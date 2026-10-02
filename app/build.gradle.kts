@@ -14,7 +14,12 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:tool-api"))
-    implementation(project(":tools:echo"))
+    implementation(project(":core:agent"))
+    implementation(project(":tools:read-file"))
+    implementation(project(":tools:write-file"))
+    implementation(project(":tools:edit-file"))
+    implementation(project(":tools:find-files"))
+    implementation(project(":tools:search-files"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
