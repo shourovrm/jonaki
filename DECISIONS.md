@@ -367,3 +367,16 @@ one prompt line until used, and per-thread opt-in would make every new
 skill a chore. Rejected: an enabled list per thread (new skills would be
 off everywhere); a global on/off per skill in Settings (the thread switch
 covers it). Outcome: pending.
+
+## D-041 · 2026-10-02 · Skill import from a file, a link or a GitHub folder — proposed
+Import takes a file from Android's document picker (no new permission): a
+zip keeps the folder that holds the shallowest SKILL.md (macOS metadata
+dropped), any other file is the SKILL.md. A link to github.com
+(`/tree/<ref>/<path>`, a repository root, or a `/blob/` or raw link to a
+SKILL.md) imports the whole folder through the GitHub contents API without
+a key (60 listings an hour per address) and the files' raw links, with
+OkHttp; any other link is fetched as a single SKILL.md. Limits: 100 files,
+2 MB in all, 5 folder levels; the folder is listed before any file is
+fetched. A name that exists asks "Replace?". Why: plan M5 step 2.
+Limits: a branch name with "/" in a tree link is read as its first part
+and fails with 404; private repositories are not reachable. Outcome: pending.
