@@ -1,5 +1,6 @@
 package app.jonaki.core.storage
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -19,6 +20,12 @@ data class ThreadEntity(
     val modelKey: String? = null,
     /** Highest message position that background memory extraction has read; null before the first run. */
     val memoryExtractedUpToPosition: Long? = null,
+    /**
+     * Skills the user switched off for this thread, comma-separated names
+     * (D-040). Every other skill in the library is listed in the prompt.
+     */
+    @ColumnInfo(defaultValue = "")
+    val disabledSkills: String = "",
 )
 
 /**

@@ -85,6 +85,8 @@ fun ChatScreen(
     onRename: () -> Unit = {},
     /** Memory in the overflow menu: the app opens this thread's memory screen. */
     onOpenMemory: () -> Unit = {},
+    /** Skills in the overflow menu: the app opens this thread's skill switches. */
+    onOpenSkills: () -> Unit = {},
     /** A message to show first instead of the end, when opened from a memory fact's source. */
     focusMessageId: String? = null,
 ) {
@@ -93,7 +95,7 @@ fun ChatScreen(
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
-        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory) },
+        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory, onOpenSkills) },
         bottomBar = {
             Column(Modifier.navigationBarsPadding().imePadding()) {
                 val status = state.status
@@ -154,6 +156,7 @@ private fun ChatTopBar(
     onWebSearchChange: (Boolean) -> Unit,
     onRename: () -> Unit,
     onOpenMemory: () -> Unit,
+    onOpenSkills: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     TopAppBar(
@@ -202,6 +205,13 @@ private fun ChatTopBar(
                             onClick = {
                                 menuOpen = false
                                 onOpenMemory()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.chat_menu_skills)) },
+                            onClick = {
+                                menuOpen = false
+                                onOpenSkills()
                             },
                         )
                     }

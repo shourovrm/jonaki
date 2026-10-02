@@ -316,3 +316,67 @@ unreadable answer marks them read. Each call's usage is a hidden message
 row (role BACKGROUND) so thread, month and usage-sheet totals include it.
 Rejected: a separate usage table (all cost queries would need a union).
 Outcome: pending.
+
+## D-037 · 2026-10-02 · Skill library on disk, read-only for the model — proposed
+Skills live in `files/skills/<name>/` with a SKILL.md whose YAML front
+matter has `name` and `description` (Anthropic's format) and any files it
+names. The name is also the folder name: lowercase letters, digits and
+single hyphens, at most 64 characters; the description at most 1,024
+characters. A SKILL.md that breaks these rules is refused on import and on
+save, with the reason. The front matter is read by a small reader in
+`core/skills` (plain, quoted and block values; other keys ignored), not a
+YAML library. The model reads skill files with read_file under the virtual
+path `/skills/<name>/...`; write_file and edit_file resolve only inside the
+thread folder, so they cannot change a skill. Why: plan M5 step 1, D-014
+(skills loaded via read_file). Rejected: a YAML library (new dependency for
+two fields); real absolute paths in the prompt (longer, tied to the install).
+Outcome: pending.
+
+## D-038 · 2026-10-02 · Built-in skills update only while unedited — proposed
+On each app start every folder under `assets/skills/` is compared with the
+library. `files/skills-builtin.json` records the SHA-256 of the files the
+app installed for each built-in skill and whether the user deleted it. A
+missing skill is installed; a skill whose files still match the recorded
+hash is replaced by a newer shipped version; a skill the user edited, or
+replaced by an import of the same name, is kept and marked "Edited", and
+the user can choose "Reset to built-in" in its editor; a deleted built-in
+stays deleted until "Restore built-in skills". Why: an update must not
+overwrite the user's edits silently. Rejected: always overwrite (loses
+edits); never update (fixes to shipped skills never arrive).
+Outcome: pending.
+
+## D-039 · 2026-10-02 · Skills listed in the system prompt — proposed
+The system prompt has a Skills section between the tool list and the
+Memory section: a header that tells the model to read a skill's SKILL.md
+with read_file before a matching task and follow it, then one line per
+enabled skill, "- name: description (/skills/name/SKILL.md)", sorted by
+name. The runner reads the library once per run, so every request of a
+run sends the same bytes (D-005); an edit or import reaches the next run.
+A skill whose SKILL.md is broken is left out of the prompt and shown with
+its problem on the skills screen. read_file's prompt line names /skills/.
+Why: plan M5 step 3, D-014. Rejected: the full SKILL.md text in the prompt
+(every skill would cost its whole text on every request). Outcome: pending.
+
+## D-040 · 2026-10-02 · Skills are on in every thread unless switched off — proposed
+Each thread stores the skills the user switched off, as comma-separated
+names in a new `threads.disabledSkills` column (Room version 4, an
+AutoMigration with default ''). Every other usable skill in the library is
+listed in the thread's prompt, so a new or imported skill is on everywhere
+at once. Switches are in the chat's ⋮ menu under Skills. Why: a skill costs
+one prompt line until used, and per-thread opt-in would make every new
+skill a chore. Rejected: an enabled list per thread (new skills would be
+off everywhere); a global on/off per skill in Settings (the thread switch
+covers it). Outcome: pending.
+
+## D-041 · 2026-10-02 · Skill import from a file, a link or a GitHub folder — proposed
+Import takes a file from Android's document picker (no new permission): a
+zip keeps the folder that holds the shallowest SKILL.md (macOS metadata
+dropped), any other file is the SKILL.md. A link to github.com
+(`/tree/<ref>/<path>`, a repository root, or a `/blob/` or raw link to a
+SKILL.md) imports the whole folder through the GitHub contents API without
+a key (60 listings an hour per address) and the files' raw links, with
+OkHttp; any other link is fetched as a single SKILL.md. Limits: 100 files,
+2 MB in all, 5 folder levels; the folder is listed before any file is
+fetched. A name that exists asks "Replace?". Why: plan M5 step 2.
+Limits: a branch name with "/" in a tree link is read as its first part
+and fails with 404; private repositories are not reachable. Outcome: pending.

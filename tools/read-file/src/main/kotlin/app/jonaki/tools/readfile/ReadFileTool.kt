@@ -2,12 +2,14 @@ package app.jonaki.tools.readfile
 
 import app.jonaki.core.toolapi.Capability
 import app.jonaki.core.toolapi.SideEffect
+import app.jonaki.core.toolapi.SkillLibraryPaths
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import app.jonaki.core.toolapi.intArgument
 import app.jonaki.core.toolapi.looksBinary
 import app.jonaki.core.toolapi.stringArgument
+import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +24,7 @@ import kotlinx.serialization.json.putJsonObject
 /** Reads a text file from the thread folder, a window of lines at a time. */
 class ReadFileTool : Tool {
     override val name: String = "read_file"
-    override val promptLine: String = "read_file: read a text file in the thread folder (offset and limit in lines)"
+    override val promptLine: String = "read_file: read a text file in the thread folder or a skill under /skills/ (offset and limit in lines)"
     override val guidelines: List<String> = listOf(
         "Read a file before you edit it, and continue long files with the offset the notice names.",
     )
@@ -31,7 +33,7 @@ class ReadFileTool : Tool {
         putJsonObject("properties") {
             putJsonObject("path") {
                 put("type", "string")
-                put("description", "Path relative to the thread folder, for example work/notes.md")
+                put("description", "Path relative to the thread folder, for example work/notes.md, or a skill path such as /skills/report/SKILL.md")
             }
             putJsonObject("offset") {
                 put("type", "integer")
@@ -51,13 +53,18 @@ class ReadFileTool : Tool {
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput = withContext(Dispatchers.IO) {
         val path = arguments.stringArgument("path")
             ?: return@withContext ToolOutput.error("argument path is missing", "Call read_file with a path.")
-        val file = context.paths.resolve(path)
-            ?: return@withContext ToolOutput.error(
-                "$path is outside the thread folder",
-                "Use a path inside the thread folder, for example work/notes.md.",
-            )
+        val isSkillPath = SkillLibraryPaths.isSkillPath(path)
+        val resolved = if (isSkillPath) resolveSkillPath(path, context) else resolveThreadPath(path, context)
+        val file = when (resolved) {
+            is Resolved.Found -> resolved.file
+            is Resolved.Failed -> return@withContext resolved.output
+        }
         if (!file.exists()) {
-            return@withContext ToolOutput.error("$path does not exist", "Use find_files to list the files.")
+            val hint = if (isSkillPath) "Use a path from the Skills list." else "Use find_files to list the files."
+            return@withContext ToolOutput.error("$path does not exist", hint)
+        }
+        if (file.isDirectory && isSkillPath) {
+            return@withContext ToolOutput.error("$path is a folder", "Read SKILL.md in it; it names the skill's other files.")
         }
         if (file.isDirectory) {
             return@withContext ToolOutput.error(
@@ -84,6 +91,36 @@ class ReadFileTool : Tool {
             )
         }
         ToolOutput.success(window(path, allLines, offset, limit))
+    }
+
+    private fun resolveThreadPath(path: String, context: ToolContext): Resolved {
+        val file = context.paths.resolve(path)
+            ?: return Resolved.Failed(
+                ToolOutput.error(
+                    "$path is outside the thread folder",
+                    "Use a path inside the thread folder, for example work/notes.md.",
+                ),
+            )
+        return Resolved.Found(file)
+    }
+
+    /** Skills are read-only and live outside the thread folder (D-037). */
+    private fun resolveSkillPath(path: String, context: ToolContext): Resolved {
+        val skillPaths = context.skillPaths
+            ?: return Resolved.Failed(
+                ToolOutput.error("there is no skill library in this run", "Read files in the thread folder instead."),
+            )
+        val file = skillPaths.resolve(path)
+            ?: return Resolved.Failed(
+                ToolOutput.error("$path is outside the skill library", "Use a path from the Skills list."),
+            )
+        return Resolved.Found(file)
+    }
+
+    private sealed interface Resolved {
+        data class Found(val file: File) : Resolved
+
+        data class Failed(val output: ToolOutput) : Resolved
     }
 
     private fun window(path: String, allLines: List<String>, offset: Int, limit: Int): String {

@@ -18,15 +18,17 @@ import kotlinx.coroutines.Dispatchers
         MemoryEntity::class,
         CompactionEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
     // Version 3 adds the memories and compactions tables and one nullable
     // thread column; the memory search index is added by the spec (M4).
+    // Version 4 adds the thread's switched-off skills, empty by default (M5).
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3, spec = JonakiDatabase.AddMemorySearchIndex::class),
+        AutoMigration(from = 3, to = 4),
     ],
 )
 abstract class JonakiDatabase : RoomDatabase() {

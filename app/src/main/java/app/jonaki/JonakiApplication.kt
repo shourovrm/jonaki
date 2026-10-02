@@ -10,6 +10,11 @@ import app.jonaki.run.ChatProviders
 import app.jonaki.run.ThreadCompactor
 import app.jonaki.run.ThreadTitles
 import app.jonaki.core.model.Role
+import app.jonaki.core.skills.BuiltInSkill
+import app.jonaki.core.skills.SkillLibrary
+import app.jonaki.core.skills.SkillDownloader
+import app.jonaki.skills.AssetSkills
+import app.jonaki.skills.SkillImporter
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.SecretStore
@@ -44,6 +49,14 @@ class JonakiApplication : Application() {
     lateinit var backgroundModel: BackgroundModel
         private set
 
+    /** The skill library in files/skills/, which read_file can read as /skills/ (D-037). */
+    lateinit var skillLibrary: SkillLibrary
+        private set
+
+    /** Adds skills from links and picked files (D-041). */
+    lateinit var skillImporter: SkillImporter
+        private set
+
     /** Account balances for the settings cards (D-031); call refreshAll() when Settings opens. */
     lateinit var balances: AccountBalances
         private set
@@ -51,6 +64,7 @@ class JonakiApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         database = JonakiDatabase.open(this)
+        skillLibrary = SkillLibrary(File(filesDir, "skills"), File(filesDir, "skills-builtin.json"))
         settings = AppSettings(this, ChatProviders::defaultModel)
         secrets = SecretStore(this)
         // One client for every call, so connections and threads are shared.
@@ -59,6 +73,7 @@ class JonakiApplication : Application() {
             // Streaming replies can pause while a model thinks; the agent loop's own limits apply on top.
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
+        skillImporter = SkillImporter(skillLibrary, SkillDownloader(httpClient))
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
         backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog)
         val memoryExtractor = MemoryExtractor(
@@ -68,7 +83,18 @@ class JonakiApplication : Application() {
             clock = System::currentTimeMillis,
         )
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
-        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope, memoryExtractor, threadCompactor)
+        runner = AgentRunner(
+            this,
+            database,
+            settings,
+            secrets,
+            httpClient,
+            catalog,
+            applicationScope,
+            memoryExtractor,
+            threadCompactor,
+            skillLibrary,
+        )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
@@ -81,7 +107,14 @@ class JonakiApplication : Application() {
         applicationScope.launch {
             restoreNamesCutByOldVersion()
         }
+        applicationScope.launch(Dispatchers.IO) {
+            // Installs new built-in skills and updates unedited ones after an app update (D-038).
+            skillLibrary.installBuiltIns(builtInSkills())
+        }
     }
+
+    /** The skills shipped in assets/skills/, read fresh each time; they are a few kilobytes. */
+    fun builtInSkills(): List<BuiltInSkill> = AssetSkills.load(assets)
 
     /** Threads named by version 0.1.0 had their names cut at 40 characters; the first message holds the whole name. */
     private suspend fun restoreNamesCutByOldVersion() {

@@ -1,13 +1,7 @@
 package app.jonaki.core.storage
 
 import androidx.sqlite.SQLiteConnection
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
-import java.io.File
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -20,41 +14,19 @@ import org.junit.Test
  * follows inserts, edits, deletes and thread deletion.
  */
 class MemoryMigrationTest {
-    private val connections = mutableListOf<SQLiteConnection>()
+    private val databases = MigrationTestDatabases()
 
     @After
     fun closeConnections() {
-        connections.forEach { connection -> connection.close() }
+        databases.closeAll()
     }
 
-    private fun openEmpty(): SQLiteConnection {
-        val connection = BundledSQLiteDriver().open(":memory:")
-        connection.execSQL("PRAGMA foreign_keys = ON")
-        connections += connection
-        return connection
-    }
+    private fun openVersion(version: Int): SQLiteConnection = databases.openVersion(version)
 
-    /** The CREATE statements Room exported for one schema version. */
-    private fun createStatements(version: Int): List<String> {
-        val schemaFile = File("schemas/app.jonaki.core.storage.JonakiDatabase/$version.json")
-        val database = Json.parseToJsonElement(schemaFile.readText()).jsonObject.getValue("database").jsonObject
-        val statements = mutableListOf<String>()
-        for (entity in database.getValue("entities").jsonArray) {
-            val fields = entity.jsonObject
-            val tableName = fields.getValue("tableName").jsonPrimitive.content
-            statements += fields.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", tableName)
-            for (index in fields["indices"]?.jsonArray.orEmpty()) {
-                statements += index.jsonObject.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", tableName)
-            }
-        }
-        return statements
-    }
+    private fun queryStrings(connection: SQLiteConnection, sql: String, vararg arguments: String): List<String> =
+        databases.queryStrings(connection, sql, *arguments)
 
-    private fun openVersion(version: Int): SQLiteConnection {
-        val connection = openEmpty()
-        createStatements(version).forEach { statement -> connection.execSQL(statement) }
-        return connection
-    }
+    private fun describeTables(connection: SQLiteConnection): Map<String, List<String>> = databases.describeTables(connection)
 
     private fun openVersion2WithOneThread(): SQLiteConnection {
         val connection = openVersion(2)
@@ -71,33 +43,6 @@ class MemoryMigrationTest {
 
     private fun migrateTo3(connection: SQLiteConnection) {
         JonakiDatabase_AutoMigration_2_3_Impl().migrate(connection)
-    }
-
-    private fun queryStrings(connection: SQLiteConnection, sql: String, vararg arguments: String): List<String> {
-        val rows = mutableListOf<String>()
-        connection.prepare(sql).use { statement ->
-            arguments.forEachIndexed { index, argument -> statement.bindText(index + 1, argument) }
-            while (statement.step()) {
-                rows += (0 until statement.getColumnCount()).joinToString("|") { column ->
-                    if (statement.isNull(column)) "null" else statement.getText(column)
-                }
-            }
-        }
-        return rows
-    }
-
-    /** Columns, indices and foreign keys of every table, as Room compares them when it opens a database. */
-    private fun describeTables(connection: SQLiteConnection): Map<String, List<String>> {
-        val tables = queryStrings(
-            connection,
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-        )
-        return tables.associateWith { table ->
-            // ALTER TABLE ADD COLUMN records "DEFAULT NULL"; Room ignores defaults its entities do not declare.
-            queryStrings(connection, "PRAGMA table_info(`$table`)").map { column -> column.replace("|NULL|", "|null|") } +
-                queryStrings(connection, "PRAGMA index_list(`$table`)").map { "index " + it.substringAfter('|') } +
-                queryStrings(connection, "PRAGMA foreign_key_list(`$table`)")
-        }
     }
 
     private fun insertMemory(connection: SQLiteConnection, id: Long, threadId: String?, text: String) {

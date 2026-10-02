@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":core:provider-api"))
     implementation(project(":core:search-api"))
     implementation(project(":core:storage"))
+    implementation(project(":core:skills"))
     implementation(project(":core:model-catalog"))
     implementation(project(":core:balance-api"))
     implementation(project(":providers:openai-compatible"))
@@ -40,6 +41,7 @@ dependencies {
     implementation(project(":feature:chat"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:memory"))
+    implementation(project(":feature:skills"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))
