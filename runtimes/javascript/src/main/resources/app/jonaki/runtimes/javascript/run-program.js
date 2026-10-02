@@ -78,11 +78,13 @@
       value = (0, eval)(jonakiJob.code);
     } catch (syntaxError) {
       // Top-level await is not valid in a script; run such a program as the
-      // body of an async function, where `return` gives the result.
+      // body of an async function, where `return` gives the result. The
+      // program starts on the wrapper's first line, so error lines still
+      // match the program's own lines.
       if (!(syntaxError instanceof SyntaxError) || !jonakiJob.code.includes("await")) {
         throw syntaxError;
       }
-      value = (0, eval)("(async () => {\n" + jonakiJob.code + "\n})()");
+      value = (0, eval)("(async () => {" + jonakiJob.code + "\n})()");
     }
     if (value !== null && typeof value === "object" && typeof value.then === "function") {
       value = await value;
