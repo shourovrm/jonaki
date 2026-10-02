@@ -18,7 +18,7 @@ enum class ChatService(
 
     // Ollama Cloud uses the same account key as Ollama web search.
     OLLAMA_CLOUD("ollama-cloud", "Ollama Cloud", SecretName.OLLAMA),
-    OLLAMA_LOCAL("ollama-local", "Ollama on my network", null),
+    OLLAMA_LOCAL("ollama-local", "Ollama on this network", null),
     OPENAI("openai", "OpenAI", SecretName.OPENAI),
     ;
 

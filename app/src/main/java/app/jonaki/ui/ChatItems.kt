@@ -26,13 +26,15 @@ object ChatItems {
         steps: List<StepEntity>,
         isRunning: Boolean,
         pendingApproval: ToolCall?,
+        /** Shown after an answer whose OpenRouter call fell back to the cheapest provider (D-030). */
+        fallbackNote: String = "",
     ): List<ChatItem> {
         val turns = splitIntoTurns(rows)
         val stepsById = steps.associateBy { step -> step.toolCallId }
         val items = mutableListOf<ChatItem>()
         for ((index, turn) in turns.withIndex()) {
             val isLastTurn = index == turns.lastIndex
-            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn)
+            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote)
             if (isLastTurn && pendingApproval != null) {
                 val detail = StepDetail.of(pendingApproval.toolName, pendingApproval.argumentsJson)
                 items += ChatItem.Approval(pendingApproval.id, pendingApproval.toolName, detail.target.orEmpty())
@@ -62,7 +64,12 @@ object ChatItems {
         return turns
     }
 
-    private fun itemsForTurn(turn: List<MessageEntity>, stepsById: Map<String, StepEntity>, isActiveTurn: Boolean): List<ChatItem> {
+    private fun itemsForTurn(
+        turn: List<MessageEntity>,
+        stepsById: Map<String, StepEntity>,
+        isActiveTurn: Boolean,
+        fallbackNote: String,
+    ): List<ChatItem> {
         val items = mutableListOf<ChatItem>()
         val turnId = turn.first().id
         val userRow = turn.first().takeIf { it.role == Role.USER.name }
@@ -75,7 +82,9 @@ object ChatItems {
             .mapNotNull { call -> stepsById[call.id] }
             .sortedBy { step -> step.startedAtMillis }
         if (turnSteps.isNotEmpty()) {
-            items += ChatItem.Run("run-$turnId", turnSteps.map(::stepUi), isActive = isActiveTurn)
+            // The turn's cost is only final once the run has ended.
+            val turnCost = if (isActiveTurn) null else costOf(turn)
+            items += ChatItem.Run("run-$turnId", turnSteps.map(::stepUi), isActive = isActiveTurn, costUsd = turnCost)
         }
         for (row in turn) {
             when (row.role) {
@@ -84,8 +93,16 @@ object ChatItems {
                 }
                 HistoryMapper.ERROR_ROLE -> items += ChatItem.Error(row.id, row.text, canRetry = false)
             }
+            if (row.routingFallback == true && fallbackNote.isNotEmpty()) {
+                items += ChatItem.Note("note-${row.id}", fallbackNote)
+            }
         }
         return items
+    }
+
+    private fun costOf(turn: List<MessageEntity>): Double? {
+        val costs = turn.mapNotNull { row -> row.costUsd }
+        return if (costs.isEmpty()) null else costs.sum()
     }
 
     private fun stepUi(step: StepEntity): StepUi {

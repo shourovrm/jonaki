@@ -120,4 +120,38 @@ class ChatItemsTest {
         assertEquals(false, running.any { it.id == ChatItems.WAITING_ID })
         assertEquals(false, streaming.any { it.id == ChatItems.WAITING_ID })
     }
+
+    @Test
+    fun aFinishedRunShowsTheCostOfItsTurn() {
+        val rows = listOf(
+            row("u1", "USER", "weather?"),
+            row("a1", "ASSISTANT", "", calls = listOf(searchCall)).copy(costUsd = 0.0010),
+            row("r1", "TOOL", "results", callId = "c1"),
+            row("a2", "ASSISTANT", "Rain.").copy(costUsd = 0.0031),
+        )
+        val steps = listOf(step("c1", "web_search", "DONE", started = 0, finished = 1))
+
+        val run = ChatItems.build(rows, steps, isRunning = false, pendingApproval = null).filterIsInstance<ChatItem.Run>().single()
+
+        assertEquals(0.0041, run.costUsd!!, 1e-9)
+    }
+
+    @Test
+    fun aRunStillWorkingShowsNoCostYet() {
+        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(searchCall)).copy(costUsd = 0.001))
+        val steps = listOf(step("c1", "web_search", "RUNNING"))
+
+        val run = ChatItems.build(rows, steps, isRunning = true, pendingApproval = null).filterIsInstance<ChatItem.Run>().single()
+
+        assertEquals(null, run.costUsd)
+    }
+
+    @Test
+    fun routingFallbackAddsOneNoteAfterTheAnswer() {
+        val rows = listOf(row("u1", "USER", "hi"), row("a1", "ASSISTANT", "Hello").copy(routingFallback = true))
+
+        val items = ChatItems.build(rows, emptyList(), isRunning = false, pendingApproval = null, fallbackNote = "used cheapest")
+
+        assertEquals(ChatItem.Note("note-a1", "used cheapest"), items.last())
+    }
 }

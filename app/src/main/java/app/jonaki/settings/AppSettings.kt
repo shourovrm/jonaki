@@ -27,6 +27,8 @@ data class SettingsSnapshot(
     val searchOrder: List<SearchService>,
     val webSearchOffInNewThreads: Boolean,
     val theme: ThemeChoice,
+    /** The chat's status strip (D-027). */
+    val showStatusStrip: Boolean = true,
 )
 
 /** Plain settings in app preferences; keys live in [SecretStore]. */
@@ -68,6 +70,7 @@ class AppSettings(
             searchOrder = searchOrder,
             webSearchOffInNewThreads = preferences.getBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, false),
             theme = enumOrDefault(preferences.getString(THEME, null), ThemeChoice.SYSTEM),
+            showStatusStrip = preferences.getBoolean(SHOW_STATUS_STRIP, true),
         )
     }
 
@@ -110,6 +113,7 @@ class AppSettings(
         editor.putString(SEARCH_ORDER, snapshot.searchOrder.joinToString(",") { it.name })
         editor.putBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, snapshot.webSearchOffInNewThreads)
         editor.putString(THEME, snapshot.theme.name)
+        editor.putBoolean(SHOW_STATUS_STRIP, snapshot.showStatusStrip)
         editor.apply()
     }
 
@@ -130,5 +134,6 @@ class AppSettings(
         const val SEARCH_ORDER = "search_order"
         const val WEB_SEARCH_OFF_IN_NEW_THREADS = "web_search_off_in_new_threads"
         const val THEME = "theme"
+        const val SHOW_STATUS_STRIP = "show_status_strip"
     }
 }

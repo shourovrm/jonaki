@@ -242,6 +242,7 @@ private fun MessageList(
                 is ChatItem.Run -> RunBlock(item)
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
+                is ChatItem.Note -> NoteRow(item)
             }
         }
     }
@@ -322,6 +323,16 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
             }
         }
     }
+}
+
+@Composable
+private fun NoteRow(note: ChatItem.Note) {
+    Text(
+        note.text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

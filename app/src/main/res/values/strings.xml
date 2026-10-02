@@ -3,4 +3,8 @@
     <string name="app_name">Jonaki</string>
     <string name="run_channel_name">Agent runs</string>
     <string name="run_notification_title">Working…</string>
+    <string name="balance_money_left">%1$s left</string>
+    <string name="balance_credits_of_limit">%1$s / %2$s credits this month</string>
+    <string name="balance_credits_used">%1$s credits used</string>
+    <string name="routing_fallback_note">No private provider for this model; used the cheapest.</string>
 </resources>

@@ -89,6 +89,9 @@ sealed interface ChatItem {
     ) : ChatItem
 
     data class Error(override val id: String, val message: String, val canRetry: Boolean) : ChatItem
+
+    /** A quiet one-line remark about a turn, for example that routing fell back (D-030). */
+    data class Note(override val id: String, val text: String) : ChatItem
 }
 
 @Immutable
