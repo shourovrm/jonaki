@@ -1,0 +1,61 @@
+package app.jonaki.core.toolapi
+
+import java.io.File
+import kotlin.time.Duration
+import kotlinx.serialization.json.JsonObject
+
+/**
+ * One capability the model can call. Each tool lives in its own module under
+ * tools/ and depends only on this module (D-007). First sketch from the
+ * version 1 plan; M2 fixes it with tests.
+ */
+interface Tool {
+    /** Name the model calls, for example "web_search". */
+    val name: String
+
+    /** One line in the system prompt. */
+    val promptLine: String
+
+    /** Extra guidance, added to the prompt only while the tool is active. */
+    val guidelines: List<String>
+
+    /** JSON schema of the arguments, sent only while the tool is active. */
+    val parameterSchema: JsonObject
+
+    val sideEffect: SideEffect
+
+    val requiredCapabilities: Set<Capability>
+
+    val timeLimit: Duration
+
+    suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput
+}
+
+/** Whether a tool only reads, or changes something and so needs approval. */
+enum class SideEffect {
+    READ_ONLY,
+    CHANGES,
+}
+
+/** Optional parts of the app a tool needs before it can run. */
+enum class Capability {
+    PYTHON,
+}
+
+/** What a tool may use while it runs. M2 adds the HTTP client and truncation helper. */
+class ToolContext(
+    val threadFolder: File,
+)
+
+/** Plain text for the model. An error says what failed and what to try next. */
+data class ToolOutput(
+    val text: String,
+    val isError: Boolean,
+) {
+    companion object {
+        fun success(text: String): ToolOutput = ToolOutput(text = text, isError = false)
+
+        fun error(whatFailed: String, whatToTryNext: String): ToolOutput =
+            ToolOutput(text = "Error: $whatFailed. $whatToTryNext", isError = true)
+    }
+}
