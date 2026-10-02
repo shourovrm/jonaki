@@ -70,10 +70,21 @@ Amendment (user, 2026-10-02): queries hold only general topic words, never
 names, personal details or file contents (tool guideline); every query is
 shown in its step card; web search can be switched off per thread. Why:
 Tavily stores queries with no fixed deletion period and may use them to
-improve its service (privacy policy of 24 November 2025).
+improve its service (privacy policy of 24 November 2025). Outcome (S-4,
+2026-10-02): passed. Tavily answers in 2.2 s with short snippets and finds
+YouTube videos with include_domains; Ollama web search works on an account
+without credit, returns 3,500 to 8,800 characters per result (cap needed),
+and its web_fetch endpoint returns 404. Quota codes from Tavily's docs: 429,
+432, 433. Recordings in testdata/search/.
 
 ## D-012 · 2026-10-02 · YouTube summaries via Gemini only — accepted
-Rejected: NewPipeExtractor (scraping, breaks), yt-dlp and ffmpeg (no Android).
+Rejected: NewPipeExtractor (scraping, breaks), yt-dlp and ffmpeg (no Android). Outcome (S-3, 2026-10-02):
+passed on gemini-3.8-flash; gemini-2.5-flash is closed to new users (404).
+A 19-minute video costs 105,878 input tokens and takes 14 to 21 s; a Bangla
+prompt gets a good Bangla summary; MEDIA_RESOLUTION_LOW did not lower the
+count; a repeat call reused 102,276 tokens from Gemini's automatic cache.
+Errors seen: 503 overload (retry worked), 403 for an unavailable video.
+Whether the key is on the free tier is not visible in the response.
 
 ## D-013 · 2026-10-02 · Python as on-demand Pyodide — accepted
 Downloaded with checksum check; micropip packages; first-run tool picker,
