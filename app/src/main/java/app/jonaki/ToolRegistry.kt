@@ -1,14 +1,20 @@
 package app.jonaki
 
+import app.jonaki.core.runtimeapi.CodeRuntime
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.toolapi.Tool
+import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.settings.ToolGroup
+import app.jonaki.settings.ToolGroups
 import app.jonaki.tools.artifact.ArtifactTool
+import app.jonaki.tools.delegate.DelegateTool
 import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.MemoryTool
 import app.jonaki.tools.readdocument.ReadDocumentTool
 import app.jonaki.tools.readfile.ReadFileTool
+import app.jonaki.tools.runcode.RunCodeTool
 import app.jonaki.tools.searchfiles.SearchFilesTool
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.ShareFileTool
@@ -33,6 +39,10 @@ data class ToolServices(
     val fileDestinations: FileDestinations? = null,
     /** From the model catalog; view_image is offered only to models that take images (D-050). */
     val modelAcceptsImages: Boolean = false,
+    /** One engine per language for run_code; empty leaves run_code out. */
+    val codeRuntimes: List<CodeRuntime> = emptyList(),
+    /** The groups switched on in the picker or Settings > Tools; the tools of the others are left out. */
+    val enabledGroups: Set<ToolGroup> = ToolGroup.entries.toSet(),
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -65,6 +75,23 @@ object ToolRegistry {
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)
         }
-        return tools
+        val languages = ToolGroups.codeLanguages(services.enabledGroups)
+        val codeRuntimes = services.codeRuntimes.filter { runtime -> runtime.language in languages }
+        if (codeRuntimes.isNotEmpty()) {
+            tools += RunCodeTool(codeRuntimes)
+        }
+        return tools.filter { tool -> ToolGroups.isOffered(tool.name, services.enabledGroups) }
+    }
+
+    /**
+     * The delegate tool joins last, because its subagents get the thread's
+     * other tools (M7); a subagent never gets delegate itself. Empty while
+     * Subagents is switched off.
+     */
+    fun delegateTools(launcher: SubagentLauncher, enabledGroups: Set<ToolGroup>): List<Tool> {
+        if (ToolGroup.SUBAGENTS !in enabledGroups) {
+            return emptyList()
+        }
+        return listOf(DelegateTool(launcher))
     }
 }

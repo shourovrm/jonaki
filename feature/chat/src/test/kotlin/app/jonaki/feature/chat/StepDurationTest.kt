@@ -31,4 +31,17 @@ class StepDurationTest {
 
         assertEquals(5_000L, totalDurationMillis(steps))
     }
+
+    @Test
+    fun stepsThatRanSideBySideCountOnce() {
+        // Three searches from 0 to 2 s, 0.5 to 3 s and 1 to 2 s, then a read from 5 to 6 s.
+        val steps = listOf(
+            StepUi("a", "web_search", StepUiStatus.DONE, "", durationMillis = 2_000, startedAtMillis = 0),
+            StepUi("b", "web_search", StepUiStatus.DONE, "", durationMillis = 2_500, startedAtMillis = 500),
+            StepUi("c", "web_search", StepUiStatus.DONE, "", durationMillis = 1_000, startedAtMillis = 1_000),
+            StepUi("d", "read_file", StepUiStatus.DONE, "", durationMillis = 1_000, startedAtMillis = 5_000),
+        )
+
+        assertEquals(4_000L, totalDurationMillis(steps))
+    }
 }

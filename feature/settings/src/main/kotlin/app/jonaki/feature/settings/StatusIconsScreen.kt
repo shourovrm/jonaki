@@ -15,6 +15,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -86,6 +87,15 @@ fun StatusIconsScreen(
                     LegendDivider()
                     LegendRow(stringResource(R.string.settings_icon_cost), stringResource(R.string.settings_icon_cost_help)) {
                         Icon(JonakiIcons.Payments, contentDescription = null, modifier = Modifier.size(20.dp))
+                    }
+                    LegendDivider()
+                    LegendRow(stringResource(R.string.settings_icon_bypass), stringResource(R.string.settings_icon_bypass_help)) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = null,
+                            tint = JonakiTheme.colors.deny,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
             }

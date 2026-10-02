@@ -45,4 +45,18 @@ class ChatCompletionRequestBodyTest {
         assertEquals(first, second)
         assertTrue(first.contains("data:image/jpeg;base64,/9j/AAAA"))
     }
+
+    @Test
+    fun toolsCanBeSentButNotCalled() {
+        val tool = app.jonaki.core.providerapi.ToolDefinition("web_search", "search", JsonObject(emptyMap()))
+        val offered = ChatCompletionRequestBody.build(ChatRequest("m", "system", emptyList(), tools = listOf(tool)))
+        val shownOnly = ChatCompletionRequestBody.build(
+            ChatRequest("m", "system", emptyList(), tools = listOf(tool), toolsCallable = false),
+        )
+
+        assertEquals(null, offered["tool_choice"])
+        assertEquals(JsonPrimitive("none"), shownOnly["tool_choice"])
+        // The same tool list, so the prompt cache prefix matches the thread's requests.
+        assertEquals(offered["tools"], shownOnly["tools"])
+    }
 }

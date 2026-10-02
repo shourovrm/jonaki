@@ -11,7 +11,9 @@
     <string name="chat_message_hint">Message</string>
     <string name="chat_send">Send</string>
     <string name="chat_attach">Attach</string>
-    <string name="chat_take_photo">Take photo</string>
+    <string name="chat_add_camera">Camera</string>
+    <string name="chat_add_photos">Photos</string>
+    <string name="chat_add_files">Files</string>
     <string name="chat_attachment_remove">Remove %1$s</string>
     <string name="chat_stop">Stop</string>
     <string name="chat_run_working">Working</string>
@@ -26,15 +28,23 @@
     <string name="chat_step_failed">Failed</string>
     <string name="chat_step_denied">Denied</string>
     <string name="chat_step_stopped">Stopped</string>
+    <string name="chat_step_skipped">No answer</string>
     <string name="chat_approval_title">Allow %1$s?</string>
     <string name="chat_approval_once">Allow once</string>
     <string name="chat_approval_thread">Allow in thread</string>
+    <string name="chat_approval_title_subagent">%1$s asks for %2$s</string>
+    <string name="chat_approval_task">Allow for task</string>
     <string name="chat_approval_deny">Deny</string>
     <string name="chat_retry">Retry</string>
     <string name="chat_status_model">Model: %1$s. Change</string>
     <string name="chat_status_context_window">Context window: %1$s tokens</string>
     <string name="chat_status_context_used">Context used: %1$d%%</string>
     <string name="chat_status_cost">Cost: %1$s</string>
+    <string name="chat_status_bypass">Bypass</string>
+    <string name="chat_status_bypass_description">Bypass: tools run without asking</string>
+    <string name="chat_menu_approvals">Approvals</string>
+    <string name="chat_approvals_title">Approvals in this thread</string>
+    <string name="chat_approvals_close">Close</string>
     <string name="chat_model_sheet_title">Model for this thread</string>
     <string name="chat_model_sheet_prices">Prices per million tokens</string>
     <string name="chat_price_in">in %1$s</string>
@@ -49,6 +59,40 @@
         <item quantity="one">%1$d turn</item>
         <item quantity="other">%1$d turns</item>
     </plurals>
+    <string name="chat_context_sheet_title">Context</string>
+    <string name="chat_context_total">%1$s of %2$s tokens</string>
+    <string name="chat_context_system_prompt">System prompt</string>
+    <string name="chat_context_tools">Tool definitions</string>
+    <string name="chat_context_skills">Skills</string>
+    <string name="chat_context_memory">Memory</string>
+    <string name="chat_context_summary">Summary of older messages</string>
+    <string name="chat_context_messages">Messages</string>
+    <string name="chat_context_tool_results">Tool results</string>
+    <string name="chat_context_images">Images</string>
+    <string name="chat_context_free">Free</string>
+    <plurals name="chat_context_tool_count">
+        <item quantity="one">%d tool</item>
+        <item quantity="other">%d tools</item>
+    </plurals>
+    <plurals name="chat_context_skill_count">
+        <item quantity="one">%d skill</item>
+        <item quantity="other">%d skills</item>
+    </plurals>
+    <plurals name="chat_context_fact_count">
+        <item quantity="one">%d fact</item>
+        <item quantity="other">%d facts</item>
+    </plurals>
+    <plurals name="chat_context_summary_covers">
+        <item quantity="one">Covers %d message</item>
+        <item quantity="other">Covers %d messages</item>
+    </plurals>
+    <plurals name="chat_context_image_count">
+        <item quantity="one">%d image</item>
+        <item quantity="other">%d images</item>
+    </plurals>
+    <string name="chat_context_estimated">Total from the last request. Split estimated.</string>
+    <string name="chat_context_no_request">Estimated. No request yet.</string>
+    <string name="chat_context_compact_at">Older messages are summarised at %1$d%% (%2$s tokens).</string>
     <string name="chat_usage_footnote">OpenRouter reports cost; others are priced from token counts.</string>
     <string name="chat_artifact_open">Open</string>
     <string name="chat_working_thinking">Thinking…</string>
@@ -59,6 +103,7 @@
     <string name="chat_working_reading_files">Reading files…</string>
     <string name="chat_working_writing_file">Writing a file…</string>
     <string name="chat_working_memory">Updating memory…</string>
+    <string name="chat_working_subagents">Subagents working…</string>
     <string name="chat_working_tool">Running %1$s…</string>
     <string name="chat_working_seconds">%1$ds</string>
     <string name="chat_reasoning">Thinking</string>
@@ -66,4 +111,35 @@
     <string name="chat_edit">Edit</string>
     <string name="chat_editing">Editing message</string>
     <string name="chat_edit_cancel">Cancel edit</string>
+    <string name="chat_subagent_running">Working</string>
+    <string name="chat_subagent_done">Done</string>
+    <string name="chat_subagent_step_limit">Out of steps</string>
+    <string name="chat_subagent_cost_limit">Over budget</string>
+    <string name="chat_subagent_time_limit">Timed out</string>
+    <string name="chat_subagent_failed">Failed</string>
+    <string name="chat_subagent_stopped">Stopped</string>
+    <string name="chat_subagent_answer">Answer</string>
+    <string name="chat_subagent_show">Show details</string>
+    <string name="chat_subagent_hide">Hide details</string>
+    <string name="chat_code_tab_code">Code</string>
+    <string name="chat_code_tab_output">Output</string>
+    <plurals name="chat_code_lines">
+        <item quantity="one">%1$d line</item>
+        <item quantity="other">%1$d lines</item>
+    </plurals>
+    <string name="chat_code_running">Still running</string>
+    <string name="chat_code_no_output">No output</string>
+    <string name="chat_code_result">Result</string>
+    <string name="chat_code_error">Error</string>
+    <string name="chat_code_saved">Saved</string>
+    <string name="chat_code_not_saved">Not saved</string>
+    <string name="chat_code_cut">Output cut</string>
+    <string name="chat_python_python">Python</string>
+    <string name="chat_python_needs_size">Needs %1$s (%2$s). Install?</string>
+    <string name="chat_python_needs">Needs %1$s. Install?</string>
+    <string name="chat_python_installed">%1$s installed</string>
+    <string name="chat_python_install">Install</string>
+    <string name="chat_python_not_now">Not now</string>
+    <string name="chat_python_close">Close</string>
+    <string name="chat_python_try_again">Try again</string>
 </resources>

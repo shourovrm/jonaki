@@ -49,7 +49,7 @@ private val TrackColumnWidth = 24.dp
  * folds to its summary line; an active run is always open.
  */
 @Composable
-internal fun RunBlock(run: ChatItem.Run, modifier: Modifier = Modifier) {
+internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, modifier: Modifier = Modifier) {
     var expanded by rememberSaveable(run.id) { mutableStateOf(false) }
     val open = run.isActive || expanded
     Surface(
@@ -67,6 +67,7 @@ internal fun RunBlock(run: ChatItem.Run, modifier: Modifier = Modifier) {
                             isFirst = index == 0,
                             isLast = index == run.steps.lastIndex,
                             nextIsDone = run.steps.getOrNull(index + 1)?.status == StepUiStatus.DONE,
+                            onOpen = onOpenStep,
                         )
                     }
                 }
@@ -130,15 +131,22 @@ private fun RunHeader(run: ChatItem.Run, open: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-private fun StepRow(step: StepUi, isFirst: Boolean, isLast: Boolean, nextIsDone: Boolean) {
+internal fun StepRow(
+    step: StepUi,
+    isFirst: Boolean,
+    isLast: Boolean,
+    nextIsDone: Boolean,
+    onOpen: (stepId: String) -> Unit,
+) {
     val colors = JonakiTheme.colors
     val doneColor = colors.done
     val trackColor = colors.track
     // The segment below a station is "travelled" when this step and the next are done.
     val segmentBelowColor = if (step.status == StepUiStatus.DONE && nextIsDone) doneColor else trackColor
     val segmentAboveColor = if (step.status == StepUiStatus.DONE) doneColor else trackColor
+    val openModifier = if (step.opensDetail) Modifier.clickable { onOpen(step.id) } else Modifier
     Row(
-        modifier = Modifier
+        modifier = openModifier
             .fillMaxWidth()
             .drawBehind {
                 val x = TrackColumnWidth.toPx() / 2
@@ -191,6 +199,7 @@ private fun StationDot(status: StepUiStatus) {
         StepUiStatus.FAILED -> colors.deny to DotStyle.QUIET
         StepUiStatus.DENIED -> outline to DotStyle.QUIET
         StepUiStatus.STOPPED -> outline to DotStyle.RING
+        StepUiStatus.SKIPPED -> outline to DotStyle.RING
     }
     // GlowDot's canvas is 2.4x the dot; 10 dp dot -> 24 dp box, centred on the track.
     GlowDot(color, style, dotSize = 10.dp)
@@ -203,6 +212,7 @@ private fun StepDetail(step: StepUi) {
         StepUiStatus.FAILED -> stringResource(R.string.chat_step_failed)
         StepUiStatus.DENIED -> stringResource(R.string.chat_step_denied)
         StepUiStatus.STOPPED -> stringResource(R.string.chat_step_stopped)
+        StepUiStatus.SKIPPED -> stringResource(R.string.chat_step_skipped)
         StepUiStatus.DONE, StepUiStatus.RUNNING -> null
     }
     val onSurface = MaterialTheme.colorScheme.onSurface

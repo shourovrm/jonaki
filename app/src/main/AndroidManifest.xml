@@ -6,6 +6,13 @@
     <!-- Keeps an agent run alive when the user leaves the app (D-005, plan M1 step 4). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- The composer's own photo gallery, asked for the first time Photos is tapped (D-086).
+         Android 14 and later can grant only the photos the user selects. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
         android:name=".JonakiApplication"

@@ -9,10 +9,25 @@ import androidx.core.content.ContextCompat
 import app.jonaki.ToolRegistry
 import app.jonaki.ToolServices
 import app.jonaki.core.agent.AgentLoop
+import app.jonaki.core.agent.ContextBreakdown
+import app.jonaki.core.agent.PromptSkill
+import app.jonaki.core.model.ImagePart
+import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentModelInfo
+import app.jonaki.core.toolapi.SubagentReport
+import app.jonaki.core.toolapi.SubagentTask
+import app.jonaki.core.toolapi.SubagentTypeInfo
 import app.jonaki.core.agent.AgentSettings
 import app.jonaki.core.agent.ApprovalDecision
+import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.agent.ImageMessages
 import app.jonaki.core.agent.MemorySection
+import app.jonaki.core.agent.ParentAnswer
+import app.jonaki.core.agent.ParentAsker
+import app.jonaki.core.agent.ParentQuestion
+import app.jonaki.core.agent.SubagentRunner
+import app.jonaki.core.agent.ToolDefinitions
+import app.jonaki.core.providerapi.ToolDefinition
 import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
@@ -41,6 +56,7 @@ import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
 import app.jonaki.settings.AppSettings
+import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
@@ -52,6 +68,7 @@ import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import java.time.ZonedDateTime
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -81,6 +98,8 @@ class AgentRunner(
     private val threadCompactor: ThreadCompactor,
     private val skillLibrary: SkillLibrary,
     private val fileDestinations: FileDestinations,
+    /** Answers subagents' ask_parent and saves their model calls' usage (M7). */
+    private val backgroundModel: BackgroundModel,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -90,8 +109,9 @@ class AgentRunner(
     private val running = MutableStateFlow<Set<String>>(emptySet())
     val runningThreadIds: StateFlow<Set<String>> = running.asStateFlow()
 
-    private val approvals = MutableStateFlow<Map<String, PendingApproval>>(emptyMap())
-    val pendingApprovals: StateFlow<Map<String, PendingApproval>> = approvals.asStateFlow()
+    /** Cards waiting per thread, oldest first; parallel subagents can ask at the same time (M7). */
+    private val approvals = MutableStateFlow<Map<String, List<PendingApproval>>>(emptyMap())
+    val pendingApprovals: StateFlow<Map<String, List<PendingApproval>>> = approvals.asStateFlow()
 
     private val stepCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
 
@@ -99,6 +119,13 @@ class AgentRunner(
     val runStepCounts: StateFlow<Map<String, Int>> = stepCounts.asStateFlow()
 
     private val promptBuilder = PromptBuilder(SystemPrompt.BASE)
+
+    /**
+     * Each running thread's own approval mode name, "" when it follows
+     * Settings. The broker reads it before every tool call, so a mode picked
+     * in the chat during a run applies from the next call (D-058).
+     */
+    private val threadApprovalModes = ConcurrentHashMap<String, String>()
 
     /** Creates a thread and returns its id. */
     suspend fun createThread(): String {
@@ -155,6 +182,9 @@ class AgentRunner(
         val removed = rows.filter { row -> row.position >= edited.position }
         val toolCallIds = removed.flatMap { row -> HistoryMapper.toolCallsFromJson(row.toolCallsJson) }.map { call -> call.id }
         if (toolCallIds.isNotEmpty()) {
+            // Subagents' steps first: the query finds them through their subagent rows.
+            database.stepDao().deleteOfSubagentsUnder(toolCallIds)
+            database.subagentDao().deleteUnder(toolCallIds)
             database.stepDao().deleteAll(toolCallIds)
         }
         database.compactionDao().deleteCoveringFrom(threadId, edited.position)
@@ -187,6 +217,19 @@ class AgentRunner(
     suspend fun setThreadThinking(threadId: String, level: ThinkingLevel?) {
         database.threadDao().setThinkingLevel(threadId, level?.name)
     }
+
+    /** A thread's own approval mode; null follows the default in Settings (D-058). */
+    suspend fun setThreadApprovalMode(threadId: String, mode: ApprovalMode?) {
+        database.threadDao().setApprovalMode(threadId, mode?.name)
+        threadApprovalModes[threadId] = mode?.name.orEmpty()
+    }
+
+    /** The mode a thread's tools ask with: its own, else the default from Settings. */
+    fun approvalModeFor(thread: ThreadEntity?): ApprovalMode =
+        ApprovalModes.effective(thread?.approvalMode, settings.snapshot.value.defaultApprovalMode)
+
+    private fun currentApprovalMode(threadId: String): ApprovalMode =
+        ApprovalModes.effective(threadApprovalModes[threadId], settings.snapshot.value.defaultApprovalMode)
 
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean) {
         database.threadDao().setWebSearchEnabled(threadId, enabled)
@@ -235,10 +278,22 @@ class AgentRunner(
         }
     }
 
-    fun answerApproval(threadId: String, decision: ApprovalDecision) {
-        val pending = approvals.value[threadId] ?: return
-        approvals.update { current -> current - threadId }
+    /** [approvalId] is the waiting call's id, which the card carries. */
+    fun answerApproval(threadId: String, approvalId: String, decision: ApprovalDecision) {
+        val pending = approvals.value[threadId].orEmpty().firstOrNull { card -> card.toolCall.id == approvalId } ?: return
+        withdrawApproval(pending)
         pending.answer.complete(decision)
+    }
+
+    private fun addApproval(pending: PendingApproval) {
+        approvals.update { current -> current + (pending.threadId to current[pending.threadId].orEmpty() + pending) }
+    }
+
+    private fun withdrawApproval(pending: PendingApproval) {
+        approvals.update { current ->
+            val remaining = current[pending.threadId].orEmpty() - pending
+            if (remaining.isEmpty()) current - pending.threadId else current + (pending.threadId to remaining)
+        }
     }
 
     private fun startRun(threadId: String, beforeRun: suspend () -> Unit) {
@@ -313,7 +368,8 @@ class AgentRunner(
             threadId = threadId,
             database = database,
             clock = System::currentTimeMillis,
-            onApprovalNeeded = { pending -> approvals.update { current -> current + (threadId to pending) } },
+            onApprovalNeeded = ::addApproval,
+            onApprovalWithdrawn = ::withdrawApproval,
             onStepStarted = {
                 stepCounts.update { current -> current + (threadId to (current[threadId] ?: 0) + 1) }
             },
@@ -329,18 +385,47 @@ class AgentRunner(
         // Unknown models count as not taking images (D-049).
         val modelAcceptsImages = catalog.find(modelKey)?.acceptsImages == true
         val threadFolder = ThreadFolders.create(context, threadId)
-        val tools = ToolRegistry.tools(
-            ToolServices(
-                searchBackends = searchBackends(snapshot.searchOrder),
-                videoSummarizer = videoSummarizer(),
-                webAccessEnabled = thread.webSearchEnabled,
-                memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
-                fileDestinations = fileDestinations,
-                modelAcceptsImages = modelAcceptsImages,
-            ),
-        )
+        val toolServices = toolServicesFor(thread, modelAcceptsImages)
+        val threadTools = ToolRegistry.tools(toolServices)
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
-        val permissionBroker = PermissionBroker(session, allowedForThread)
+        threadApprovalModes[threadId] = thread.approvalMode.orEmpty()
+        val permissionBroker = PermissionBroker(session, allowedForThread, approvalMode = { currentApprovalMode(threadId) })
+        val memorySection = memorySectionFor(threadId)
+        val skillSection = skillSectionFor(thread)
+        val imageCache = ThreadFolders.imageCache(context, threadId)
+        val threadImageMessages = ImageMessages(ModelImageLoader(threadFolder, imageCache), modelAcceptsImages)
+        val thinkingLevel = ThinkingLevels.effective(
+            threadLevel = thread.thinkingLevel,
+            modelLevel = snapshot.thinkingLevels[modelKey],
+            isSupported = ThinkingSupport.isSupported(modelKey, catalog.find(modelKey)),
+        )
+        // The subagents are built before the request they ask through; the asker reads it only when a question comes.
+        var parentRequest = ParentRequest(systemPrompt = "", tools = emptyList(), thinkingLevel, threadImageMessages)
+        val subagents = SubagentRunner(
+            // As a vision model sees them: each subagent keeps view_image only if its own model takes images.
+            threadTools = ToolRegistry.tools(toolServices.copy(modelAcceptsImages = true)),
+            broker = permissionBroker,
+            subagentModels = AppSubagentModels(
+                snapshot = snapshot,
+                catalog = catalog,
+                threadModelKey = modelKey,
+                backgroundModelKey = backgroundModel.modelFor(modelKey),
+                providerFor = ::subagentProvider,
+                imageMessagesFor = { acceptsImages -> ImageMessages(ModelImageLoader(threadFolder, imageCache), acceptsImages) },
+            ),
+            recorder = SubagentSession(threadId, database, System::currentTimeMillis) { usageModelKey, usage, cost ->
+                backgroundModel.saveUsage(threadId, usageModelKey, usage, cost)
+            },
+            parentAsker = ParentAsker { question, agentLabel, delegateToolCallId ->
+                answerParentQuestion(threadId, modelKey, parentRequest, question, agentLabel, delegateToolCallId)
+            },
+            memorySection = memorySection,
+            skillSection = skillSection,
+            now = ZonedDateTime::now,
+        )
+        val tools = threadTools + ToolRegistry.delegateTools(subagents, toolServices.enabledGroups)
+        val systemPrompt = promptBuilder.systemPrompt(activeTools = tools, memorySection = memorySection, skillSection = skillSection)
+        parentRequest = parentRequest.copy(systemPrompt = systemPrompt, tools = ToolDefinitions.of(tools))
         val loop = AgentLoop(
             provider = provider,
             tools = tools,
@@ -349,21 +434,10 @@ class AgentRunner(
             recorder = session,
             settings = AgentSettings(
                 model = ModelKey.modelOf(modelKey),
-                thinkingLevel = ThinkingLevels.effective(
-                    threadLevel = thread.thinkingLevel,
-                    modelLevel = snapshot.thinkingLevels[modelKey],
-                    isSupported = ThinkingSupport.isSupported(modelKey, catalog.find(modelKey)),
-                ),
-                systemPrompt = promptBuilder.systemPrompt(
-                    activeTools = tools,
-                    memorySection = memorySectionFor(threadId),
-                    skillSection = skillSectionFor(thread),
-                ),
+                thinkingLevel = thinkingLevel,
+                systemPrompt = systemPrompt,
             ),
-            imageMessages = ImageMessages(
-                ModelImageLoader(threadFolder, ThreadFolders.imageCache(context, threadId)),
-                modelAcceptsImages,
-            ),
+            imageMessages = threadImageMessages,
         )
         val summary = database.compactionDao().latestForThread(threadId)
         val history = CompactionPlan.historyAfter(
@@ -378,14 +452,127 @@ class AgentRunner(
         }
     }
 
+    /** What the thread's own requests in this run send besides messages; ask_parent repeats it (D-063). */
+    private data class ParentRequest(
+        val systemPrompt: String,
+        val tools: List<ToolDefinition>,
+        val thinkingLevel: ThinkingLevel?,
+        val imageMessages: ImageMessages,
+    )
+
+    /** What the thread's tools need, from the user's keys and the thread's switches. */
+    private fun toolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices = ToolServices(
+        searchBackends = searchBackends(settings.snapshot.value.searchOrder),
+        videoSummarizer = videoSummarizer(),
+        webAccessEnabled = thread.webSearchEnabled,
+        memoryStore = RoomMemoryStore(database, thread.id, System::currentTimeMillis),
+        fileDestinations = fileDestinations,
+        modelAcceptsImages = modelAcceptsImages,
+        codeRuntimes = CodeRuntimes.forApp(context),
+        enabledGroups = settings.snapshot.value.enabledToolGroups,
+    )
+
+    /**
+     * The pieces the thread's next request would send, for the context
+     * sheet (D-081): the same tools, sections and history as [runOnce]
+     * builds, without its side effects. Null for a thread not yet created.
+     */
+    suspend fun contextBreakdown(threadId: String): ContextBreakdown? {
+        val thread = database.threadDao().find(threadId) ?: return null
+        val modelKey = modelKeyFor(thread)
+        val modelAcceptsImages = modelKey?.let { key -> catalog.find(key)?.acceptsImages } == true
+        val toolServices = toolServicesFor(thread, modelAcceptsImages)
+        val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents, toolServices.enabledGroups)
+        val memory = MemorySection.build(promptFactsOf(threadId))
+        val skills = enabledSkillsOf(thread)
+        val rows = database.messageDao().listThread(threadId)
+        val summary = database.compactionDao().latestForThread(threadId)
+        val history = CompactionPlan.historyAfter(rows, summary?.summaryText, summary?.upToPosition)
+        // Images are counted, not loaded: a placeholder stands for each one the request would carry.
+        val withImages = ImageMessages({ ImagePart("image/jpeg", "") }, modelAcceptsImages).prepare(history)
+        return ContextBreakdown(
+            basePrompt = SystemPrompt.BASE,
+            tools = tools,
+            skillSection = SkillSection.build(skills),
+            skillCount = skills.size,
+            memorySection = memory.text,
+            factCount = memory.includedIds.size,
+            messages = withImages,
+            summaryBlock = summary?.let { compaction -> CompactionPlan.summaryBlock(compaction.summaryText) },
+            summaryCoversMessages = summary?.let { compaction -> CompactionPlan.coveredMessageCount(rows, compaction.upToPosition) } ?: 0,
+        )
+    }
+
+    /** Stands in for the subagent runner where only the delegate tool's prompt text is needed. */
+    private object PromptOnlySubagents : SubagentLauncher {
+        override val agentTypes: List<SubagentTypeInfo> = SubagentRunner.AGENT_TYPES
+        override val models: List<SubagentModelInfo> = emptyList()
+        override val extraToolNames: List<String> = emptyList()
+
+        override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> =
+            error("PromptOnlySubagents never runs subagents")
+    }
+
+    /**
+     * A subagent's ask_parent (D-063): one call on the thread's model with
+     * the thread's conversation up to the delegate call, and the same system
+     * prompt, tool list (not callable), thinking level and images as the
+     * thread's requests, so the provider can serve the prefix from its
+     * prompt cache. Its cost counts to the thread and to the asking subagent.
+     */
+    private suspend fun answerParentQuestion(
+        threadId: String,
+        modelKey: String,
+        parentRequest: ParentRequest,
+        question: String,
+        agentLabel: String,
+        delegateToolCallId: String,
+    ): ParentAnswer {
+        val summary = database.compactionDao().latestForThread(threadId)
+        val history = CompactionPlan.historyAfter(
+            rows = database.messageDao().listThread(threadId),
+            summaryText = summary?.summaryText,
+            upToPosition = summary?.upToPosition,
+        )
+        val conversation = ParentQuestion.conversation(history, delegateToolCallId, agentLabel, question)
+        val answer = backgroundModel.completeOn(
+            threadId = threadId,
+            modelKey = modelKey,
+            systemPrompt = parentRequest.systemPrompt,
+            messages = parentRequest.imageMessages.prepare(conversation),
+            maxOutputTokens = PARENT_ANSWER_TOKENS,
+            tools = parentRequest.tools,
+            thinkingLevel = parentRequest.thinkingLevel,
+        )
+        return when (answer) {
+            is BackgroundAnswer.Success -> ParentAnswer.Answered(answer.text.trim(), answer.costUsd)
+            is BackgroundAnswer.Failed -> ParentAnswer.Failed(answer.message, answer.costUsd)
+        }
+    }
+
+    /** A provider for a subagent's model; null when its service has no saved key. */
+    private fun subagentProvider(modelKey: String): ChatProvider? {
+        val service = ChatService.byKey(ModelKey.serviceOf(modelKey)) ?: return null
+        val routing = settings.snapshot.value.routing.effectiveFor(modelKey)
+        return chatProvider(service, routing, onRoutingFallback = {})
+    }
+
     /**
      * Global and thread facts for the system prompt, built once per run so
      * the prompt stays the same for every request of the run (D-005). Facts
      * the memory tool saves during the run reach the next run.
      */
     private suspend fun memorySectionFor(threadId: String): String {
-        val memoryDao = database.memoryDao()
-        val facts = memoryDao.listVisibleFrom(threadId).map { memory ->
+        val section = MemorySection.build(promptFactsOf(threadId))
+        if (section.includedIds.isNotEmpty()) {
+            // Safe for the cache: the section is chosen by use time but written in id order (D-035).
+            database.memoryDao().markUsed(section.includedIds, System.currentTimeMillis())
+        }
+        return section.text
+    }
+
+    private suspend fun promptFactsOf(threadId: String): List<PromptFact> =
+        database.memoryDao().listVisibleFrom(threadId).map { memory ->
             PromptFact(
                 id = memory.id,
                 text = memory.text,
@@ -394,22 +581,17 @@ class AgentRunner(
                 lastUsedAtMillis = memory.lastUsedAtMillis,
             )
         }
-        val section = MemorySection.build(facts)
-        if (section.includedIds.isNotEmpty()) {
-            // Safe for the cache: the section is chosen by use time but written in id order (D-035).
-            memoryDao.markUsed(section.includedIds, System.currentTimeMillis())
-        }
-        return section.text
-    }
 
     /**
      * The thread's enabled skills, read from the library once per run, so
      * the prompt stays the same for every request of the run (D-005). A
      * skill edited or imported during a run reaches the next run.
      */
-    private suspend fun skillSectionFor(thread: ThreadEntity): String {
+    private suspend fun skillSectionFor(thread: ThreadEntity): String = SkillSection.build(enabledSkillsOf(thread))
+
+    private suspend fun enabledSkillsOf(thread: ThreadEntity): List<PromptSkill> {
         val entries = withContext(Dispatchers.IO) { skillLibrary.list() }
-        return SkillSection.build(ThreadSkills.forPrompt(entries, thread.disabledSkills))
+        return ThreadSkills.forPrompt(entries, thread.disabledSkills)
     }
 
     /** Switches one skill on or off for one thread; the next run's prompt follows (D-040). */
@@ -476,6 +658,9 @@ class AgentRunner(
 
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
+
+        /** A parent's answer to a subagent is a few sentences. */
+        const val PARENT_ANSWER_TOKENS = 1_000
         const val NO_MODEL_ERROR = "No model. Add one in Settings."
     }
 }

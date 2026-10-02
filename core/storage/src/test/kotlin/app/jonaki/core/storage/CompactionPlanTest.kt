@@ -52,6 +52,18 @@ class CompactionPlanTest {
     }
 
     @Test
+    fun theThresholdIsSeventyPercentOfTheWindow() {
+        assertEquals(70_000, CompactionPlan.thresholdTokens(100_000))
+        assertEquals(89_600, CompactionPlan.thresholdTokens(null))
+    }
+
+    @Test
+    fun theSummaryCoversTheShownMessagesUpToItsCut() {
+        // U0 A1 U2 A3(call) T4 A5: five user and assistant rows, the tool result is not one.
+        assertEquals(5, CompactionPlan.coveredMessageCount(fourTurns(), upToPosition = 5))
+    }
+
+    @Test
     fun theLastTwoUserTurnsStayWordForWord() {
         // Turns starting at U6 and U8 are kept, so U0 to A5 are summarised.
         assertEquals(5L, CompactionPlan.cutPosition(fourTurns(), afterPosition = null))

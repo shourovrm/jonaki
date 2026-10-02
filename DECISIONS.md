@@ -90,6 +90,15 @@ Whether the key is on the free tier is not visible in the response.
 Downloaded with checksum check; micropip packages; first-run tool picker,
 Settings install and remove, just-in-time install card. Rejected: Chaquopy
 bundled (+25–40 MB, fixed packages, reaches app secrets).
+Outcome (2026-10-03, spike S-2 on the A059, WebView 153): passed. Pyodide
+314.0.7 installed over Wi-Fi in 8.4 s (core, 13,532,188 bytes) plus 10.4 s
+(numpy, pandas, python-dateutil, pytz, six: 7,889,748 bytes); 21.4 MB on
+disk. With airplane mode on, run_code read inbox/sales.csv with pandas and
+saved work/summary.csv: 8.7 s from a cold app process, 3.2 to 3.7 s for a
+program without packages. The WebView renderer held 261 MB PSS while
+pandas worked on a 200,000-row frame; the app process 116 to 129 MB.
+Checking the core hashes before a run takes 13 ms. Moved to the
+background by Home, the same run took 36.3 s (see D-070).
 
 ## D-014 · 2026-10-02 · 16 tools, pi token patterns — accepted
 read_file, write_file, edit_file, find_files, search_files, share_file,
@@ -182,6 +191,7 @@ any failure, not only quota errors (Tavily 429/432/433, Ollama and Exa
 web_fetch. Why: found while building M2 and M3 (workers A and B).
 Outcome (device test, 2026-10-02): search, fetch, approval, Stop, killed app
 and YouTube (Gemini 503 then retry) all behaved as described.
+Amended by D-080: read-only calls of one turn now run side by side.
 
 ## D-027 · 2026-10-02 · Cost display and scoped models — accepted
 A status strip above the message field: model (tap to switch among scoped
@@ -591,3 +601,396 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-058 · 2026-10-03 · Approval modes Ask, Auto and Bypass — proposed
+Three modes decide which tool calls show an approval card. Ask: every
+`CHANGES` and `CHANGES_THREAD_FOLDER` call (the behaviour before). Auto:
+`CHANGES_THREAD_FOLDER` (write_file, edit_file) runs, `CHANGES` (share_file,
+later phone, schedule, MCP) still asks. Bypass: nothing asks, also not a
+subagent's request. `READ_ONLY` and `CHANGES_APP_DATA` never ask, and
+"Allow in thread" allowances still apply. Settings > Approvals holds the
+default (Ask for new installs); the chat's ⋮ > Approvals sets one thread's
+own mode (Default, Ask, Auto, Bypass), stored as the nullable
+`threads.approvalMode` (null follows Settings; Room version 7). The broker
+reads the mode before every call, so a change during a run applies from the
+next call. The status strip shows a red "Bypass" pill while a thread's mode
+is Bypass. Why: user ruling (2026-10-03). Outcome: pending.
+
+## D-059 · 2026-10-03 · Four built-in subagent types — proposed
+Version 1 has four types and no custom ones. researcher: web_search,
+web_fetch, youtube_summarize, read_file, find_files, search_files,
+read_document, view_image; answers with Summary, numbered Findings with
+source links, Gaps. scout: find_files, search_files, read_file,
+read_document, web_search; answers compressed (Found, Where with exact
+paths or links, Start here). writer: the read tools plus write_file,
+edit_file, artifact. worker: every thread tool. Writer and worker end with
+"Files written or changed" and "Blockers", and only they see the skill list.
+Each gets only the tools the thread has; no subagent gets delegate (no
+nesting) or memory (it reads the memory section, and reports new facts in
+its answer). view_image follows the subagent's own model, so a text-only
+thread can hand an image to a vision model. Every subagent also has
+request_tool and ask_parent, and notes when one call starts several. Its
+system prompt is built once from its starting tools (D-005); a tool granted
+later joins only the request's tool list. Why: user rulings (2026-10-03),
+adapted from the user's pi agents. Outcome: pending.
+
+## D-060 · 2026-10-03 · delegate tool — proposed
+`tools/delegate` depends only on `core/tool-api`, whose `SubagentLauncher`
+interface core/agent's `SubagentRunner` implements. Arguments: agent, task,
+extra_tools, model, or tasks[] (at most 3, set by the user on
+2026-10-03, run in parallel; nesting stays forbidden; each
+subagent's calls run one after another). No parent conversation is passed.
+model names one of the user's scoped models by key, id or name; an unknown
+one returns an error that lists them. Each answer comes back capped at
+16 KB (16,384 characters, user ruling 2026-10-03); a longer one is saved
+whole to `work/delegations/<folder>/<agent>-<n>.md` and the result names
+the read_file call that continues it; if saving fails, the answer is cut
+at 16 KB with a note. The notes board of a call is
+`work/delegations/<folder>/notes.md`. The folder is 12 hex characters of
+the call id's SHA-256 (Gemini 3 call ids carry the thought signature and
+exceed the 255-byte name limit; a blank id gets a fresh one). Subagents
+run in a supervisor scope: one that crashes is recorded as Failed and the
+others go on; its end is saved even during Stop. Time limit 11 minutes, one more than
+a subagent's own, so a subagent at its limit still returns its work. Stop
+cancels every subagent. Declared read-only: the subagents' own calls go
+through the broker. Guidelines tell the model to delegate reasoning-heavy
+work, not single searches, and that subagents have no context. The
+working line says "Subagents working…". Outcome: pending.
+
+## D-061 · 2026-10-03 · Subagent budgets — proposed
+A subagent has 10 tool steps (every call counts, request_tool and notes
+too), $0.10 of model cost (the calls' actual costs, reported by the
+service or priced from the catalog, plus its ask_parent answers; a call
+with no known cost adds nothing, so a model with neither has only the step
+limit; the prompt names the cost limit when the catalog has a price or the
+service is OpenRouter) and 10 minutes. A failed model call is retried once
+per turn after 2 s. At the step limit it gets one last request without tools and
+answers; calls beyond the limit in the same turn get a "Not run" result.
+At the cost limit, the time limit, a failed model call (after one retry
+after 2 s) or Stop, it returns its texts so far and its last three tool
+results, cut to 3,000 characters each. The result names the limit that
+stopped it. Why: brief from the lead (2026-10-03). Outcome: pending.
+
+## D-062 · 2026-10-03 · request_tool and the 3-minute rule — proposed
+request_tool(name, reason) and a subagent's own calls go through
+`SubagentGate` with the thread's approval mode (D-058): read-only tools,
+"Allow in thread" allowances and Bypass need no card. Otherwise a card
+names the subagent, the tool and the reason, with Allow once, Allow for
+this task, Deny. For a thread-folder tool (write_file, edit_file), Allow
+once on a request covers its next call and Allow for this task all of
+them. A tool that leaves the app (share_file) is only added: every call
+still shows its own card with its arguments, as the mode asks, so a
+subagent misled by a web page cannot send a file out under a grant given
+for a stated reason. A card unanswered for 3 minutes is withdrawn and
+counts as skipped; an answer that lands as the time runs out still counts: the
+model is told to go on with the other parts or stop, and the result lists
+every skipped part. The thread's own agent waits without limit. Tested
+with a hand-made virtual clock (`WaitTimer`, first named `ApprovalTimer`), because
+kotlinx-coroutines-test would be a new dependency. Outcome: pending.
+
+## D-063 · 2026-10-03 · ask_parent — proposed
+ask_parent(question), at most two per subagent, is answered by one call
+on the thread's model with the thread's system prompt, tool list (sent
+with tool_choice "none", Gemini mode NONE, new `ChatRequest.toolsCallable`),
+thinking level and images, and its history up to, not including, the turn
+that called delegate (that turn's calls have no results yet), then the
+question as a user message; at most 1,000 output tokens, through
+`BackgroundModel.completeOn`. So the request starts with the same bytes as
+the one that produced the delegate call and the provider's prompt cache
+can serve them. Its usage is a BACKGROUND row, so it counts to the thread;
+its cost also counts against the asking subagent's $0.10 and shows on its
+card. Outcome: pending.
+
+## D-064 · 2026-10-03 · Subagents in the database — proposed
+Room version 7 (one AutoMigration from 6, with D-058's column) adds the
+`subagents` table (thread, delegate call id, order, type, task, model,
+status, answer, latest text, cost, times; deleted with its thread) and the
+nullable `steps.subagentId`. A subagent's steps are saved as they happen
+under "<subagent id>/<call id>", so ids from two providers cannot clash;
+its model calls are BACKGROUND rows with their cost, so thread, month and
+usage-sheet totals include them, and the run's cost line adds them. Edit
+and resend (D-056) deletes the subagents of removed delegate calls; a
+killed app marks running subagents stopped. Outcome: pending.
+
+## D-065 · 2026-10-03 · Model per subagent type — proposed
+Settings > Subagent models picks a model per type from the scoped models.
+Default: the thread's model; for the scout the background model (D-036),
+which is the thread's model when no priced model has a key. A model named
+in the delegate call wins; a setting whose model is no longer scoped is
+ignored. A subagent uses its model's own thinking level, not the
+thread's. Stored as settings.subagent_models. Outcome: pending.
+
+## D-066 · 2026-10-03 · Subagent cards in the chat — proposed
+Under the run that called delegate, one card per subagent: a dot, its
+name ("Researcher 2"), status (Working, Done, Out of steps, Over budget,
+Timed out, Failed, Stopped; a step whose card went unanswered shows "No
+answer"), step count and cost, then its task and the first
+line of the latest text it wrote, each on one line. Tapped, it shows the
+whole task, its steps as a track and its answer. Its approval cards read
+"Researcher 2 asks for share_file" with the reason, and Allow once, Allow
+for task, Deny. Several cards can wait at once. Strings reviewed by an
+Opus subagent (6 of 36 changed). Artifacts a subagent
+shows get "Open" cards like the thread agent's. Outcome: pending.
+
+## D-067 · 2026-10-03 · run_code: files in by name, results out from work/ and artifacts/ — proposed
+run_code takes language (javascript or python), code and files (thread
+paths or folders; a list, one path, or a list written as text). The
+program sees exactly those files at the same paths (inbox/sales.csv).
+Afterwards only new or changed files under work/ and artifacts/ are saved;
+anything else the program changed, inbox/ included, is dropped and named
+as "Not saved". This is stricter than write_file, which may write anywhere
+in the thread folder. Limits: 25 MB per file and 50 MB per run each way
+(as D-046), 120 s for the program, 180 s for the tool including Python's
+start, output cut to 20,000 characters through OutputLimiter.
+requiredCapabilities stays empty because only some calls need Python; a
+missing Python is reported per call. Engines come through the
+constructor from core/runtime-api (`CodeRuntime`), one module per engine
+under runtimes/. Why: plan M8 steps 1 and 2, user ruling of 2026-10-03.
+Outcome: pending.
+
+## D-068 · 2026-10-03 · JavaScript through androidx.javascriptengine 1.1.1 — proposed
+runtimes/javascript runs programs in JavaScriptSandbox (V8 in Android
+System WebView's isolated process: no network, no files, no Android API).
+A fresh sandbox and isolate per run, one run at a time per app (the API
+allows one connection), heap 256 MB where the WebView supports the limit.
+The program gets console.log and a files object (read, write, list; text
+only, so binary files are refused with a hint to use Python); the last
+expression's value is the result, and top-level await works. A run past
+the time limit is stopped by closing the isolate. Phones whose WebView
+lacks the sandbox or promise results get "Android System WebView on this
+phone is too old". Adds Guava (shrunk by R8): release APK 5,954,755 to
+5,972,819 bytes. Why: user ruling of 2026-10-03 (new dependency approved).
+Rejected: QuickJS (named in the plan; native code to ship). Outcome: on
+the A059 (WebView 153) a CSV total ran in 155 ms end to end, await worked,
+and an endless loop was stopped at 120.3 s.
+
+## D-069 · 2026-10-03 · Pyodide 314.0.7 pinned, downloaded from jsDelivr — proposed
+runtimes/pyodide downloads Pyodide 314.0.7 (Python 3.14.2; the latest
+stable release on 2026-10-03, npm dist-tag latest) from
+https://cdn.jsdelivr.net/pyodide/v314.0.7/full/ into files/pyodide/314.0.7/.
+The five core files (pyodide.js, pyodide.asm.mjs, pyodide.asm.wasm,
+python_stdlib.zip, pyodide-lock.json; 13,532,188 bytes) have their SHA-256
+pinned in PyodideRelease.kt; each download is hashed while it streams and
+kept only on a match, and the core is hashed again before every run.
+Packages come from the same CDN, checked against the sha256 in the pinned
+lock file, with their dependencies from it; Pyodide checks them again as
+it loads. The data add-on is numpy and pandas (7,889,748 bytes with
+python-dateutil, pytz and six). Only plain file names ending in .whl, .zip,
+.tar, .tar.gz or .tgz are downloaded, so no .so or .dex file is ever
+fetched; wheels hold WebAssembly modules that run only inside the WebView.
+How the hashes were checked: the CDN files, the npm package
+pyodide@314.0.7 (tarball sha512 equal to the registry's integrity
+"sha512-0YvXxEhf…lD2R1A==") and the GitHub release archive
+pyodide-core-314.0.7.tar.bz2 gave the same SHA-256 for all five files; the
+six wheels matched the lock file. Installed state is read from the files,
+no database row (no Room change). Packages outside the lock file (PyPI
+through micropip) are not supported yet. Why: user ruling of 2026-10-03.
+Outcome: see D-013.
+
+## D-070 · 2026-10-03 · Python runs offline in a hidden WebView worker — proposed
+Each Python run gets a new WebView, made on the main thread with the
+application context and destroyed afterwards. Its page (harness.html) and
+Python worker come from the module's resources on a made-up host,
+https://python.jonaki/. Three walls keep programs offline: the request
+filter answers only the harness, the installed Pyodide files and the run's
+input files (403 for everything else); every response carries a
+Content-Security-Policy with connect-src 'self'; and Python runs in a
+dedicated worker, which has no DOM, frames, WebRTC or sendBeacon, nor the
+page's JonakiBridge. Checked on the A059: fetch, XHR, pyfetch and a
+WebSocket to the internet all failed. The program's folder is /thread
+with inbox/, work/ and artifacts/; given files appear at their thread
+paths; all new or changed files go back to the app, which applies D-067.
+The 120 s limit starts when the program starts (Python's start and
+package loading get 45 s of their own); past it the worker is terminated
+and the WebView destroyed. A renderer crash is reported, not fatal.
+Known gap: with the activity in the background the run was 4x slower
+(36.3 s against 8.7 s); runs from the foreground service were not
+measured. Why: user ruling of 2026-10-03. Outcome: pending.
+
+## D-080 · 2026-10-03 · Parallel read-only tool calls — proposed
+Amends D-026 (user approved 2026-10-03): of the tool calls in one model
+turn, consecutive READ_ONLY calls run side by side, at most 4 at once. Any
+other call (CHANGES, CHANGES_THREAD_FOLDER, CHANGES_APP_DATA, an unknown
+tool, arguments that are not a JSON object, and delegate and request_tool,
+which are declared read-only but can show cards) runs alone in its place:
+earlier calls finish first, later ones wait, so approval cards still come
+one at a time. Example: read, read, write, read, read runs as two reads
+together, the write, then two reads together. web_search calls of one
+group start 0.5 s apart (user's request, for rate limits), so three start
+at 0, 0.5 and 1.0 s and overlap. Results go to the model, and their TOOL
+rows get positions, in call order; a finished call's result is saved once
+every earlier call has finished, so its step card can show Running a
+little longer. The step budget still counts model turns. Stop cancels
+every running call; started ones show Stopped. Subagents follow the same
+rule with their per-call step count, fixed before the calls start (this
+changes D-060's "each subagent's calls run one after another"). The run's
+folded line counts overlapping steps' time once. Code:
+`ToolCallScheduler` in core/agent; tests in `ParallelToolCallsTest`.
+Outcome: pending (not checked on a device).
+
+## D-081 · 2026-10-03 · Context sheet on the ring pill — proposed
+Tapping the context ring in the status strip opens a sheet like Claude
+Code's /context (user request, 2026-10-03): percent used, "N of M tokens",
+a bar, then one row per part with tokens and percent of the window: System
+prompt, Tool definitions (prompt lines, guidelines and schemas, with the
+tool count), Skills (count), Memory (fact count), Summary of older
+messages (with the messages it covers), Messages, Tool results, Images,
+Free; then "Older messages are summarised at 70 % (N tokens)", from
+`CompactionPlan.thresholdTokens`, the compactor's own check. The total is
+the input count the service reported for the latest request, which the
+ring already shows; the split is an estimate: each part is measured in
+characters (4 per token; 1,500 tokens per image, as images are shrunk to
+1,568 pixels) from the pieces the next request would send (the runner's
+tools, sections and history after compaction, without marking memory as
+used), then scaled to that total. Before the first request everything is
+estimated and the sheet says so. No token counter exists in the
+repository, so none was reused. Code: `ContextBreakdown` (core/agent, JVM
+tests), `AgentRunner.contextBreakdown`, `ContextSheet`. Limit: the parts
+describe the next request, the total the last one, so they differ by the
+last answer and any compaction since. Outcome: pending (not checked on a
+device).
+
+## D-085 · 2026-10-03 · One + button and an in-app photo gallery — proposed
+The composer's paper clip and camera button (D-042, D-053) become one "+"
+at the bottom left, as in ChatGPT. It opens a sheet with three tiles:
+Camera (as D-053), Photos, Files (the system document picker, as D-042).
+Photos opens Jonaki's gallery sheet in the new module `feature/gallery`:
+Recent, a grid of the newest images (MediaStore, newest added first, pages
+of 120 loaded as the grid scrolls), and Collections, the MediaStore
+buckets with their newest image as cover and a count on a line of its own;
+an album opens in the same grid with a back arrow. Taps pick several
+images across both tabs with numbered marks; "Add N" copies them through
+IncomingShares into chips, so the 25 MB cap and naming of D-046 and the
+send path of D-049 are unchanged. Thumbnails: ContentResolver.loadThumbnail
+on Android 10 and later, a power-of-two decode (ImageScale.sampleSize)
+turned by MediaStore's orientation on 8 and 9, four loads at a time on the
+IO dispatcher, an LruCache of at most 32 MB. The MediaStore queries sit
+behind the `PhotoLibrary` interface (`MediaStorePhotoLibrary` in the app).
+No image library. Release APK 6,018,647 → 6,056,863 bytes (measured
+2026-10-03). Why: user request of 2026-10-03. Rejected: Coil (a new
+dependency); a separate Photos button (the composer had two buttons
+already). Limits: the selection is lost on rotation; previews at 360 dp
+and font scale 1.3 exist in GalleryPreviews.kt but were not rendered (no
+emulator). Outcome: pending.
+
+## D-086 · 2026-10-03 · Photo permission, asked once, with the system picker as fallback — proposed
+New permissions, approved by the user on 2026-10-03: READ_MEDIA_IMAGES and
+READ_MEDIA_VISUAL_USER_SELECTED (Android 13 and later), READ_EXTERNAL_STORAGE
+with maxSdkVersion 32 (checked with aapt2 on the release APK). Jonaki asks
+the first time Photos is tapped, never at start. Android 14 "Select
+photos" opens the gallery with only those photos and a note "Only photos
+you allowed" with Select more (asks again, so Android offers its picker)
+and Settings (Jonaki's page in system settings). Any
+answer that gives no access, a dismissed dialog included, counts as a
+refusal: Jonaki stores it (preferences `photo_access`), never asks again,
+and every Photos tap opens the system photo picker
+(PickMultipleVisualMedia, images only), which needs no permission, until
+access is granted in system settings; the grant is read again on every
+tap and on return to the app. Why: user request of 2026-10-03; Android's
+guidance for partial access. Rejected: asking again after a refusal
+(Android blocks the dialog after two refusals anyway). Outcome: pending.
+
+## D-090 · 2026-10-03 · Code sheet for run_code steps — proposed
+Tapping a run_code step (in the run track or a subagent card) opens a
+sheet with "Python · 12 lines", a copy button and two tabs. Code: line
+numbers, colours, no wrapping (long lines scroll sideways), and the line
+an error points at marked red. Output: printed text, stderr in amber, the
+result, the error, saved files as links (a page in artifacts/ opens in
+the artifact viewer, anything else in another app through the FileProvider
+of D-044, ACTION_VIEW) and "Not saved" files in grey. The folded step
+reads "Python · 12 lines". Data, without a Room change: the code from the
+step's arguments; the output from the TOOL row of that call (the step
+keeps 2,000 characters), or from OutputLimiter's file when the row was cut
+at 20,000; a subagent's step has no TOOL row, so its 2,000-character
+preview is shown with "Output cut". Printed text over 50,000 characters is
+cut for the screen. `RunCodeReport` (tools/run-code) reads the tool's own
+text back, with the labels shared with RunCodeTool; `ProgramErrorLine`
+reads the line from Pyodide's `File "main.py", line N` and from V8's
+`eval at …, <anonymous>:N:C` frames; the JavaScript runner now keeps the
+program on line 1 when it wraps top-level await. Colours: `CodeColors` in
+core/ui, one set per theme, off the firefly yellow-green (D-024); computed
+contrast at least 5.1:1 on surfaceContainer. The tokenizer is our own
+(`CodeTokenizer`, about 200 lines, JVM tests), no new dependency. Why: user
+request of 2026-10-03. Limits: printed text that itself contains a label
+line ("Result: …" with no result of its own) is read wrongly; JavaScript
+syntax errors name no line; previews at 360 dp and font scale 1.3 exist
+in CodeRunPreviews.kt but were not rendered (no emulator). Outcome:
+pending.
+
+## D-091 · 2026-10-03 · Tool groups and the first-run tool picker — proposed
+Ten rows the user switches (plan M8 step 3, user ruling 2026-10-03): Files
+(read_file, write_file, edit_file, find_files, search_files, read_document,
+view_image; always on, as every other tool works on thread files), Web
+(web_search, web_fetch), YouTube, Memory (the memory tool only; the memory
+section and background extraction stay), Subagents (delegate), Reports
+(artifact), Share (share_file), JavaScript and Python (languages of the one
+run_code tool, whose language enum, prompt line and guidelines name only
+the languages that are on; off for both leaves run_code out), and the data
+add-on (D-092). A switched-off group's tools never reach ToolRegistry's
+list, so they cost no prompt tokens; subagents see the same list. Every
+group starts on; Settings stores the switched-off ones
+(`disabled_tool_groups`), so a group added later starts on too. The
+picker is the new module feature/onboarding; it shows while
+`tool_picker_seen_version` (AppSettings, no Room change) is below
+ToolPicker.CURRENT = 1, so on a new install and once on installs from
+before it, and Continue sets it. The same rows (core/ui ToolGroupList) are
+Settings > Tools. Code: `ToolGroup`, `ToolGroups`, `ToolPicker`
+(app/settings), `ToolGroupRows`; tests ToolGroupsTest, ToolRegistryTest,
+ToolGroupRowsTest. Rejected: a per-thread switch (the Web switch in the
+chat stays and both must be on). Outcome: pending.
+
+## D-092 · 2026-10-03 · Python's two switches — proposed
+Python's switch says whether the model is offered Python; it starts on but
+downloads nothing, and its row shows "13.5 MB download" with a Download
+button. Switching it on from off starts the download at once with
+progress and Cancel, since the size stands beside the switch; switching
+it off keeps the files (Settings > Python removes them). The data
+add-on's switch is its installed state: on downloads numpy and pandas
+(7.9 MB, with Python first when missing), off removes them; it waits for
+Python's switch. Jonaki cannot tell mobile data from Wi-Fi without the
+ACCESS_NETWORK_STATE permission, which needs approval, so nothing
+downloads without the size on screen. Why: user ruling 2026-10-03 (start
+the download with progress, or offer it). Outcome: pending.
+
+## D-093 · 2026-10-03 · Settings > Python — proposed
+Status (Not installed, Installed, Damaged with the file names), "Pyodide
+314.0.7", storage used, Install (13.5 MB) with progress and Cancel,
+Repair (fetches again only files with the wrong SHA-256), Remove with a
+confirmation, the data add-on with Install or Remove, the installed
+packages, and a field to install one more package by name from the lock
+file; another name fails with the installer's "requests is not available
+for Pyodide 314.0.7". `PythonSetup` (app/run) holds the state, runs one
+download at a time in the application scope (leaving the screen does not
+stop it) and reads the state back from the files after every change.
+Removing packages also removes the installed packages that need them,
+and their dependencies no other installed package needs
+(`PyodideFolder.removePackages`). Code tests: PythonSetupTest (15),
+PyodideInstallerTest (3 new). Outcome: pending.
+
+## D-094 · 2026-10-03 · Just-in-time Python install card from the saved step — proposed
+When the last turn's run_code step failed with run_code's NotInstalled or
+MissingPackages text, the chat shows a card after the turn: "Needs Python
+(13.5 MB). Install?" or "Needs pandas (7.9 MB). Install?", with Install
+and Not now; Install shows progress and Cancel, then "Python installed"
+with Try again, which sends "Installed. Try again." (the user can also
+just ask again). The card is read from the step's saved result through
+`InstallNeeds.of` in tools/run-code, the same object that writes the
+error's first sentence, so the model still gets plain text, the result
+row is the only record (no Room change, no runner state) and the card
+survives a restart. Packages within the data add-on install the whole
+add-on with its measured size; others install by name with no size
+shown. Only the last turn gets a card, so it goes once the user writes
+again; Not now hides it until the chat is opened again. The tool's text
+now names "Settings > Python" and the chat's Install button. Code:
+`InstallNeeds`, `PythonCards`, `ChatItems.pythonCardFor`,
+`PythonInstallCard`; tests RunCodeToolTest, PythonCardsTest,
+ChatItemsTest. Rejected: a structured field on ToolOutput (changes
+core/tool-api for one tool); a runner StateFlow (lost on restart).
+Outcome: pending.
+
+## D-095 · 2026-10-03 · Download sizes in decimal megabytes — proposed
+Python's sizes show as decimal megabytes with one decimal (13,532,188
+bytes is "13.5 MB", the add-on "7.9 MB"), as the user wrote them and as
+app stores show downloads; run_code's error text uses the same form.
+IncomingFiles.describeSize keeps binary megabytes for the 25 MB file cap.
+Code: UsageFormat.byteSize. Outcome: pending.

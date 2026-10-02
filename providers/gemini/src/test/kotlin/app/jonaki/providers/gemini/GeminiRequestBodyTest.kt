@@ -111,4 +111,14 @@ class GeminiRequestBodyTest {
         assertEquals(1, parts.size)
         assertEquals("image/png", parts[0].jsonObject["inlineData"]!!.jsonObject["mimeType"]!!.jsonPrimitive.content)
     }
+
+    @Test
+    fun toolsCanBeSentButNotCalled() {
+        val tool = ToolDefinition("web_search", "search", JsonObject(emptyMap()))
+        val body = GeminiRequestBody.build(request.copy(tools = listOf(tool), toolsCallable = false))
+
+        assertEquals(1, body["tools"]!!.jsonArray.size)
+        assertEquals("NONE", body["toolConfig"]!!.jsonObject["functionCallingConfig"]!!.jsonObject["mode"]!!.jsonPrimitive.content)
+        assertNull(GeminiRequestBody.build(request.copy(tools = listOf(tool)))["toolConfig"])
+    }
 }

@@ -4,6 +4,10 @@ import app.jonaki.core.model.ToolCall
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.StepEntity
+import app.jonaki.core.storage.SubagentEntity
+import app.jonaki.core.agent.SubagentAsk
+import app.jonaki.run.PendingApproval
+import kotlinx.coroutines.CompletableDeferred
 import app.jonaki.feature.chat.ChatItem
 import app.jonaki.feature.chat.WorkingActivity
 import app.jonaki.feature.chat.StepUiStatus
@@ -24,7 +28,7 @@ class ChatItemsTest {
 
     @Test
     fun userTextLosesTheTimeLineAddedForTheModel() {
-        val items = ChatItems.build(listOf(row("u1", "USER", "[Friday 2 October 2026, 21:47 Asia/Dhaka]\nhello")), emptyList(), isRunning = false, pendingApproval = null)
+        val items = ChatItems.build(listOf(row("u1", "USER", "[Friday 2 October 2026, 21:47 Asia/Dhaka]\nhello")), emptyList(), isRunning = false)
 
         assertEquals(ChatItem.UserMessage("u1", "hello"), items.single())
     }
@@ -39,7 +43,7 @@ class ChatItemsTest {
         )
         val steps = listOf(step("c1", "web_search", "DONE", searchCall.argumentsJson, started = 1_000, finished = 3_100))
 
-        val items = ChatItems.build(rows, steps, isRunning = false, pendingApproval = null)
+        val items = ChatItems.build(rows, steps, isRunning = false)
 
         assertEquals(listOf("u1", "run-u1", "a2"), items.map { it.id })
         val run = items[1] as ChatItem.Run
@@ -60,7 +64,7 @@ class ChatItemsTest {
         )
         val steps = listOf(step("c1", "web_search", "DONE", searchCall.argumentsJson))
 
-        val items = ChatItems.build(rows, steps, isRunning = false, pendingApproval = null)
+        val items = ChatItems.build(rows, steps, isRunning = false)
 
         assertEquals(listOf("u1", "run-u1", "a2"), items.map { it.id })
         assertEquals(0.03, (items[1] as ChatItem.Run).costUsd!!, 1e-9)
@@ -76,7 +80,7 @@ class ChatItemsTest {
         )
         val steps = listOf(step("c1", "read_file", "DONE"), step("c2", "read_file", "RUNNING"))
 
-        val runs = ChatItems.build(rows, steps, isRunning = true, pendingApproval = null).filterIsInstance<ChatItem.Run>()
+        val runs = ChatItems.build(rows, steps, isRunning = true).filterIsInstance<ChatItem.Run>()
 
         assertEquals(listOf(false, true), runs.map { it.isActive })
         assertEquals(null, runs[1].steps.single().durationMillis)
@@ -86,7 +90,7 @@ class ChatItemsTest {
     fun streamingAnswerIsMarkedUntilComplete() {
         val rows = listOf(row("u1", "USER", "hi"), row("a1", "ASSISTANT", "Hel", complete = false))
 
-        val answer = ChatItems.build(rows, emptyList(), isRunning = true, pendingApproval = null)
+        val answer = ChatItems.build(rows, emptyList(), isRunning = true)
             .filterIsInstance<ChatItem.AssistantMessage>().single()
 
         assertTrue(answer.isStreaming)
@@ -98,7 +102,7 @@ class ChatItemsTest {
         val rows = listOf(row("u1", "USER", "save"), row("a1", "ASSISTANT", "", calls = listOf(writeCall)))
         val steps = listOf(step("c9", "write_file", "WAITING_FOR_APPROVAL", writeCall.argumentsJson))
 
-        val items = ChatItems.build(rows, steps, isRunning = true, pendingApproval = writeCall)
+        val items = ChatItems.build(rows, steps, isRunning = true, pendingApprovals = listOf(PendingApproval("t", writeCall.toolName, writeCall, CompletableDeferred())))
 
         assertEquals(ChatItem.Approval("c9", "write_file", "work/notes.md"), items.last())
     }
@@ -107,8 +111,8 @@ class ChatItemsTest {
     fun onlyTheLastErrorCanBeRetriedAndOnlyWhenIdle() {
         val rows = listOf(row("u1", "USER", "a"), row("e1", "ERROR", "Busy"), row("u2", "USER", "b"), row("e2", "ERROR", "Busy"))
 
-        val errors = ChatItems.build(rows, emptyList(), isRunning = false, pendingApproval = null).filterIsInstance<ChatItem.Error>()
-        val whileRunning = ChatItems.build(rows, emptyList(), isRunning = true, pendingApproval = null).filterIsInstance<ChatItem.Error>()
+        val errors = ChatItems.build(rows, emptyList(), isRunning = false).filterIsInstance<ChatItem.Error>()
+        val whileRunning = ChatItems.build(rows, emptyList(), isRunning = true).filterIsInstance<ChatItem.Error>()
 
         assertEquals(listOf(false, true), errors.map { it.canRetry })
         assertEquals(listOf(false, false), whileRunning.map { it.canRetry })
@@ -118,7 +122,7 @@ class ChatItemsTest {
     fun aRunWithNothingVisibleYetShowsThinking() {
         val user = row("u1", "USER", "hi").copy(createdAtMillis = 5_000)
 
-        val items = ChatItems.build(listOf(user), emptyList(), isRunning = true, pendingApproval = null)
+        val items = ChatItems.build(listOf(user), emptyList(), isRunning = true)
 
         assertEquals(ChatItem.Working(ChatItems.WORKING_ID, WorkingActivity.Thinking, sinceMillis = 5_000), items.last())
     }
@@ -129,13 +133,11 @@ class ChatItemsTest {
             listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(searchCall))),
             listOf(step("c1", "web_search", "RUNNING")),
             isRunning = true,
-            pendingApproval = null,
         )
         val streaming = ChatItems.build(
             listOf(row("u2", "USER", "hi"), row("a2", "ASSISTANT", "He", complete = false)),
             emptyList(),
             isRunning = true,
-            pendingApproval = null,
         )
 
         assertEquals(WorkingActivity.Tool("web_search"), (running.last() as ChatItem.Working).activity)
@@ -146,8 +148,8 @@ class ChatItemsTest {
     fun noIndicatorWhenIdleOrWaitingForApproval() {
         val rows = listOf(row("u1", "USER", "write it"), row("a1", "ASSISTANT", "", calls = listOf(searchCall)))
 
-        val idle = ChatItems.build(rows, emptyList(), isRunning = false, pendingApproval = null)
-        val waiting = ChatItems.build(rows, emptyList(), isRunning = true, pendingApproval = searchCall)
+        val idle = ChatItems.build(rows, emptyList(), isRunning = false)
+        val waiting = ChatItems.build(rows, emptyList(), isRunning = true, pendingApprovals = listOf(PendingApproval("t", searchCall.toolName, searchCall, CompletableDeferred())))
 
         assertEquals(false, idle.any { it is ChatItem.Working })
         assertEquals(false, waiting.any { it is ChatItem.Working })
@@ -159,13 +161,11 @@ class ChatItemsTest {
             listOf(row("u1", "USER", "why?"), row("a1", "ASSISTANT", "", complete = false).copy(reasoningText = "Let me see")),
             emptyList(),
             isRunning = true,
-            pendingApproval = null,
         )
         val done = ChatItems.build(
             listOf(row("u2", "USER", "why?"), row("a2", "ASSISTANT", "Because.").copy(reasoningText = "Let me see")),
             emptyList(),
             isRunning = false,
-            pendingApproval = null,
         )
 
         assertEquals(ChatItem.Reasoning("reasoning-a1", "Let me see", isStreaming = true), thinking[1])
@@ -184,7 +184,7 @@ class ChatItemsTest {
         )
         val steps = listOf(step("c1", "web_search", "DONE", started = 0, finished = 1))
 
-        val run = ChatItems.build(rows, steps, isRunning = false, pendingApproval = null).filterIsInstance<ChatItem.Run>().single()
+        val run = ChatItems.build(rows, steps, isRunning = false).filterIsInstance<ChatItem.Run>().single()
 
         assertEquals(0.0041, run.costUsd!!, 1e-9)
     }
@@ -194,7 +194,7 @@ class ChatItemsTest {
         val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(searchCall)).copy(costUsd = 0.001))
         val steps = listOf(step("c1", "web_search", "RUNNING"))
 
-        val run = ChatItems.build(rows, steps, isRunning = true, pendingApproval = null).filterIsInstance<ChatItem.Run>().single()
+        val run = ChatItems.build(rows, steps, isRunning = true).filterIsInstance<ChatItem.Run>().single()
 
         assertEquals(null, run.costUsd)
     }
@@ -203,7 +203,7 @@ class ChatItemsTest {
     fun routingFallbackAddsOneNoteAfterTheAnswer() {
         val rows = listOf(row("u1", "USER", "hi"), row("a1", "ASSISTANT", "Hello").copy(routingFallback = true))
 
-        val items = ChatItems.build(rows, emptyList(), isRunning = false, pendingApproval = null, fallbackNote = "used cheapest")
+        val items = ChatItems.build(rows, emptyList(), isRunning = false, fallbackNote = "used cheapest")
 
         assertEquals(ChatItem.Note("note-a1", "used cheapest"), items.last())
     }
@@ -226,10 +226,120 @@ class ChatItemsTest {
             step("c3", "artifact", "FAILED", """{"path":"artifacts/missing.html"}""", started = 2),
         )
 
-        val items = ChatItems.build(rows, steps, isRunning = false, pendingApproval = null)
+        val items = ChatItems.build(rows, steps, isRunning = false)
 
         val cards = items.filterIsInstance<ChatItem.Artifact>()
         assertEquals(listOf("artifacts/report.html"), cards.map { card -> card.path })
         assertTrue(items.indexOf(cards.single()) > items.indexOfFirst { item -> item is ChatItem.Run })
+    }
+
+    private fun subagent(id: String, order: Int, type: String, status: String = "DONE", cost: Double? = 0.01) = SubagentEntity(
+        id = id, threadId = "t", parentToolCallId = "d1", orderInCall = order, agentType = type, task = "Laptop $order",
+        model = "test:m", status = status, resultText = "answer $id", latestText = "Reading reviews\nmore", costUsd = cost,
+        startedAtMillis = order.toLong(), finishedAtMillis = 9,
+    )
+
+    @Test
+    fun subagentsShowAsCardsUnderTheRunAndTheirStepsStayOutOfTheTrack() {
+        val delegateCall = ToolCall("d1", "delegate", """{"tasks":[{"agent":"researcher","task":"a"},{"agent":"scout","task":"b"}]}""")
+        val rows = listOf(
+            row("u1", "USER", "compare"),
+            row("a1", "ASSISTANT", "", calls = listOf(delegateCall)).copy(costUsd = 0.02),
+            row("r1", "TOOL", "answers", callId = "d1"),
+            row("a2", "ASSISTANT", "Report ready."),
+        )
+        val steps = listOf(
+            step("d1", "delegate", "DONE", delegateCall.argumentsJson, started = 1, finished = 5),
+            step("s1/c1", "web_search", "DONE", started = 2, finished = 3).copy(subagentId = "s1"),
+            step("s2/c1", "read_file", "SKIPPED", started = 2, finished = 3).copy(subagentId = "s2"),
+        )
+
+        val items = ChatItems.build(rows, steps, isRunning = false, subagents = listOf(subagent("s1", 0, "researcher"), subagent("s2", 1, "scout")))
+
+        assertEquals(listOf("u1", "run-u1", "subagent-s1", "subagent-s2", "a2"), items.map { it.id })
+        val run = items[1] as ChatItem.Run
+        assertEquals(listOf("delegate"), run.steps.map { it.toolName })
+        assertEquals("researcher, scout", run.steps.single().detail)
+        // The run's cost line includes the subagents' hidden calls.
+        assertEquals(0.04, run.costUsd!!, 0.0001)
+        val scout = items[3] as ChatItem.Subagent
+        assertEquals("scout 2", scout.label)
+        assertEquals(StepUiStatus.SKIPPED, scout.steps.single().status)
+        assertEquals("answer s2", scout.answer)
+    }
+
+    @Test
+    fun aSubagentsRequestShowsItsReasonAndName() {
+        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(ToolCall("d1", "delegate", "{}"))))
+        val request = ToolCall("s1/c3", "request_tool", """{"name":"share_file","reason":"save the report"}""")
+        val pending = PendingApproval("t", "share_file", request, CompletableDeferred(), SubagentAsk("writer", "save the report"))
+
+        val card = ChatItems.build(rows, emptyList(), isRunning = true, pendingApprovals = listOf(pending)).last() as ChatItem.Approval
+
+        assertEquals(ChatItem.Approval("s1/c3", "share_file", "save the report", agentLabel = "writer"), card)
+    }
+
+    @Test
+    fun theWorkingLineNamesSubagentsWhileDelegateRuns() {
+        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(ToolCall("d1", "delegate", "{}"))))
+        val steps = listOf(step("d1", "delegate", "RUNNING"))
+
+        val working = ChatItems.build(rows, steps, isRunning = true).last() as ChatItem.Working
+
+        assertEquals(WorkingActivity.Tool("delegate"), working.activity)
+    }
+
+    private val pythonMissing = "Error: Python is not installed. Tell the user that Python is a 13.5 MB download."
+
+    private fun pythonTurn(userId: String, callId: String, resultText: String): Pair<List<MessageEntity>, StepEntity> {
+        val call = ToolCall(callId, "run_code", """{"language":"python","code":"print(1)"}""")
+        val rows = listOf(
+            row(userId, "USER", "run it"),
+            row("a-$callId", "ASSISTANT", "", calls = listOf(call)),
+            row("r-$callId", "TOOL", resultText, callId = callId),
+            row("b-$callId", "ASSISTANT", "Python is not installed."),
+        )
+        return rows to step(callId, "run_code", "FAILED").copy(resultText = resultText)
+    }
+
+    private val noteCard: (String, app.jonaki.tools.runcode.InstallNeed) -> ChatItem? = { callId, need ->
+        ChatItem.Note("python-$callId", need.packageNames.joinToString(","))
+    }
+
+    @Test
+    fun aMissingPythonShowsTheCardAfterTheTurn() {
+        val (rows, pythonStep) = pythonTurn("u1", "c1", pythonMissing)
+
+        val items = ChatItems.build(rows, listOf(pythonStep), isRunning = false, pythonCard = noteCard)
+
+        assertEquals(listOf("u1", "run-u1", "b-c1", "python-c1"), items.map { it.id })
+    }
+
+    @Test
+    fun missingPackagesAreNamedOnTheCard() {
+        val (rows, pythonStep) = pythonTurn("u1", "c1", "Error: the Python packages pandas, numpy are not installed. The chat shows...")
+
+        val items = ChatItems.build(rows, listOf(pythonStep), isRunning = false, pythonCard = noteCard)
+
+        assertEquals("pandas,numpy", (items.last() as ChatItem.Note).text)
+    }
+
+    @Test
+    fun onlyTheLastTurnGetsACard() {
+        val (firstRows, firstStep) = pythonTurn("u1", "c1", pythonMissing)
+        val laterRows = listOf(row("u2", "USER", "thanks"), row("a3", "ASSISTANT", "You're welcome."))
+
+        val items = ChatItems.build(firstRows + laterRows, listOf(firstStep), isRunning = false, pythonCard = noteCard)
+
+        assertTrue(items.none { item -> item.id.startsWith("python-") })
+    }
+
+    @Test
+    fun otherRunCodeErrorsGetNoCard() {
+        val (rows, pythonStep) = pythonTurn("u1", "c1", "Python stopped with an error.\nError:\nNameError")
+
+        val items = ChatItems.build(rows, listOf(pythonStep), isRunning = false, pythonCard = noteCard)
+
+        assertTrue(items.none { item -> item.id.startsWith("python-") })
     }
 }

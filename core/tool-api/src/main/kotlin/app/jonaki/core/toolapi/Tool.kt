@@ -35,7 +35,16 @@ interface Tool {
 /** Whether a tool only reads, or changes something and so needs approval. */
 enum class SideEffect {
     READ_ONLY,
+
+    /** Changes something outside Jonaki: Downloads, the linked folder, the phone, a server. */
     CHANGES,
+
+    /**
+     * Changes only files inside the thread's own folder. Needs approval like
+     * [CHANGES] in the Ask mode; the Auto mode runs it without asking,
+     * because nothing leaves the app.
+     */
+    CHANGES_THREAD_FOLDER,
 
     /**
      * Changes only Jonaki's own records, which the user sees in the step
@@ -59,11 +68,19 @@ class ToolContext(
     val threadFolder: File,
     val httpClient: OkHttpClient,
     /** The skill library, readable as /skills/ (D-037); null where a run has no skills. */
-    skillLibraryFolder: File? = null,
+    val skillLibraryFolder: File? = null,
+    /**
+     * The id of the call being run, set by the agent loop for each call; the
+     * delegate tool links its subagents' steps to it (M7). Null outside a call.
+     */
+    val toolCallId: String? = null,
 ) {
     val paths: ThreadPaths = ThreadPaths(threadFolder)
     val skillPaths: SkillLibraryPaths? = skillLibraryFolder?.let(::SkillLibraryPaths)
     val outputLimiter: OutputLimiter = OutputLimiter(threadFolder)
+
+    /** The same context for one call. */
+    fun forCall(callId: String): ToolContext = ToolContext(threadFolder, httpClient, skillLibraryFolder, callId)
 }
 
 /** Plain text for the model. An error says what failed and what to try next. */
