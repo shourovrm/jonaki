@@ -153,7 +153,9 @@ which is 3.18 on Android 8 (trigram needs 3.34) and has no FTS5. Cost: new
 downloads, about 1.9 MB of native code in the APK (0.8 MB compressed).
 Room 2.7.2 with Kotlin 2.1.0 and KSP 2.1.0-1.0.29 is checked when M1 builds
 core/storage. Rejected: Room 2.6.1 with FTS4 (no trigram; Bangla matching
-depends on word splitting). Outcome: pending.
+depends on word splitting). Outcome (2026-10-02): Room 2.7.2 builds with Kotlin
+2.1.0 and KSP 2.1.0-1.0.29; the app runs on the test phone with the bundled
+driver. DAO tests need a device (the bundled driver has no host build).
 
 ## D-024 · 2026-10-02 · Visual design: Firefly look with Rail line steps — accepted
 Material 3 structure. Firefly colours and shapes: leaf-dark night theme,
@@ -169,3 +171,14 @@ A lowercase j whose dot is the firefly, lit with a soft halo, on the
 leaf-dark ground; one-colour version for themed icons and notifications.
 Options: docs/mockups/logo.html. Rejected: literal firefly (wings vanish at
 48 px), step track (not tied to the name), light trail (faint when small).
+
+## D-026 · 2026-10-02 · Agent loop behaviour, first version — accepted
+Step budget 15 model turns that call tools; when used up, one last request
+without tools. Tool calls of one turn run one after another. A stream that
+ends without a finish counts as a retryable failure; the app retries a
+retryable failure once after 2 s. Web search moves to the next backend on
+any failure, not only quota errors (Tavily 429/432/433, Ollama and Exa
+402/429 are quota). The per-thread web switch removes web_search and
+web_fetch. Why: found while building M2 and M3 (workers A and B).
+Outcome (device test, 2026-10-02): search, fetch, approval, Stop, killed app
+and YouTube (Gemini 503 then retry) all behaved as described.

@@ -1,16 +1,17 @@
-# Status — 2026-10-02 (M0 mostly done)
+# Status — 2026-10-02 (M0 to M3 done, v0.1.0)
 
-Phase:        M0 done except step 0.1 and S-2 (need the phone); S-5 deferred to before M10.
-Goal:         Lightweight Android agent app with threads, global and thread memory, skills, MCP, subagents,
-              web search, YouTube summaries, HTML artifacts and phone tools.
-Active plan:  docs/plans/2026-10-02-v1-plan.md, resume from M1 step 1.
-Decisions:    D-001 to D-015 and D-017 to D-022 accepted; D-016 superseded; D-023 (Room 2.7.2 with
-              bundled SQLite) proposed.
-Blockers:     D-023 ruling before M1 step 2 (core/storage). Phone over USB for 0.1, S-2 and device checks.
-Build:        `gradle testReleaseUnitTest assembleRelease` passes, 12 JVM tests; release APK 617 KB.
-Spikes:       S-1 FTS5 trigram works (SQLite 3.46.0). S-3 Gemini YouTube works on gemini-3.8-flash
-              (2.5-flash closed to new users; 19-min video = 105,878 tokens). S-4 Tavily and Ollama work.
-Environment:  /opt/android-sdk (platform 35), OpenJDK 21, system Gradle 9.7.1, AGP 8.7.3 stack.
-              API keys in secrets.properties (gitignored); recorded responses in testdata/.
-Next action:  M1 step 1: core/provider-api and providers/openai-compatible with SSE streaming.
-Key files:    AGENTS.md, DECISIONS.md, docs/plans/2026-10-02-v1-plan.md, testdata/README.md.
+Phase:        M0 to M3 built, tested on the phone (A059, Android 16) and released as v0.1.0.
+Goal:         Lightweight Android agent app with threads, memory, skills, MCP, subagents, web search,
+              YouTube summaries, HTML artifacts and phone tools.
+Active plan:  docs/plans/2026-10-02-v1-plan.md, resume from M4 step 1.
+Decisions:    D-001 to D-015, D-017 to D-026 accepted; D-016 superseded. None proposed.
+Waiting on:   User's choice for cost display and in-thread model picker (mockups requested).
+Build:        `gradle testReleaseUnitTest assembleRelease` passes; 221 JVM tests; release APK ~3.5 MB.
+Device check: search with fallback, web_fetch, write_file approval, Stop, killed app keeps partial
+              text, YouTube summary via Gemini (retry after 503), light and dark themes.
+Known gaps:   No thread delete or rename in the UI. No "interrupted" mark on a killed answer.
+              DAO tests need a device. Default models for non-OpenRouter presets unchecked (M10).
+Environment:  /opt/android-sdk, OpenJDK 21, Gradle 9.7.1, AGP 8.7.3, Room 2.7.2 (D-023).
+              API keys in secrets.properties (gitignored). Remote: github.com/shourovrm/jonaki.
+Next action:  Cost and model-picker mockups, then M4 memory and compaction.
+Key files:    AGENTS.md, DECISIONS.md, PRODUCT.md, docs/plans/2026-10-02-v1-plan.md, docs/mockups/.
