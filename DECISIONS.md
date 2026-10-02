@@ -316,3 +316,31 @@ unreadable answer marks them read. Each call's usage is a hidden message
 row (role BACKGROUND) so thread, month and usage-sheet totals include it.
 Rejected: a separate usage table (all cost queries would need a union).
 Outcome: pending.
+
+## D-037 · 2026-10-02 · Skill library on disk, read-only for the model — proposed
+Skills live in `files/skills/<name>/` with a SKILL.md whose YAML front
+matter has `name` and `description` (Anthropic's format) and any files it
+names. The name is also the folder name: lowercase letters, digits and
+single hyphens, at most 64 characters; the description at most 1,024
+characters. A SKILL.md that breaks these rules is refused on import and on
+save, with the reason. The front matter is read by a small reader in
+`core/skills` (plain, quoted and block values; other keys ignored), not a
+YAML library. The model reads skill files with read_file under the virtual
+path `/skills/<name>/...`; write_file and edit_file resolve only inside the
+thread folder, so they cannot change a skill. Why: plan M5 step 1, D-014
+(skills loaded via read_file). Rejected: a YAML library (new dependency for
+two fields); real absolute paths in the prompt (longer, tied to the install).
+Outcome: pending.
+
+## D-038 · 2026-10-02 · Built-in skills update only while unedited — proposed
+On each app start every folder under `assets/skills/` is compared with the
+library. `files/skills-builtin.json` records the SHA-256 of the files the
+app installed for each built-in skill and whether the user deleted it. A
+missing skill is installed; a skill whose files still match the recorded
+hash is replaced by a newer shipped version; a skill the user edited, or
+replaced by an import of the same name, is kept and marked "Edited", and
+the user can choose "Reset to built-in" in its editor; a deleted built-in
+stays deleted until "Restore built-in skills". Why: an update must not
+overwrite the user's edits silently. Rejected: always overwrite (loses
+edits); never update (fixes to shipped skills never arrive).
+Outcome: pending.
