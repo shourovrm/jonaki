@@ -68,6 +68,8 @@ internal class AskParentTool(
     private val asker: ParentAsker,
     private val agentLabel: String,
     private val delegateToolCallId: String,
+    /** Adds the answer's cost to the subagent's budget and card. */
+    private val onCost: suspend (Double) -> Unit,
     private val maxQuestions: Int = MAX_QUESTIONS,
 ) : Tool {
     private var questionsAsked = 0
@@ -103,7 +105,9 @@ internal class AskParentTool(
             )
         }
         questionsAsked += 1
-        return when (val answer = asker.ask(question, agentLabel, delegateToolCallId)) {
+        val answer = asker.ask(question, agentLabel, delegateToolCallId)
+        answer.costUsd?.let { cost -> onCost(cost) }
+        return when (answer) {
             is ParentAnswer.Answered -> ToolOutput.success(answer.text)
             is ParentAnswer.Failed -> ToolOutput.error(
                 "the question could not be answered (${answer.message})",

@@ -35,10 +35,8 @@ internal class SubagentToolbox(startTools: List<Tool>, requestableTools: List<To
     val requestableNames: List<String>
         get() = requestable.keys.filter { name -> name !in active }.sorted()
 
-    /** Sorted like the system prompt, so the request bytes stay the same until a tool is granted. */
-    fun definitions(): List<ToolDefinition> = active.values.sortedBy { tool -> tool.name }.map { tool ->
-        ToolDefinition(name = tool.name, description = tool.promptLine, parameterSchema = tool.parameterSchema)
-    }
+    /** The same bytes on every request until a tool is granted. */
+    fun definitions(): List<ToolDefinition> = ToolDefinitions.of(active.values)
 }
 
 /**
@@ -81,6 +79,8 @@ internal class SubagentLoop(
                 return progress.stoppedEarly(SubagentStop.FAILED, failure = turn.message)
             }
             val answered = turn as TurnResult.Answered
+            // One retry per turn, as for the thread's agent (D-026).
+            retried = false
             recordUsage(answered.usage)
             conversation += answered.message
             recordText(answered.message.text)
@@ -128,7 +128,8 @@ internal class SubagentLoop(
     /** Only known costs count; a model without a price has only the step limit. */
     private fun costCapReached(): Boolean {
         val spent = progress.costUsd ?: return false
-        return spent >= limits.costCapUsd
+        // Sums of dollar amounts carry rounding errors; 0.01 + 0.08 + 0.01 is just under 0.10.
+        return spent >= limits.costCapUsd - ROUNDING_TOLERANCE_USD
     }
 
     private suspend fun runToolCall(toolCall: ToolCall): Message {
@@ -239,5 +240,7 @@ internal class SubagentLoop(
 
     private companion object {
         const val DESCRIPTION_CHARACTERS = 80
+
+        const val ROUNDING_TOLERANCE_USD = 1e-9
     }
 }

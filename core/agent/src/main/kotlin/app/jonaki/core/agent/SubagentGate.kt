@@ -1,10 +1,13 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.model.ToolCall
+import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.selects.select
@@ -57,13 +60,24 @@ class SubagentGate(
         return answerFor(tool.name, decision, grantsLaterCall = false)
     }
 
-    /** request_tool: whether [tool] may be added. [stepCall] is the request_tool call. */
+    /**
+     * request_tool: whether [tool] may be added. [stepCall] is the request_tool
+     * call. For a tool that only changes the thread folder, the answer also
+     * covers its next call (Allow once) or all of them (Allow for task). A
+     * tool that leaves the app is only added: each of its calls still shows
+     * its own card with its arguments, as the mode asks, so a subagent misled
+     * by a web page cannot send a file out under a grant the user gave for a
+     * reason (D-062).
+     */
     suspend fun grant(tool: Tool, stepCall: ToolCall, reason: String): GateAnswer {
         if (runsWithoutCard(tool)) {
             return GateAnswer.ALLOWED
         }
         val decision = askWithinLimit(ApprovalRequest(tool.name, stepCall, SubagentAsk(agentLabel, reason)))
             ?: return GateAnswer.SKIPPED
+        if (tool.sideEffect != SideEffect.CHANGES_THREAD_FOLDER) {
+            return if (decision == ApprovalDecision.DENY) GateAnswer.DENIED else GateAnswer.ALLOWED
+        }
         return answerFor(tool.name, decision, grantsLaterCall = true)
     }
 
@@ -89,16 +103,23 @@ class SubagentGate(
         return GateAnswer.ALLOWED
     }
 
-    /** The user's answer, or null when [waitLimit] passed first; the card is withdrawn then. */
+    /**
+     * The user's answer, or null when [waitLimit] passed first; the card is
+     * withdrawn then. Both waits have ended when this returns, so the card's
+     * own status writes never land after the step's final status.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun askWithinLimit(request: ApprovalRequest): ApprovalDecision? = coroutineScope {
         val answer = async { broker.askForSubagent(request) }
         val timeUp = async { timer.wait(waitLimit) }
-        val decision = select<ApprovalDecision?> {
+        val firstDone = select<ApprovalDecision?> {
             answer.onAwait { decision -> decision }
             timeUp.onAwait { null }
         }
-        answer.cancel()
-        timeUp.cancel()
+        // An answer given in the same moment the time ran out still counts.
+        val decision = firstDone ?: if (answer.isCompleted && !answer.isCancelled) answer.getCompleted() else null
+        answer.cancelAndJoin()
+        timeUp.cancelAndJoin()
         decision
     }
 

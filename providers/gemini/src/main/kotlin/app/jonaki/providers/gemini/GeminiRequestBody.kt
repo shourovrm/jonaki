@@ -38,6 +38,11 @@ object GeminiRequestBody {
                 }
             }
         }
+        if (request.tools.isNotEmpty() && !request.toolsCallable) {
+            putJsonObject("toolConfig") {
+                putJsonObject("functionCallingConfig") { put("mode", "NONE") }
+            }
+        }
         val thinkingConfig = GeminiThinking.configFor(request.model, request.thinkingLevel)
         if (request.maxOutputTokens != null || thinkingConfig != null) {
             putJsonObject("generationConfig") {

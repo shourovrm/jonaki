@@ -632,9 +632,14 @@ subagent's calls run one after another). No parent conversation is passed.
 model names one of the user's scoped models by key, id or name; an unknown
 one returns an error that lists them. Each answer comes back capped at
 16 KB (16,384 characters, user ruling 2026-10-03); a longer one is saved
-whole to `work/delegations/<call id>/<agent>-<n>.md` and the result names
-the read_file call that continues it. The notes board of a call is
-`work/delegations/<call id>/notes.md`. Time limit 11 minutes, one more than
+whole to `work/delegations/<folder>/<agent>-<n>.md` and the result names
+the read_file call that continues it; if saving fails, the answer is cut
+at 16 KB with a note. The notes board of a call is
+`work/delegations/<folder>/notes.md`. The folder is 12 hex characters of
+the call id's SHA-256 (Gemini 3 call ids carry the thought signature and
+exceed the 255-byte name limit; a blank id gets a fresh one). Subagents
+run in a supervisor scope: one that crashes is recorded as Failed and the
+others go on; its end is saved even during Stop. Time limit 11 minutes, one more than
 a subagent's own, so a subagent at its limit still returns its work. Stop
 cancels every subagent. Declared read-only: the subagents' own calls go
 through the broker. Guidelines tell the model to delegate reasoning-heavy
@@ -643,9 +648,12 @@ working line says "Subagents working…". Outcome: pending.
 
 ## D-061 · 2026-10-03 · Subagent budgets — proposed
 A subagent has 10 tool steps (every call counts, request_tool and notes
-too), $0.10 of model cost (only known costs count; a model without a price
-in the catalog and no reported cost has only the step limit) and 10
-minutes. At the step limit it gets one last request without tools and
+too), $0.10 of model cost (the calls' actual costs, reported by the
+service or priced from the catalog, plus its ask_parent answers; a call
+with no known cost adds nothing, so a model with neither has only the step
+limit; the prompt names the cost limit when the catalog has a price or the
+service is OpenRouter) and 10 minutes. A failed model call is retried once
+per turn after 2 s. At the step limit it gets one last request without tools and
 answers; calls beyond the limit in the same turn get a "Not run" result.
 At the cost limit, the time limit, a failed model call (after one retry
 after 2 s) or Stop, it returns its texts so far and its last three tool
@@ -657,8 +665,13 @@ request_tool(name, reason) and a subagent's own calls go through
 `SubagentGate` with the thread's approval mode (D-058): read-only tools,
 "Allow in thread" allowances and Bypass need no card. Otherwise a card
 names the subagent, the tool and the reason, with Allow once, Allow for
-this task, Deny. Allow once on a request covers the next call of that tool.
-A card unanswered for 3 minutes is withdrawn and counts as skipped: the
+this task, Deny. For a thread-folder tool (write_file, edit_file), Allow
+once on a request covers its next call and Allow for this task all of
+them. A tool that leaves the app (share_file) is only added: every call
+still shows its own card with its arguments, as the mode asks, so a
+subagent misled by a web page cannot send a file out under a grant given
+for a stated reason. A card unanswered for 3 minutes is withdrawn and
+counts as skipped; an answer that lands as the time runs out still counts: the
 model is told to go on with the other parts or stop, and the result lists
 every skipped part. The thread's own agent waits without limit. Tested
 with a hand-made virtual clock (`ApprovalTimer`), because
@@ -666,11 +679,16 @@ kotlinx-coroutines-test would be a new dependency. Outcome: pending.
 
 ## D-063 · 2026-10-03 · ask_parent — proposed
 ask_parent(question), at most two per subagent, is answered by one call
-on the thread's model with the thread's system prompt and its history up
-to, not including, the turn that called delegate (that turn's calls have
-no results yet), then the question as a user message; no tools, at most
-1,000 output tokens, through `BackgroundModel.completeOn`. Its usage is a
-BACKGROUND row, so it counts to the thread. Outcome: pending.
+on the thread's model with the thread's system prompt, tool list (sent
+with tool_choice "none", Gemini mode NONE, new `ChatRequest.toolsCallable`),
+thinking level and images, and its history up to, not including, the turn
+that called delegate (that turn's calls have no results yet), then the
+question as a user message; at most 1,000 output tokens, through
+`BackgroundModel.completeOn`. So the request starts with the same bytes as
+the one that produced the delegate call and the provider's prompt cache
+can serve them. Its usage is a BACKGROUND row, so it counts to the thread;
+its cost also counts against the asking subagent's $0.10 and shows on its
+card. Outcome: pending.
 
 ## D-064 · 2026-10-03 · Subagents in the database — proposed
 Room version 7 (one AutoMigration from 6, with D-058's column) adds the

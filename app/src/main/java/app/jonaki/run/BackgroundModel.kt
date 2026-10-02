@@ -8,6 +8,8 @@ import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.providerapi.ChatRequest
 import app.jonaki.core.providerapi.FinishReason
 import app.jonaki.core.providerapi.StreamEvent
+import app.jonaki.core.providerapi.ThinkingLevel
+import app.jonaki.core.providerapi.ToolDefinition
 import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
@@ -19,10 +21,13 @@ import java.util.UUID
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 
+/** [costUsd] is the call's cost as saved; null when unknown or when no usage came back. */
 sealed interface BackgroundAnswer {
-    data class Success(val text: String, val modelKey: String) : BackgroundAnswer
+    val costUsd: Double?
 
-    data class Failed(val message: String) : BackgroundAnswer
+    data class Success(val text: String, val modelKey: String, override val costUsd: Double? = null) : BackgroundAnswer
+
+    data class Failed(val message: String, override val costUsd: Double? = null) : BackgroundAnswer
 }
 
 /**
@@ -62,9 +67,10 @@ class BackgroundModel(
     }
 
     /**
-     * Sends [messages] to [modelKey] without tools and returns the whole
-     * answer; the usage is saved like any background call. A subagent's
-     * ask_parent uses it with the thread's own model and conversation (D-063).
+     * Sends [messages] to [modelKey] and returns the whole answer; the usage
+     * is saved like any background call. [tools] are listed but cannot be
+     * called: a subagent's ask_parent sends the thread's own tool list and
+     * thinking level, so its request starts like the thread's (D-063).
      */
     suspend fun completeOn(
         threadId: String,
@@ -72,6 +78,8 @@ class BackgroundModel(
         systemPrompt: String,
         messages: List<Message>,
         maxOutputTokens: Int,
+        tools: List<ToolDefinition> = emptyList(),
+        thinkingLevel: ThinkingLevel? = null,
     ): BackgroundAnswer {
         val service = ChatService.byKey(ModelKey.serviceOf(modelKey))
             ?: return BackgroundAnswer.Failed("unknown service in $modelKey")
@@ -83,7 +91,10 @@ class BackgroundModel(
             model = ModelKey.modelOf(modelKey),
             systemPrompt = systemPrompt,
             messages = messages,
+            tools = tools,
             maxOutputTokens = maxOutputTokens,
+            thinkingLevel = thinkingLevel,
+            toolsCallable = false,
         )
         val answer = StringBuilder()
         var usage: Usage? = null
@@ -102,13 +113,14 @@ class BackgroundModel(
                 }
             }
         }
-        usage?.let { reported -> saveUsage(threadId, modelKey, reported, CostCalculator.costUsd(reported, catalog.find(modelKey))) }
+        val cost = usage?.let { reported -> CostCalculator.costUsd(reported, catalog.find(modelKey)) }
+        usage?.let { reported -> saveUsage(threadId, modelKey, reported, cost) }
         return when {
-            finished == null -> BackgroundAnswer.Failed("$modelKey gave no answer within ${TIME_LIMIT_MILLIS / 1000} s")
-            failure != null -> BackgroundAnswer.Failed(failure.orEmpty())
+            finished == null -> BackgroundAnswer.Failed("$modelKey gave no answer within ${TIME_LIMIT_MILLIS / 1000} s", cost)
+            failure != null -> BackgroundAnswer.Failed(failure.orEmpty(), cost)
             // Half a summary or half a JSON answer would silently lose the newest part.
-            finishReason == FinishReason.LENGTH -> BackgroundAnswer.Failed("$modelKey stopped at $maxOutputTokens output tokens")
-            else -> BackgroundAnswer.Success(answer.toString(), modelKey)
+            finishReason == FinishReason.LENGTH -> BackgroundAnswer.Failed("$modelKey stopped at $maxOutputTokens output tokens", cost)
+            else -> BackgroundAnswer.Success(answer.toString(), modelKey, cost)
         }
     }
 

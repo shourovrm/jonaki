@@ -43,10 +43,7 @@ class AgentLoop(
 ) {
     private val toolsByName: Map<String, Tool> = tools.associateBy { tool -> tool.name }
 
-    // Sorted like the system prompt, so the request bytes stay stable for the prompt cache.
-    private val toolDefinitions: List<ToolDefinition> = tools.sortedBy { tool -> tool.name }.map { tool ->
-        ToolDefinition(name = tool.name, description = tool.promptLine, parameterSchema = tool.parameterSchema)
-    }
+    private val toolDefinitions: List<ToolDefinition> = ToolDefinitions.of(tools)
 
     suspend fun run(history: List<Message>): RunOutcome {
         val conversation = history.toMutableList()

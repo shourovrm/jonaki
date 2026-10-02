@@ -10,6 +10,7 @@ import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.modelcatalog.ThinkingSupport
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.toolapi.SubagentModelInfo
+import app.jonaki.settings.ChatService
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.SubagentModelChoice
 import app.jonaki.settings.ThinkingLevels
@@ -27,6 +28,12 @@ class AppSubagentModels(
 ) : SubagentModels {
     override val scoped: List<SubagentModelInfo> = snapshot.chatModels.allModelKeys.map { key ->
         SubagentModelInfo(key, catalog.find(key)?.displayName ?: ModelKey.modelOf(key))
+    }
+
+    /** OpenRouter reports each call's cost, so its limit applies even to a model the catalog has no price for. */
+    private fun hasKnownPrice(key: String, info: app.jonaki.core.modelcatalog.ModelInfo?): Boolean {
+        val catalogHasPrice = info?.inputUsdPerMillion != null && info.outputUsdPerMillion != null
+        return catalogHasPrice || ModelKey.serviceOf(key) == ChatService.OPENROUTER.key
     }
 
     override fun modelFor(agentType: AgentType, requestedKey: String?): SubagentModel? {
@@ -53,7 +60,7 @@ class AppSubagentModels(
                 isSupported = ThinkingSupport.isSupported(key, info),
             ),
             acceptsImages = acceptsImages,
-            hasKnownPrice = info?.inputUsdPerMillion != null && info.outputUsdPerMillion != null,
+            hasKnownPrice = hasKnownPrice(key, info),
             priceOf = { usage -> CostCalculator.costUsd(usage, info) },
             imageMessages = imageMessagesFor(acceptsImages),
         )
