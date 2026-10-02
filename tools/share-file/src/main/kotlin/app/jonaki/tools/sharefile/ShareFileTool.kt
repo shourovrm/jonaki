@@ -83,7 +83,7 @@ class ShareFileTool(private val destinations: FileDestinations) : Tool {
             ?: return unknownAction(actionArgument)
         val path = arguments.stringArgument("path")?.trim().orEmpty()
         return when (action) {
-            Action.LIST_LINKED -> listLinked(path)
+            Action.LIST_LINKED -> listLinked(path, context)
             Action.IMPORT_LINKED -> importLinked(path, context)
             else -> export(action, path, context)
         }
@@ -130,11 +130,13 @@ class ShareFileTool(private val destinations: FileDestinations) : Tool {
         return ToolOutput.success(text)
     }
 
-    private suspend fun listLinked(folderPath: String): ToolOutput {
+    private suspend fun listLinked(folderPath: String, context: ToolContext): ToolOutput {
         val folder = folderPath.trim('/')
         return when (val listing = destinations.listLinkedFolder(folder)) {
             is LinkedListing.Failed -> errorFor(listing.problem, folder.ifEmpty { "the linked folder" })
-            is LinkedListing.Entries -> ToolOutput.success(describeListing(listing, folder))
+            is LinkedListing.Entries -> ToolOutput.success(
+                context.outputLimiter.limit(describeListing(listing, folder), MAX_LISTING_CHARACTERS, name),
+            )
         }
     }
 
@@ -209,5 +211,10 @@ class ShareFileTool(private val destinations: FileDestinations) : Tool {
             "$subject could not be handled: ${result.reason}",
             "Tell the user what failed; try action downloads if another action failed.",
         )
+    }
+
+    private companion object {
+        /** About 2,000 tokens: a few hundred names, enough to find a file without flooding the context. */
+        const val MAX_LISTING_CHARACTERS = 8_000
     }
 }

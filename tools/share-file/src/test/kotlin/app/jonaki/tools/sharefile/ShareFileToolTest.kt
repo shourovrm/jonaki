@@ -236,4 +236,16 @@ class ShareFileToolTest {
         assertTrue(output.text.contains("25 MB"))
         assertFalse(File(threadFolder, "inbox/video.mp4").exists())
     }
+
+    @Test
+    fun longListingIsCutAndSavedWhole() {
+        destinations.listing = LinkedListing.Entries(
+            "Photos",
+            (1..2_000).map { number -> LinkedEntry("IMG_$number.jpg", isFolder = false, sizeBytes = 2_000_000) },
+        )
+        val output = call("action" to "list_linked")
+        assertFalse(output.isError)
+        assertTrue(output.text.length < 10_000)
+        assertTrue(output.text.contains("read_file"))
+    }
 }
