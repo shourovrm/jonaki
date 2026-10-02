@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 
@@ -102,6 +103,7 @@ class ChatCompletionStreamAssembler {
             inputTokens = usageObject.intOrNull("prompt_tokens") ?: 0,
             outputTokens = usageObject.intOrNull("completion_tokens") ?: 0,
             cachedInputTokens = cachedTokens,
+            costUsd = (usageObject["cost"] as? JsonPrimitive)?.doubleOrNull,
         )
     }
 

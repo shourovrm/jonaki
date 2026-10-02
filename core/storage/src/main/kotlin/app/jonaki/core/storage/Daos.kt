@@ -18,10 +18,14 @@ interface ThreadDao {
         "SELECT threads.*, (SELECT messages.text FROM messages WHERE messages.threadId = threads.id " +
             "AND messages.role != 'TOOL' AND messages.text != '' ORDER BY messages.position DESC LIMIT 1) AS lastText, " +
             "(SELECT messages.role FROM messages WHERE messages.threadId = threads.id " +
-            "AND messages.role != 'TOOL' ORDER BY messages.position DESC LIMIT 1) AS lastRole " +
+            "AND messages.role != 'TOOL' ORDER BY messages.position DESC LIMIT 1) AS lastRole, " +
+            "(SELECT SUM(messages.costUsd) FROM messages WHERE messages.threadId = threads.id) AS totalCostUsd " +
             "FROM threads ORDER BY updatedAtMillis DESC",
     )
     fun observeSummaries(): Flow<List<ThreadSummary>>
+
+    @Query("UPDATE threads SET modelKey = :modelKey WHERE id = :threadId")
+    suspend fun setModelKey(threadId: String, modelKey: String)
 
     @Query("SELECT * FROM threads WHERE id = :threadId")
     fun observe(threadId: String): Flow<ThreadEntity?>
@@ -68,7 +72,43 @@ interface MessageDao {
     /** Messages left incomplete when Android stopped the app mid-stream. */
     @Query("UPDATE messages SET isComplete = 1 WHERE isComplete = 0")
     suspend fun closeInterrupted()
+
+    /** Total cost of a thread in USD; null when no call in it has a known cost. */
+    @Query("SELECT SUM(costUsd) FROM messages WHERE threadId = :threadId")
+    fun observeThreadCost(threadId: String): Flow<Double?>
+
+    /** Total cost of every call since [sinceMillis], for the month's total in the thread list. */
+    @Query("SELECT SUM(costUsd) FROM messages WHERE createdAtMillis >= :sinceMillis")
+    fun observeCostSince(sinceMillis: Long): Flow<Double?>
+
+    /** One row per model used in a thread, in the order the models were first used (usage sheet). */
+    @Query(
+        "SELECT model, COUNT(*) AS turns, SUM(inputTokens) AS inputTokens, " +
+            "SUM(cachedInputTokens) AS cachedInputTokens, SUM(outputTokens) AS outputTokens, " +
+            "SUM(costUsd) AS costUsd FROM messages WHERE threadId = :threadId AND model IS NOT NULL " +
+            "GROUP BY model ORDER BY MIN(position)",
+    )
+    fun observeModelUsage(threadId: String): Flow<List<ModelUsageRow>>
+
+    /**
+     * Input tokens of the thread's latest model call: the size of the context
+     * the model last saw, for the status strip's percentage.
+     */
+    @Query(
+        "SELECT inputTokens FROM messages WHERE threadId = :threadId AND inputTokens IS NOT NULL " +
+            "ORDER BY position DESC LIMIT 1",
+    )
+    fun observeLastInputTokens(threadId: String): Flow<Int?>
 }
+
+data class ModelUsageRow(
+    val model: String,
+    val turns: Int,
+    val inputTokens: Long?,
+    val cachedInputTokens: Long?,
+    val outputTokens: Long?,
+    val costUsd: Double?,
+)
 
 @Dao
 interface StepDao {
@@ -90,4 +130,5 @@ data class ThreadSummary(
     @Embedded val thread: ThreadEntity,
     val lastText: String?,
     val lastRole: String?,
+    val totalCostUsd: Double?,
 )

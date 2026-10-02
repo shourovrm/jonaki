@@ -26,6 +26,8 @@ dependencies {
     implementation(project(":core:provider-api"))
     implementation(project(":core:search-api"))
     implementation(project(":core:storage"))
+    implementation(project(":core:model-catalog"))
+    implementation(project(":core:balance-api"))
     implementation(project(":providers:openai-compatible"))
     implementation(project(":providers:gemini"))
     implementation(project(":search:tavily"))

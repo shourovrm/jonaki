@@ -14,11 +14,20 @@ import kotlinx.serialization.json.putJsonObject
 
 /** Builds the JSON body of a streaming chat completions request. */
 object ChatCompletionRequestBody {
-    fun build(request: ChatRequest): JsonObject = buildJsonObject {
+    fun build(
+        request: ChatRequest,
+        askForCost: Boolean = false,
+        routing: OpenRouterRouting = OpenRouterRouting.AUTOMATIC,
+    ): JsonObject = buildJsonObject {
+        routing.providerBlock()?.let { block -> put("provider", block) }
         put("model", request.model)
         put("stream", true)
         // Without this the stream carries no token counts.
         putJsonObject("stream_options") { put("include_usage", true) }
+        if (askForCost) {
+            // OpenRouter's own field; it adds usage.cost in USD to the last chunk.
+            putJsonObject("usage") { put("include", true) }
+        }
         request.maxOutputTokens?.let { put("max_tokens", it) }
         putJsonArray("messages") {
             addJsonObject {

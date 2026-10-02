@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.json.Json
@@ -19,7 +20,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 
 /** Streams chat completions from any service in the OpenAI format (D-010). */
 class OpenAiCompatibleProvider(
@@ -27,11 +27,38 @@ class OpenAiCompatibleProvider(
     private val apiKey: String?,
     private val httpClient: OkHttpClient,
     private val baseUrl: String = preset.baseUrl,
+    /** Applies to OpenRouter only (D-030); other services ignore it. */
+    private val openRouterRouting: OpenRouterRouting = OpenRouterRouting.AUTOMATIC,
+    /** Called when a private-only request found no endpoint and was sent again as cheapest. */
+    private val onRoutingFallback: () -> Unit = {},
 ) : ChatProvider {
     override val id: String = "openai-compatible:${preset.key}"
 
+    private val isOpenRouter: Boolean
+        get() = preset.key == ProviderPresets.openRouter.key
+
     override fun stream(request: ChatRequest): Flow<StreamEvent> = flow {
-        val call = httpClient.newCall(httpRequestFor(request))
+        val routing = if (isOpenRouter) openRouterRouting else OpenRouterRouting.AUTOMATIC
+        val mayFallBack = routing == OpenRouterRouting.PRIVATE_THEN_CHEAPEST
+        val rejectedByDataPolicy = streamWith(request, routing, mayFallBack)
+        if (rejectedByDataPolicy) {
+            // No endpoint for this model promises not to keep prompts, so the user's
+            // choice (D-030) is to run on the cheapest endpoint and be told.
+            onRoutingFallback()
+            streamWith(request, OpenRouterRouting.CHEAPEST, mayFallBack = false)
+        }
+    }.flowOn(Dispatchers.IO)
+
+    /**
+     * Streams one request. Returns true, having emitted nothing, when the request
+     * was rejected by OpenRouter's data policy filter and [mayFallBack] is set.
+     */
+    private suspend fun FlowCollector<StreamEvent>.streamWith(
+        request: ChatRequest,
+        routing: OpenRouterRouting,
+        mayFallBack: Boolean,
+    ): Boolean {
+        val call = httpClient.newCall(httpRequestFor(request, routing))
         // Stop's cancellation must abort the blocking read, not wait for the next chunk.
         val cancelHandle = currentCoroutineContext()[Job]?.invokeOnCompletion { call.cancel() }
         try {
@@ -40,12 +67,16 @@ class OpenAiCompatibleProvider(
             } catch (networkError: IOException) {
                 currentCoroutineContext().ensureActive()
                 emit(StreamEvent.Failed("Could not reach ${preset.displayName}: ${networkError.message}", retryable = true))
-                return@flow
+                return false
             }
             response.use {
                 if (!response.isSuccessful) {
-                    emit(failureFromErrorResponse(response))
-                    return@flow
+                    val bodyText = response.body?.string().orEmpty()
+                    if (mayFallBack && OpenRouterRouting.isDataPolicyRejection(response.code, bodyText)) {
+                        return true
+                    }
+                    emit(failureFromErrorResponse(response.code, bodyText))
+                    return false
                 }
                 val assembler = ChatCompletionStreamAssembler()
                 val reader = ServerSentEventReader(response.body!!.charStream().buffered())
@@ -63,10 +94,11 @@ class OpenAiCompatibleProvider(
         } finally {
             cancelHandle?.dispose()
         }
-    }.flowOn(Dispatchers.IO)
+        return false
+    }
 
-    private fun httpRequestFor(request: ChatRequest): Request {
-        val body = ChatCompletionRequestBody.build(request).toString()
+    private fun httpRequestFor(request: ChatRequest, routing: OpenRouterRouting): Request {
+        val body = ChatCompletionRequestBody.build(request, askForCost = preset.reportsCost, routing = routing).toString()
         val builder = Request.Builder()
             .url(baseUrl.trimEnd('/') + "/chat/completions")
             .post(body.toRequestBody(jsonMediaType))
@@ -80,11 +112,10 @@ class OpenAiCompatibleProvider(
         return builder.build()
     }
 
-    private fun failureFromErrorResponse(response: Response): StreamEvent.Failed {
-        val bodyText = response.body?.string().orEmpty()
+    private fun failureFromErrorResponse(statusCode: Int, bodyText: String): StreamEvent.Failed {
         val serviceMessage = errorMessageFrom(bodyText)
-        val message = "${preset.displayName} answered HTTP ${response.code}: $serviceMessage"
-        return StreamEvent.Failed(message, retryable = isRetryableHttpStatus(response.code))
+        val message = "${preset.displayName} answered HTTP $statusCode: $serviceMessage"
+        return StreamEvent.Failed(message, retryable = isRetryableHttpStatus(statusCode))
     }
 
     private fun errorMessageFrom(bodyText: String): String {

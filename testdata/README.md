@@ -28,3 +28,19 @@ Tavily quota errors could not be triggered on a fresh account. Its
 documentation lists 429 (rate limit, with a `Retry-After` header), 432 (plan
 limit exceeded) and 433 (pay-as-you-go limit exceeded), each with the body
 shape `{"detail": {"error": "..."}}`.
+
+## balance/ (D-031)
+
+| File | Request | Result |
+|---|---|---|
+| `openrouter-credits.json` | `GET openrouter.ai/api/v1/credits`, 2026-10-02 | 24 credits, 11.126219445 used |
+| `openrouter-key.json` | `GET openrouter.ai/api/v1/key`, trimmed to the limit fields (label and ids removed) | limit 20 monthly, 19.927821514 left |
+| `tavily-usage.json` | `GET api.tavily.com/usage` | plan usage 3 of 1,000 credits |
+| `deepseek-balance-documented.json` | Not recorded (no DeepSeek key); shape from DeepSeek's documentation of `GET /user/balance` | balance as text, per currency |
+
+## openrouter/ (M3b, D-027)
+
+| File | Request | Result |
+|---|---|---|
+| `models-trimmed.json` | `GET openrouter.ai/api/v1/models` (no key), 2026-10-02; 5 of 464 models kept | Prices are USD per token as text; `openrouter/auto-beta` has price `-1` (varies); `deepseek/deepseek-chat` has no cached-input price |
+| `error-404-data-policy.json` | Chat request to `liquid/lfm-2.5-2.6b:free` with `provider: {data_collection: "deny", sort: "price"}` (D-030) | HTTP 404, "No endpoints found matching your data policy (Free model training)", `failed_routing_step: "Filter by Data Policy"` |

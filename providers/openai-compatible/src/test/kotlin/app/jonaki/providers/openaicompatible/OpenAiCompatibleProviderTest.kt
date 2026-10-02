@@ -124,4 +124,25 @@ class OpenAiCompatibleProviderTest {
         assertTrue(failure.retryable)
         assertTrue(failure.message.startsWith("Could not reach OpenRouter"))
     }
+
+    @Test
+    fun openRouterIsAskedToReportCost() = runBlocking {
+        server.enqueue(MockResponse().setBody(sse("""{"choices":[{"delta":{},"finish_reason":"stop"}]}""", "[DONE]")))
+
+        provider.stream(request).toList()
+
+        val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertEquals("true", body.getValue("usage").jsonObject.getValue("include").jsonPrimitive.content)
+    }
+
+    @Test
+    fun otherServicesAreNotSentOpenRoutersUsageField() = runBlocking {
+        val deepSeek = OpenAiCompatibleProvider(ProviderPresets.deepSeek, "k", OkHttpClient(), server.url("/").toString())
+        server.enqueue(MockResponse().setBody(sse("""{"choices":[{"delta":{},"finish_reason":"stop"}]}""", "[DONE]")))
+
+        deepSeek.stream(request).toList()
+
+        val body = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertFalse(body.containsKey("usage"))
+    }
 }

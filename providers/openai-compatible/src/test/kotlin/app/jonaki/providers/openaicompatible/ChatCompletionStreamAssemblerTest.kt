@@ -108,4 +108,15 @@ class ChatCompletionStreamAssemblerTest {
         assertEquals(emptyList<StreamEvent>(), assembler.accept("""{"choices":[{"delta":{"content":"late"}}]}"""))
         assertEquals(emptyList<StreamEvent>(), assembler.finish())
     }
+
+    @Test
+    fun openRouterCostIsReportedInUsd() {
+        val assembler = ChatCompletionStreamAssembler()
+        assembler.accept("""{"choices":[{"delta":{"content":"Hi"},"finish_reason":"stop"}]}""")
+        assembler.accept("""{"choices":[],"usage":{"prompt_tokens":100,"completion_tokens":20,"cost":0.00042,"prompt_tokens_details":{"cached_tokens":60}}}""")
+
+        val finished = assembler.accept("[DONE]").last() as StreamEvent.Finished
+
+        assertEquals(Usage(100, 20, 60, costUsd = 0.00042), finished.usage)
+    }
 }

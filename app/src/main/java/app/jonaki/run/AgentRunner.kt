@@ -12,6 +12,9 @@ import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.model.Role
+import app.jonaki.core.modelcatalog.CostCalculator
+import app.jonaki.core.modelcatalog.ModelCatalog
+import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.storage.HistoryMapper
@@ -22,8 +25,7 @@ import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.providers.gemini.GeminiProvider
 import app.jonaki.providers.gemini.VideoSummaryOutcome
 import app.jonaki.providers.gemini.VideoSummaryRequest
-import app.jonaki.providers.openaicompatible.OpenAiCompatibleProvider
-import app.jonaki.providers.openaicompatible.ProviderPresets
+import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
@@ -57,6 +59,7 @@ class AgentRunner(
     private val settings: AppSettings,
     private val secrets: SecretStore,
     private val httpClient: OkHttpClient,
+    private val catalog: ModelCatalog,
     private val scope: CoroutineScope,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
@@ -83,11 +86,21 @@ class AgentRunner(
             createdAtMillis = now,
             updatedAtMillis = now,
             webSearchEnabled = !settings.snapshot.value.webSearchOffInNewThreads,
+            modelKey = settings.snapshot.value.chatModels.defaultModelKey,
         )
         database.threadDao().insert(thread)
         ThreadFolders.create(context, thread.id)
         return thread.id
     }
+
+    /** Switches a thread's model; the next message uses it (D-027). */
+    suspend fun setThreadModel(threadId: String, modelKey: String) {
+        database.threadDao().setModelKey(threadId, modelKey)
+    }
+
+    /** The model a thread uses: its own, or the starred default for threads made before version 2. */
+    fun modelKeyFor(thread: ThreadEntity?): String? =
+        thread?.modelKey ?: settings.snapshot.value.chatModels.defaultModelKey
 
     fun send(threadId: String, text: String) {
         if (threadId in running.value || text.isBlank()) {
@@ -186,18 +199,12 @@ class AgentRunner(
     private suspend fun runOnce(threadId: String): RunOutcome? {
         val thread = database.threadDao().find(threadId) ?: return null
         val snapshot = settings.snapshot.value
-        val provider = chatProvider(snapshot.chatService)
-        if (provider == null) {
-            saveError(threadId, MISSING_KEY_ERROR)
+        val modelKey = modelKeyFor(thread)
+        val service = modelKey?.let { ChatService.byKey(ModelKey.serviceOf(it)) }
+        if (modelKey == null || service == null) {
+            saveError(threadId, NO_MODEL_ERROR)
             return null
         }
-        val tools = ToolRegistry.tools(
-            ToolServices(
-                searchBackends = searchBackends(snapshot.searchOrder),
-                videoSummarizer = videoSummarizer(),
-                webAccessEnabled = thread.webSearchEnabled,
-            ),
-        )
         val session = RunSession(
             threadId = threadId,
             database = database,
@@ -206,6 +213,21 @@ class AgentRunner(
             onStepStarted = {
                 stepCounts.update { current -> current + (threadId to (current[threadId] ?: 0) + 1) }
             },
+            modelKey = modelKey,
+            priceOf = { usage -> CostCalculator.costUsd(usage, catalog.find(modelKey)) },
+        )
+        val routing = snapshot.routing.effectiveFor(modelKey)
+        val provider = chatProvider(service, routing, onRoutingFallback = session::markRoutingFallback)
+        if (provider == null) {
+            saveError(threadId, "No ${service.displayName} API key. Add one in Settings.")
+            return null
+        }
+        val tools = ToolRegistry.tools(
+            ToolServices(
+                searchBackends = searchBackends(snapshot.searchOrder),
+                videoSummarizer = videoSummarizer(),
+                webAccessEnabled = thread.webSearchEnabled,
+            ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
         val permissionBroker = PermissionBroker(session, allowedForThread)
@@ -216,7 +238,7 @@ class AgentRunner(
             permissionBroker = permissionBroker,
             recorder = session,
             settings = AgentSettings(
-                model = modelFor(snapshot.chatService),
+                model = ModelKey.modelOf(modelKey),
                 systemPrompt = promptBuilder.systemPrompt(tools),
             ),
         )
@@ -245,19 +267,11 @@ class AgentRunner(
         )
     }
 
-    private fun chatProvider(service: ChatService): ChatProvider? {
-        val key = secrets.read(service.secret) ?: return null
-        return OpenAiCompatibleProvider(presetFor(service), key, httpClient)
-    }
-
-    private fun presetFor(service: ChatService) = when (service) {
-        ChatService.OPENROUTER -> ProviderPresets.openRouter
-        ChatService.DEEPSEEK -> ProviderPresets.deepSeek
-    }
-
-    fun modelFor(service: ChatService): String {
-        val chosen = settings.snapshot.value.modelByService[service].orEmpty()
-        return chosen.ifBlank { presetFor(service).defaultModel }
+    /** Null when the service needs a key and none is saved. */
+    private fun chatProvider(service: ChatService, routing: OpenRouterRouting, onRoutingFallback: () -> Unit): ChatProvider? {
+        val secret = service.secret
+        val key = if (secret == null) null else secrets.read(secret) ?: return null
+        return ChatProviders.create(service, key, httpClient, routing, onRoutingFallback)
     }
 
     private fun searchBackends(order: List<SearchService>): List<SearchBackend> =
@@ -301,7 +315,7 @@ class AgentRunner(
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
         const val TITLE_LENGTH = 40
-        const val MISSING_KEY_ERROR = "No chat API key. Add one in Settings."
+        const val NO_MODEL_ERROR = "No model. Add one in Settings."
     }
 }
 

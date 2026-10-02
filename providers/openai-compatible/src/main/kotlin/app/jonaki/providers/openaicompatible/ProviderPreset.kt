@@ -10,6 +10,8 @@ data class ProviderPreset(
     val baseUrl: String,
     val defaultModel: String,
     val needsApiKey: Boolean = true,
+    /** OpenRouter reports each request's cost in USD when asked with `usage.include` (D-027). */
+    val reportsCost: Boolean = false,
 )
 
 object ProviderPresets {
@@ -18,6 +20,7 @@ object ProviderPresets {
         displayName = "OpenRouter",
         baseUrl = "https://openrouter.ai/api/v1",
         defaultModel = "z-ai/glm-5.3-flash",
+        reportsCost = true,
     )
 
     val deepSeek = ProviderPreset(

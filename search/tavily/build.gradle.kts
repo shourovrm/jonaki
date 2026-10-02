@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     api(project(":core:search-api"))
+    api(project(":core:balance-api"))
     api(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)

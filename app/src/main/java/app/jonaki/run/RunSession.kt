@@ -7,6 +7,7 @@ import app.jonaki.core.agent.ApprovalRequester
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.agent.StepRecorder
 import app.jonaki.core.model.Role
+import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MessageEntity
@@ -28,7 +29,20 @@ class RunSession(
     private val onApprovalNeeded: (PendingApproval) -> Unit,
     /** Counts steps for the thread list's "step N" label. */
     private val onStepStarted: () -> Unit,
+    /** "service:modelId" of this run's model, saved with each call's usage (D-027). */
+    private val modelKey: String,
+    /** Cost in USD of one call: the service's own figure, else priced from the catalog. */
+    private val priceOf: (Usage) -> Double?,
 ) : StepRecorder, ApprovalRequester {
+
+    /** Set by the provider during a call; saved on that call's assistant message (D-030). */
+    @Volatile
+    private var routingFellBack = false
+
+    /** Called by the OpenRouter provider when a private-only request ran on the cheapest endpoint. */
+    fun markRoutingFallback() {
+        routingFellBack = true
+    }
 
     private var streamingMessageId: String? = null
     private var streamingPosition: Long = 0
@@ -103,9 +117,17 @@ class RunSession(
             toolCallId = null,
             isComplete = true,
             createdAtMillis = clock(),
+            model = modelKey,
+            // A stopped turn has no usage report; its row keeps the model but no numbers.
+            inputTokens = event.usage?.inputTokens,
+            cachedInputTokens = event.usage?.cachedInputTokens,
+            outputTokens = event.usage?.outputTokens,
+            costUsd = event.usage?.let(priceOf),
+            routingFallback = if (routingFellBack) true else null,
         )
         messageDao.upsert(row)
         streamingMessageId = null
+        routingFellBack = false
         streamingText.clear()
     }
 
