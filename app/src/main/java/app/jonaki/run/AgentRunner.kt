@@ -18,6 +18,10 @@ import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.agent.SkillSection
+import app.jonaki.core.agent.InstructionsSection
+import app.jonaki.core.agent.PromptPersona
+import app.jonaki.settings.AnswerStyles
+import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.core.model.Role
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.memory.RoomMemoryStore
@@ -358,6 +362,7 @@ class AgentRunner(
                     activeTools = tools,
                     memorySection = memorySectionFor(threadId),
                     skillSection = skillSectionFor(thread),
+                    instructionsSection = instructionsSectionFor(thread, snapshot),
                 ),
             ),
             imageMessages = ImageMessages(
@@ -410,6 +415,21 @@ class AgentRunner(
     private suspend fun skillSectionFor(thread: ThreadEntity): String {
         val entries = withContext(Dispatchers.IO) { skillLibrary.list() }
         return SkillSection.build(ThreadSkills.forPrompt(entries, thread.disabledSkills))
+    }
+
+    /**
+     * The answer style, general and thread instructions and the thread's
+     * persona, read once per run so every request of the run sends the same
+     * bytes (D-005, D-STY-1). A persona deleted meanwhile counts as none.
+     */
+    private suspend fun instructionsSectionFor(thread: ThreadEntity, snapshot: SettingsSnapshot): String {
+        val persona = thread.personaId?.let { personaId -> database.personaDao().find(personaId) }
+        return InstructionsSection.build(
+            answerStyle = AnswerStyles.effective(thread.answerStyle, snapshot.answerStyle),
+            generalInstructions = snapshot.customInstructions,
+            persona = persona?.let { found -> PromptPersona(found.name, found.instructions) },
+            threadInstructions = thread.instructions,
+        )
     }
 
     /** Switches one skill on or off for one thread; the next run's prompt follows (D-040). */

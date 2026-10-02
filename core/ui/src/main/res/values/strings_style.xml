@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Answer style and instructions (D-STY-1, D-STY-2). -->
+    <string name="ui_style_default">Default</string>
+    <string name="ui_style_concise">Concise</string>
+    <string name="ui_style_normal">Normal</string>
+    <string name="ui_style_detailed">Detailed</string>
+    <string name="ui_instructions_count">%1$s / %2$s</string>
+</resources>

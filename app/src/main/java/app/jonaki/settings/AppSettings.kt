@@ -1,5 +1,6 @@
 package app.jonaki.settings
 
+import app.jonaki.core.agent.AnswerStyle
 import app.jonaki.core.providerapi.ThinkingLevel
 import android.content.Context
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
@@ -34,6 +35,10 @@ data class SettingsSnapshot(
     val reviewExtractedMemories: Boolean = false,
     /** Thinking level per model key; a model without an entry keeps its own default (D-057). */
     val thinkingLevels: Map<String, ThinkingLevel> = emptyMap(),
+    /** The user's general instructions for every thread (D-STY-1). */
+    val customInstructions: String = "",
+    /** Answer style of every thread that has not picked its own (D-STY-2). */
+    val answerStyle: AnswerStyle = AnswerStyle.NORMAL,
 )
 
 /** Plain settings in app preferences; keys live in [SecretStore]. */
@@ -78,6 +83,8 @@ class AppSettings(
             showStatusStrip = preferences.getBoolean(SHOW_STATUS_STRIP, true),
             reviewExtractedMemories = preferences.getBoolean(REVIEW_EXTRACTED_MEMORIES, false),
             thinkingLevels = ThinkingLevels.fromText(preferences.getString(THINKING_LEVELS, "").orEmpty()),
+            customInstructions = preferences.getString(CUSTOM_INSTRUCTIONS, "").orEmpty(),
+            answerStyle = AnswerStyles.fromName(preferences.getString(ANSWER_STYLE, null)) ?: AnswerStyle.NORMAL,
         )
     }
 
@@ -123,6 +130,8 @@ class AppSettings(
         editor.putBoolean(SHOW_STATUS_STRIP, snapshot.showStatusStrip)
         editor.putBoolean(REVIEW_EXTRACTED_MEMORIES, snapshot.reviewExtractedMemories)
         editor.putString(THINKING_LEVELS, ThinkingLevels.toText(snapshot.thinkingLevels))
+        editor.putString(CUSTOM_INSTRUCTIONS, snapshot.customInstructions)
+        editor.putString(ANSWER_STYLE, snapshot.answerStyle.name)
         editor.apply()
     }
 
@@ -146,5 +155,7 @@ class AppSettings(
         const val SHOW_STATUS_STRIP = "show_status_strip"
         const val REVIEW_EXTRACTED_MEMORIES = "review_extracted_memories"
         const val THINKING_LEVELS = "thinking_levels"
+        const val CUSTOM_INSTRUCTIONS = "custom_instructions"
+        const val ANSWER_STYLE = "answer_style"
     }
 }

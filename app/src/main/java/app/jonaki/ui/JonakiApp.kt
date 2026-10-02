@@ -94,6 +94,10 @@ private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
 private const val ROUTE_SKILLS = "skills"
 private const val ROUTE_SKILLS_THREAD_PREFIX = "skills:"
+private const val ROUTE_CUSTOM_INSTRUCTIONS = "custom-instructions"
+
+/** "persona:<id>", the id empty for a new persona (D-STY-3). */
+private const val ROUTE_PERSONA_PREFIX = "persona:"
 
 /** "artifact:<thread id>@<path relative to the thread folder>" (D-047). */
 private const val ROUTE_ARTIFACT_PREFIX = "artifact:"
@@ -141,6 +145,20 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
+                    onOpenCustomInstructions = { route = ROUTE_CUSTOM_INSTRUCTIONS },
+                    onOpenPersona = { personaId -> route = ROUTE_PERSONA_PREFIX + personaId.orEmpty() },
+                )
+            }
+            route == ROUTE_CUSTOM_INSTRUCTIONS -> {
+                BackHandler { route = ROUTE_SETTINGS }
+                CustomInstructionsRoute(application, onBack = { route = ROUTE_SETTINGS })
+            }
+            route.startsWith(ROUTE_PERSONA_PREFIX) -> {
+                BackHandler { route = ROUTE_SETTINGS }
+                PersonaEditorRoute(
+                    application = application,
+                    personaId = route.removePrefix(ROUTE_PERSONA_PREFIX).ifEmpty { null },
+                    onBack = { route = ROUTE_SETTINGS },
                 )
             }
             route == ROUTE_SKILLS || route.startsWith(ROUTE_SKILLS_THREAD_PREFIX) -> {
@@ -400,6 +418,9 @@ private fun ChatRoute(
     // A new thread has no row to hold its thinking level until the first message creates it.
     var thinkingForNewThread by rememberSaveable(threadId) { mutableStateOf(ThinkingChoice.DEFAULT) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
+    // Style, persona and instructions picked before the first message, like the thinking level above.
+    var styleForNewThread by rememberSaveable(threadId, stateSaver = ThreadStyleDraftSaver) { mutableStateOf(ThreadStyleDraft()) }
+    var styleSheetOpen by rememberSaveable(threadId) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     DisposableEffect(threadId) {
@@ -477,6 +498,9 @@ private fun ChatRoute(
                 if (isNew && thinkingForNewThread != ThinkingChoice.DEFAULT) {
                     runner.setThreadThinking(targetThreadId, thinkingLevelOf(thinkingForNewThread))
                 }
+                if (isNew && styleForNewThread != ThreadStyleDraft()) {
+                    saveThreadStyle(database, targetThreadId, styleForNewThread)
+                }
                 // threadId is still "new" for a new thread, which is the key its attachments wait under.
                 val inboxPaths = withContext(Dispatchers.IO) {
                     application.attachmentDrafts.moveIntoInbox(threadId, runner.threadFolder(targetThreadId))
@@ -537,7 +561,22 @@ private fun ChatRoute(
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
+        onOpenStyle = { styleSheetOpen = true },
     )
+    if (styleSheetOpen) {
+        ThreadStyleSheetRoute(
+            application = application,
+            draft = if (isNew) styleForNewThread else styleDraftOf(thread),
+            onChange = { draft ->
+                if (isNew) {
+                    styleForNewThread = draft
+                } else {
+                    scope.launch { saveThreadStyle(database, threadId, draft) }
+                }
+            },
+            onDismiss = { styleSheetOpen = false },
+        )
+    }
     val currentThread = thread
     if (renaming && currentThread != null) {
         RenameThreadDialog(
@@ -609,7 +648,10 @@ private fun SettingsRoute(
     onAddModels: (String) -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenCustomInstructions: () -> Unit,
+    onOpenPersona: (personaId: String?) -> Unit,
 ) {
+    val personas by remember { application.database.personaDao().observeAll() }.collectAsState(initial = emptyList())
     val settings = application.settings
     val secrets = application.secrets
     val snapshot by settings.snapshot.collectAsState()
@@ -657,6 +699,9 @@ private fun SettingsRoute(
         themeMode = themeModeOf(snapshot.theme),
         showStatusStrip = snapshot.showStatusStrip,
         linkedFolderName = linkedFolder?.name,
+        answerStyle = answerStyleChoiceOf(snapshot.answerStyle),
+        customInstructions = snapshot.customInstructions,
+        personas = personaRowsOf(personas),
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -704,6 +749,14 @@ private fun SettingsRoute(
                 current.copy(thinkingLevels = levels)
             }
         },
+        onAnswerStyleChange = { choice ->
+            val style = answerStyleOf(choice)
+            if (style != null) {
+                settings.update { current -> current.copy(answerStyle = style) }
+            }
+        },
+        onOpenCustomInstructions = onOpenCustomInstructions,
+        onOpenPersona = onOpenPersona,
     )
     SettingsScreen(state = state, actions = actions)
 }

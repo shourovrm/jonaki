@@ -1,5 +1,6 @@
 package app.jonaki.feature.settings
 
+import app.jonaki.core.ui.AnswerStyleChoice
 import app.jonaki.core.ui.ThinkingChoice
 
 import androidx.compose.runtime.Immutable
@@ -24,6 +25,12 @@ data class SettingsUiState(
     val showStatusStrip: Boolean = true,
     /** The folder linked for share_file and imports (D-043); null while none is linked. */
     val linkedFolderName: String? = null,
+    /** Answer style of every thread that has not picked its own (D-STY-2); never DEFAULT here. */
+    val answerStyle: AnswerStyleChoice = AnswerStyleChoice.NORMAL,
+    /** The general custom instructions (D-STY-1); the row shows their first line. */
+    val customInstructions: String = "",
+    /** Saved personas, sorted by name (D-STY-3). */
+    val personas: List<PersonaRowUi> = emptyList(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -147,6 +154,11 @@ class SettingsActions(
     val onModelRemove: (modelKey: String) -> Unit = {},
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
+    val onAnswerStyleChange: (AnswerStyleChoice) -> Unit = {},
+    /** Opens the editor for the general custom instructions. */
+    val onOpenCustomInstructions: () -> Unit = {},
+    /** Opens a persona's editor; null opens an empty one for a new persona. */
+    val onOpenPersona: (personaId: String?) -> Unit = {},
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

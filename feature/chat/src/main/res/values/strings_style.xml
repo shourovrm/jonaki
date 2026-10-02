@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Style and persona of one thread (D-STY-1 to D-STY-3). -->
+    <string name="chat_menu_style">Style and persona</string>
+    <string name="chat_style_title">Style and persona</string>
+    <string name="chat_style_answer">Answer style</string>
+    <string name="chat_style_persona">Persona</string>
+    <string name="chat_style_persona_none">None</string>
+    <string name="chat_style_no_personas">No personas. Add one in Settings.</string>
+    <string name="chat_style_instructions">Instructions for this thread</string>
+    <string name="chat_style_save">Save</string>
+</resources>

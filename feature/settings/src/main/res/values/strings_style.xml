@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Custom instructions, answer style and personas (D-STY-1 to D-STY-3). -->
+    <string name="settings_section_answers">Answers</string>
+    <string name="settings_custom_instructions">Custom instructions</string>
+    <string name="settings_custom_instructions_none">None</string>
+    <string name="settings_section_personas">Personas</string>
+    <string name="settings_add_persona">Add persona</string>
+    <string name="settings_persona_new">New persona</string>
+    <string name="settings_persona_edit">Edit persona</string>
+    <string name="settings_editor_name">Name</string>
+    <string name="settings_editor_instructions">Instructions</string>
+    <string name="settings_editor_save">Save</string>
+    <string name="settings_editor_delete">Delete</string>
+    <string name="settings_persona_delete_title">Delete %1$s?</string>
+</resources>
