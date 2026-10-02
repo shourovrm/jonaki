@@ -12,7 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -57,14 +64,22 @@ fun MarkdownText(markdown: String, modifier: Modifier = Modifier, showCaret: Boo
             Box(Modifier.fillMaxSize().background(caretColor, RoundedCornerShape(2.dp)))
         },
     )
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (blocks.isEmpty() && showCaret) {
-            Text(buildAnnotatedString { appendInlineContent(CARET_ID) }, inlineContent = caretContent)
+    val content = @Composable {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (blocks.isEmpty() && showCaret) {
+                Text(buildAnnotatedString { appendInlineContent(CARET_ID) }, inlineContent = caretContent)
+            }
+            blocks.forEachIndexed { index, block ->
+                val caretHere = showCaret && index == blocks.lastIndex
+                MarkdownBlockView(block, inlineColors, caretHere, caretContent)
+            }
         }
-        blocks.forEachIndexed { index, block ->
-            val caretHere = showCaret && index == blocks.lastIndex
-            MarkdownBlockView(block, inlineColors, caretHere, caretContent)
-        }
+    }
+    // A finished answer can be selected with a long press; a streaming one changes under the finger.
+    if (showCaret) {
+        content()
+    } else {
+        SelectionContainer { content() }
     }
 }
 
@@ -88,7 +103,7 @@ private fun MarkdownBlockView(
             }
             InlineText(block.inlines, style.copy(fontWeight = FontWeight.SemiBold), colors, showCaret, caretContent)
         }
-        is MarkdownBlock.CodeBlock -> CodeBlockView(block.code)
+        is MarkdownBlock.CodeBlock -> CodeBlockView(block.code, block.language)
         is MarkdownBlock.BulletList -> ListView(
             markers = block.items.map { "•" },
             items = block.items,
@@ -145,19 +160,39 @@ private fun ListView(
     }
 }
 
+/** A code block with its language, if given, and a copy button above the code. */
 @Composable
-private fun CodeBlockView(code: String) {
+private fun CodeBlockView(code: String, language: String?) {
+    val clipboard = LocalClipboardManager.current
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.small,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(
-            text = code,
-            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MonospaceFamily, fontSize = 13.sp),
-            softWrap = false,
-            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(12.dp),
-        )
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 12.dp)) {
+                Text(
+                    language.orEmpty(),
+                    style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { clipboard.setText(AnnotatedString(code)) }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        JonakiIcons.ContentCopy,
+                        contentDescription = stringResource(R.string.ui_copy_code),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            Text(
+                text = code,
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MonospaceFamily, fontSize = 13.sp),
+                softWrap = false,
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            )
+        }
     }
 }
 

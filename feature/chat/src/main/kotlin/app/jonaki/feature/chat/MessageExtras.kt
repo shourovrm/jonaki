@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -130,13 +131,15 @@ internal fun ReasoningBlock(reasoning: ChatItem.Reasoning) {
         if (showText) {
             // While streaming, only the newest lines show, so the chat does not jump with long reasoning.
             val text = if (reasoning.isStreaming) reasoning.text.lines().takeLast(STREAMING_LINES).joinToString("\n") else reasoning.text
-            Text(
-                text,
-                style = MaterialTheme.typography.bodySmall,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 2.dp, bottom = 4.dp),
-            )
+            SelectionContainer {
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 2.dp, bottom = 4.dp),
+                )
+            }
         }
     }
 }
