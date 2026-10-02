@@ -98,6 +98,10 @@ fun ChatScreen(
     onAttach: () -> Unit = {},
     /** The close mark on an attachment chip. */
     onRemoveAttachment: (attachmentId: String) -> Unit = {},
+    /** Edit under a sent prompt: the app puts its text in the field and marks it as editing. */
+    onEditMessage: (messageId: String, text: String) -> Unit = { _, _ -> },
+    /** The close mark on the editing banner. */
+    onCancelEdit: () -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
@@ -119,6 +123,9 @@ fun ChatScreen(
                 if (state.attachments.isNotEmpty()) {
                     AttachmentChips(state.attachments, onRemoveAttachment)
                 }
+                if (state.editingMessageId != null) {
+                    EditingBanner(onCancelEdit)
+                }
                 Composer(
                     draft = state.draft,
                     canSend = state.draft.isNotBlank() || state.attachments.isNotEmpty(),
@@ -133,7 +140,15 @@ fun ChatScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (state.items.isNotEmpty()) {
-                MessageList(state.items, onApprovalChoice, onRetry, focusMessageId, onOpenArtifact)
+                MessageList(
+                    items = state.items,
+                    onApprovalChoice = onApprovalChoice,
+                    onRetry = onRetry,
+                    focusMessageId = focusMessageId,
+                    onOpenArtifact = onOpenArtifact,
+                    // Editing while the agent works would change the history under the run.
+                    onEditMessage = if (state.isRunning) null else onEditMessage,
+                )
             }
         }
     }
@@ -242,6 +257,7 @@ private fun MessageList(
     onRetry: (String) -> Unit,
     focusMessageId: String?,
     onOpenArtifact: (path: String) -> Unit,
+    onEditMessage: ((messageId: String, text: String) -> Unit)?,
 ) {
     val listState = rememberLazyListState()
     // Follow the stream only while the user is at the bottom; scrolling up to
@@ -256,8 +272,8 @@ private fun MessageList(
         }
     }
     var openedAtBottom by remember { mutableStateOf(false) }
-    val lastItem = items.lastOrNull()
-    val contentSignature = items.size to contentLength(lastItem)
+    // The working line is always last and never grows, so the newest few items are measured.
+    val contentSignature = items.size to items.takeLast(ITEMS_THAT_GROW).sumOf(::contentLength)
     LaunchedEffect(contentSignature) {
         if (items.isEmpty()) {
             return@LaunchedEffect
@@ -282,8 +298,18 @@ private fun MessageList(
     ) {
         items(items, key = { item -> item.id }) { item ->
             when (item) {
-                is ChatItem.UserMessage -> UserBubble(item.text)
-                is ChatItem.AssistantMessage -> MarkdownText(item.markdown, showCaret = item.isStreaming)
+                is ChatItem.UserMessage -> Column {
+                    UserBubble(item.text)
+                    MessageActions(item.text, alignEnd = true, onEdit = onEditMessage?.let { edit -> { edit(item.id, item.text) } })
+                }
+                is ChatItem.AssistantMessage -> Column {
+                    MarkdownText(item.markdown, showCaret = item.isStreaming)
+                    if (!item.isStreaming) {
+                        MessageActions(item.markdown, alignEnd = false, onEdit = null)
+                    }
+                }
+                is ChatItem.Reasoning -> ReasoningBlock(item)
+                is ChatItem.Working -> WorkingRow(item)
                 is ChatItem.Run -> RunBlock(item)
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
@@ -294,10 +320,13 @@ private fun MessageList(
     }
 }
 
-private const val ROWS_ONE_UPDATE_CAN_ADD = 3
+private const val ROWS_ONE_UPDATE_CAN_ADD = 4
+
+private const val ITEMS_THAT_GROW = 3
 
 private fun contentLength(item: ChatItem?): Int = when (item) {
     is ChatItem.AssistantMessage -> item.markdown.length
+    is ChatItem.Reasoning -> item.text.length
     is ChatItem.Run -> item.steps.size
     else -> 0
 }

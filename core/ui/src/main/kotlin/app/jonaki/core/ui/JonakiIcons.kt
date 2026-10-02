@@ -129,6 +129,15 @@ object JonakiIcons {
         )
     }
 
+    /** Material "content_copy": copy a message. */
+    val ContentCopy: ImageVector by lazy {
+        icon(
+            "ContentCopy",
+            "M16,1H4c-1.1,0 -2,0.9 -2,2v14h2V3h12V1zM19,5H8c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h11" +
+                "c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2zM19,21H8V7h11v14z",
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
             .addPath(pathData = addPathNodes(pathData), fill = SolidColor(Color.Black))

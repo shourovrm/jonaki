@@ -70,6 +70,11 @@ data class MessageEntity(
      * call ran on the cheapest one instead (D-030); the chat shows a note.
      */
     val routingFallback: Boolean? = null,
+    /**
+     * The model's reasoning before this answer, when it shows one; kept for
+     * the folded "Thinking" block and never sent back to the model (D-054).
+     */
+    val reasoningText: String? = null,
 )
 
 /** One tool call as the user sees it in the step track. */

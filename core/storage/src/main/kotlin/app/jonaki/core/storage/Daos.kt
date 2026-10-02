@@ -78,6 +78,13 @@ interface MessageDao {
     @Query("UPDATE messages SET text = :text WHERE id = :messageId")
     suspend fun updateText(messageId: String, text: String)
 
+    @Query("UPDATE messages SET reasoningText = :reasoningText WHERE id = :messageId")
+    suspend fun updateReasoning(messageId: String, reasoningText: String)
+
+    /** Removes a thread's messages from [fromPosition] on, when an edited prompt replaces them (D-056). */
+    @Query("DELETE FROM messages WHERE threadId = :threadId AND position >= :fromPosition")
+    suspend fun deleteFrom(threadId: String, fromPosition: Long)
+
     /** Messages left incomplete when Android stopped the app mid-stream. */
     @Query("UPDATE messages SET isComplete = 1 WHERE isComplete = 0")
     suspend fun closeInterrupted()
@@ -141,6 +148,9 @@ interface StepDao {
     /** Steps left running when Android stopped the app. */
     @Query("UPDATE steps SET status = 'STOPPED' WHERE status IN ('RUNNING', 'WAITING_FOR_APPROVAL')")
     suspend fun stopInterrupted()
+
+    @Query("DELETE FROM steps WHERE toolCallId IN (:toolCallIds)")
+    suspend fun deleteAll(toolCallIds: List<String>)
 }
 
 @Dao
@@ -204,6 +214,10 @@ interface MemoryDao {
 interface CompactionDao {
     @Insert
     suspend fun insert(compaction: CompactionEntity)
+
+    /** Summaries that cover any message from [fromPosition] on; an edit makes them out of date (D-056). */
+    @Query("DELETE FROM compactions WHERE threadId = :threadId AND upToPosition >= :fromPosition")
+    suspend fun deleteCoveringFrom(threadId: String, fromPosition: Long)
 
     /** The summary that covers the most messages of the thread; null before the first compaction. */
     @Query("SELECT * FROM compactions WHERE threadId = :threadId ORDER BY upToPosition DESC LIMIT 1")

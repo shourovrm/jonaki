@@ -8,6 +8,7 @@ import app.jonaki.core.storage.StepEntity
 import app.jonaki.feature.chat.ChatItem
 import app.jonaki.feature.chat.StepUi
 import app.jonaki.feature.chat.StepUiStatus
+import app.jonaki.feature.chat.WorkingActivity
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -19,8 +20,8 @@ import kotlinx.serialization.json.contentOrNull
  * assistant's text (D-024: Rail line steps inside the Firefly look).
  */
 object ChatItems {
-    /** Id of the caret row shown while the model is thinking and nothing else moves. */
-    const val WAITING_ID = "waiting"
+    /** Id of the working line shown at the end while a run is going (D-055). */
+    const val WORKING_ID = "working"
 
     /** The "[date, time zone]" line saved in front of each user message for the model. */
     private val timeLine = Regex("""^\[[^\]\n]*]\n""")
@@ -47,16 +48,24 @@ object ChatItems {
             }
         }
         val withRetry = markRetryableError(items, visibleRows, isRunning)
-        if (isRunning && pendingApproval == null && !somethingIsMoving(withRetry)) {
-            return withRetry + ChatItem.AssistantMessage(WAITING_ID, "", isStreaming = true)
+        // While an approval card waits, the user is the one to act, so nothing pulses.
+        if (!isRunning || pendingApproval != null) {
+            return withRetry
         }
-        return withRetry
+        val runStartedAt = visibleRows.lastOrNull { row -> row.role == Role.USER.name }?.createdAtMillis ?: 0
+        return withRetry + ChatItem.Working(WORKING_ID, activityOf(withRetry), runStartedAt)
     }
 
-    private fun somethingIsMoving(items: List<ChatItem>): Boolean = items.any { item ->
-        val isStreamingText = item is ChatItem.AssistantMessage && item.isStreaming
-        val hasRunningStep = item is ChatItem.Run && item.steps.any { step -> step.status == StepUiStatus.RUNNING }
-        isStreamingText || hasRunningStep
+    /** A running tool wins, then text being written; anything else is thinking. */
+    private fun activityOf(items: List<ChatItem>): WorkingActivity {
+        val runningStep = items.filterIsInstance<ChatItem.Run>()
+            .flatMap { run -> run.steps }
+            .lastOrNull { step -> step.status == StepUiStatus.RUNNING }
+        if (runningStep != null) {
+            return WorkingActivity.Tool(runningStep.toolName)
+        }
+        val isWriting = items.any { item -> item is ChatItem.AssistantMessage && item.isStreaming }
+        return if (isWriting) WorkingActivity.Writing else WorkingActivity.Thinking
     }
 
     private fun splitIntoTurns(rows: List<MessageEntity>): List<List<MessageEntity>> {
@@ -95,14 +104,28 @@ object ChatItems {
         items += artifactsShown(turnSteps, turnId)
         for (row in turn) {
             when (row.role) {
-                Role.ASSISTANT.name -> if (row.text.isNotBlank()) {
-                    items += ChatItem.AssistantMessage(row.id, row.text, isStreaming = isActiveTurn && !row.isComplete)
-                }
+                Role.ASSISTANT.name -> items += assistantItems(row, isActiveTurn)
                 HistoryMapper.ERROR_ROLE -> items += ChatItem.Error(row.id, row.text, canRetry = false)
             }
             if (row.routingFallback == true && fallbackNote.isNotEmpty()) {
                 items += ChatItem.Note("note-${row.id}", fallbackNote)
             }
+        }
+        return items
+    }
+
+    /** The reasoning block, then the answer text, of one assistant row. */
+    private fun assistantItems(row: MessageEntity, isActiveTurn: Boolean): List<ChatItem> {
+        val items = mutableListOf<ChatItem>()
+        val isStreaming = isActiveTurn && !row.isComplete
+        val reasoning = row.reasoningText
+        if (!reasoning.isNullOrBlank()) {
+            // Reasoning stays open only until the answer text starts.
+            val isStillThinking = isStreaming && row.text.isEmpty()
+            items += ChatItem.Reasoning("reasoning-${row.id}", reasoning.trim(), isStreaming = isStillThinking)
+        }
+        if (row.text.isNotBlank()) {
+            items += ChatItem.AssistantMessage(row.id, row.text, isStreaming = isStreaming)
         }
         return items
     }

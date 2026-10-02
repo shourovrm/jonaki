@@ -478,3 +478,31 @@ package (sha512 integrity checked 2026-10-02). Pages load it as
 lib/chart.js. Why: plan M6 step 4; the user chose Chart.js over uPlot and
 over inline SVG only (2026-10-02), because models write working Chart.js
 code more often. Outcome: pending.
+
+## D-054 · 2026-10-03 · The model's reasoning is saved and shown — proposed
+Reasoning that a model streams (OpenRouter `reasoning`, DeepSeek
+`reasoning_content`, Gemini thought parts) is saved in a new nullable
+column messages.reasoningText (Room version 5, AutoMigration 4 to 5) and
+never sent back to the model. The chat shows it in a "Thinking" block above
+the answer: open with the newest six lines while it streams, folded to one
+line once the answer starts, opened on tap. Why: user request (2026-10-03);
+the user agreed to saving after hearing the cost: about 1 to 5 KB per
+answer, about 5 MB per 1,000 answers. Outcome: pending.
+
+## D-055 · 2026-10-03 · Working line while the agent runs — proposed
+While a run is going and no approval card waits, the chat ends with a
+glowing firefly dot, what the agent is doing ("Thinking…", "Writing…",
+"Searching the web…", "Reading files…" and so on, named from the running
+tool) and, after 3 seconds, the seconds since the prompt was sent. It
+replaces the bare caret. Why: user request (2026-10-03), modelled on Claude
+Code's status line. Outcome: pending.
+
+## D-056 · 2026-10-03 · Copy, and edit and resend — proposed
+Every prompt and every finished answer has a Copy button (the raw text,
+Markdown for answers). A prompt also has Edit while no run is going: its
+text goes into the field under an "Editing message" banner; sending deletes
+that prompt and everything after it (messages, their steps, summaries that
+covered them, and the extraction mark), then runs the new prompt. Facts
+already extracted from deleted messages stay in memory. Why: user request
+(2026-10-03), the user chose "edit and resend" over copying into the
+field. Outcome: pending.

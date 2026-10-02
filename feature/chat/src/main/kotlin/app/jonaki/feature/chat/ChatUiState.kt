@@ -22,6 +22,8 @@ data class ChatUiState(
     val usage: UsageUi? = null,
     /** Files picked or shared for the next message, shown as chips above the field. */
     val attachments: List<AttachmentUi> = emptyList(),
+    /** A sent prompt being edited; sending replaces it and everything after it. */
+    val editingMessageId: String? = null,
 )
 
 /** A file waiting to go into the thread's inbox/ with the next message. */
@@ -104,6 +106,21 @@ sealed interface ChatItem {
 
     /** An HTML file the model showed with the artifact tool; tapping it opens the viewer (D-047). */
     data class Artifact(override val id: String, val path: String) : ChatItem
+
+    /** The model's reasoning before an answer: open while it streams, folded afterwards (D-054). */
+    data class Reasoning(override val id: String, val text: String, val isStreaming: Boolean) : ChatItem
+
+    /** The pulsing line at the end of the chat while the agent works (D-055). */
+    data class Working(override val id: String, val activity: WorkingActivity, val sinceMillis: Long) : ChatItem
+}
+
+/** What the working line says the agent is doing. */
+sealed interface WorkingActivity {
+    data object Thinking : WorkingActivity
+
+    data object Writing : WorkingActivity
+
+    data class Tool(val toolName: String) : WorkingActivity
 }
 
 @Immutable

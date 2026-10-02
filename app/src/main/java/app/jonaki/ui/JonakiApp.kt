@@ -368,6 +368,8 @@ private fun ChatRoute(
     val attachmentsByThread by application.attachmentDrafts.byThread.collectAsState()
     val sharedTexts by application.incomingShares.textFor.collectAsState()
     var draft by rememberSaveable(threadId) { mutableStateOf("") }
+    // The sent prompt being edited (D-056); null when the field holds a new message.
+    var editingMessageId by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         application.incomingShares.attach(threadId, uris)
     }
@@ -423,6 +425,7 @@ private fun ChatRoute(
         selectedModelKey = modelKey,
         usage = usageOf(modelUsage, catalog, threadCost),
         attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name) },
+        editingMessageId = editingMessageId,
     )
     ChatScreen(
         state = state,
@@ -431,7 +434,16 @@ private fun ChatRoute(
         onSend = {
             val text = draft
             draft = ""
+            val editedMessageId = editingMessageId
+            editingMessageId = null
             scope.launch {
+                if (editedMessageId != null && !isNew) {
+                    val inboxPaths = withContext(Dispatchers.IO) {
+                        application.attachmentDrafts.moveIntoInbox(threadId, runner.threadFolder(threadId))
+                    }
+                    runner.editAndResend(threadId, editedMessageId, AttachmentDrafts.messageWith(text, inboxPaths))
+                    return@launch
+                }
                 val targetThreadId = if (isNew) runner.createThread() else threadId
                 val pickedModel = modelForNewThread
                 if (isNew && pickedModel != null) {
@@ -448,6 +460,14 @@ private fun ChatRoute(
             }
         },
         onStop = { runner.stop(threadId) },
+        onEditMessage = { messageId, text ->
+            editingMessageId = messageId
+            draft = text
+        },
+        onCancelEdit = {
+            editingMessageId = null
+            draft = ""
+        },
         onApprovalChoice = { _, choice -> runner.answerApproval(threadId, decisionOf(choice)) },
         onRetry = { runner.retry(threadId) },
         onWebSearchChange = { enabled ->

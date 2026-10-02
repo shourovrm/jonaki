@@ -129,6 +129,38 @@ class AgentRunner(
         }
     }
 
+    /**
+     * Replaces a sent prompt with [text]: the prompt and everything after it
+     * are deleted, then the new prompt runs (D-056).
+     */
+    fun editAndResend(threadId: String, messageId: String, text: String) {
+        if (threadId in running.value || text.isBlank()) {
+            return
+        }
+        startRun(threadId) {
+            deleteFromMessage(threadId, messageId)
+            saveUserMessage(threadId, text.trim())
+        }
+    }
+
+    private suspend fun deleteFromMessage(threadId: String, messageId: String) {
+        val messageDao = database.messageDao()
+        val rows = messageDao.listThread(threadId)
+        val edited = rows.firstOrNull { row -> row.id == messageId && row.role == Role.USER.name } ?: return
+        val removed = rows.filter { row -> row.position >= edited.position }
+        val toolCallIds = removed.flatMap { row -> HistoryMapper.toolCallsFromJson(row.toolCallsJson) }.map { call -> call.id }
+        if (toolCallIds.isNotEmpty()) {
+            database.stepDao().deleteAll(toolCallIds)
+        }
+        database.compactionDao().deleteCoveringFrom(threadId, edited.position)
+        messageDao.deleteFrom(threadId, edited.position)
+        // Extraction must not skip the new messages that take the removed positions.
+        val extractedUpTo = database.threadDao().find(threadId)?.memoryExtractedUpToPosition
+        if (extractedUpTo != null && extractedUpTo >= edited.position) {
+            database.threadDao().setMemoryExtractedUpTo(threadId, edited.position - 1)
+        }
+    }
+
     /** Runs again on the saved history, after a failed answer. */
     fun retry(threadId: String) {
         if (threadId in running.value) {

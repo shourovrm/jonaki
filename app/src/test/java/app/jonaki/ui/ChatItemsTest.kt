@@ -5,6 +5,7 @@ import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.StepEntity
 import app.jonaki.feature.chat.ChatItem
+import app.jonaki.feature.chat.WorkingActivity
 import app.jonaki.feature.chat.StepUiStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -85,7 +86,8 @@ class ChatItemsTest {
     fun streamingAnswerIsMarkedUntilComplete() {
         val rows = listOf(row("u1", "USER", "hi"), row("a1", "ASSISTANT", "Hel", complete = false))
 
-        val answer = ChatItems.build(rows, emptyList(), isRunning = true, pendingApproval = null).last() as ChatItem.AssistantMessage
+        val answer = ChatItems.build(rows, emptyList(), isRunning = true, pendingApproval = null)
+            .filterIsInstance<ChatItem.AssistantMessage>().single()
 
         assertTrue(answer.isStreaming)
     }
@@ -113,14 +115,16 @@ class ChatItemsTest {
     }
 
     @Test
-    fun aRunWithNothingVisibleYetShowsTheLiveCaret() {
-        val items = ChatItems.build(listOf(row("u1", "USER", "hi")), emptyList(), isRunning = true, pendingApproval = null)
+    fun aRunWithNothingVisibleYetShowsThinking() {
+        val user = row("u1", "USER", "hi").copy(createdAtMillis = 5_000)
 
-        assertEquals(ChatItem.AssistantMessage(ChatItems.WAITING_ID, "", isStreaming = true), items.last())
+        val items = ChatItems.build(listOf(user), emptyList(), isRunning = true, pendingApproval = null)
+
+        assertEquals(ChatItem.Working(ChatItems.WORKING_ID, WorkingActivity.Thinking, sinceMillis = 5_000), items.last())
     }
 
     @Test
-    fun noCaretWhileAStepIsRunningOrTextIsStreaming() {
+    fun theIndicatorNamesTheRunningToolOrTheWriting() {
         val running = ChatItems.build(
             listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(searchCall))),
             listOf(step("c1", "web_search", "RUNNING")),
@@ -134,8 +138,40 @@ class ChatItemsTest {
             pendingApproval = null,
         )
 
-        assertEquals(false, running.any { it.id == ChatItems.WAITING_ID })
-        assertEquals(false, streaming.any { it.id == ChatItems.WAITING_ID })
+        assertEquals(WorkingActivity.Tool("web_search"), (running.last() as ChatItem.Working).activity)
+        assertEquals(WorkingActivity.Writing, (streaming.last() as ChatItem.Working).activity)
+    }
+
+    @Test
+    fun noIndicatorWhenIdleOrWaitingForApproval() {
+        val rows = listOf(row("u1", "USER", "write it"), row("a1", "ASSISTANT", "", calls = listOf(searchCall)))
+
+        val idle = ChatItems.build(rows, emptyList(), isRunning = false, pendingApproval = null)
+        val waiting = ChatItems.build(rows, emptyList(), isRunning = true, pendingApproval = searchCall)
+
+        assertEquals(false, idle.any { it is ChatItem.Working })
+        assertEquals(false, waiting.any { it is ChatItem.Working })
+    }
+
+    @Test
+    fun reasoningStreamsOpenThenStaysFoldedBeforeItsAnswer() {
+        val thinking = ChatItems.build(
+            listOf(row("u1", "USER", "why?"), row("a1", "ASSISTANT", "", complete = false).copy(reasoningText = "Let me see")),
+            emptyList(),
+            isRunning = true,
+            pendingApproval = null,
+        )
+        val done = ChatItems.build(
+            listOf(row("u2", "USER", "why?"), row("a2", "ASSISTANT", "Because.").copy(reasoningText = "Let me see")),
+            emptyList(),
+            isRunning = false,
+            pendingApproval = null,
+        )
+
+        assertEquals(ChatItem.Reasoning("reasoning-a1", "Let me see", isStreaming = true), thinking[1])
+        assertEquals(WorkingActivity.Thinking, (thinking.last() as ChatItem.Working).activity)
+        assertEquals(ChatItem.Reasoning("reasoning-a2", "Let me see", isStreaming = false), done[1])
+        assertEquals(ChatItem.AssistantMessage("a2", "Because.", isStreaming = false), done[2])
     }
 
     @Test

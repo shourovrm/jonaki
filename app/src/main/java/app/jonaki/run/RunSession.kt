@@ -47,13 +47,14 @@ class RunSession(
     private var streamingMessageId: String? = null
     private var streamingPosition: Long = 0
     private val streamingText = StringBuilder()
+    private val streamingReasoning = StringBuilder()
     private val deniedToolCallIds = mutableSetOf<String>()
     private val stepsOfThisRun = mutableSetOf<String>()
 
     override suspend fun record(event: AgentEvent) {
         when (event) {
             is AgentEvent.TextDelta -> appendStreamedText(event.text)
-            is AgentEvent.ReasoningDelta -> Unit
+            is AgentEvent.ReasoningDelta -> appendStreamedReasoning(event.text)
             is AgentEvent.AssistantMessage -> saveAssistantMessage(event)
             is AgentEvent.ToolStarted -> saveStepStarted(event)
             is AgentEvent.ToolFinished -> saveToolFinished(event)
@@ -80,8 +81,22 @@ class RunSession(
     }
 
     private suspend fun appendStreamedText(text: String) {
+        val messageId = streamingRowId()
+        streamingText.append(text)
+        database.messageDao().updateText(messageId, streamingText.toString())
+    }
+
+    /** Reasoning arrives before the answer, so it may be what creates the turn's row (D-054). */
+    private suspend fun appendStreamedReasoning(text: String) {
+        val messageId = streamingRowId()
+        streamingReasoning.append(text)
+        database.messageDao().updateReasoning(messageId, streamingReasoning.toString())
+    }
+
+    /** The row this model turn streams into, created on the first chunk of text or reasoning. */
+    private suspend fun streamingRowId(): String {
         val messageDao = database.messageDao()
-        val messageId = streamingMessageId ?: newMessageId().also { id ->
+        return streamingMessageId ?: newMessageId().also { id ->
             streamingMessageId = id
             streamingPosition = messageDao.nextPosition(threadId)
             messageDao.upsert(
@@ -98,8 +113,6 @@ class RunSession(
                 ),
             )
         }
-        streamingText.append(text)
-        messageDao.updateText(messageId, streamingText.toString())
     }
 
     private suspend fun saveAssistantMessage(event: AgentEvent.AssistantMessage) {
@@ -124,11 +137,13 @@ class RunSession(
             outputTokens = event.usage?.outputTokens,
             costUsd = event.usage?.let(priceOf),
             routingFallback = if (routingFellBack) true else null,
+            reasoningText = streamingReasoning.toString().trim().ifEmpty { null },
         )
         messageDao.upsert(row)
         streamingMessageId = null
         routingFellBack = false
         streamingText.clear()
+        streamingReasoning.clear()
     }
 
     private suspend fun saveStepStarted(event: AgentEvent.ToolStarted) {
