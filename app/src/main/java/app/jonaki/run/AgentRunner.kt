@@ -67,6 +67,11 @@ class AgentRunner(
     private val approvals = MutableStateFlow<Map<String, PendingApproval>>(emptyMap())
     val pendingApprovals: StateFlow<Map<String, PendingApproval>> = approvals.asStateFlow()
 
+    private val stepCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+
+    /** Steps started so far in each running thread. */
+    val runStepCounts: StateFlow<Map<String, Int>> = stepCounts.asStateFlow()
+
     private val promptBuilder = PromptBuilder(SystemPrompt.BASE)
 
     /** Creates a thread and returns its id. */
@@ -101,6 +106,16 @@ class AgentRunner(
         startRun(threadId) {}
     }
 
+    suspend fun deleteThread(threadId: String) {
+        stop(threadId)
+        database.threadDao().delete(threadId)
+        ThreadFolders.delete(context, threadId)
+    }
+
+    suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean) {
+        database.threadDao().setWebSearchEnabled(threadId, enabled)
+    }
+
     fun stop(threadId: String) {
         runningJobs[threadId]?.cancel()
     }
@@ -113,6 +128,7 @@ class AgentRunner(
 
     private fun startRun(threadId: String, beforeRun: suspend () -> Unit) {
         running.update { current -> current + threadId }
+        stepCounts.update { current -> current - threadId }
         AgentService.start(context)
         val job = scope.launch {
             try {
@@ -182,9 +198,15 @@ class AgentRunner(
                 webAccessEnabled = thread.webSearchEnabled,
             ),
         )
-        val session = RunSession(threadId, database, System::currentTimeMillis) { pending ->
-            approvals.update { current -> current + (threadId to pending) }
-        }
+        val session = RunSession(
+            threadId = threadId,
+            database = database,
+            clock = System::currentTimeMillis,
+            onApprovalNeeded = { pending -> approvals.update { current -> current + (threadId to pending) } },
+            onStepStarted = {
+                stepCounts.update { current -> current + (threadId to (current[threadId] ?: 0) + 1) }
+            },
+        )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
         val permissionBroker = PermissionBroker(session, allowedForThread)
         val loop = AgentLoop(
@@ -279,7 +301,7 @@ class AgentRunner(
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
         const val TITLE_LENGTH = 40
-        const val MISSING_KEY_ERROR = "No API key for the chat service. Add one in Settings."
+        const val MISSING_KEY_ERROR = "No chat API key. Add one in Settings."
     }
 }
 

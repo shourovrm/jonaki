@@ -26,6 +26,8 @@ class RunSession(
     private val clock: () -> Long,
     /** Shows the approval card; the runner clears it once answered. */
     private val onApprovalNeeded: (PendingApproval) -> Unit,
+    /** Counts steps for the thread list's "step N" label. */
+    private val onStepStarted: () -> Unit,
 ) : StepRecorder, ApprovalRequester {
 
     private var streamingMessageId: String? = null
@@ -105,6 +107,7 @@ class RunSession(
 
     private suspend fun saveStepStarted(event: AgentEvent.ToolStarted) {
         stepsOfThisRun += event.toolCall.id
+        onStepStarted()
         database.stepDao().upsert(
             StepEntity(
                 toolCallId = event.toolCall.id,

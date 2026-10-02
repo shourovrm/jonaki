@@ -1,6 +1,5 @@
 package app.jonaki.ui
 
-import java.util.Locale
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -21,14 +20,6 @@ data class StepDetail(
                 "find_files", "search_files" -> StepDetail(query = null, target = arguments.text("pattern") ?: arguments.text("path"))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
-        }
-
-        fun duration(millis: Long): String {
-            if (millis < 60_000) {
-                return String.format(Locale.ENGLISH, "%.1f s", millis / 1000.0)
-            }
-            val totalSeconds = millis / 1000
-            return String.format(Locale.ENGLISH, "%d:%02d", totalSeconds / 60, totalSeconds % 60)
         }
 
         private fun parse(argumentsJson: String): JsonObject? =

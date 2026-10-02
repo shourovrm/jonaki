@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="chat_back">Back</string>
-    <string name="chat_more">More</string>
+    <string name="chat_more">More options</string>
     <string name="chat_subtitle_search_on">%1$s · web search on</string>
     <string name="chat_subtitle_search_off">%1$s · web search off</string>
     <string name="chat_menu_web_search">Web search</string>
@@ -16,7 +16,7 @@
     </plurals>
     <string name="chat_run_show">Show steps</string>
     <string name="chat_run_hide">Hide steps</string>
-    <string name="chat_step_waiting">Waiting for you</string>
+    <string name="chat_step_waiting">Needs approval</string>
     <string name="chat_step_failed">Failed</string>
     <string name="chat_step_denied">Denied</string>
     <string name="chat_step_stopped">Stopped</string>
@@ -25,5 +25,4 @@
     <string name="chat_approval_thread">Allow in thread</string>
     <string name="chat_approval_deny">Deny</string>
     <string name="chat_retry">Retry</string>
-    <string name="chat_empty">Ask anything.</string>
 </resources>

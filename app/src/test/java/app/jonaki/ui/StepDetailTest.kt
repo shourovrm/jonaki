@@ -35,11 +35,4 @@ class StepDetailTest {
         assertEquals(null, detail.query)
         assertEquals(null, detail.target)
     }
-
-    @Test
-    fun durationIsShownInSecondsThenMinutes() {
-        assertEquals("0.4 s", StepDetail.duration(400))
-        assertEquals("2.1 s", StepDetail.duration(2_140))
-        assertEquals("1:05", StepDetail.duration(65_000))
-    }
 }

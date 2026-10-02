@@ -32,6 +32,10 @@ dependencies {
     implementation(project(":search:ollama"))
     implementation(project(":search:exa"))
     implementation(libs.okhttp)
+    implementation(project(":core:ui"))
+    implementation(project(":feature:threads"))
+    implementation(project(":feature:chat"))
+    implementation(project(":feature:settings"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))

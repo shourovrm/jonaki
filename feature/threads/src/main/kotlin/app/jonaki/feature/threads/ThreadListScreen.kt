@@ -92,10 +92,7 @@ fun ThreadListScreen(
                 SearchField(state.searchQuery, onSearchQueryChange)
             }
             when {
-                state.threads.isEmpty() -> EmptyState(
-                    title = stringResource(R.string.threads_empty_title),
-                    body = stringResource(R.string.threads_empty_body),
-                )
+                state.threads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_empty_title), body = null)
                 visibleThreads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_no_matches), body = null)
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
                     items(visibleThreads, key = { thread -> thread.id }) { thread ->

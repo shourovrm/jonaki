@@ -1,6 +1,7 @@
 package app.jonaki.core.storage
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -11,6 +12,16 @@ import kotlinx.coroutines.flow.Flow
 interface ThreadDao {
     @Query("SELECT * FROM threads ORDER BY updatedAtMillis DESC")
     fun observeAll(): Flow<List<ThreadEntity>>
+
+    /** Each thread with the text of its latest user, assistant or error row, for the thread list. */
+    @Query(
+        "SELECT threads.*, (SELECT messages.text FROM messages WHERE messages.threadId = threads.id " +
+            "AND messages.role != 'TOOL' AND messages.text != '' ORDER BY messages.position DESC LIMIT 1) AS lastText, " +
+            "(SELECT messages.role FROM messages WHERE messages.threadId = threads.id " +
+            "AND messages.role != 'TOOL' ORDER BY messages.position DESC LIMIT 1) AS lastRole " +
+            "FROM threads ORDER BY updatedAtMillis DESC",
+    )
+    fun observeSummaries(): Flow<List<ThreadSummary>>
 
     @Query("SELECT * FROM threads WHERE id = :threadId")
     fun observe(threadId: String): Flow<ThreadEntity?>
@@ -74,3 +85,9 @@ interface StepDao {
     @Query("UPDATE steps SET status = 'STOPPED' WHERE status IN ('RUNNING', 'WAITING_FOR_APPROVAL')")
     suspend fun stopInterrupted()
 }
+
+data class ThreadSummary(
+    @Embedded val thread: ThreadEntity,
+    val lastText: String?,
+    val lastRole: String?,
+)

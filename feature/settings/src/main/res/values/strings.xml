@@ -3,7 +3,6 @@
     <string name="settings_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_section_chat">Chat model</string>
-    <string name="settings_provider">Provider</string>
     <string name="settings_model">Model</string>
     <string name="settings_api_key">API key</string>
     <string name="settings_section_youtube">YouTube summaries</string>

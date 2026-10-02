@@ -93,14 +93,7 @@ fun ChatScreen(
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            if (state.items.isEmpty()) {
-                Text(
-                    stringResource(R.string.chat_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            } else {
+            if (state.items.isNotEmpty()) {
                 MessageList(state.items, onApprovalChoice, onRetry)
             }
         }
