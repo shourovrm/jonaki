@@ -381,6 +381,74 @@ fetched. A name that exists asks "Replace?". Why: plan M5 step 2.
 Limits: a branch name with "/" in a tree link is read as its first part
 and fails with 404; private repositories are not reachable. Outcome: pending.
 
+## D-042 · 2026-10-02 · Shared and attached files wait as chips, then go to inbox/ — proposed
+The share sheet (SEND and SEND_MULTIPLE, any type) and the composer's
+paper clip (system picker, several files) copy each file into the cache at
+once, because the right to read it can end with the sending activity. A
+share first asks "Add to thread": New thread or an existing one, newest
+first. The files then show as chips above the chosen chat's field (tap to
+remove) and shared text goes into the field. On Send the files move into
+`inbox/` and the message ends with "Attached: inbox/a.csv, inbox/b.pdf",
+so the model sees the paths. Why: one path for both ways in; a new thread
+gets no folder until its first message. Rejected: copying into inbox/ when
+the thread is picked (a file the user removes would stay, and New thread
+would make an empty thread). Limit: chips do not survive the process; the
+cache copies are deleted on the next start. Outcome: pending.
+
+## D-043 · 2026-10-02 · One linked folder, read and written through share_file — proposed
+Settings > Files > "Link a folder" opens the system folder picker
+(OPEN_DOCUMENT_TREE); Jonaki keeps a persisted read and write grant and the
+folder's name; "Unlink" releases it; linking another replaces it. The model
+reaches it only through share_file: list_linked (one folder level, folders
+first, cut at 8,000 characters with the rest saved to a file),
+import_linked (a file into inbox/) and linked_folder (a thread file into
+the folder's top). Built on DocumentsContract, no DocumentFile library. A
+grant taken back in system settings answers "link the folder again". Why:
+plan M6 step 1c, D-017. Rejected: a separate linked-folder tool (a 17th
+tool against D-014's count). Outcome: pending.
+
+## D-044 · 2026-10-02 · share_file: six actions, one approval cost — proposed
+Actions downloads, save_as, share, linked_folder, list_linked,
+import_linked; files to send must resolve inside the thread folder
+(ThreadPaths). The tool declares `SideEffect.CHANGES`, so every call shows
+an approval card that names where the file goes ("To Downloads:
+artifacts/report.pdf"); "Allow in thread" covers all six actions, reading
+the linked folder included. Downloads uses MediaStore into
+Downloads/Jonaki/ on Android 10 and later and the "Save as" picker on
+Android 8 and 9 (no storage permission). share hands a FileProvider link
+(authority `<package>.files`, threads/ only) to the share sheet and
+reports only that the sheet opened. A closed picker is an error, so the
+model does not claim a save. Time limit 5 minutes for the picker. Why:
+plan M6 step 2, user rulings of 2026-10-02 (no new permission, no new
+library). Rejected: READ_ONLY for the list actions (one tool has one cost,
+D-034); WRITE_EXTERNAL_STORAGE on Android 8 and 9. Outcome: pending.
+
+## D-045 · 2026-10-02 · Pickers and the share sheet through VisibleActivity — proposed
+The tool module defines `FileDestinations` (as tools/memory defines
+MemoryStore); the app implements it. Pickers and the share sheet need an
+activity on screen, so the app's `VisibleActivity` keeps the live
+MainActivity instances (attached in onCreate, detached in onDestroy),
+launches on the newest one that is started, and suspends until the result
+through the activity's result registry. After a rotation it registers the
+same key on the new activity, which hands over the parked result. When no
+Jonaki window is on screen the call fails at once with "Ask the user to
+open Jonaki, then call share_file again, or use action downloads";
+Downloads and the linked folder work in the background. Why: the tool runs
+in the agent service, which may not start activities. Rejected: an
+interface in core/tool-api (only one tool needs it); a notification that
+opens the picker (more moving parts for a rare case). Outcome: pending.
+
+## D-046 · 2026-10-02 · Rules for files coming in — proposed
+`IncomingFiles` in core/tool-api serves the app and share_file: at most
+25 MB per file, checked while copying since providers often report no
+size, with "sales.zip is over 25 MB"; a name keeps one file name ("/", "\"
+and control characters become "_", empty or dot names become "file", at
+most 120 characters with the extension kept); a taken name gets " (2)",
+" (3)" before the extension and nothing is replaced. Shared file://
+links are refused as unreadable, because they could name Jonaki's own
+private files. Why: plan M6 step 1c. Rejected: a larger cap (a phone and
+the model gain little from bigger files). Outcome: pending.
+
 ## D-047 · 2026-10-02 · Artifact tool and offline viewer — proposed
 The model writes an HTML file in artifacts/ with write_file or edit_file,
 then calls `artifact` with its path. The tool keeps a version when the file

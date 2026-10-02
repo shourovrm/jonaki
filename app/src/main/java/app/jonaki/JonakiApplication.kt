@@ -3,6 +3,11 @@ package app.jonaki
 import android.app.Application
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.storage.JonakiDatabase
+import app.jonaki.files.AndroidFileDestinations
+import app.jonaki.files.AttachmentDrafts
+import app.jonaki.files.IncomingShares
+import app.jonaki.files.LinkedFolder
+import app.jonaki.files.VisibleActivity
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.run.AgentRunner
 import app.jonaki.run.BackgroundModel
@@ -61,6 +66,21 @@ class JonakiApplication : Application() {
     lateinit var balances: AccountBalances
         private set
 
+    /** The activity on screen, for pickers and the share sheet that share_file opens (D-045). */
+    val visibleActivity = VisibleActivity()
+
+    /** The folder linked in Settings (D-043). */
+    lateinit var linkedFolder: LinkedFolder
+        private set
+
+    /** Files waiting as chips for each thread's next message (D-042). */
+    lateinit var attachmentDrafts: AttachmentDrafts
+        private set
+
+    /** Files and text shared from other apps, and files from the attach button. */
+    lateinit var incomingShares: IncomingShares
+        private set
+
     override fun onCreate() {
         super.onCreate()
         database = JonakiDatabase.open(this)
@@ -73,6 +93,9 @@ class JonakiApplication : Application() {
             // Streaming replies can pause while a model thinks; the agent loop's own limits apply on top.
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
+        linkedFolder = LinkedFolder(this)
+        attachmentDrafts = AttachmentDrafts(File(cacheDir, "incoming"))
+        incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
         skillImporter = SkillImporter(skillLibrary, SkillDownloader(httpClient))
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
         backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog)
@@ -94,6 +117,7 @@ class JonakiApplication : Application() {
             memoryExtractor,
             threadCompactor,
             skillLibrary,
+            AndroidFileDestinations(this, visibleActivity, linkedFolder),
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {
@@ -106,6 +130,9 @@ class JonakiApplication : Application() {
         }
         applicationScope.launch {
             restoreNamesCutByOldVersion()
+        }
+        applicationScope.launch(Dispatchers.IO) {
+            attachmentDrafts.deleteLeftovers()
         }
         applicationScope.launch(Dispatchers.IO) {
             // Installs new built-in skills and updates unedited ones after an app update (D-038).

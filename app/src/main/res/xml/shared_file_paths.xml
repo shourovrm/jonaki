@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- share_file offers files of a thread folder to other apps through the share sheet (D-044). -->
+<paths>
+    <files-path name="threads" path="threads/" />
+</paths>

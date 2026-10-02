@@ -1,5 +1,6 @@
 package app.jonaki.feature.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
@@ -37,6 +39,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -91,6 +94,10 @@ fun ChatScreen(
     onOpenArtifact: (path: String) -> Unit = {},
     /** A message to show first instead of the end, when opened from a memory fact's source. */
     focusMessageId: String? = null,
+    /** The paper clip: the app opens the system file picker. */
+    onAttach: () -> Unit = {},
+    /** The close mark on an attachment chip. */
+    onRemoveAttachment: (attachmentId: String) -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
@@ -109,12 +116,17 @@ fun ChatScreen(
                         onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
                     )
                 }
+                if (state.attachments.isNotEmpty()) {
+                    AttachmentChips(state.attachments, onRemoveAttachment)
+                }
                 Composer(
                     draft = state.draft,
+                    canSend = state.draft.isNotBlank() || state.attachments.isNotEmpty(),
                     isRunning = state.isRunning,
                     onDraftChange = onDraftChange,
                     onSend = onSend,
                     onStop = onStop,
+                    onAttach = onAttach,
                 )
             }
         },
@@ -420,17 +432,26 @@ private fun ErrorRow(error: ChatItem.Error, onRetry: (String) -> Unit) {
 @Composable
 private fun Composer(
     draft: String,
+    canSend: Boolean,
     isRunning: Boolean,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
+    onAttach: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier) {
         Row(
             verticalAlignment = Alignment.Bottom,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
         ) {
+            IconButton(onClick = onAttach, modifier = Modifier.size(52.dp)) {
+                Icon(
+                    JonakiIcons.AttachFile,
+                    contentDescription = stringResource(R.string.chat_attach),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             TextField(
                 value = draft,
                 onValueChange = onDraftChange,
@@ -451,7 +472,7 @@ private fun Composer(
             } else {
                 FilledIconButton(
                     onClick = onSend,
-                    enabled = draft.isNotBlank(),
+                    enabled = canSend,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -461,6 +482,41 @@ private fun Composer(
                     Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
                 }
             }
+        }
+    }
+}
+
+/** One chip per file; a long name keeps one line and ends in "…" (D-029). Tapping a chip removes it. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AttachmentChips(attachments: List<AttachmentUi>, onRemove: (String) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+    ) {
+        for (attachment in attachments) {
+            InputChip(
+                selected = false,
+                onClick = { onRemove(attachment.id) },
+                label = {
+                    Text(
+                        attachment.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 220.dp),
+                    )
+                },
+                trailingIcon = {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.chat_attachment_remove, attachment.name),
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+            )
         }
     }
 }

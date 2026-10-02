@@ -20,6 +20,8 @@ data class SettingsUiState(
     val themeMode: ThemeMode,
     /** The chat's status strip (D-027); its switch lives on the Status icons page. */
     val showStatusStrip: Boolean = true,
+    /** The folder linked for share_file and imports (D-043); null while none is linked. */
+    val linkedFolderName: String? = null,
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -128,6 +130,9 @@ class SettingsActions(
     val onOpenMemory: () -> Unit = {},
     /** Opens the skill library (M5). */
     val onOpenSkills: () -> Unit = {},
+    /** Opens Android's folder picker; the app keeps the picked folder. */
+    val onLinkFolder: () -> Unit = {},
+    val onUnlinkFolder: () -> Unit = {},
     val onAddService: (serviceKey: String) -> Unit = {},
     /** Removes the service, its key and its models. */
     val onRemoveService: (serviceKey: String) -> Unit = {},

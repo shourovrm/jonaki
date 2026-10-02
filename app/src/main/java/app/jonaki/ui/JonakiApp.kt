@@ -1,6 +1,10 @@
 package app.jonaki.ui
 
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -12,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.jonaki.JonakiApplication
 import app.jonaki.R
@@ -25,7 +30,11 @@ import app.jonaki.core.storage.ThreadSummary
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
 import app.jonaki.core.ui.resolvesToDark
+import app.jonaki.core.toolapi.IncomingFiles
 import app.jonaki.feature.chat.ApprovalChoice
+import app.jonaki.feature.chat.AttachmentUi
+import app.jonaki.files.AttachmentDrafts
+import app.jonaki.files.RefusedFile
 import app.jonaki.feature.chat.ChatScreen
 import app.jonaki.feature.chat.ChatStatusUi
 import app.jonaki.feature.chat.ChatUiState
@@ -48,6 +57,8 @@ import app.jonaki.feature.settings.SettingsUiState
 import app.jonaki.feature.settings.StatusIconsScreen
 import app.jonaki.feature.settings.moveInOrder
 import app.jonaki.feature.threads.RenameThreadDialog
+import app.jonaki.feature.threads.ShareTargetRow
+import app.jonaki.feature.threads.ShareTargetScreen
 import app.jonaki.feature.threads.ThreadListScreen
 import app.jonaki.feature.threads.ThreadListUiState
 import app.jonaki.feature.threads.ThreadRow
@@ -61,9 +72,11 @@ import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.ThemeChoice
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Routes are plain strings so they survive process death through rememberSaveable. */
 private const val ROUTE_THREADS = "threads"
@@ -96,6 +109,22 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
     LaunchedEffect(isDark) { onDarkThemeChange(isDark) }
     JonakiTheme(themeMode = themeMode) {
         var route by rememberSaveable { mutableStateOf(ROUTE_THREADS) }
+        RefusedFilesMessage(application)
+        val pendingShare by application.incomingShares.pending.collectAsState()
+        val share = pendingShare
+        if (share != null) {
+            // A share from another app asks for its thread first, over whatever screen was open.
+            BackHandler { application.incomingShares.discard() }
+            ShareTargetRoute(
+                application = application,
+                fileNames = share.files.map { file -> file.name },
+                onPicked = { threadKey ->
+                    application.incomingShares.deliverTo(threadKey)
+                    route = ROUTE_CHAT_PREFIX + threadKey
+                },
+            )
+            return@JonakiTheme
+        }
         when {
             route == ROUTE_SETTINGS -> {
                 BackHandler { route = ROUTE_THREADS }
@@ -189,6 +218,42 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 onOpenSettings = { route = ROUTE_SETTINGS },
             )
         }
+    }
+}
+
+@Composable
+private fun ShareTargetRoute(application: JonakiApplication, fileNames: List<String>, onPicked: (threadKey: String) -> Unit) {
+    val summaries by remember { application.database.threadDao().observeSummaries() }.collectAsState(initial = emptyList())
+    val rows = summaries
+        .sortedByDescending { summary -> summary.thread.updatedAtMillis }
+        .map { summary -> ShareTargetRow(summary.thread.id, summary.thread.title) }
+    ShareTargetScreen(
+        fileNames = fileNames,
+        threads = rows,
+        onNewThread = { onPicked(NEW_THREAD) },
+        onPickThread = onPicked,
+        onCancel = { application.incomingShares.discard() },
+    )
+}
+
+/** Files that were too large or unreadable are named once in a short message. */
+@Composable
+private fun RefusedFilesMessage(application: JonakiApplication) {
+    val refused by application.incomingShares.refusedFiles.collectAsState()
+    val context = LocalContext.current
+    LaunchedEffect(refused) {
+        if (refused.isEmpty()) {
+            return@LaunchedEffect
+        }
+        val lines = refused.map { file ->
+            when (file) {
+                is RefusedFile.TooLarge ->
+                    context.getString(R.string.files_refused_too_large, file.name, IncomingFiles.describeSize(file.limitBytes))
+                is RefusedFile.Unreadable -> context.getString(R.string.files_refused_unreadable, file.name)
+            }
+        }
+        Toast.makeText(context, lines.joinToString("\n"), Toast.LENGTH_LONG).show()
+        application.incomingShares.clearRefused()
     }
 }
 
@@ -300,7 +365,16 @@ private fun ChatRoute(
     val running by runner.runningThreadIds.collectAsState()
     val approvals by runner.pendingApprovals.collectAsState()
     val settingsSnapshot by application.settings.snapshot.collectAsState()
+    val attachmentsByThread by application.attachmentDrafts.byThread.collectAsState()
+    val sharedTexts by application.incomingShares.textFor.collectAsState()
     var draft by rememberSaveable(threadId) { mutableStateOf("") }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        application.incomingShares.attach(threadId, uris)
+    }
+    LaunchedEffect(threadId, sharedTexts[threadId]) {
+        val sharedText = application.incomingShares.takeText(threadId) ?: return@LaunchedEffect
+        draft = if (draft.isBlank()) sharedText else draft.trimEnd() + "\n\n" + sharedText
+    }
     // A new thread does not exist yet, so a model picked before the first message is kept here.
     var modelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
@@ -348,6 +422,7 @@ private fun ChatRoute(
         modelChoices = modelChoices(settingsSnapshot.chatModels, catalog),
         selectedModelKey = modelKey,
         usage = usageOf(modelUsage, catalog, threadCost),
+        attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name) },
     )
     ChatScreen(
         state = state,
@@ -362,7 +437,11 @@ private fun ChatRoute(
                 if (isNew && pickedModel != null) {
                     runner.setThreadModel(targetThreadId, pickedModel)
                 }
-                runner.send(targetThreadId, text)
+                // threadId is still "new" for a new thread, which is the key its attachments wait under.
+                val inboxPaths = withContext(Dispatchers.IO) {
+                    application.attachmentDrafts.moveIntoInbox(threadId, runner.threadFolder(targetThreadId))
+                }
+                runner.send(targetThreadId, AttachmentDrafts.messageWith(text, inboxPaths))
                 if (isNew) {
                     onThreadCreated(targetThreadId)
                 }
@@ -389,6 +468,10 @@ private fun ChatRoute(
         onOpenSkills = onOpenSkills,
         onOpenArtifact = onOpenArtifact,
         focusMessageId = focusMessageId,
+        onAttach = { filePicker.launch(arrayOf("*/*")) },
+        onRemoveAttachment = { attachmentId ->
+            scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
+        },
     )
     val currentThread = thread
     if (renaming && currentThread != null) {
@@ -461,6 +544,12 @@ private fun SettingsRoute(
         leftAndMonth = { left, month -> application.getString(R.string.balance_left_and_month, left, month) },
         monthOnly = { month -> application.getString(R.string.balance_month_only, month) },
     )
+    val linkedFolder by application.linkedFolder.current.collectAsState()
+    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
+        if (treeUri != null) {
+            linkFolder(application, treeUri)
+        }
+    }
     val serviceCosts by remember { application.database.messageDao().observeServiceCostSince(startOfThisMonthMillis()) }
         .collectAsState(initial = emptyList())
     val appCountedMonth = serviceCosts.associate { row -> row.service to row.costUsd }
@@ -488,6 +577,7 @@ private fun SettingsRoute(
         webSearchOffInNewThreads = snapshot.webSearchOffInNewThreads,
         themeMode = themeModeOf(snapshot.theme),
         showStatusStrip = snapshot.showStatusStrip,
+        linkedFolderName = linkedFolder?.name,
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -504,6 +594,8 @@ private fun SettingsRoute(
         onOpenStatusIcons = onOpenStatusIcons,
         onOpenMemory = onOpenMemory,
         onOpenSkills = onOpenSkills,
+        onLinkFolder = { folderPicker.launch(null) },
+        onUnlinkFolder = { application.linkedFolder.unlink() },
         onAddService = { serviceKey ->
             val service = ChatService.byKey(serviceKey)
             if (service != null) {
@@ -528,6 +620,15 @@ private fun SettingsRoute(
         onModelRemove = { modelKey -> settings.updateChatModels { models -> models.removeModel(modelKey) } },
     )
     SettingsScreen(state = state, actions = actions)
+}
+
+/** Some folder pickers give a folder whose access cannot be kept; then nothing is linked. */
+private fun linkFolder(application: JonakiApplication, treeUri: Uri) {
+    try {
+        application.linkedFolder.link(treeUri)
+    } catch (refused: SecurityException) {
+        Toast.makeText(application, R.string.files_link_failed, Toast.LENGTH_LONG).show()
+    }
 }
 
 private fun serviceCards(

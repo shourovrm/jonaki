@@ -42,6 +42,7 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
 import app.jonaki.skills.ThreadSkills
+import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import java.time.ZonedDateTime
@@ -74,6 +75,7 @@ class AgentRunner(
     private val memoryExtractor: MemoryExtractor,
     private val threadCompactor: ThreadCompactor,
     private val skillLibrary: SkillLibrary,
+    private val fileDestinations: FileDestinations,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -134,6 +136,9 @@ class AgentRunner(
         }
         startRun(threadId) {}
     }
+
+    /** The thread's folder, made if missing; attachments move into its inbox/ before a message is sent. */
+    fun threadFolder(threadId: String): java.io.File = ThreadFolders.create(context, threadId)
 
     suspend fun deleteThread(threadId: String) {
         stop(threadId)
@@ -285,6 +290,7 @@ class AgentRunner(
                 videoSummarizer = videoSummarizer(),
                 webAccessEnabled = thread.webSearchEnabled,
                 memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
+                fileDestinations = fileDestinations,
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()

@@ -18,4 +18,11 @@
     <string name="threads_delete_title">Delete thread?</string>
     <string name="threads_save">Save</string>
     <string name="threads_cancel">Cancel</string>
+    <string name="share_target_title">Add to thread</string>
+    <string name="share_target_untitled">Untitled</string>
+    <plurals name="share_target_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="share_target_text">Text</string>
 </resources>
