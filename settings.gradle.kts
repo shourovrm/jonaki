@@ -18,5 +18,7 @@ rootProject.name = "Jonaki"
 include(":app")
 include(":core:model")
 include(":core:tool-api")
+include(":core:provider-api")
+include(":core:search-api")
 include(":tools:echo")
 include(":spikes:fts5")
