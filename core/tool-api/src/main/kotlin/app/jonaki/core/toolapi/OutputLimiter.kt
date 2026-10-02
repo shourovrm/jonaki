@@ -14,6 +14,25 @@ class OutputLimiter(private val threadFolder: File) {
             return text
         }
         val spillPath = "$SPILL_FOLDER/${saveToNewSpillFile(text, sourceName).name}"
+        return firstPartWithNotice(text, maxCharacters, spillPath)
+    }
+
+    /**
+     * Like [limit], but the whole text goes to [spillPath], relative to the
+     * thread folder, so that it sits beside related files (a subagent's
+     * answer in its delegation's folder, M7).
+     */
+    fun limitInto(text: String, maxCharacters: Int, spillPath: String): String {
+        if (text.length <= maxCharacters) {
+            return text
+        }
+        val file = File(threadFolder, spillPath)
+        file.parentFile?.mkdirs()
+        file.writeText(text)
+        return firstPartWithNotice(text, maxCharacters, spillPath)
+    }
+
+    private fun firstPartWithNotice(text: String, maxCharacters: Int, spillPath: String): String {
         val lastNewlineInLimit = text.lastIndexOf('\n', startIndex = maxCharacters)
 
         if (lastNewlineInLimit <= 0) {

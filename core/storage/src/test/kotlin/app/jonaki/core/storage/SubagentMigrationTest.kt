@@ -60,8 +60,8 @@ class SubagentMigrationTest {
         JonakiDatabase_AutoMigration_6_7_Impl().migrate(connection)
         connection.execSQL(
             "INSERT INTO subagents (id, threadId, parentToolCallId, orderInCall, agentType, task, model, status, " +
-                "resultText, costUsd, startedAtMillis, finishedAtMillis) " +
-                "VALUES ('s1', 't1', 'c1', 0, 'scout', 'Find', NULL, 'DONE', 'ok', 0.01, 1, 2)",
+                "resultText, latestText, costUsd, startedAtMillis, finishedAtMillis) " +
+                "VALUES ('s1', 't1', 'c1', 0, 'scout', 'Find', NULL, 'DONE', 'ok', NULL, 0.01, 1, 2)",
         )
 
         connection.execSQL("DELETE FROM threads WHERE id = 't1'")

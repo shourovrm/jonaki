@@ -5,21 +5,14 @@ import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.providerapi.ChatRequest
-import app.jonaki.core.providerapi.StreamEvent
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.providerapi.ToolDefinition
-import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
 
 data class AgentSettings(
     val model: String,
@@ -93,12 +86,6 @@ class AgentLoop(
         return outcome
     }
 
-    private sealed interface TurnResult {
-        data class Answered(val message: Message, val usage: Usage?) : TurnResult
-
-        data class Failed(val message: String, val retryable: Boolean) : TurnResult
-    }
-
     private suspend fun streamOneTurn(conversation: List<Message>, tools: List<ToolDefinition>): TurnResult {
         val request = ChatRequest(
             model = settings.model,
@@ -108,36 +95,21 @@ class AgentLoop(
             maxOutputTokens = settings.maxOutputTokens,
             thinkingLevel = settings.thinkingLevel,
         )
-        val text = StringBuilder()
-        val toolCalls = mutableListOf<ToolCall>()
-        var finished: StreamEvent.Finished? = null
-        var failed: StreamEvent.Failed? = null
+        val streamedText = StringBuilder()
         try {
-            provider.stream(request).collect { event ->
-                when (event) {
-                    is StreamEvent.TextDelta -> {
-                        text.append(event.text)
-                        recorder.record(AgentEvent.TextDelta(event.text))
-                    }
-                    is StreamEvent.ReasoningDelta -> recorder.record(AgentEvent.ReasoningDelta(event.text))
-                    is StreamEvent.ToolCallReady -> toolCalls += event.toolCall
-                    is StreamEvent.Finished -> finished = event
-                    is StreamEvent.Failed -> failed = event
-                }
-            }
+            return streamTurn(
+                provider = provider,
+                request = request,
+                onTextDelta = { delta ->
+                    streamedText.append(delta)
+                    recorder.record(AgentEvent.TextDelta(delta))
+                },
+                onReasoningDelta = { delta -> recorder.record(AgentEvent.ReasoningDelta(delta)) },
+            )
         } catch (cancellation: CancellationException) {
-            recordStop(text.toString())
+            recordStop(streamedText.toString())
             throw cancellation
         }
-
-        val failure = failed
-        if (failure != null) {
-            return TurnResult.Failed(failure.message, failure.retryable)
-        }
-        val finish = finished
-            ?: return TurnResult.Failed("the model's reply stopped before it finished", retryable = true)
-        val message = Message(role = Role.ASSISTANT, text = text.toString(), toolCalls = toolCalls.toList())
-        return TurnResult.Answered(message, finish.usage)
     }
 
     private suspend fun recordStop(partialText: String) {
@@ -169,7 +141,7 @@ class AgentLoop(
                 "there is no tool named ${toolCall.toolName}",
                 "Available tools: ${toolsByName.keys.sorted().joinToString(", ")}.",
             )
-        val arguments = parseArguments(toolCall.argumentsJson)
+        val arguments = parseToolArguments(toolCall.argumentsJson)
             ?: return ToolOutput.error(
                 "the arguments for ${tool.name} are not a JSON object",
                 "Call ${tool.name} again with arguments that match its schema.",
@@ -180,38 +152,7 @@ class AgentLoop(
                 "Do not retry it; continue without it or ask the user what to do instead.",
             )
         }
-        return runWithTimeLimit(tool, arguments)
-    }
-
-    private suspend fun runWithTimeLimit(tool: Tool, arguments: JsonObject): ToolOutput {
-        val output = try {
-            withTimeoutOrNull(tool.timeLimit) { tool.run(arguments, toolContext) }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (exception: Exception) {
-            return ToolOutput.error(
-                "${tool.name} failed with ${exception::class.simpleName}: ${exception.message}",
-                "Check the arguments, or try a different approach.",
-            )
-        }
-        return output ?: ToolOutput.error(
-            "${tool.name} did not finish within its time limit of ${tool.timeLimit}",
-            "Try a smaller request, or a different tool.",
-        )
-    }
-
-    private fun parseArguments(argumentsJson: String): JsonObject? {
-        // Some models send an empty string for a call without arguments.
-        if (argumentsJson.isBlank()) {
-            return JsonObject(emptyMap())
-        }
-        return try {
-            Json.parseToJsonElement(argumentsJson).jsonObject
-        } catch (exception: SerializationException) {
-            null
-        } catch (exception: IllegalArgumentException) {
-            null
-        }
+        return runToolWithTimeLimit(tool, arguments, toolContext.forCall(toolCall.id))
     }
 
     private companion object {

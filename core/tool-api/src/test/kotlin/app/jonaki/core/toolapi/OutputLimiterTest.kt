@@ -54,4 +54,15 @@ class OutputLimiterTest {
         assertEquals("a".repeat(100), limited.substringBefore("\n\n["))
         assertTrue(limited.contains("100 of 1000 characters"))
     }
+
+    @Test
+    fun limitIntoSavesTheWholeTextAtTheGivenPath() {
+        val folder = java.nio.file.Files.createTempDirectory("thread").toFile()
+        val text = (1..100).joinToString("\n") { number -> "line $number" }
+
+        val limited = OutputLimiter(folder).limitInto(text, maxCharacters = 50, spillPath = "work/delegations/d1/scout.md")
+
+        assertEquals(text, java.io.File(folder, "work/delegations/d1/scout.md").readText())
+        assertTrue(limited.contains("read_file path=\"work/delegations/d1/scout.md\" offset="))
+    }
 }

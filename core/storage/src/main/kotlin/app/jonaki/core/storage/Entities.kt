@@ -157,6 +157,8 @@ data class SubagentEntity(
     val status: String,
     /** The answer it returned to the thread's agent; null while it runs. */
     val resultText: String?,
+    /** The start of the latest text it wrote, for its folded card; null until it writes. */
+    val latestText: String? = null,
     val costUsd: Double?,
     val startedAtMillis: Long,
     val finishedAtMillis: Long?,

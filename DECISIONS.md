@@ -605,3 +605,44 @@ own mode (Default, Ask, Auto, Bypass), stored as the nullable
 reads the mode before every call, so a change during a run applies from the
 next call. The status strip shows a red "Bypass" pill while a thread's mode
 is Bypass. Why: user ruling (2026-10-03). Outcome: pending.
+
+## D-059 · 2026-10-03 · Four built-in subagent types — proposed
+Version 1 has four types and no custom ones. researcher: web_search,
+web_fetch, youtube_summarize, read_file, find_files, search_files,
+read_document, view_image; answers with Summary, numbered Findings with
+source links, Gaps. scout: find_files, search_files, read_file,
+read_document, web_search; answers compressed (Found, Where with exact
+paths or links, Start here). writer: the read tools plus write_file,
+edit_file, artifact. worker: every thread tool. Writer and worker end with
+"Files written or changed" and "Blockers", and only they see the skill list.
+Each gets only the tools the thread has; no subagent gets delegate (no
+nesting) or memory (it reads the memory section, and reports new facts in
+its answer). view_image follows the subagent's own model, so a text-only
+thread can hand an image to a vision model. Every subagent also has
+request_tool and ask_parent, and notes when one call starts several. Its
+system prompt is built once from its starting tools (D-005); a tool granted
+later joins only the request's tool list. Why: user rulings (2026-10-03),
+adapted from the user's pi agents. Outcome: pending.
+
+## D-061 · 2026-10-03 · Subagent budgets — proposed
+A subagent has 10 tool steps (every call counts, request_tool and notes
+too), $0.10 of model cost (only known costs count; a model without a price
+in the catalog and no reported cost has only the step limit) and 10
+minutes. At the step limit it gets one last request without tools and
+answers; calls beyond the limit in the same turn get a "Not run" result.
+At the cost limit, the time limit, a failed model call (after one retry
+after 2 s) or Stop, it returns its texts so far and its last three tool
+results, cut to 3,000 characters each. The result names the limit that
+stopped it. Why: brief from the lead (2026-10-03). Outcome: pending.
+
+## D-062 · 2026-10-03 · request_tool and the 3-minute rule — proposed
+request_tool(name, reason) and a subagent's own calls go through
+`SubagentGate` with the thread's approval mode (D-058): read-only tools,
+"Allow in thread" allowances and Bypass need no card. Otherwise a card
+names the subagent, the tool and the reason, with Allow once, Allow for
+this task, Deny. Allow once on a request covers the next call of that tool.
+A card unanswered for 3 minutes is withdrawn and counts as skipped: the
+model is told to go on with the other parts or stop, and the result lists
+every skipped part. The thread's own agent waits without limit. Tested
+with a hand-made virtual clock (`ApprovalTimer`), because
+kotlinx-coroutines-test would be a new dependency. Outcome: pending.

@@ -177,6 +177,12 @@ interface SubagentDao {
     @Upsert
     suspend fun upsert(subagent: SubagentEntity)
 
+    @Query("UPDATE subagents SET latestText = :text WHERE id = :subagentId")
+    suspend fun setLatestText(subagentId: String, text: String)
+
+    @Query("UPDATE subagents SET costUsd = :costUsd WHERE id = :subagentId")
+    suspend fun setCost(subagentId: String, costUsd: Double?)
+
     @Query("DELETE FROM subagents WHERE parentToolCallId IN (:parentToolCallIds)")
     suspend fun deleteUnder(parentToolCallIds: List<String>)
 

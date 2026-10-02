@@ -68,11 +68,19 @@ class ToolContext(
     val threadFolder: File,
     val httpClient: OkHttpClient,
     /** The skill library, readable as /skills/ (D-037); null where a run has no skills. */
-    skillLibraryFolder: File? = null,
+    val skillLibraryFolder: File? = null,
+    /**
+     * The id of the call being run, set by the agent loop for each call; the
+     * delegate tool links its subagents' steps to it (M7). Null outside a call.
+     */
+    val toolCallId: String? = null,
 ) {
     val paths: ThreadPaths = ThreadPaths(threadFolder)
     val skillPaths: SkillLibraryPaths? = skillLibraryFolder?.let(::SkillLibraryPaths)
     val outputLimiter: OutputLimiter = OutputLimiter(threadFolder)
+
+    /** The same context for one call. */
+    fun forCall(callId: String): ToolContext = ToolContext(threadFolder, httpClient, skillLibraryFolder, callId)
 }
 
 /** Plain text for the model. An error says what failed and what to try next. */

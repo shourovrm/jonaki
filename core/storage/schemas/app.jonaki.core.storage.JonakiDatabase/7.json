@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "c62426033b3141fe897b37e62d5e00d5",
+    "identityHash": "ff026abf3470ba8d88a6fa3537ebbfa3",
     "entities": [
       {
         "tableName": "threads",
@@ -468,7 +468,7 @@
       },
       {
         "tableName": "subagents",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `threadId` TEXT NOT NULL, `parentToolCallId` TEXT NOT NULL, `orderInCall` INTEGER NOT NULL, `agentType` TEXT NOT NULL, `task` TEXT NOT NULL, `model` TEXT, `status` TEXT NOT NULL, `resultText` TEXT, `costUsd` REAL, `startedAtMillis` INTEGER NOT NULL, `finishedAtMillis` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`threadId`) REFERENCES `threads`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `threadId` TEXT NOT NULL, `parentToolCallId` TEXT NOT NULL, `orderInCall` INTEGER NOT NULL, `agentType` TEXT NOT NULL, `task` TEXT NOT NULL, `model` TEXT, `status` TEXT NOT NULL, `resultText` TEXT, `latestText` TEXT, `costUsd` REAL, `startedAtMillis` INTEGER NOT NULL, `finishedAtMillis` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`threadId`) REFERENCES `threads`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -520,6 +520,11 @@
           {
             "fieldPath": "resultText",
             "columnName": "resultText",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "latestText",
+            "columnName": "latestText",
             "affinity": "TEXT"
           },
           {
@@ -582,7 +587,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c62426033b3141fe897b37e62d5e00d5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ff026abf3470ba8d88a6fa3537ebbfa3')"
     ]
   }
 }

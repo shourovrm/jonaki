@@ -17,6 +17,15 @@ enum class ApprovalDecision {
 data class ApprovalRequest(
     val toolName: String,
     val toolCall: ToolCall,
+    /** Set when a subagent asks: the card names it and offers "Allow for this task" (D-015). */
+    val subagent: SubagentAsk? = null,
+)
+
+data class SubagentAsk(
+    /** "researcher", or "researcher 2" when one delegate call started several. */
+    val agentLabel: String,
+    /** The subagent's reason, from request_tool; null for a call it makes. */
+    val reason: String?,
 )
 
 /**
@@ -56,6 +65,10 @@ class PermissionBroker(
         }
         return tool.name in allowedTools
     }
+
+    /** Shows a subagent's card; [SubagentGate] decides what the answer means and how long to wait. */
+    suspend fun askForSubagent(request: ApprovalRequest): ApprovalDecision =
+        approvalRequester.requestApproval(request)
 
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
         if (runsWithoutAsking(tool)) {
