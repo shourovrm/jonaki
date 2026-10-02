@@ -603,3 +603,13 @@ picked). Deleting a thread deletes its chips. This lifts D-042's limit.
 Why: STATUS known gap. Rejected: a Room table (a migration for a few
 lines of state); a file in the thread folder (a new thread has none until
 its first message). Outcome: pending.
+
+## D-GAP-2 · 2026-10-03 · Back from the skill editor asks before losing edits — proposed
+When the editor's text differs from the saved SKILL.md, Back (the arrow or
+the system gesture) asks "Discard changes?" with Discard and Keep editing;
+tapping outside keeps editing. Without changes Back leaves at once. A failed
+save counts as unsaved. feature/skills now uses activity-compose (already
+in the app) for BackHandler. Why: STATUS known gap; the smallest fix.
+Rejected: keeping a draft per skill (a stored second copy that can drift
+from the file). Not shared: the memory and rename dialogs hold a line or
+two and close only on Cancel or a tap outside. Outcome: pending.

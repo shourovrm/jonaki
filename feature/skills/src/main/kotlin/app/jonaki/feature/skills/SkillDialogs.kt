@@ -119,3 +119,20 @@ internal fun DeleteSkillDialog(name: String, onConfirm: () -> Unit, onDismiss: (
         },
     )
 }
+
+/** Asked on Back when the editor holds text that was not saved (D-GAP-2). */
+@Composable
+internal fun DiscardChangesDialog(onDiscard: () -> Unit, onKeepEditing: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onKeepEditing,
+        title = { Text(stringResource(R.string.skills_discard_title)) },
+        confirmButton = {
+            TextButton(onClick = onDiscard) {
+                Text(stringResource(R.string.skills_discard), color = JonakiTheme.colors.deny)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onKeepEditing) { Text(stringResource(R.string.skills_keep_editing)) }
+        },
+    )
+}
