@@ -66,4 +66,6 @@ data class Usage(
     val outputTokens: Int,
     /** Input tokens served from the provider's prompt cache, when it reports them. */
     val cachedInputTokens: Int? = null,
+    /** Cost in US dollars when the service reports it (OpenRouter does); otherwise priced from tokens (D-027). */
+    val costUsd: Double? = null,
 )
