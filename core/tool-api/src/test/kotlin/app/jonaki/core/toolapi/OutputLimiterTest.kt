@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -64,5 +65,23 @@ class OutputLimiterTest {
 
         assertEquals(text, java.io.File(folder, "work/delegations/d1/scout.md").readText())
         assertTrue(limited.contains("read_file path=\"work/delegations/d1/scout.md\" offset="))
+    }
+
+    @Test
+    fun theSpillPathAndTheKeptPartCanBeReadBackFromACutText() {
+        val text = (1..100).joinToString("\n") { number -> "line $number" }
+        val byLines = limiter.limit(text = text, maxCharacters = 50, sourceName = "run_code")
+        val byCharacters = limiter.limit(text = "a".repeat(1_000), maxCharacters = 100, sourceName = "run_code")
+
+        assertEquals("work/tool-output/run_code-1.txt", OutputLimiter.spillPathOf(byLines))
+        assertEquals("work/tool-output/run_code-2.txt", OutputLimiter.spillPathOf(byCharacters))
+        assertTrue(text.startsWith(OutputLimiter.visiblePartOf(byLines)))
+        assertEquals("a".repeat(100), OutputLimiter.visiblePartOf(byCharacters))
+    }
+
+    @Test
+    fun aTextThatWasNotCutHasNoSpillPath() {
+        assertNull(OutputLimiter.spillPathOf("Printed:\nFull output saved to nowhere. Fine"))
+        assertEquals("one\ntwo", OutputLimiter.visiblePartOf("one\ntwo"))
     }
 }

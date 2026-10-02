@@ -38,7 +38,7 @@ class OutputLimiter(private val threadFolder: File) {
         if (lastNewlineInLimit <= 0) {
             // The first line alone is over the limit, so a line offset cannot continue it.
             val visibleText = text.substring(0, maxCharacters)
-            val notice = "[Output truncated: showed ${visibleText.length} of ${text.length} characters. " +
+            val notice = "$NOTICE_START showed ${visibleText.length} of ${text.length} characters. " +
                 "Full output saved to $spillPath; search it with search_files path=\"$spillPath\".]"
             return "$visibleText\n\n$notice"
         }
@@ -46,7 +46,7 @@ class OutputLimiter(private val threadFolder: File) {
         val visibleText = text.substring(0, lastNewlineInLimit)
         val visibleLineCount = visibleText.lines().size
         val totalLineCount = text.lines().size
-        val notice = "[Output truncated: showed lines 1-$visibleLineCount of $totalLineCount " +
+        val notice = "$NOTICE_START showed lines 1-$visibleLineCount of $totalLineCount " +
             "(${visibleText.length} of ${text.length} characters). Full output saved to $spillPath. " +
             "Use read_file path=\"$spillPath\" offset=${visibleLineCount + 1} to continue.]"
         return "$visibleText\n\n$notice"
@@ -68,5 +68,25 @@ class OutputLimiter(private val threadFolder: File) {
     companion object {
         /** Relative to the thread folder. */
         const val SPILL_FOLDER = "work/tool-output"
+
+        private const val NOTICE_START = "[Output truncated:"
+        private const val NOTICE_SEPARATOR = "\n\n$NOTICE_START"
+        private val spillPathInNotice = Regex("""Full output saved to (\S+?)[.;](\s|$)""")
+
+        /** The part of a [limit]ed text that was kept, without the notice; the text itself when nothing was cut. */
+        fun visiblePartOf(limitedText: String): String {
+            val noticeIndex = limitedText.lastIndexOf(NOTICE_SEPARATOR)
+            return if (noticeIndex < 0) limitedText else limitedText.substring(0, noticeIndex)
+        }
+
+        /** Where [limit] saved the whole text, relative to the thread folder; null when nothing was cut. */
+        fun spillPathOf(limitedText: String): String? {
+            val noticeIndex = limitedText.lastIndexOf(NOTICE_SEPARATOR)
+            if (noticeIndex < 0) {
+                return null
+            }
+            val notice = limitedText.substring(noticeIndex)
+            return spillPathInNotice.find(notice)?.groupValues?.get(1)
+        }
     }
 }

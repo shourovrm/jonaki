@@ -145,7 +145,7 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
     ): ToolOutput = when (outcome) {
         is CodeRunOutcome.Finished -> finishedReport(language, outcome, exchange, context)
         is CodeRunOutcome.TimedOut -> {
-            val text = "Error: the program ran longer than ${CODE_TIME_LIMIT.inWholeSeconds} seconds and was stopped; " +
+            val text = "${RunCodeReport.TIMED_OUT_START} ${CODE_TIME_LIMIT.inWholeSeconds} seconds and was stopped; " +
                 "files it wrote were not saved. Make it do less, or split the work into several runs." +
                 printedSection(outcome.stdout, outcome.stderr)
             ToolOutput(context.outputLimiter.limit(text, MAX_OUTPUT_CHARACTERS, name), isError = true)
@@ -177,24 +177,24 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
         val failed = errorText != null
         val builder = StringBuilder()
         if (failed) {
-            builder.append("${language.displayName} stopped with an error.")
+            builder.append("${language.displayName} ${RunCodeReport.STOPPED_WITH_ERROR}")
         } else {
-            builder.append("${language.displayName} finished.")
+            builder.append("${language.displayName} ${RunCodeReport.FINISHED}")
         }
         val printed = printedSection(outcome.stdout, outcome.stderr)
         builder.append(printed)
         if (outcome.resultValue != null) {
-            builder.append("\nResult: ${outcome.resultValue}")
+            builder.append("${RunCodeReport.RESULT}${outcome.resultValue}")
         }
         if (errorText != null) {
-            builder.append("\nError:\n${errorText.trimEnd()}")
+            builder.append("${RunCodeReport.ERROR}${errorText.trimEnd()}")
         }
         if (printed.isEmpty() && outcome.resultValue == null && !failed) {
-            builder.append("\nNo output and no result.")
+            builder.append("\n${RunCodeReport.NO_OUTPUT}")
         }
         builder.append(filesSection(saveReport))
         if (failed) {
-            builder.append("\nFix the program and call run_code again.")
+            builder.append("\n${RunCodeReport.FIX_AND_RETRY}")
         }
         val text = context.outputLimiter.limit(builder.toString(), MAX_OUTPUT_CHARACTERS, name)
         return ToolOutput(text, isError = failed)
@@ -203,10 +203,10 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
     private fun printedSection(stdout: String, stderr: String): String {
         val builder = StringBuilder()
         if (stdout.isNotEmpty()) {
-            builder.append("\nPrinted:\n${stdout.trimEnd()}")
+            builder.append("${RunCodeReport.PRINTED}${stdout.trimEnd()}")
         }
         if (stderr.isNotEmpty()) {
-            builder.append("\nPrinted to stderr:\n${stderr.trimEnd()}")
+            builder.append("${RunCodeReport.PRINTED_TO_STDERR}${stderr.trimEnd()}")
         }
         return builder.toString()
     }
@@ -215,10 +215,10 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
         val builder = StringBuilder()
         for (saved in saveReport.saved) {
             val state = if (saved.wasNew) "new" else "replaced"
-            builder.append("\nSaved: ${saved.relativePath} ($state, ${saved.sizeBytes} bytes)")
+            builder.append("\n${RunCodeReport.SAVED}${saved.relativePath} ($state, ${saved.sizeBytes} bytes)")
         }
         for (refused in saveReport.refused) {
-            builder.append("\nNot saved: ${refused.relativePath} (${refused.reason})")
+            builder.append("\n${RunCodeReport.NOT_SAVED}${refused.relativePath} (${refused.reason})")
         }
         return builder.toString()
     }
