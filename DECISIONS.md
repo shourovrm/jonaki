@@ -591,3 +591,35 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-067 · 2026-10-03 · run_code: files in by name, results out from work/ and artifacts/ — proposed
+run_code takes language (javascript or python), code and files (thread
+paths or folders; a list, one path, or a list written as text). The
+program sees exactly those files at the same paths (inbox/sales.csv).
+Afterwards only new or changed files under work/ and artifacts/ are saved;
+anything else the program changed, inbox/ included, is dropped and named
+as "Not saved". This is stricter than write_file, which may write anywhere
+in the thread folder. Limits: 25 MB per file and 50 MB per run each way
+(as D-046), 120 s for the program, 180 s for the tool including Python's
+start, output cut to 20,000 characters through OutputLimiter.
+requiredCapabilities stays empty because only some calls need Python; a
+missing Python is reported per call. Engines come through the
+constructor from core/runtime-api (`CodeRuntime`), one module per engine
+under runtimes/. Why: plan M8 steps 1 and 2, user ruling of 2026-10-03.
+Outcome: pending.
+
+## D-068 · 2026-10-03 · JavaScript through androidx.javascriptengine 1.1.1 — proposed
+runtimes/javascript runs programs in JavaScriptSandbox (V8 in Android
+System WebView's isolated process: no network, no files, no Android API).
+A fresh sandbox and isolate per run, one run at a time per app (the API
+allows one connection), heap 256 MB where the WebView supports the limit.
+The program gets console.log and a files object (read, write, list; text
+only, so binary files are refused with a hint to use Python); the last
+expression's value is the result, and top-level await works. A run past
+the time limit is stopped by closing the isolate. Phones whose WebView
+lacks the sandbox or promise results get "Android System WebView on this
+phone is too old". Adds Guava (shrunk by R8): release APK 5,954,755 to
+5,972,819 bytes. Why: user ruling of 2026-10-03 (new dependency approved).
+Rejected: QuickJS (named in the plan; native code to ship). Outcome: on
+the A059 (WebView 153) a CSV total ran in 155 ms end to end, await worked,
+and an endless loop was stopped at 120.3 s.

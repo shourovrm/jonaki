@@ -1,5 +1,6 @@
 package app.jonaki
 
+import app.jonaki.core.runtimeapi.CodeRuntime
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.tools.artifact.ArtifactTool
@@ -9,6 +10,7 @@ import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.MemoryTool
 import app.jonaki.tools.readdocument.ReadDocumentTool
 import app.jonaki.tools.readfile.ReadFileTool
+import app.jonaki.tools.runcode.RunCodeTool
 import app.jonaki.tools.searchfiles.SearchFilesTool
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.ShareFileTool
@@ -33,6 +35,8 @@ data class ToolServices(
     val fileDestinations: FileDestinations? = null,
     /** From the model catalog; view_image is offered only to models that take images (D-050). */
     val modelAcceptsImages: Boolean = false,
+    /** One engine per language for run_code; empty leaves run_code out. */
+    val codeRuntimes: List<CodeRuntime> = emptyList(),
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -64,6 +68,9 @@ object ToolRegistry {
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)
+        }
+        if (services.codeRuntimes.isNotEmpty()) {
+            tools += RunCodeTool(services.codeRuntimes)
         }
         return tools
     }

@@ -337,6 +337,7 @@ class AgentRunner(
                 memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
                 fileDestinations = fileDestinations,
                 modelAcceptsImages = modelAcceptsImages,
+                codeRuntimes = CodeRuntimes.forApp(context),
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()

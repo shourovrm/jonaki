@@ -35,6 +35,9 @@ dependencies {
     implementation(project(":tools:share-file"))
     implementation(project(":tools:view-image"))
     implementation(project(":tools:read-document"))
+    implementation(project(":tools:run-code"))
+    implementation(project(":core:runtime-api"))
+    implementation(project(":runtimes:javascript"))
     // Only for PDFBoxResourceLoader.init at start; read_document does the reading (D-051).
     implementation(libs.pdfbox.android)
     implementation(project(":core:provider-api"))
