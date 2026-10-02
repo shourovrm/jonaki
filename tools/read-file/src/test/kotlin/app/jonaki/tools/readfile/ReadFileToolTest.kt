@@ -103,4 +103,34 @@ class ReadFileToolTest {
         writeFile("empty.txt", "")
         assertEquals("(empty.txt is empty)", read("path" to "empty.txt").text)
     }
+
+    @Test
+    fun readsASkillFileFromTheLibrary() {
+        val library = Files.createTempDirectory("skills").toFile()
+        File(library, "report").mkdirs()
+        File(library, "report/SKILL.md").writeText("---\nname: report\n---\nSteps\n")
+        val skillContext = ToolContext(threadFolder, OkHttpClient(), skillLibraryFolder = library)
+
+        val output = runBlocking { tool.run(JsonObject(mapOf("path" to JsonPrimitive("/skills/report/SKILL.md"))), skillContext) }
+
+        assertFalse(output.isError)
+        assertEquals("---\nname: report\n---\nSteps", output.text)
+    }
+
+    @Test
+    fun skillPathsFailLoudlyWithoutALibraryOrOutsideIt() {
+        val library = Files.createTempDirectory("skills").toFile()
+        val skillContext = ToolContext(threadFolder, OkHttpClient(), skillLibraryFolder = library)
+
+        val withoutLibrary = read("path" to "/skills/report/SKILL.md")
+        val escape = runBlocking { tool.run(JsonObject(mapOf("path" to JsonPrimitive("/skills/../x"))), skillContext) }
+        val missing = runBlocking { tool.run(JsonObject(mapOf("path" to JsonPrimitive("/skills/nope/SKILL.md"))), skillContext) }
+
+        assertTrue(withoutLibrary.isError)
+        assertTrue(withoutLibrary.text.contains("no skill library"))
+        assertTrue(escape.isError)
+        assertTrue(escape.text.contains("outside the skill library"))
+        assertTrue(missing.isError)
+        assertTrue(missing.text.contains("Skills list"))
+    }
 }

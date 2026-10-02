@@ -76,7 +76,7 @@ class JonakiApplication : Application() {
             clock = System::currentTimeMillis,
         )
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
-        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope, memoryExtractor, threadCompactor)
+        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope, memoryExtractor, threadCompactor, skillLibrary)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.

@@ -58,8 +58,11 @@ enum class Capability {
 class ToolContext(
     val threadFolder: File,
     val httpClient: OkHttpClient,
+    /** The skill library, readable as /skills/ (D-037); null where a run has no skills. */
+    skillLibraryFolder: File? = null,
 ) {
     val paths: ThreadPaths = ThreadPaths(threadFolder)
+    val skillPaths: SkillLibraryPaths? = skillLibraryFolder?.let(::SkillLibraryPaths)
     val outputLimiter: OutputLimiter = OutputLimiter(threadFolder)
 }
 

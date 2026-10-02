@@ -55,7 +55,7 @@ sealed interface SaveResult {
  * so that an app update replaces a built-in skill only while the user has
  * not changed it (D-038).
  */
-class SkillLibrary(private val folder: File, private val stateFile: File) {
+class SkillLibrary(val folder: File, private val stateFile: File) {
 
     /** Every skill folder, sorted by name; folders whose name starts with "." are work in progress. */
     @Synchronized

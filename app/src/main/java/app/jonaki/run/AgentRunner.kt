@@ -13,6 +13,7 @@ import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
+import app.jonaki.core.agent.SkillSection
 import app.jonaki.core.model.Role
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.memory.RoomMemoryStore
@@ -21,6 +22,7 @@ import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.searchapi.SearchBackend
+import app.jonaki.core.skills.SkillLibrary
 import app.jonaki.core.storage.CompactionPlan
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
@@ -39,11 +41,13 @@ import app.jonaki.settings.ChatService
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
+import app.jonaki.skills.ThreadSkills
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import java.time.ZonedDateTime
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +55,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
 /**
@@ -68,6 +73,7 @@ class AgentRunner(
     private val scope: CoroutineScope,
     private val memoryExtractor: MemoryExtractor,
     private val threadCompactor: ThreadCompactor,
+    private val skillLibrary: SkillLibrary,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -286,12 +292,16 @@ class AgentRunner(
         val loop = AgentLoop(
             provider = provider,
             tools = tools,
-            toolContext = ToolContext(ThreadFolders.create(context, threadId), httpClient),
+            toolContext = ToolContext(ThreadFolders.create(context, threadId), httpClient, skillLibrary.folder),
             permissionBroker = permissionBroker,
             recorder = session,
             settings = AgentSettings(
                 model = ModelKey.modelOf(modelKey),
-                systemPrompt = promptBuilder.systemPrompt(tools, memorySectionFor(threadId)),
+                systemPrompt = promptBuilder.systemPrompt(
+                    activeTools = tools,
+                    memorySection = memorySectionFor(threadId),
+                    skillSection = skillSectionFor(thread),
+                ),
             ),
         )
         val summary = database.compactionDao().latestForThread(threadId)
@@ -329,6 +339,22 @@ class AgentRunner(
             memoryDao.markUsed(section.includedIds, System.currentTimeMillis())
         }
         return section.text
+    }
+
+    /**
+     * The thread's enabled skills, read from the library once per run, so
+     * the prompt stays the same for every request of the run (D-005). A
+     * skill edited or imported during a run reaches the next run.
+     */
+    private suspend fun skillSectionFor(thread: ThreadEntity): String {
+        val entries = withContext(Dispatchers.IO) { skillLibrary.list() }
+        return SkillSection.build(ThreadSkills.forPrompt(entries, thread.disabledSkills))
+    }
+
+    /** Switches one skill on or off for one thread; the next run's prompt follows (D-040). */
+    suspend fun setSkillEnabled(threadId: String, skillName: String, enabled: Boolean) {
+        val thread = database.threadDao().find(threadId) ?: return
+        database.threadDao().setDisabledSkills(threadId, ThreadSkills.withSkill(skillName, enabled, thread.disabledSkills))
     }
 
     private suspend fun saveError(threadId: String, message: String) {

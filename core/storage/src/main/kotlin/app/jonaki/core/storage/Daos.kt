@@ -54,6 +54,9 @@ interface ThreadDao {
     @Query("UPDATE threads SET toolsAllowedForThread = :toolNames WHERE id = :threadId")
     suspend fun setToolsAllowedForThread(threadId: String, toolNames: String)
 
+    @Query("UPDATE threads SET disabledSkills = :skillNames WHERE id = :threadId")
+    suspend fun setDisabledSkills(threadId: String, skillNames: String)
+
     @Query("DELETE FROM threads WHERE id = :threadId")
     suspend fun delete(threadId: String)
 }

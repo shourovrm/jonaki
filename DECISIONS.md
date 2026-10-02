@@ -344,3 +344,26 @@ stays deleted until "Restore built-in skills". Why: an update must not
 overwrite the user's edits silently. Rejected: always overwrite (loses
 edits); never update (fixes to shipped skills never arrive).
 Outcome: pending.
+
+## D-039 · 2026-10-02 · Skills listed in the system prompt — proposed
+The system prompt has a Skills section between the tool list and the
+Memory section: a header that tells the model to read a skill's SKILL.md
+with read_file before a matching task and follow it, then one line per
+enabled skill, "- name: description (/skills/name/SKILL.md)", sorted by
+name. The runner reads the library once per run, so every request of a
+run sends the same bytes (D-005); an edit or import reaches the next run.
+A skill whose SKILL.md is broken is left out of the prompt and shown with
+its problem on the skills screen. read_file's prompt line names /skills/.
+Why: plan M5 step 3, D-014. Rejected: the full SKILL.md text in the prompt
+(every skill would cost its whole text on every request). Outcome: pending.
+
+## D-040 · 2026-10-02 · Skills are on in every thread unless switched off — proposed
+Each thread stores the skills the user switched off, as comma-separated
+names in a new `threads.disabledSkills` column (Room version 4, an
+AutoMigration with default ''). Every other usable skill in the library is
+listed in the thread's prompt, so a new or imported skill is on everywhere
+at once. Switches are in the chat's ⋮ menu under Skills. Why: a skill costs
+one prompt line until used, and per-thread opt-in would make every new
+skill a chore. Rejected: an enabled list per thread (new skills would be
+off everywhere); a global on/off per skill in Settings (the thread switch
+covers it). Outcome: pending.

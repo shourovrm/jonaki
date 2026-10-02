@@ -55,4 +55,18 @@ class WriteFileToolTest {
     fun missingContentIsAnError() {
         assertTrue(write("path" to "a.txt").isError)
     }
+
+    @Test
+    fun cannotWriteIntoTheSkillLibrary() {
+        val library = Files.createTempDirectory("skills").toFile()
+        File(library, "report").mkdirs()
+        val skillContext = ToolContext(threadFolder, OkHttpClient(), skillLibraryFolder = library)
+        val arguments = JsonObject(mapOf("path" to JsonPrimitive("/skills/report/SKILL.md"), "content" to JsonPrimitive("x")))
+
+        val output = runBlocking { tool.run(arguments, skillContext) }
+
+        assertTrue(output.isError)
+        assertFalse(File(library, "report/SKILL.md").exists())
+        assertFalse(File("/skills/report/SKILL.md").exists())
+    }
 }

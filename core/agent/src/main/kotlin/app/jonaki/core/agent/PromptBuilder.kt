@@ -16,13 +16,12 @@ class PromptBuilder(private val basePrompt: String) {
     /**
      * [memorySection] comes from [MemorySection.build]; it goes last, so that
      * a changed fact leaves the base text and the tool list as a cached prefix.
+     * [skillSection] comes from [SkillSection.build] and goes before it, as
+     * skills change less often than facts.
      */
-    fun systemPrompt(activeTools: List<Tool>, memorySection: String = ""): String {
-        val withTools = basePromptWithTools(activeTools)
-        if (memorySection.isBlank()) {
-            return withTools
-        }
-        return withTools + "\n\n" + memorySection.trim()
+    fun systemPrompt(activeTools: List<Tool>, memorySection: String = "", skillSection: String = ""): String {
+        val parts = listOf(basePromptWithTools(activeTools), skillSection.trim(), memorySection.trim())
+        return parts.filter { part -> part.isNotEmpty() }.joinToString("\n\n")
     }
 
     private fun basePromptWithTools(activeTools: List<Tool>): String {
