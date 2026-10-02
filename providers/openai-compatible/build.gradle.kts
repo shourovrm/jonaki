@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     api(project(":core:provider-api"))
+    api(project(":core:balance-api"))
     api(libs.okhttp)
     testImplementation(libs.okhttp.mockwebserver)
 }

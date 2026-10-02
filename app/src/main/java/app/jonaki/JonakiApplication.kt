@@ -5,6 +5,7 @@ import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.run.AgentRunner
 import app.jonaki.run.ChatProviders
+import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.SecretStore
 import java.io.File
@@ -32,6 +33,10 @@ class JonakiApplication : Application() {
     lateinit var runner: AgentRunner
         private set
 
+    /** Account balances for the settings cards (D-031); call refreshAll() when Settings opens. */
+    lateinit var balances: AccountBalances
+        private set
+
     override fun onCreate() {
         super.onCreate()
         database = JonakiDatabase.open(this)
@@ -45,6 +50,7 @@ class JonakiApplication : Application() {
             .build()
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
         runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope)
+        balances = AccountBalances(secrets, httpClient)
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
             database.messageDao().closeInterrupted()
