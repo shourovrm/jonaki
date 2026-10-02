@@ -12,6 +12,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -117,7 +118,15 @@ private fun ToolGroupRow(
                 }
             }
             Spacer(Modifier.width(12.dp))
-            Switch(checked = row.isOn, onCheckedChange = null, enabled = row.canSwitch)
+            // A group that is always on (Files) keeps the "on" colours; Material's disabled look reads as off.
+            val enabledColors = SwitchDefaults.colors()
+            val colors = SwitchDefaults.colors(
+                disabledCheckedThumbColor = enabledColors.checkedThumbColor,
+                disabledCheckedTrackColor = enabledColors.checkedTrackColor,
+                disabledCheckedBorderColor = enabledColors.checkedBorderColor,
+                disabledCheckedIconColor = enabledColors.checkedIconColor,
+            )
+            Switch(checked = row.isOn, onCheckedChange = null, enabled = row.canSwitch, colors = colors)
         }
         val download = row.download
         if (download is GroupDownloadUi.Downloading) {
