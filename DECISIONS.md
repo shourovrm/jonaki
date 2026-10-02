@@ -194,3 +194,14 @@ from OpenRouter's usage report, else from token counts times a price table.
 Mockups: docs/mockups/cost-and-models.html (option C, bottom). Rejected:
 cost in the subtitle with a model chip in the composer (A), cost chip with
 a menu from the subtitle (B), taka display and monthly limit (not now).
+
+## D-028 · 2026-10-02 · Chat model settings as service cards — accepted
+Settings lists each added chat service as a card that opens to show its key
+and models. "Add service" is a drop-down of services not yet added. A saved
+key shows its first 3 characters and dots, never more. Models are added by
+searching the service's model list (OpenRouter's catalog; a built-in list
+plus free text for others), several per service. One model across all
+services is starred as the default for new threads; the status strip's
+model menu (D-027) lists all added models. Mockups:
+docs/mockups/settings-models.html (option A). Rejected: a page per service
+(B; one more tap), first-and-last-3 masking.
