@@ -693,10 +693,12 @@ thread's. Stored as settings.subagent_models. Outcome: pending.
 
 ## D-066 · 2026-10-03 · Subagent cards in the chat — proposed
 Under the run that called delegate, one card per subagent: a dot, its
-name ("Researcher 2"), status (Working, Done, Step limit, Cost limit, Time
-limit, Failed, Stopped), step count and cost, then its task and the first
+name ("Researcher 2"), status (Working, Done, Out of steps, Over budget,
+Timed out, Failed, Stopped; a step whose card went unanswered shows "No
+answer"), step count and cost, then its task and the first
 line of the latest text it wrote, each on one line. Tapped, it shows the
 whole task, its steps as a track and its answer. Its approval cards read
 "Researcher 2 asks for share_file" with the reason, and Allow once, Allow
-for task, Deny. Several cards can wait at once. Artifacts a subagent
+for task, Deny. Several cards can wait at once. Strings reviewed by an
+Opus subagent (6 of 36 changed). Artifacts a subagent
 shows get "Open" cards like the thread agent's. Outcome: pending.

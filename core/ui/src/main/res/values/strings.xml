@@ -12,7 +12,7 @@
     <string name="ui_approval_auto">Auto</string>
     <string name="ui_approval_bypass">Bypass</string>
     <string name="ui_approval_ask_help">Ask before any change</string>
-    <string name="ui_approval_auto_help">Ask only before changes outside the thread</string>
-    <string name="ui_approval_bypass_help">Never ask, also not for subagents</string>
+    <string name="ui_approval_auto_help">Ask before changes outside the thread\'s folder</string>
+    <string name="ui_approval_bypass_help">Never ask, including subagents</string>
     <string name="ui_approval_default">Default (%1$s)</string>
 </resources>

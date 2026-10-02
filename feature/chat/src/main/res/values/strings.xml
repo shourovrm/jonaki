@@ -26,7 +26,7 @@
     <string name="chat_step_failed">Failed</string>
     <string name="chat_step_denied">Denied</string>
     <string name="chat_step_stopped">Stopped</string>
-    <string name="chat_step_skipped">Skipped</string>
+    <string name="chat_step_skipped">No answer</string>
     <string name="chat_approval_title">Allow %1$s?</string>
     <string name="chat_approval_once">Allow once</string>
     <string name="chat_approval_thread">Allow in thread</string>
@@ -77,9 +77,9 @@
     <string name="chat_edit_cancel">Cancel edit</string>
     <string name="chat_subagent_running">Working</string>
     <string name="chat_subagent_done">Done</string>
-    <string name="chat_subagent_step_limit">Step limit</string>
-    <string name="chat_subagent_cost_limit">Cost limit</string>
-    <string name="chat_subagent_time_limit">Time limit</string>
+    <string name="chat_subagent_step_limit">Out of steps</string>
+    <string name="chat_subagent_cost_limit">Over budget</string>
+    <string name="chat_subagent_time_limit">Timed out</string>
     <string name="chat_subagent_failed">Failed</string>
     <string name="chat_subagent_stopped">Stopped</string>
     <string name="chat_subagent_answer">Answer</string>
