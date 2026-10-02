@@ -5,6 +5,8 @@ import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.run.AgentRunner
 import app.jonaki.run.ChatProviders
+import app.jonaki.run.ThreadTitles
+import app.jonaki.core.model.Role
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.SecretStore
@@ -13,6 +15,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
@@ -58,6 +61,22 @@ class JonakiApplication : Application() {
         }
         applicationScope.launch {
             catalog.refreshIfStale()
+        }
+        applicationScope.launch {
+            restoreNamesCutByOldVersion()
+        }
+    }
+
+    /** Threads named by version 0.1.0 had their names cut at 40 characters; the first message holds the whole name. */
+    private suspend fun restoreNamesCutByOldVersion() {
+        val threads = database.threadDao().observeAll().first()
+        for (thread in threads) {
+            if (!ThreadTitles.looksCutByOldVersion(thread.title)) {
+                continue
+            }
+            val firstUserMessage = database.messageDao().listThread(thread.id)
+                .firstOrNull { message -> message.role == Role.USER.name } ?: continue
+            database.threadDao().rename(thread.id, ThreadTitles.fromMessage(firstUserMessage.text))
         }
     }
 }

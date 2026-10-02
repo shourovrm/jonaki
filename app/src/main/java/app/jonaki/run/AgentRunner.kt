@@ -304,17 +304,10 @@ class AgentRunner(
         }
     }
 
-    private fun titleFrom(text: String): String {
-        val firstLine = text.lineSequence().first().trim()
-        if (firstLine.length <= TITLE_LENGTH) {
-            return firstLine
-        }
-        return firstLine.take(TITLE_LENGTH).substringBeforeLast(' ').trimEnd() + "…"
-    }
+    private fun titleFrom(text: String): String = ThreadTitles.fromMessage(text)
 
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
-        const val TITLE_LENGTH = 40
         const val NO_MODEL_ERROR = "No model. Add one in Settings."
     }
 }
