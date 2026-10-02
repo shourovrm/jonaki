@@ -6,6 +6,7 @@ import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.providerapi.ChatRequest
+import app.jonaki.core.providerapi.FinishReason
 import app.jonaki.core.providerapi.StreamEvent
 import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.storage.HistoryMapper
@@ -72,11 +73,15 @@ class BackgroundModel(
         val answer = StringBuilder()
         var usage: Usage? = null
         var failure: String? = null
+        var finishReason: FinishReason? = null
         val finished = withTimeoutOrNull(TIME_LIMIT_MILLIS) {
             provider.stream(request).collect { event ->
                 when (event) {
                     is StreamEvent.TextDelta -> answer.append(event.text)
-                    is StreamEvent.Finished -> usage = event.usage
+                    is StreamEvent.Finished -> {
+                        usage = event.usage
+                        finishReason = event.reason
+                    }
                     is StreamEvent.Failed -> failure = event.message
                     else -> Unit
                 }
@@ -86,6 +91,8 @@ class BackgroundModel(
         return when {
             finished == null -> BackgroundAnswer.Failed("$modelKey gave no answer within ${TIME_LIMIT_MILLIS / 1000} s")
             failure != null -> BackgroundAnswer.Failed(failure.orEmpty())
+            // Half a summary or half a JSON answer would silently lose the newest part.
+            finishReason == FinishReason.LENGTH -> BackgroundAnswer.Failed("$modelKey stopped at $maxOutputTokens output tokens")
             else -> BackgroundAnswer.Success(answer.toString(), modelKey)
         }
     }

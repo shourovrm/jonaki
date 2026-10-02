@@ -21,6 +21,7 @@ import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.searchapi.SearchBackend
+import app.jonaki.core.storage.CompactionPlan
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MessageEntity
@@ -66,6 +67,7 @@ class AgentRunner(
     private val catalog: ModelCatalog,
     private val scope: CoroutineScope,
     private val memoryExtractor: MemoryExtractor,
+    private val threadCompactor: ThreadCompactor,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -172,6 +174,14 @@ class AgentRunner(
         }
     }
 
+    /** Its own coroutine, like extraction, so the next message is not held up by the summary. */
+    private fun launchCompaction(threadId: String) {
+        scope.launch {
+            val thread = database.threadDao().find(threadId) ?: return@launch
+            threadCompactor.compactIfDue(threadId, modelKeyFor(thread))
+        }
+    }
+
     fun answerApproval(threadId: String, decision: ApprovalDecision) {
         val pending = approvals.value[threadId] ?: return
         approvals.update { current -> current - threadId }
@@ -187,6 +197,7 @@ class AgentRunner(
                 beforeRun()
                 runWithOneRetry(threadId)
                 extractMemoryAfterRun(threadId)
+                launchCompaction(threadId)
             } finally {
                 approvals.update { current -> current - threadId }
                 runningJobs.remove(threadId)
@@ -283,7 +294,12 @@ class AgentRunner(
                 systemPrompt = promptBuilder.systemPrompt(tools, memorySectionFor(threadId)),
             ),
         )
-        val history = HistoryMapper.toHistory(database.messageDao().listThread(threadId))
+        val summary = database.compactionDao().latestForThread(threadId)
+        val history = CompactionPlan.historyAfter(
+            rows = database.messageDao().listThread(threadId),
+            summaryText = summary?.summaryText,
+            upToPosition = summary?.upToPosition,
+        )
         try {
             return loop.run(history)
         } finally {

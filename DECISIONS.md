@@ -257,6 +257,20 @@ Mockup: docs/mockups/service-card-balance.html. Copy agreed with an Opus
 reviewer. Why: user request. Limit: deleting a thread deletes its usage
 rows, so Jonaki's own count drops with it.
 
+## D-033 · 2026-10-02 · Compaction of long threads — proposed
+When a run ends and its last request filled 70 % of the model's context
+window (128k tokens assumed when the catalog does not know it), the
+background model (D-036) writes a summary with the sections Goal,
+Constraints and Preferences, Progress, Key Decisions, Next Steps and
+Critical Context, merging any earlier summary. The last two user turns stay
+word for word; the cut falls just before a user message, so a tool call
+never loses its result. The summary is stored in `compactions`; later
+requests send it at the start of the first kept message, so its bytes stay
+the same until the next compaction (D-005). The chat still shows every
+original message. A failed or cut-off summary (4,000-token limit) leaves
+the thread whole until the next run. Why: plan M4 step 6. Limit: the chat
+does not yet mark where the summary begins. Outcome: pending.
+
 ## D-034 · 2026-10-02 · Memory tool runs without approval — proposed
 The memory tool (remember, forget, recall) declares a new cost,
 `SideEffect.CHANGES_APP_DATA`: it changes only Jonaki's own records, which

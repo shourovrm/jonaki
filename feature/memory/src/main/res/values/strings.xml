@@ -2,11 +2,11 @@
 <resources>
     <string name="memory_title">Memory</string>
     <string name="memory_back">Back</string>
-    <string name="memory_section_review">Waiting for review</string>
+    <string name="memory_section_review">To review</string>
     <string name="memory_section_thread">This thread</string>
     <string name="memory_section_global">All threads</string>
-    <string name="memory_empty_thread">Nothing saved for this thread</string>
-    <string name="memory_empty_global">Nothing saved for all threads</string>
+    <string name="memory_empty_thread">No facts yet</string>
+    <string name="memory_empty_global">No facts yet</string>
     <string name="memory_review_switch">Review facts found in chats</string>
     <string name="memory_add">Add fact</string>
     <string name="memory_add_title">New fact</string>
@@ -15,7 +15,7 @@
     <string name="memory_scope_global">All threads</string>
     <string name="memory_save">Save</string>
     <string name="memory_cancel">Cancel</string>
-    <string name="memory_more">More</string>
+    <string name="memory_more">More options</string>
     <string name="memory_menu_edit">Edit</string>
     <string name="memory_menu_pin">Pin</string>
     <string name="memory_menu_unpin">Unpin</string>

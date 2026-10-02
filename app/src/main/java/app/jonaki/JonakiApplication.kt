@@ -7,6 +7,7 @@ import app.jonaki.memory.MemoryExtractor
 import app.jonaki.run.AgentRunner
 import app.jonaki.run.BackgroundModel
 import app.jonaki.run.ChatProviders
+import app.jonaki.run.ThreadCompactor
 import app.jonaki.run.ThreadTitles
 import app.jonaki.core.model.Role
 import app.jonaki.settings.AccountBalances
@@ -66,7 +67,8 @@ class JonakiApplication : Application() {
             reviewMode = { settings.snapshot.value.reviewExtractedMemories },
             clock = System::currentTimeMillis,
         )
-        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope, memoryExtractor)
+        val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
+        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope, memoryExtractor, threadCompactor)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
