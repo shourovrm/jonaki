@@ -21,6 +21,14 @@ A report is one HTML file in `artifacts/`, for example `artifacts/laptop-compari
 - A "Sources" list at the end: title, site and URL of each page used. Cite as [1], [2] in the text.
 - Write in the language the user writes in. For Bangla, set `lang="bn"` and use the font stack `"Noto Sans Bengali", sans-serif`.
 
+## Writing
+
+- Begin each paragraph with a concrete fact the reader can use or check, then back it with a number, an example or the reason behind it.
+- Define each term where it first appears.
+- Write only sentences that carry content: nothing that announces what comes next, no opening line for effect, no list of three built for rhythm, no sweeping claim about the whole of anything.
+- Prefer plain verbs (is, has, does) and one exact number over several adjectives.
+- Headings are plain noun phrases that name the section's subject, never questions or promises.
+
 ## HTML rules
 
 - One file, `<!doctype html>`, `<meta charset="utf-8">`, `<meta name="viewport" content="width=device-width, initial-scale=1">`.

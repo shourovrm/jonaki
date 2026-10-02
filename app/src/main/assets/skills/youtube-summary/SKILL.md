@@ -23,6 +23,11 @@ description: Summarise a YouTube video with youtube_summarize — key points wit
    - For a tutorial, the steps as a numbered list instead of key points.
 5. If the user wants to keep it, or the summary is longer than about 400 words, also save it as `artifacts/<video-title>-summary.md` with the link at the top, and say so.
 
+## Writing
+
+- Each key point states what the video says as a checkable fact, with the number or example the speaker gives.
+- No opening line for effect, no list of three built for rhythm, no praise of the video.
+
 ## Rules
 
 - Report what the video says, and mark your own comments as such.

@@ -21,6 +21,12 @@ A deck is one HTML file in `artifacts/`, for example `artifacts/solar-energy-sli
 - Numbers as large type or a simple inline SVG chart; one chart per slide.
 - Sources on the last slide or in small type at the foot of the slide that uses them.
 
+## Writing
+
+- Bullets and speaker notes carry facts: a number, an example or a reason, never a line for effect.
+- No bullet that announces what comes next, no list of three built for rhythm, no sweeping claim.
+- Define each term on the slide where it first appears.
+
 ## HTML structure
 
 - Each slide is `<section class="slide">` with a 16:9 box (`aspect-ratio: 16 / 9; width: min(100vw, 177.78vh)`), centred, text sized in `vmin` so it scales from phone to projector.

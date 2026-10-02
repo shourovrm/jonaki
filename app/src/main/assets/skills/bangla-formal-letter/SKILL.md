@@ -48,4 +48,5 @@ Ask in one message for whatever is missing, and fill nothing in by guessing:
   - ছুটির আবেদন: the dates and the reason, then "...দিন ছুটি মঞ্জুর করে বাধিত করবেন।"
   - চাকরির আবেদন: the post, the advertisement reference, qualifications as a short list, then "...আমাকে উক্ত পদে নিয়োগ দানে আপনার মর্জি হয়।" and a list of enclosures (সংযুক্তি).
   - অভিযোগ / দাপ্তরিক চিঠি to an authority: the problem with place and date, the effect, then the specific action requested.
+- Every sentence carries a fact or the request; no filler sentence and no sentence that only repeats the subject line.
 - Show the finished letter in the chat inside a code block, so the layout keeps its line breaks. If the user wants a file, save `artifacts/<subject>-letter.md`, or an HTML file with `lang="bn"`, A4 print margins of 2.5 cm and the font stack `"Noto Sans Bengali", sans-serif`.
