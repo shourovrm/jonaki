@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import app.jonaki.JonakiApplication
 import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.model.Role
+import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.ThreadSummary
 import app.jonaki.core.ui.JonakiTheme
@@ -33,6 +34,7 @@ import app.jonaki.feature.threads.ThreadListUiState
 import app.jonaki.feature.threads.ThreadRow
 import app.jonaki.feature.threads.ThreadRunState
 import app.jonaki.feature.settings.moveInOrder
+import app.jonaki.run.ChatProviders
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
@@ -159,7 +161,7 @@ private fun ChatRoute(
     val webSearchEnabled = thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
     val state = ChatUiState(
         title = thread?.title.orEmpty(),
-        modelLabel = runner.modelFor(settingsSnapshot.chatService),
+        modelLabel = runner.modelKeyFor(thread)?.let(ModelKey::modelOf).orEmpty(),
         webSearchEnabled = webSearchEnabled,
         items = ChatItems.build(messages, steps, isRunning, pending?.toolCall),
         isRunning = isRunning,
@@ -197,13 +199,21 @@ private fun SettingsRoute(application: JonakiApplication, onBack: () -> Unit) {
     val secrets = application.secrets
     val snapshot by settings.snapshot.collectAsState()
     val savedKeys by secrets.names.collectAsState()
+    // Interim screen until the D-028 service cards replace it: the starred model's
+    // service is the selected provider, and the field edits the starred model's id.
+    val defaultModelKey = snapshot.chatModels.defaultModelKey
+    val selectedService = defaultModelKey?.let { ChatService.byKey(ModelKey.serviceOf(it)) } ?: ChatService.OPENROUTER
+    // The field keeps its own text, so clearing it does not refill it from settings.
+    var modelText by remember(defaultModelKey) { mutableStateOf(defaultModelKey?.let(ModelKey::modelOf).orEmpty()) }
+    val interimServices = listOf(ChatService.OPENROUTER, ChatService.DEEPSEEK)
 
     val state = SettingsUiState(
-        providers = ChatService.entries.map { service ->
-            ProviderChoice(service.presetKey, displayNameOf(service), KeySlot(slotIdOf(service.secret), service.secret in savedKeys))
+        providers = interimServices.map { service ->
+            val secret = service.secret!!
+            ProviderChoice(service.key, service.displayName, KeySlot(slotIdOf(secret), secret in savedKeys))
         },
-        selectedProviderKey = snapshot.chatService.presetKey,
-        model = application.runner.modelFor(snapshot.chatService),
+        selectedProviderKey = selectedService.key,
+        model = modelText,
         geminiKey = KeySlot(slotIdOf(SecretName.GEMINI), SecretName.GEMINI in savedKeys),
         searchServices = snapshot.searchOrder.map { service ->
             SearchServiceRow(service.name, displayNameOf(service), KeySlot(slotIdOf(service.secret), service.secret in savedKeys))
@@ -214,12 +224,26 @@ private fun SettingsRoute(application: JonakiApplication, onBack: () -> Unit) {
     val actions = SettingsActions(
         onBack = onBack,
         onProviderSelect = { key ->
-            val service = ChatService.entries.first { it.presetKey == key }
-            settings.update { current -> current.copy(chatService = service) }
+            val service = ChatService.byKey(key) ?: ChatService.OPENROUTER
+            settings.updateChatModels { models ->
+                val firstModel = models.modelsByService[service].orEmpty().firstOrNull()
+                if (firstModel != null) {
+                    models.setDefault(ModelKey.of(service.key, firstModel))
+                } else {
+                    models.addModel(service, ChatProviders.defaultModel(service))
+                        .setDefault(ModelKey.of(service.key, ChatProviders.defaultModel(service)))
+                }
+            }
         },
         onModelChange = { model ->
-            settings.update { current ->
-                current.copy(modelByService = current.modelByService + (current.chatService to model))
+            modelText = model
+            val trimmed = model.trim()
+            if (trimmed.isNotEmpty() && defaultModelKey != null) {
+                settings.updateChatModels { models ->
+                    models.removeModel(defaultModelKey)
+                        .addModel(selectedService, trimmed)
+                        .setDefault(ModelKey.of(selectedService.key, trimmed))
+                }
             }
         },
         onKeySave = { slotId, value -> secrets.save(secretOf(slotId), value) },
@@ -239,11 +263,6 @@ private fun SettingsRoute(application: JonakiApplication, onBack: () -> Unit) {
 private fun slotIdOf(secret: SecretName): String = secret.name
 
 private fun secretOf(slotId: String): SecretName = SecretName.valueOf(slotId)
-
-private fun displayNameOf(service: ChatService): String = when (service) {
-    ChatService.OPENROUTER -> "OpenRouter"
-    ChatService.DEEPSEEK -> "DeepSeek"
-}
 
 private fun displayNameOf(service: SearchService): String = when (service) {
     SearchService.TAVILY -> "Tavily"

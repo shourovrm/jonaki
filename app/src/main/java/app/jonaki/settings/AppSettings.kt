@@ -18,26 +18,23 @@ enum class SearchService(val secret: SecretName) {
     EXA(SecretName.EXA),
 }
 
-/** Chat services offered in M1 to M3; the other presets arrive in M10. */
-enum class ChatService(val presetKey: String, val secret: SecretName) {
-    OPENROUTER("openrouter", SecretName.OPENROUTER),
-    DEEPSEEK("deepseek", SecretName.DEEPSEEK),
-}
-
 data class SettingsSnapshot(
-    val chatService: ChatService,
-    /** Empty means the preset's default model. */
-    val modelByService: Map<ChatService, String>,
+    /** Chat services, their models and the starred default (D-028). */
+    val chatModels: ChatModels,
     val searchOrder: List<SearchService>,
     val webSearchOffInNewThreads: Boolean,
     val theme: ThemeChoice,
 )
 
 /** Plain settings in app preferences; keys live in [SecretStore]. */
-class AppSettings(context: Context) {
+class AppSettings(
+    context: Context,
+    /** The model a 0.1.0 install used when its model field was blank. */
+    presetDefaultModel: (ChatService) -> String,
+) {
     private val preferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
-    private val state = MutableStateFlow(read())
+    private val state = MutableStateFlow(read(presetDefaultModel))
 
     val snapshot: StateFlow<SettingsSnapshot> = state.asStateFlow()
 
@@ -47,7 +44,12 @@ class AppSettings(context: Context) {
         state.value = updated
     }
 
-    private fun read(): SettingsSnapshot {
+    /** Shorthand for the chat-model edits the settings screen makes. */
+    fun updateChatModels(change: (ChatModels) -> ChatModels) {
+        update { current -> current.copy(chatModels = change(current.chatModels)) }
+    }
+
+    private fun read(presetDefaultModel: (ChatService) -> String): SettingsSnapshot {
         val savedOrder = preferences.getString(SEARCH_ORDER, null)
             ?.split(",")
             ?.mapNotNull { name -> SearchService.entries.firstOrNull { it.name == name } }
@@ -55,22 +57,47 @@ class AppSettings(context: Context) {
         // Services added in a later version are appended so they still appear.
         val searchOrder = savedOrder + SearchService.entries.filter { it !in savedOrder }
         return SettingsSnapshot(
-            chatService = enumOrDefault(preferences.getString(CHAT_SERVICE, null), ChatService.OPENROUTER),
-            modelByService = ChatService.entries.associateWith { service ->
-                preferences.getString(MODEL_PREFIX + service.name, "").orEmpty()
-            },
+            chatModels = readChatModels(presetDefaultModel),
             searchOrder = searchOrder,
             webSearchOffInNewThreads = preferences.getBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, false),
             theme = enumOrDefault(preferences.getString(THEME, null), ThemeChoice.SYSTEM),
         )
     }
 
+    private fun readChatModels(presetDefaultModel: (ChatService) -> String): ChatModels {
+        val addedNames = preferences.getString(ADDED_SERVICES, null)
+            ?: return ChatModels.fromLegacy(
+                chatServiceName = preferences.getString(LEGACY_CHAT_SERVICE, null),
+                savedModels = ChatService.entries.associate { service ->
+                    service.name to preferences.getString(LEGACY_MODEL_PREFIX + service.name, "").orEmpty()
+                },
+                presetDefaultModel = presetDefaultModel,
+            )
+        val addedServices = addedNames.split(",").mapNotNull { name -> ChatService.entries.firstOrNull { it.name == name } }
+        val modelsByService = addedServices.associateWith { service ->
+            // Model ids can hold commas or colons, so one id per line.
+            preferences.getString(MODELS_PREFIX + service.name, "").orEmpty().lines().filter { it.isNotBlank() }
+        }
+        return ChatModels(
+            addedServices = addedServices,
+            modelsByService = modelsByService,
+            defaultModelKey = preferences.getString(DEFAULT_MODEL_KEY, null),
+        )
+    }
+
     private fun write(snapshot: SettingsSnapshot) {
         val editor = preferences.edit()
-        editor.putString(CHAT_SERVICE, snapshot.chatService.name)
-        for ((service, model) in snapshot.modelByService) {
-            editor.putString(MODEL_PREFIX + service.name, model.trim())
+        val chatModels = snapshot.chatModels
+        editor.putString(ADDED_SERVICES, chatModels.addedServices.joinToString(",") { it.name })
+        for (service in ChatService.entries) {
+            val modelIds = chatModels.modelsByService[service]
+            if (modelIds == null) {
+                editor.remove(MODELS_PREFIX + service.name)
+            } else {
+                editor.putString(MODELS_PREFIX + service.name, modelIds.joinToString("\n"))
+            }
         }
+        editor.putString(DEFAULT_MODEL_KEY, chatModels.defaultModelKey)
         editor.putString(SEARCH_ORDER, snapshot.searchOrder.joinToString(",") { it.name })
         editor.putBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, snapshot.webSearchOffInNewThreads)
         editor.putString(THEME, snapshot.theme.name)
@@ -81,8 +108,14 @@ class AppSettings(context: Context) {
         enumValues<T>().firstOrNull { it.name == name } ?: default
 
     private companion object {
-        const val CHAT_SERVICE = "chat_service"
-        const val MODEL_PREFIX = "model_"
+        const val ADDED_SERVICES = "chat_services"
+        const val MODELS_PREFIX = "chat_models_"
+        const val DEFAULT_MODEL_KEY = "default_model_key"
+
+        // Settings of version 0.1.0, read once to migrate.
+        const val LEGACY_CHAT_SERVICE = "chat_service"
+        const val LEGACY_MODEL_PREFIX = "model_"
+
         const val SEARCH_ORDER = "search_order"
         const val WEB_SEARCH_OFF_IN_NEW_THREADS = "web_search_off_in_new_threads"
         const val THEME = "theme"

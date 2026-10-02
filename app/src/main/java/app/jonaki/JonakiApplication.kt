@@ -1,10 +1,13 @@
 package app.jonaki
 
 import android.app.Application
+import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.run.AgentRunner
+import app.jonaki.run.ChatProviders
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.SecretStore
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,13 +25,17 @@ class JonakiApplication : Application() {
         private set
     lateinit var secrets: SecretStore
         private set
+
+    /** Model lists for the model picker and prices for the cost display (D-027, D-028). */
+    lateinit var catalog: ModelCatalog
+        private set
     lateinit var runner: AgentRunner
         private set
 
     override fun onCreate() {
         super.onCreate()
         database = JonakiDatabase.open(this)
-        settings = AppSettings(this)
+        settings = AppSettings(this, ChatProviders::defaultModel)
         secrets = SecretStore(this)
         // One client for every call, so connections and threads are shared.
         val httpClient = OkHttpClient.Builder()
@@ -36,11 +43,15 @@ class JonakiApplication : Application() {
             // Streaming replies can pause while a model thinks; the agent loop's own limits apply on top.
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
-        runner = AgentRunner(this, database, settings, secrets, httpClient, applicationScope)
+        catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
+        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope)
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
             database.messageDao().closeInterrupted()
             database.stepDao().stopInterrupted()
+        }
+        applicationScope.launch {
+            catalog.refreshIfStale()
         }
     }
 }

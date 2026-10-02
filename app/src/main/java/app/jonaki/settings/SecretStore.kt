@@ -18,7 +18,12 @@ enum class SecretName {
     OPENROUTER,
     DEEPSEEK,
     GEMINI,
+    GLM,
+    MIMO,
+    OPENAI,
     TAVILY,
+
+    /** One Ollama account key serves both Ollama Cloud chat and Ollama web search. */
     OLLAMA,
     EXA,
 }
@@ -34,6 +39,11 @@ class SecretStore(context: Context) {
 
     /** Which keys are saved; the UI shows "set" without ever reading a key back. */
     val names: StateFlow<Set<SecretName>> = savedNames.asStateFlow()
+
+    private val savedPreviews = MutableStateFlow(readPreviews())
+
+    /** For each saved key, its first three characters and a mask (D-028); never the whole key. */
+    val previews: StateFlow<Map<SecretName, String>> = savedPreviews.asStateFlow()
 
     fun read(name: SecretName): String? {
         val stored = preferences.getString(name.name, null) ?: return null
@@ -56,15 +66,24 @@ class SecretStore(context: Context) {
         val stored = cipher.iv + cipher.doFinal(trimmed.toByteArray(Charsets.UTF_8))
         preferences.edit().putString(name.name, Base64.encodeToString(stored, Base64.NO_WRAP)).apply()
         savedNames.value = readSavedNames()
+        savedPreviews.value = savedPreviews.value + (name to maskedKeyPreview(trimmed))
     }
 
     fun remove(name: SecretName) {
         preferences.edit().remove(name.name).apply()
         savedNames.value = readSavedNames()
+        savedPreviews.value = savedPreviews.value - name
     }
 
     private fun readSavedNames(): Set<SecretName> =
         SecretName.entries.filter { name -> preferences.contains(name.name) }.toSet()
+
+    private fun readPreviews(): Map<SecretName, String> =
+        readSavedNames().mapNotNull { name ->
+            // A key that no longer decrypts (for example after a Keystore reset) shows as not saved.
+            val key = runCatching { read(name) }.getOrNull() ?: return@mapNotNull null
+            name to maskedKeyPreview(key)
+        }.toMap()
 
     private fun keystoreKey(): SecretKey {
         val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
