@@ -51,10 +51,10 @@ private class FrontMatterReader(skillMarkdown: String) {
 
     fun read(): FrontMatterResult {
         if (lines.first().trimEnd() != FENCE) {
-            return FrontMatterResult.Invalid("SKILL.md must start with a --- line")
+            return FrontMatterResult.Invalid("SKILL.md must start with ---")
         }
         val closingIndex = (1 until lines.size).firstOrNull { index -> lines[index].trimEnd() == FENCE }
-            ?: return FrontMatterResult.Invalid("the front matter has no closing --- line")
+            ?: return FrontMatterResult.Invalid("no closing --- line")
         val values = mutableMapOf<String, String>()
         var index = 1
         while (index < closingIndex) {
@@ -87,8 +87,8 @@ private class FrontMatterReader(skillMarkdown: String) {
         }
         if (!SkillFrontMatter.isValidName(name)) {
             return FrontMatterResult.Invalid(
-                "name must be lowercase letters, digits and single hyphens, " +
-                    "at most ${SkillFrontMatter.MAX_NAME_LENGTH} characters",
+                "name must be a-z, 0-9 and single hyphens, " +
+                    "up to ${SkillFrontMatter.MAX_NAME_LENGTH} characters",
             )
         }
         val description = values["description"]?.trim().orEmpty()
@@ -97,8 +97,7 @@ private class FrontMatterReader(skillMarkdown: String) {
         }
         if (description.length > SkillFrontMatter.MAX_DESCRIPTION_LENGTH) {
             return FrontMatterResult.Invalid(
-                "description has ${description.length} characters; " +
-                    "the limit is ${SkillFrontMatter.MAX_DESCRIPTION_LENGTH}",
+                "description is over ${SkillFrontMatter.MAX_DESCRIPTION_LENGTH} characters",
             )
         }
         return FrontMatterResult.Parsed(SkillFrontMatter(name = name, description = description))

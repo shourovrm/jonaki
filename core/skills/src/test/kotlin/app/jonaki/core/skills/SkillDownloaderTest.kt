@@ -90,10 +90,10 @@ class SkillDownloaderTest {
             downloader().download(SkillSource.SingleFile(server.url("/broken.md").toString()))
         }
 
-        assertEquals(SkillFilesResult.Failed("not found on GitHub (404)"), notFound)
-        assertEquals(SkillFilesResult.Failed("GitHub's hourly download limit is used up; try again later"), limited)
+        assertEquals(SkillFilesResult.Failed("not found"), notFound)
+        assertEquals(SkillFilesResult.Failed("GitHub limit reached, try again in an hour"), limited)
         assertEquals(SkillFilesResult.Failed("the link is a file, not a folder"), notAFolder)
-        assertEquals(SkillFilesResult.Failed("the server answered 500"), serverError)
+        assertEquals(SkillFilesResult.Failed("server error 500"), serverError)
     }
 
     @Test

@@ -50,7 +50,7 @@ class SkillArchiveTest {
 
     @Test
     fun aZipWithoutSkillMdOrTooBigIsRefused() {
-        assertEquals(SkillFilesResult.Failed("the zip file has no SKILL.md"), SkillArchive.filesOf(zipOf("a.txt" to "a")))
+        assertEquals(SkillFilesResult.Failed("no SKILL.md found"), SkillArchive.filesOf(zipOf("a.txt" to "a")))
         assertEquals(
             SkillFilesResult.Failed("the skill is larger than 2 MB"),
             SkillArchive.filesOf(zipOf("SKILL.md" to "x".repeat(SkillDownloader.MAX_TOTAL_BYTES + 1))),

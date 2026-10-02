@@ -30,7 +30,7 @@ object SkillArchive {
         val skillFilePath = entries.keys
             .filter { path -> path == SkillLibrary.SKILL_FILE || path.endsWith("/" + SkillLibrary.SKILL_FILE) }
             .minByOrNull { path -> path.count { character -> character == '/' } }
-            ?: return SkillFilesResult.Failed("the zip file has no SKILL.md")
+            ?: return SkillFilesResult.Failed("no SKILL.md found")
         val folderPrefix = skillFilePath.removeSuffix(SkillLibrary.SKILL_FILE)
         val files = entries
             .filterKeys { path -> path.startsWith(folderPrefix) }

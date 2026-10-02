@@ -9,10 +9,10 @@
     <string name="skills_edited">Edited</string>
     <string name="skills_restore">Restore built-in skills</string>
     <string name="skills_import_link">Link</string>
-    <string name="skills_import_link_hint">GitHub folder or SKILL.md link</string>
+    <string name="skills_import_link_hint">GitHub folder or SKILL.md</string>
     <string name="skills_import_file">Choose file</string>
     <string name="skills_import_add">Add</string>
-    <string name="skills_import_working">Downloading…</string>
+    <string name="skills_import_working">Adding…</string>
     <string name="skills_import_failed">Not added: %1$s</string>
     <string name="skills_replace_title">Replace %1$s?</string>
     <string name="skills_replace">Replace</string>

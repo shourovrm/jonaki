@@ -96,12 +96,12 @@ class SkillFrontMatterTest {
 
     @Test
     fun missingOpeningLineIsInvalid() {
-        assertEquals("SKILL.md must start with a --- line", invalidReason("# Report\nname: report\n"))
+        assertEquals("SKILL.md must start with ---", invalidReason("# Report\nname: report\n"))
     }
 
     @Test
     fun missingClosingLineIsInvalid() {
-        assertEquals("the front matter has no closing --- line", invalidReason("---\nname: report\ndescription: x\n"))
+        assertEquals("no closing --- line", invalidReason("---\nname: report\ndescription: x\n"))
     }
 
     @Test
@@ -120,7 +120,7 @@ class SkillFrontMatterTest {
 
     @Test
     fun nameMustBeLowercaseWordsWithHyphens() {
-        val expected = "name must be lowercase letters, digits and single hyphens, at most 64 characters"
+        val expected = "name must be a-z, 0-9 and single hyphens, up to 64 characters"
 
         assertEquals(expected, invalidReason("---\nname: My Report\ndescription: x\n---\n"))
         assertEquals(expected, invalidReason("---\nname: -report\ndescription: x\n---\n"))
@@ -133,7 +133,7 @@ class SkillFrontMatterTest {
         val longDescription = "word ".repeat(300).trim()
 
         assertEquals(
-            "description has 1499 characters; the limit is 1024",
+            "description is over 1024 characters",
             invalidReason("---\nname: report\ndescription: $longDescription\n---\n"),
         )
         assertEquals(1024, parsed("---\nname: report\ndescription: ${"d".repeat(1024)}\n---\n").description.length)

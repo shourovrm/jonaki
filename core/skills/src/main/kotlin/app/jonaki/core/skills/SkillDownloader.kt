@@ -32,7 +32,7 @@ class SkillDownloader(
     } catch (failure: DownloadFailure) {
         SkillFilesResult.Failed(failure.reason)
     } catch (failure: IOException) {
-        SkillFilesResult.Failed("could not connect: ${failure.message ?: failure.javaClass.simpleName}")
+        SkillFilesResult.Failed("could not connect")
     }
 
     private suspend fun downloadSingleFile(url: String): SkillFilesResult {
@@ -62,7 +62,7 @@ class SkillDownloader(
         val listing = try {
             Json.parseToJsonElement(listingText)
         } catch (unreadable: SerializationException) {
-            throw DownloadFailure("GitHub sent a folder list that could not be read")
+            throw DownloadFailure("GitHub's reply could not be read")
         }
         val entries = listing as? JsonArray ?: throw DownloadFailure("the link is a file, not a folder")
         for (entry in entries) {
@@ -119,10 +119,10 @@ class SkillDownloader(
         val isGitHub = response.request.url.toString().startsWith(gitHubApiBaseUrl)
         return when {
             response.code == 403 && response.header("X-RateLimit-Remaining") == "0" ->
-                "GitHub's hourly download limit is used up; try again later"
-            response.code == 404 && isGitHub -> "not found on GitHub (404)"
-            response.code == 404 -> "not found (404)"
-            else -> "the server answered ${response.code}"
+                "GitHub limit reached, try again in an hour"
+            response.code == 404 && isGitHub -> "not found"
+            response.code == 404 -> "not found"
+            else -> "server error ${response.code}"
         }
     }
 

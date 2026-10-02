@@ -34,6 +34,6 @@ class SkillImporterTest {
     @Test
     fun failuresCarryTheReason() = runBlocking {
         assertEquals(ImportOutcome.Failed("this is not a link"), importer.fromLink("my skill"))
-        assertEquals(ImportOutcome.Failed("SKILL.md must start with a --- line"), importer.fromFile("hello".toByteArray()))
+        assertEquals(ImportOutcome.Failed("SKILL.md must start with ---"), importer.fromFile("hello".toByteArray()))
     }
 }

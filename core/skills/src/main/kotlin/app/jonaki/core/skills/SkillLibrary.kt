@@ -79,7 +79,7 @@ class SkillLibrary(val folder: File, private val stateFile: File) {
     fun saveText(name: String, text: String): SaveResult {
         val skillFile = skillFileOf(name)
         if (skillFile == null || !skillFile.parentFile.isDirectory) {
-            return SaveResult.Invalid("the skill $name no longer exists")
+            return SaveResult.Invalid("the skill no longer exists")
         }
         when (val result = SkillFrontMatter.parse(text)) {
             is FrontMatterResult.Invalid -> return SaveResult.Invalid(result.reason)
@@ -107,7 +107,7 @@ class SkillLibrary(val folder: File, private val stateFile: File) {
      */
     @Synchronized
     fun install(files: Map<String, ByteArray>, replace: Boolean): InstallResult {
-        val skillMarkdown = files[SKILL_FILE] ?: return InstallResult.Invalid("no SKILL.md in the skill's folder")
+        val skillMarkdown = files[SKILL_FILE] ?: return InstallResult.Invalid("no SKILL.md found")
         val frontMatter = when (val result = SkillFrontMatter.parse(skillMarkdown.decodeToString())) {
             is FrontMatterResult.Invalid -> return InstallResult.Invalid(result.reason)
             is FrontMatterResult.Parsed -> result.frontMatter
@@ -188,7 +188,7 @@ class SkillLibrary(val folder: File, private val stateFile: File) {
         val result = if (skillFile.isFile) {
             SkillFrontMatter.parse(skillFile.readText())
         } else {
-            FrontMatterResult.Invalid("no SKILL.md in the skill's folder")
+            FrontMatterResult.Invalid("no SKILL.md found")
         }
         return when (result) {
             is FrontMatterResult.Invalid -> SkillEntry(skillFolder.name, "", result.reason, isBuiltIn, isEdited)

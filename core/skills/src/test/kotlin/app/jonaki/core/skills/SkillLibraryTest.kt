@@ -50,8 +50,8 @@ class SkillLibraryTest {
         val missing = library.install(mapOf("README.md" to "x".toByteArray()), replace = false)
         val existing = library.install(files("report", body = "Second"), replace = false)
 
-        assertEquals(InstallResult.Invalid("SKILL.md must start with a --- line"), invalid)
-        assertEquals(InstallResult.Invalid("no SKILL.md in the skill's folder"), missing)
+        assertEquals(InstallResult.Invalid("SKILL.md must start with ---"), invalid)
+        assertEquals(InstallResult.Invalid("no SKILL.md found"), missing)
         assertEquals(InstallResult.AlreadyExists("report"), existing)
         assertTrue(skillFileOf("report").readText().contains("First"))
 
