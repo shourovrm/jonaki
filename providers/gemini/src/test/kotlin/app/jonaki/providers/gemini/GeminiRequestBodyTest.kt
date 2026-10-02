@@ -1,5 +1,6 @@
 package app.jonaki.providers.gemini
 
+import app.jonaki.core.model.ImagePart
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
@@ -86,5 +87,28 @@ class GeminiRequestBodyTest {
         assertEquals("web_search", declaration["name"]!!.jsonPrimitive.content)
         assertEquals("object", declaration["parametersJsonSchema"]!!.jsonObject["type"]!!.jsonPrimitive.content)
         assertEquals(1000, body["generationConfig"]!!.jsonObject["maxOutputTokens"]!!.jsonPrimitive.content.toInt())
+    }
+
+    @Test
+    fun imagesBecomeInlineDataPartsAfterTheText() {
+        val withImage = ChatRequest(
+            model = "gemini-3.8-flash",
+            systemPrompt = "s",
+            messages = listOf(Message(Role.USER, "What is this?", images = listOf(ImagePart("image/jpeg", "/9j/AAAA")))),
+        )
+        val parts = GeminiRequestBody.build(withImage)["contents"]!!.jsonArray[0].jsonObject["parts"]!!.jsonArray
+        assertEquals(2, parts.size)
+        assertEquals("What is this?", parts[0].jsonObject["text"]!!.jsonPrimitive.content)
+        val inline = parts[1].jsonObject["inlineData"]!!.jsonObject
+        assertEquals("image/jpeg", inline["mimeType"]!!.jsonPrimitive.content)
+        assertEquals("/9j/AAAA", inline["data"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun imageWithoutTextSendsNoEmptyTextPart() {
+        val imageOnly = ChatRequest("m", "s", listOf(Message(Role.USER, "", images = listOf(ImagePart("image/png", "iVBO")))))
+        val parts = GeminiRequestBody.build(imageOnly)["contents"]!!.jsonArray[0].jsonObject["parts"]!!.jsonArray
+        assertEquals(1, parts.size)
+        assertEquals("image/png", parts[0].jsonObject["inlineData"]!!.jsonObject["mimeType"]!!.jsonPrimitive.content)
     }
 }
