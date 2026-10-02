@@ -83,13 +83,17 @@ fun ChatScreen(
     onEditModels: () -> Unit = {},
     /** Rename in the overflow menu: the app shows the rename dialog. */
     onRename: () -> Unit = {},
+    /** Memory in the overflow menu: the app opens this thread's memory screen. */
+    onOpenMemory: () -> Unit = {},
+    /** A message to show first instead of the end, when opened from a memory fact's source. */
+    focusMessageId: String? = null,
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
-        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename) },
+        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory) },
         bottomBar = {
             Column(Modifier.navigationBarsPadding().imePadding()) {
                 val status = state.status
@@ -113,7 +117,7 @@ fun ChatScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (state.items.isNotEmpty()) {
-                MessageList(state.items, onApprovalChoice, onRetry)
+                MessageList(state.items, onApprovalChoice, onRetry, focusMessageId)
             }
         }
     }
@@ -149,6 +153,7 @@ private fun ChatTopBar(
     onBack: () -> Unit,
     onWebSearchChange: (Boolean) -> Unit,
     onRename: () -> Unit,
+    onOpenMemory: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     TopAppBar(
@@ -192,6 +197,13 @@ private fun ChatTopBar(
                                 onRename()
                             },
                         )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.chat_menu_memory)) },
+                            onClick = {
+                                menuOpen = false
+                                onOpenMemory()
+                            },
+                        )
                     }
                 }
             }
@@ -204,6 +216,7 @@ private fun MessageList(
     items: List<ChatItem>,
     onApprovalChoice: (String, ApprovalChoice) -> Unit,
     onRetry: (String) -> Unit,
+    focusMessageId: String?,
 ) {
     val listState = rememberLazyListState()
     // Follow the stream only while the user is at the bottom; scrolling up to
@@ -222,6 +235,13 @@ private fun MessageList(
     val contentSignature = items.size to contentLength(lastItem)
     LaunchedEffect(contentSignature) {
         if (items.isEmpty()) {
+            return@LaunchedEffect
+        }
+        val focusIndex = items.indexOfFirst { item -> item.id == focusMessageId }
+        if (!openedAtBottom && focusIndex >= 0) {
+            // Opened from a memory fact: show its source message, then follow the stream as usual.
+            listState.scrollToItem(focusIndex)
+            openedAtBottom = true
             return@LaunchedEffect
         }
         if (!openedAtBottom || nearBottom) {

@@ -70,6 +70,11 @@ private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_STATUS_ICONS = "status-icons"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
+private const val ROUTE_MEMORY = "memory"
+private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
+
+/** Separates a thread id from the message to show first: "chat:<thread>@<message>". */
+private const val FOCUS_SEPARATOR = '@'
 
 /** A thread is only created on its first message, so backing out leaves no empty thread. */
 private const val NEW_THREAD = "new"
@@ -90,6 +95,18 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onBack = { route = ROUTE_THREADS },
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
+                    onOpenMemory = { route = ROUTE_MEMORY },
+                )
+            }
+            route == ROUTE_MEMORY || route.startsWith(ROUTE_MEMORY_THREAD_PREFIX) -> {
+                val memoryThreadId = if (route == ROUTE_MEMORY) null else route.removePrefix(ROUTE_MEMORY_THREAD_PREFIX)
+                val backRoute = if (memoryThreadId == null) ROUTE_SETTINGS else ROUTE_CHAT_PREFIX + memoryThreadId
+                BackHandler { route = backRoute }
+                MemoryRoute(
+                    application = application,
+                    threadId = memoryThreadId,
+                    onBack = { route = backRoute },
+                    onOpenMessage = { threadId, messageId -> route = ROUTE_CHAT_PREFIX + threadId + FOCUS_SEPARATOR + messageId },
                 )
             }
             route == ROUTE_STATUS_ICONS -> {
@@ -110,12 +127,16 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             }
             route.startsWith(ROUTE_CHAT_PREFIX) -> {
                 BackHandler { route = ROUTE_THREADS }
+                val chatTarget = route.removePrefix(ROUTE_CHAT_PREFIX)
+                val chatThreadId = chatTarget.substringBefore(FOCUS_SEPARATOR)
                 ChatRoute(
                     application = application,
-                    threadId = route.removePrefix(ROUTE_CHAT_PREFIX),
+                    threadId = chatThreadId,
+                    focusMessageId = chatTarget.substringAfter(FOCUS_SEPARATOR, "").ifEmpty { null },
                     onBack = { route = ROUTE_THREADS },
                     onThreadCreated = { threadId -> route = ROUTE_CHAT_PREFIX + threadId },
                     onEditModels = { route = ROUTE_SETTINGS },
+                    onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
                 )
             }
             else -> ThreadsRoute(
@@ -203,9 +224,11 @@ private fun startOfThisMonthMillis(): Long {
 private fun ChatRoute(
     application: JonakiApplication,
     threadId: String,
+    focusMessageId: String?,
     onBack: () -> Unit,
     onThreadCreated: (String) -> Unit,
     onEditModels: () -> Unit,
+    onOpenMemory: () -> Unit,
 ) {
     val database = application.database
     val runner = application.runner
@@ -317,6 +340,8 @@ private fun ChatRoute(
         },
         onEditModels = onEditModels,
         onRename = { renaming = true },
+        onOpenMemory = onOpenMemory,
+        focusMessageId = focusMessageId,
     )
     val currentThread = thread
     if (renaming && currentThread != null) {
@@ -369,6 +394,7 @@ private fun SettingsRoute(
     onBack: () -> Unit,
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
+    onOpenMemory: () -> Unit,
 ) {
     val settings = application.settings
     val secrets = application.secrets
@@ -418,6 +444,7 @@ private fun SettingsRoute(
         onWebSearchOffInNewThreadsChange = { off -> settings.update { current -> current.copy(webSearchOffInNewThreads = off) } },
         onThemeModeChange = { mode -> settings.update { current -> current.copy(theme = themeChoiceOf(mode)) } },
         onOpenStatusIcons = onOpenStatusIcons,
+        onOpenMemory = onOpenMemory,
         onAddService = { serviceKey ->
             val service = ChatService.byKey(serviceKey)
             if (service != null) {
