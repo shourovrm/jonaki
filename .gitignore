@@ -1,0 +1,26 @@
+# Gradle and Android build output
+.gradle/
+build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# Local machine settings and secrets
+local.properties
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+.env
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Tool and agent scratch files
+.playwright-mcp/
+*.log

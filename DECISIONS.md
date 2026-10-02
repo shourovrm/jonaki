@@ -1,0 +1,125 @@
+# Decisions
+
+Numbered log; newest at the bottom; it grows as needed. Keep each entry to a
+few short lines. Only the user changes a status. The full reasoning for
+D-001 to D-020 is in `docs/planning-chat-2026-10-02.md`.
+
+Format:
+```
+## D-NNN · YYYY-MM-DD · Title — status
+Decision. Why: reason. Rejected: alternative (reason). Outcome: pending.
+```
+
+## D-001 · 2026-10-02 · Governance — accepted
+AGENTS.md (rules), CLAUDE.md (pointer), STATUS.md (≤20 lines), this log,
+plans in docs/plans/ with a "Resume from" line. Agent proposes, user rules.
+Agent commits after each incremental change (≤80-character subject, AI
+trailer allowed). Rejected: OPFlow's journal, ledgers, script maps (research
+records an app does not need).
+
+## D-002 · 2026-10-02 · Name Jonaki (জোনাকি, firefly) — accepted
+Rejected: Tuntuni, Wren, Setu, Kheya.
+
+## D-003 · 2026-10-02 · General phone agent first, light coding — accepted
+Why: user will not build apps on the phone. Rejected: coding agent first.
+
+## D-004 · 2026-10-02 · No Linux sandbox — accepted
+Built-in tools in app folders; SSH to PC or VPS later. Rejected: proot
+(150 MB, hangs until reboot in Kai 9000 #359), Termux (second app).
+
+## D-005 · 2026-10-02 · Runtime rules from Kai 9000 — accepted
+API search with fallbacks; capped tool output; heavy research in subagents;
+always stream, live steps, Stop button; tool time limits, step budgets;
+loop in a foreground service, every step saved; stable system prompt;
+summaries only between messages, originals kept.
+
+## D-006 · 2026-10-02 · Stack — proposed
+Kotlin, Compose, coroutines, Room, OkHttp with SSE, kotlinx.serialization,
+Keystore for keys, WorkManager. Android only, minSdk 26. Rejected: React
+Native, Flutter (heavier); Kotlin Multiplatform (unneeded platforms).
+
+## D-007 · 2026-10-02 · One module per tool (Unix rule) — accepted
+Each tool, provider, search backend, runtime, decider and screen is a Gradle
+module depending only on core/. Text in, text out; spill large output to a
+file. Rejected: one tools module with packages (not cleanly removable).
+
+## D-008 · 2026-10-02 · Threads with own memory; global memory, skills — accepted
+Thread owns messages, memory, folder (inbox/, work/, artifacts/), overrides.
+User can add, edit, delete, pin, promote memories.
+
+## D-009 · 2026-10-02 · Memory storage — proposed
+SQLite facts table with full-text index (FTS5 trigram if spike S-1 passes,
+else FTS4). Explicit memory tool plus background extraction (add, update,
+delete) on a cheap model. Inject global and thread memory up to ~1,500
+tokens each; rest via recall. Rejected: embeddings in v1; JSON in settings.
+
+## D-010 · 2026-10-02 · Providers — proposed
+One OpenAI-compatible module with presets, one native Gemini module.
+Rejected: a module per service (same wire format).
+
+## D-011 · 2026-10-02 · Web search — proposed
+Tavily default, then Ollama, then Exa on quota errors; web_fetch with jsoup
+and Readability4J, capped. YouTube search = web_search on youtube.com.
+Rejected: DuckDuckGo scraping (Kai 9000 hangs), Brave (card required).
+
+## D-012 · 2026-10-02 · YouTube summaries via Gemini only — accepted
+Rejected: NewPipeExtractor (scraping, breaks), yt-dlp and ffmpeg (no Android).
+
+## D-013 · 2026-10-02 · Python as on-demand Pyodide — accepted
+Downloaded with checksum check; micropip packages; first-run tool picker,
+Settings install and remove, just-in-time install card. Rejected: Chaquopy
+bundled (+25–40 MB, fixed packages, reaches app secrets).
+
+## D-014 · 2026-10-02 · 16 tools, pi token patterns — accepted
+read_file, write_file, edit_file, find_files, search_files, share_file,
+web_search, web_fetch, youtube_summarize, run_code, artifact, memory,
+delegate, phone, schedule, mcp. One prompt line per tool; schemas only when
+active; truncation notices name the next call; skills loaded via read_file;
+one mcp proxy tool. Rejected: ~30 single-purpose tools (2x tokens).
+
+## D-015 · 2026-10-02 · Subagents — accepted with amendment
+delegate (single or parallel), minimal default tools plus extra_tools, no
+parent context, capped answer, no nesting, budgets. request_tool goes to the
+permission broker; approval unanswered for 3 minutes: skip that part and
+continue, or stop and return results with the skipped parts listed.
+ask_parent at most twice; shared notes board. Rejected: tool requests via
+the main model (costly), direct agent chat (loops, deadlocks).
+
+## D-016 · 2026-10-02 · Jev routing — superseded by D-022
+
+## D-017 · 2026-10-02 · Files: copy in, work, export — proposed
+Share sheet, attach picker, one linked folder → inbox/; export to
+Downloads/Jonaki, save as, share, linked folder, with approval.
+Rejected: all-files access.
+
+## D-018 · 2026-10-02 · HTML artifacts — proposed
+Self-contained HTML in artifacts/, WebView with network and file access off,
+versions, PDF via print. Offline report and slide skills with a bundled
+chart library. Rejected: generated native UI (Kai 9000; no export).
+
+## D-019 · 2026-10-02 · Distribution: GitHub release APK only — accepted
+Release APK only, never debug. Google Play requirements deferred.
+
+## D-020 · 2026-10-02 · Phone tool scope — proposed
+v1: calendar, reminder, notify, clipboard, open app. Later: notification
+reading. Never: SMS, call log, AccessibilityService control.
+
+## D-021 · 2026-10-02 · Build setup reused from the user's apps — proposed
+System Gradle 9.7.1, AGP 8.7.3, Kotlin 2.1.0, KSP 2.1.0-1.0.29, Compose BOM
+2024.11.00, Room 2.6.1, Java 17, arm64-v8a, release signing as in
+BD-calendar. Why: all already in ~/.gradle (865 MB), no new toolchain
+download. Rejected: latest versions (new downloads, untested with Gradle 9.7).
+
+## D-022 · 2026-10-02 · Jev as an optional decider module — proposed
+deciders/jev, behind a Decider interface, called once per user message with
+several questions in parallel: which skill (if any), which memories among
+full-text candidates are relevant, does the message hold a durable fact
+(gates memory extraction), model size for routing, follow-up or new task;
+also re-ranks web_search results before the model sees them. Endpoint:
+OpenRouter decisions API or TypeSafe direct; user's choice. Without a Jev
+key, fallbacks: list all skills, inject top memories by recency and pin,
+extract on a timer. Results only as hints in the latest message, never in
+the system prompt (keeps the cache). Why: $0.042 per million input tokens;
+TypeSafe reports 2.3x fewer wrong skill loads. Rejected: typesafe/jev-router
+as the main model (OpenRouter models only); routing per tool step (breaks
+cache). Risk: English-first model; test with Bangla in spike S-5.
