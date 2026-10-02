@@ -134,4 +134,12 @@
     <string name="chat_code_saved">Saved</string>
     <string name="chat_code_not_saved">Not saved</string>
     <string name="chat_code_cut">Output cut</string>
+    <string name="chat_python_python">Python</string>
+    <string name="chat_python_needs_size">Needs %1$s (%2$s). Install?</string>
+    <string name="chat_python_needs">Needs %1$s. Install?</string>
+    <string name="chat_python_installed">%1$s installed</string>
+    <string name="chat_python_install">Install</string>
+    <string name="chat_python_not_now">Not now</string>
+    <string name="chat_python_close">Close</string>
+    <string name="chat_python_try_again">Try again</string>
 </resources>

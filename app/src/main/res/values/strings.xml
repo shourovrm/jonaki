@@ -14,4 +14,5 @@
     <string name="files_open_missing">File not found</string>
     <string name="files_open_no_app">No app can open this file</string>
     <string name="routing_fallback_note">No private provider for this model; used the cheapest.</string>
+    <string name="python_try_again_message">Installed. Try again.</string>
 </resources>

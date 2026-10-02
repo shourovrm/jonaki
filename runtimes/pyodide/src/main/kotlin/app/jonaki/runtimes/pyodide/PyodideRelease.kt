@@ -21,6 +21,13 @@ data class PyodideRelease(
         val DATA_ADD_ON: List<String> = listOf("numpy", "pandas")
 
         /**
+         * The data add-on with its dependencies (python-dateutil, pytz, six),
+         * measured in spike S-2 (D-013). The lock file gives no sizes, so other
+         * packages have no known size before their download.
+         */
+        const val DATA_ADD_ON_DOWNLOAD_BYTES: Long = 7_889_748
+
+        /**
          * Pyodide 314.0.7 (Python 3.14.2), the latest stable release on
          * 2026-10-03. The hashes match the CDN files, the npm package
          * pyodide@314.0.7 (its sha512 integrity checked against the npm

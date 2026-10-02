@@ -82,6 +82,7 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.ThemeChoice
+import app.jonaki.settings.ToolPicker
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
@@ -95,6 +96,8 @@ import kotlinx.coroutines.withContext
 private const val ROUTE_THREADS = "threads"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_STATUS_ICONS = "status-icons"
+private const val ROUTE_TOOLS = "tools"
+private const val ROUTE_PYTHON = "python"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
 private const val ROUTE_MEMORY = "memory"
@@ -138,6 +141,10 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             )
             return@JonakiTheme
         }
+        if (ToolPicker.shouldShow(settingsSnapshot.toolPickerSeenVersion)) {
+            ToolPickerRoute(application)
+            return@JonakiTheme
+        }
         when {
             route == ROUTE_SETTINGS -> {
                 BackHandler { route = ROUTE_THREADS }
@@ -148,7 +155,17 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
+                    onOpenTools = { route = ROUTE_TOOLS },
+                    onOpenPython = { route = ROUTE_PYTHON },
                 )
+            }
+            route == ROUTE_TOOLS -> {
+                BackHandler { route = ROUTE_SETTINGS }
+                ToolsRoute(application, onBack = { route = ROUTE_SETTINGS })
+            }
+            route == ROUTE_PYTHON -> {
+                BackHandler { route = ROUTE_SETTINGS }
+                PythonRoute(application, onBack = { route = ROUTE_SETTINGS })
             }
             route == ROUTE_SKILLS || route.startsWith(ROUTE_SKILLS_THREAD_PREFIX) -> {
                 val skillsThreadId = if (route == ROUTE_SKILLS) null else route.removePrefix(ROUTE_SKILLS_THREAD_PREFIX)
@@ -430,6 +447,12 @@ private fun ChatRoute(
 
     val isRunning = threadId in running
     val pending = approvals[threadId].orEmpty()
+    val tryAgainText = stringResource(R.string.python_try_again_message)
+    val pythonCards = rememberPythonCardHooks(application, threadId) {
+        if (!isNew) {
+            runner.send(threadId, tryAgainText)
+        }
+    }
     val webSearchEnabled = thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
     val modelKey = (if (isNew) modelForNewThread else null) ?: runner.modelKeyFor(thread)
     val modelInfo = modelKey?.let(catalog::find)
@@ -456,6 +479,7 @@ private fun ChatRoute(
             pendingApprovals = pending,
             fallbackNote = stringResource(R.string.routing_fallback_note),
             subagents = subagents,
+            pythonCard = pythonCards.cardFor,
         ),
         isRunning = isRunning,
         draft = draft,
@@ -581,6 +605,7 @@ private fun ChatRoute(
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
+        onPythonCard = pythonCards.onAction,
     )
     val currentThread = thread
     if (renaming && currentThread != null) {
@@ -653,6 +678,8 @@ private fun SettingsRoute(
     onAddModels: (String) -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenTools: () -> Unit,
+    onOpenPython: () -> Unit,
 ) {
     val settings = application.settings
     val secrets = application.secrets
@@ -728,6 +755,8 @@ private fun SettingsRoute(
         onOpenStatusIcons = onOpenStatusIcons,
         onOpenMemory = onOpenMemory,
         onOpenSkills = onOpenSkills,
+        onOpenTools = onOpenTools,
+        onOpenPython = onOpenPython,
         onLinkFolder = { folderPicker.launch(null) },
         onUnlinkFolder = { application.linkedFolder.unlink() },
         onAddService = { serviceKey ->

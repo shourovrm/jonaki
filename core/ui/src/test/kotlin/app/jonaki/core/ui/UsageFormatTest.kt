@@ -66,4 +66,17 @@ class UsageFormatTest {
         assertEquals("131K", UsageFormat.tileTokens(131_072))
         assertEquals("1.2M", UsageFormat.tileTokens(1_234_567))
     }
+
+    @Test
+    fun byteSizesAreDecimalMegabytesWithOneDecimal() {
+        assertEquals("13.5 MB", UsageFormat.byteSize(13_532_188))
+        assertEquals("7.9 MB", UsageFormat.byteSize(7_889_748))
+        assertEquals("21.0 MB", UsageFormat.byteSize(21_000_000))
+    }
+
+    @Test
+    fun smallByteSizesAreKilobytesOrBytes() {
+        assertEquals("119 KB", UsageFormat.byteSize(119_077))
+        assertEquals("0 B", UsageFormat.byteSize(0))
+    }
 }

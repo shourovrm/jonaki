@@ -15,6 +15,9 @@ import app.jonaki.memory.MemoryExtractor
 import app.jonaki.run.AgentRunner
 import app.jonaki.run.BackgroundModel
 import app.jonaki.run.ChatProviders
+import app.jonaki.run.CodeRuntimes
+import app.jonaki.run.PythonSetup
+import app.jonaki.runtimes.pyodide.PyodideInstaller
 import app.jonaki.run.ThreadCompactor
 import app.jonaki.run.ThreadTitles
 import app.jonaki.core.model.Role
@@ -85,6 +88,10 @@ class JonakiApplication : Application() {
     lateinit var incomingShares: IncomingShares
         private set
 
+    /** Installs and removes Python for Settings > Python, the tool picker and the chat's install card (M8). */
+    lateinit var python: PythonSetup
+        private set
+
     /** The phone's photos for the composer's gallery sheet, with one thumbnail cache for the app's life (D-085). */
     val gallerySource: GallerySource by lazy {
         GallerySource(MediaStorePhotoLibrary(contentResolver), MediaThumbnails(contentResolver))
@@ -132,6 +139,11 @@ class JonakiApplication : Application() {
             backgroundModel,
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
+        val pythonFolder = CodeRuntimes.pythonFolder(this)
+        python = PythonSetup(pythonFolder, PyodideInstaller(pythonFolder, httpClient), applicationScope)
+        applicationScope.launch {
+            python.refresh()
+        }
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
             database.messageDao().closeInterrupted()

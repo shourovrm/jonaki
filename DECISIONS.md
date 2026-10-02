@@ -916,3 +916,81 @@ line ("Result: …" with no result of its own) is read wrongly; JavaScript
 syntax errors name no line; previews at 360 dp and font scale 1.3 exist
 in CodeRunPreviews.kt but were not rendered (no emulator). Outcome:
 pending.
+
+## D-091 · 2026-10-03 · Tool groups and the first-run tool picker — proposed
+Ten rows the user switches (plan M8 step 3, user ruling 2026-10-03): Files
+(read_file, write_file, edit_file, find_files, search_files, read_document,
+view_image; always on, as every other tool works on thread files), Web
+(web_search, web_fetch), YouTube, Memory (the memory tool only; the memory
+section and background extraction stay), Subagents (delegate), Reports
+(artifact), Share (share_file), JavaScript and Python (languages of the one
+run_code tool, whose language enum, prompt line and guidelines name only
+the languages that are on; off for both leaves run_code out), and the data
+add-on (D-092). A switched-off group's tools never reach ToolRegistry's
+list, so they cost no prompt tokens; subagents see the same list. Every
+group starts on; Settings stores the switched-off ones
+(`disabled_tool_groups`), so a group added later starts on too. The
+picker is the new module feature/onboarding; it shows while
+`tool_picker_seen_version` (AppSettings, no Room change) is below
+ToolPicker.CURRENT = 1, so on a new install and once on installs from
+before it, and Continue sets it. The same rows (core/ui ToolGroupList) are
+Settings > Tools. Code: `ToolGroup`, `ToolGroups`, `ToolPicker`
+(app/settings), `ToolGroupRows`; tests ToolGroupsTest, ToolRegistryTest,
+ToolGroupRowsTest. Rejected: a per-thread switch (the Web switch in the
+chat stays and both must be on). Outcome: pending.
+
+## D-092 · 2026-10-03 · Python's two switches — proposed
+Python's switch says whether the model is offered Python; it starts on but
+downloads nothing, and its row shows "13.5 MB download" with a Download
+button. Switching it on from off starts the download at once with
+progress and Cancel, since the size stands beside the switch; switching
+it off keeps the files (Settings > Python removes them). The data
+add-on's switch is its installed state: on downloads numpy and pandas
+(7.9 MB, with Python first when missing), off removes them; it waits for
+Python's switch. Jonaki cannot tell mobile data from Wi-Fi without the
+ACCESS_NETWORK_STATE permission, which needs approval, so nothing
+downloads without the size on screen. Why: user ruling 2026-10-03 (start
+the download with progress, or offer it). Outcome: pending.
+
+## D-093 · 2026-10-03 · Settings > Python — proposed
+Status (Not installed, Installed, Damaged with the file names), "Pyodide
+314.0.7", storage used, Install (13.5 MB) with progress and Cancel,
+Repair (fetches again only files with the wrong SHA-256), Remove with a
+confirmation, the data add-on with Install or Remove, the installed
+packages, and a field to install one more package by name from the lock
+file; another name fails with the installer's "requests is not available
+for Pyodide 314.0.7". `PythonSetup` (app/run) holds the state, runs one
+download at a time in the application scope (leaving the screen does not
+stop it) and reads the state back from the files after every change.
+Removing packages also removes the installed packages that need them,
+and their dependencies no other installed package needs
+(`PyodideFolder.removePackages`). Code tests: PythonSetupTest (15),
+PyodideInstallerTest (3 new). Outcome: pending.
+
+## D-094 · 2026-10-03 · Just-in-time Python install card from the saved step — proposed
+When the last turn's run_code step failed with run_code's NotInstalled or
+MissingPackages text, the chat shows a card after the turn: "Needs Python
+(13.5 MB). Install?" or "Needs pandas (7.9 MB). Install?", with Install
+and Not now; Install shows progress and Cancel, then "Python installed"
+with Try again, which sends "Installed. Try again." (the user can also
+just ask again). The card is read from the step's saved result through
+`InstallNeeds.of` in tools/run-code, the same object that writes the
+error's first sentence, so the model still gets plain text, the result
+row is the only record (no Room change, no runner state) and the card
+survives a restart. Packages within the data add-on install the whole
+add-on with its measured size; others install by name with no size
+shown. Only the last turn gets a card, so it goes once the user writes
+again; Not now hides it until the chat is opened again. The tool's text
+now names "Settings > Python" and the chat's Install button. Code:
+`InstallNeeds`, `PythonCards`, `ChatItems.pythonCardFor`,
+`PythonInstallCard`; tests RunCodeToolTest, PythonCardsTest,
+ChatItemsTest. Rejected: a structured field on ToolOutput (changes
+core/tool-api for one tool); a runner StateFlow (lost on restart).
+Outcome: pending.
+
+## D-095 · 2026-10-03 · Download sizes in decimal megabytes — proposed
+Python's sizes show as decimal megabytes with one decimal (13,532,188
+bytes is "13.5 MB", the add-on "7.9 MB"), as the user wrote them and as
+app stores show downloads; run_code's error text uses the same form.
+IncomingFiles.describeSize keeps binary megabytes for the 25 MB file cap.
+Code: UsageFormat.byteSize. Outcome: pending.

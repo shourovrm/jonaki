@@ -10,7 +10,7 @@ import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import app.jonaki.core.toolapi.stringArgument
-import kotlin.math.roundToLong
+import java.util.Locale
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
@@ -35,21 +35,44 @@ import kotlinx.serialization.json.putJsonObject
 class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
     override val name: String = "run_code"
 
+    /** Only the languages that are switched on are named, so a switched-off one costs no tokens (M8). */
+    private val languages: List<CodeLanguage> = CodeLanguage.entries.filter { language ->
+        runtimes.any { runtime -> runtime.language == language }
+    }
+
+    private val languageNames: String = languages.joinToString(" or ") { language -> language.displayName }
+
     override val promptLine: String =
-        "run_code: run a short JavaScript or Python program on the phone, without internet; " +
+        "run_code: run a short $languageNames program on the phone, without internet; " +
             "it reads the thread files you name and can save files to work/ and artifacts/"
 
-    override val guidelines: List<String> = listOf(
-        "run_code sees only the files you list in files, at the same paths (for example inbox/sales.csv). " +
-            "New or changed files under work/ and artifacts/ are saved to the thread; changes anywhere else, " +
-            "inbox/ included, are dropped.",
-        "In JavaScript, print with console.log, read a listed file with files.read(path), write text with " +
-            "files.write(path, text); the last expression's value is returned. No modules, no DOM, no fetch.",
-        "In Python, use open() with the same paths and print(); numpy and pandas work when installed. " +
-            "There is no pip at run time.",
-        "A run stops after ${CODE_TIME_LIMIT.inWholeSeconds} seconds. Prefer JavaScript for small calculations; " +
-            "Python starts slower.",
-    )
+    override val guidelines: List<String> = buildList {
+        add(
+            "run_code sees only the files you list in files, at the same paths (for example inbox/sales.csv). " +
+                "New or changed files under work/ and artifacts/ are saved to the thread; changes anywhere else, " +
+                "inbox/ included, are dropped.",
+        )
+        if (CodeLanguage.JAVASCRIPT in languages) {
+            add(
+                "In JavaScript, print with console.log, read a listed file with files.read(path), write text with " +
+                    "files.write(path, text); the last expression's value is returned. No modules, no DOM, no fetch.",
+            )
+        }
+        if (CodeLanguage.PYTHON in languages) {
+            add(
+                "In Python, use open() with the same paths and print(); numpy and pandas work when installed. " +
+                    "There is no pip at run time.",
+            )
+        }
+        if (languages.size > 1) {
+            add(
+                "A run stops after ${CODE_TIME_LIMIT.inWholeSeconds} seconds. Prefer JavaScript for small " +
+                    "calculations; Python starts slower.",
+            )
+        } else {
+            add("A run stops after ${CODE_TIME_LIMIT.inWholeSeconds} seconds.")
+        }
+    }
 
     override val parameterSchema: JsonObject = buildJsonObject {
         put("type", "object")
@@ -57,8 +80,9 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
             putJsonObject("language") {
                 put("type", "string")
                 putJsonArray("enum") {
-                    add(CodeLanguage.JAVASCRIPT.argumentValue)
-                    add(CodeLanguage.PYTHON.argumentValue)
+                    for (language in languages) {
+                        add(language.argumentValue)
+                    }
                 }
             }
             putJsonObject("code") {
@@ -151,14 +175,15 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
             ToolOutput(context.outputLimiter.limit(text, MAX_OUTPUT_CHARACTERS, name), isError = true)
         }
         is CodeRunOutcome.NotInstalled -> ToolOutput.error(
-            "${language.displayName} is not installed",
-            "Tell the user that ${language.displayName} is a ${megabytes(outcome.downloadBytes)} MB download " +
-                "they can install in Settings, ${language.displayName}; until then use javascript if it can do the job.",
+            InstallNeeds.notInstalledText(language),
+            "Tell the user that ${language.displayName} is a ${megabytes(outcome.downloadBytes)} download: the chat " +
+                "shows them an Install button, and it is also in Settings > ${language.displayName}. After installing " +
+                "they can ask again." + otherLanguageHint(language),
         )
         is CodeRunOutcome.MissingPackages -> ToolOutput.error(
-            "the ${language.displayName} packages ${outcome.packageNames.joinToString(", ")} are not installed",
-            "Tell the user they can install them in Settings, ${language.displayName}; " +
-                "or solve the task without them.",
+            InstallNeeds.missingPackagesText(language, outcome.packageNames),
+            "The chat shows the user an Install button for them, and they are also in Settings > " +
+                "${language.displayName}. After installing they can ask again; or solve the task without them.",
         )
         is CodeRunOutcome.Unavailable -> ToolOutput.error(
             "${language.displayName} cannot run on this phone: ${outcome.reason}",
@@ -223,12 +248,18 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
         return builder.toString()
     }
 
-    private fun megabytes(bytes: Long): Long = (bytes / BYTES_PER_MEGABYTE).roundToLong()
+    /** "13.5 MB", the size the install card and Settings show. */
+    private fun megabytes(bytes: Long): String = String.format(Locale.ENGLISH, "%.1f MB", bytes / BYTES_PER_MEGABYTE)
+
+    private fun otherLanguageHint(language: CodeLanguage): String {
+        val other = languages.firstOrNull { candidate -> candidate != language } ?: return ""
+        return " Until then use ${other.argumentValue} if it can do the job."
+    }
 
     companion object {
         val CODE_TIME_LIMIT: Duration = 120.seconds
         private val STARTUP_ALLOWANCE: Duration = 60.seconds
         private const val MAX_OUTPUT_CHARACTERS = 20_000
-        private const val BYTES_PER_MEGABYTE = 1024.0 * 1024.0
+        private const val BYTES_PER_MEGABYTE = 1_000_000.0
     }
 }

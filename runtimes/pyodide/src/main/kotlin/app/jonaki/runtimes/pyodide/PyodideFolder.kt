@@ -43,6 +43,35 @@ class PyodideFolder(
         return lock.all.filter { lockPackage -> packageFile(lockPackage).isFile }.map { lockPackage -> lockPackage.name }
     }
 
+    /**
+     * Removes the named packages, every installed package that needs one of
+     * them (it could no longer load), and their dependencies that no other
+     * installed package needs. Removing numpy and pandas also removes
+     * python-dateutil, pytz and six unless another package still uses them.
+     */
+    fun removePackages(names: List<String>) {
+        val lock = lock() ?: return
+        val installed = lock.all.filter { lockPackage -> packageFile(lockPackage).isFile }
+        val namedClosure = lock.withDependencies(names).map { lockPackage -> lockPackage.name }.toSet()
+        val namedPackages = names.mapNotNull { name -> lock.find(name)?.name }.toSet()
+        val dependents = installed.filter { lockPackage ->
+            lock.withDependencies(listOf(lockPackage.name)).any { needed -> needed.name in namedPackages }
+        }
+        val dependentNames = dependents.map { lockPackage -> lockPackage.name }.toSet()
+        val keptRoots = installed.filter { lockPackage ->
+            lockPackage.name !in dependentNames && lockPackage.name !in namedClosure
+        }
+        val stillNeeded = lock.withDependencies(keptRoots.map { lockPackage -> lockPackage.name })
+            .map { lockPackage -> lockPackage.name }
+            .toSet()
+        val removable = installed.filter { lockPackage ->
+            lockPackage.name in dependentNames || (lockPackage.name in namedClosure && lockPackage.name !in stillNeeded)
+        }
+        for (lockPackage in removable) {
+            packageFile(lockPackage).delete()
+        }
+    }
+
     fun storageBytes(): Long = root.walkTopDown().filter { file -> file.isFile }.sumOf { file -> file.length() }
 
     /** Removes Python with every package, and any older version left from an update. */

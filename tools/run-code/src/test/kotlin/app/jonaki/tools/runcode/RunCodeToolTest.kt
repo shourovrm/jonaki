@@ -255,8 +255,21 @@ class RunCodeToolTest {
 
         assertTrue(output.isError)
         assertTrue(output.text, output.text.contains("Python is not installed"))
-        assertTrue(output.text, output.text.contains("13 MB"))
-        assertTrue(output.text, output.text.contains("Settings"))
+        assertTrue(output.text, output.text.contains("13.6 MB"))
+        assertTrue(output.text, output.text.contains("Settings > Python"))
+        assertEquals(InstallNeed(emptyList()), InstallNeeds.of(output.text))
+    }
+
+    @Test
+    fun suggestsJavaScriptOnlyWhenItIsOn() {
+        val python = FakeRuntime(CodeLanguage.PYTHON, CodeRunOutcome.NotInstalled(downloadBytes = 13_532_188))
+        val javaScript = FakeRuntime(CodeLanguage.JAVASCRIPT, finished())
+
+        val alone = run(RunCodeTool(listOf(python)), "language" to text("python"), "code" to text("print(1)"))
+        val withJavaScript = run(RunCodeTool(listOf(javaScript, python)), "language" to text("python"), "code" to text("print(1)"))
+
+        assertFalse(alone.text, alone.text.contains("javascript"))
+        assertTrue(withJavaScript.text, withJavaScript.text.contains("use javascript"))
     }
 
     @Test
@@ -271,7 +284,30 @@ class RunCodeToolTest {
 
         assertTrue(output.isError)
         assertTrue(output.text, output.text.contains("pandas, numpy"))
-        assertTrue(output.text, output.text.contains("Settings"))
+        assertTrue(output.text, output.text.contains("Settings > Python"))
+        assertEquals(InstallNeed(listOf("pandas", "numpy")), InstallNeeds.of(output.text))
+    }
+
+    @Test
+    fun offersOnlyTheLanguagesItHasRuntimesFor() {
+        val pythonOnly = RunCodeTool(listOf(FakeRuntime(CodeLanguage.PYTHON, finished())))
+        val both = RunCodeTool(
+            listOf(FakeRuntime(CodeLanguage.JAVASCRIPT, finished()), FakeRuntime(CodeLanguage.PYTHON, finished())),
+        )
+
+        val pythonEnum = pythonOnly.parameterSchema.toString()
+        assertTrue(pythonEnum, pythonEnum.contains("\"enum\":[\"python\"]"))
+        assertTrue(pythonOnly.promptLine, pythonOnly.promptLine.contains("short Python program"))
+        assertTrue(pythonOnly.guidelines.none { line -> line.contains("console.log") })
+        assertTrue(both.parameterSchema.toString().contains("\"enum\":[\"javascript\",\"python\"]"))
+        assertTrue(both.promptLine, both.promptLine.contains("JavaScript or Python"))
+    }
+
+    @Test
+    fun otherResultsNeedNoInstall() {
+        assertNull(InstallNeeds.of("Python finished.\nPrinted:\n1"))
+        assertNull(InstallNeeds.of("Error: Python cannot run on this phone: Python's files are damaged"))
+        assertNull(InstallNeeds.of("Error: JavaScript is not installed. Try again."))
     }
 
     @Test

@@ -423,7 +423,7 @@ class AgentRunner(
             skillSection = skillSection,
             now = ZonedDateTime::now,
         )
-        val tools = threadTools + ToolRegistry.delegateTool(subagents)
+        val tools = threadTools + ToolRegistry.delegateTools(subagents, toolServices.enabledGroups)
         val systemPrompt = promptBuilder.systemPrompt(activeTools = tools, memorySection = memorySection, skillSection = skillSection)
         parentRequest = parentRequest.copy(systemPrompt = systemPrompt, tools = ToolDefinitions.of(tools))
         val loop = AgentLoop(
@@ -469,6 +469,7 @@ class AgentRunner(
         fileDestinations = fileDestinations,
         modelAcceptsImages = modelAcceptsImages,
         codeRuntimes = CodeRuntimes.forApp(context),
+        enabledGroups = settings.snapshot.value.enabledToolGroups,
     )
 
     /**
@@ -480,7 +481,8 @@ class AgentRunner(
         val thread = database.threadDao().find(threadId) ?: return null
         val modelKey = modelKeyFor(thread)
         val modelAcceptsImages = modelKey?.let { key -> catalog.find(key)?.acceptsImages } == true
-        val tools = ToolRegistry.tools(toolServicesFor(thread, modelAcceptsImages)) + ToolRegistry.delegateTool(PromptOnlySubagents)
+        val toolServices = toolServicesFor(thread, modelAcceptsImages)
+        val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents, toolServices.enabledGroups)
         val memory = MemorySection.build(promptFactsOf(threadId))
         val skills = enabledSkillsOf(thread)
         val rows = database.messageDao().listThread(threadId)

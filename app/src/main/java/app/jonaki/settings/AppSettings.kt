@@ -39,7 +39,13 @@ data class SettingsSnapshot(
     val defaultApprovalMode: ApprovalMode = ApprovalMode.ASK,
     /** Model key per subagent type; a type without an entry uses its default (D-065). */
     val subagentModels: Map<String, String> = emptyMap(),
-)
+    /** Tool groups switched off in the picker or Settings > Tools; every other group is on (M8). */
+    val disabledToolGroups: Set<ToolGroup> = emptySet(),
+    /** The [ToolPicker] version the user last finished; 0 before the picker existed. */
+    val toolPickerSeenVersion: Int = 0,
+) {
+    val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
+}
 
 /** Plain settings in app preferences; keys live in [SecretStore]. */
 class AppSettings(
@@ -85,6 +91,8 @@ class AppSettings(
             thinkingLevels = ThinkingLevels.fromText(preferences.getString(THINKING_LEVELS, "").orEmpty()),
             defaultApprovalMode = ApprovalModes.fromName(preferences.getString(APPROVAL_MODE, null)),
             subagentModels = SubagentModelChoice.fromText(preferences.getString(SUBAGENT_MODELS, "").orEmpty()),
+            disabledToolGroups = ToolGroups.disabledFromText(preferences.getString(DISABLED_TOOL_GROUPS, "").orEmpty()),
+            toolPickerSeenVersion = preferences.getInt(TOOL_PICKER_SEEN_VERSION, 0),
         )
     }
 
@@ -132,6 +140,8 @@ class AppSettings(
         editor.putString(THINKING_LEVELS, ThinkingLevels.toText(snapshot.thinkingLevels))
         editor.putString(APPROVAL_MODE, snapshot.defaultApprovalMode.name)
         editor.putString(SUBAGENT_MODELS, SubagentModelChoice.toText(snapshot.subagentModels))
+        editor.putString(DISABLED_TOOL_GROUPS, ToolGroups.disabledToText(snapshot.disabledToolGroups))
+        editor.putInt(TOOL_PICKER_SEEN_VERSION, snapshot.toolPickerSeenVersion)
         editor.apply()
     }
 
@@ -157,5 +167,7 @@ class AppSettings(
         const val THINKING_LEVELS = "thinking_levels"
         const val APPROVAL_MODE = "approval_mode"
         const val SUBAGENT_MODELS = "subagent_models"
+        const val DISABLED_TOOL_GROUPS = "disabled_tool_groups"
+        const val TOOL_PICKER_SEEN_VERSION = "tool_picker_seen_version"
     }
 }
