@@ -157,8 +157,8 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
         )
         is CodeRunOutcome.MissingPackages -> ToolOutput.error(
             "the ${language.displayName} packages ${outcome.packageNames.joinToString(", ")} are not installed",
-            "Tell the user they can install them in Settings, ${language.displayName} " +
-                "(${megabytes(outcome.downloadBytes)} MB); or solve the task without them.",
+            "Tell the user they can install them in Settings, ${language.displayName}; " +
+                "or solve the task without them.",
         )
         is CodeRunOutcome.Unavailable -> ToolOutput.error(
             "${language.displayName} cannot run on this phone: ${outcome.reason}",

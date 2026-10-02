@@ -83,10 +83,12 @@ sealed interface CodeRunOutcome {
         val downloadBytes: Long,
     ) : CodeRunOutcome
 
-    /** The program imports packages that are known but not installed. */
+    /**
+     * The program imports packages the engine knows but has not installed.
+     * Like [NotInstalled], a start for the just-in-time install card.
+     */
     data class MissingPackages(
         val packageNames: List<String>,
-        val downloadBytes: Long,
     ) : CodeRunOutcome
 
     /** The engine cannot run on this phone, for example because Android System WebView is too old. */

@@ -38,6 +38,7 @@ dependencies {
     implementation(project(":tools:run-code"))
     implementation(project(":core:runtime-api"))
     implementation(project(":runtimes:javascript"))
+    implementation(project(":runtimes:pyodide"))
     // Only for PDFBoxResourceLoader.init at start; read_document does the reading (D-051).
     implementation(libs.pdfbox.android)
     implementation(project(":core:provider-api"))

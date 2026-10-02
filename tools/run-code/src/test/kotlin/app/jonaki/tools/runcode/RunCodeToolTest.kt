@@ -263,7 +263,7 @@ class RunCodeToolTest {
     fun namesMissingPackages() {
         val runtime = FakeRuntime(
             CodeLanguage.PYTHON,
-            CodeRunOutcome.MissingPackages(listOf("pandas", "numpy"), downloadBytes = 7_900_000),
+            CodeRunOutcome.MissingPackages(listOf("pandas", "numpy")),
         )
         val tool = RunCodeTool(listOf(runtime))
 
@@ -271,7 +271,7 @@ class RunCodeToolTest {
 
         assertTrue(output.isError)
         assertTrue(output.text, output.text.contains("pandas, numpy"))
-        assertTrue(output.text, output.text.contains("8 MB"))
+        assertTrue(output.text, output.text.contains("Settings"))
     }
 
     @Test
