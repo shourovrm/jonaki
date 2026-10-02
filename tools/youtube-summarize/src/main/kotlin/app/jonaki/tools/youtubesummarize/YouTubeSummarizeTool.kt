@@ -109,7 +109,8 @@ class YouTubeSummarizeTool(private val summarizer: VideoSummarizer) : Tool {
                 "The video may be private, age-restricted or removed; tell the user or find another video."
             else -> "Tell the user the video could not be summarised and why."
         }
-        return ToolOutput.error(answer.message, hint)
+        // ToolOutput.error adds its own full stop.
+        return ToolOutput.error(answer.message.trimEnd('.', ' '), hint)
     }
 
     /** Seconds from "90", "1:30" or "1:02:05"; null when absent; [INVALID_TIME] when unreadable. */
