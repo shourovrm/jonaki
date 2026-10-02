@@ -84,6 +84,25 @@ class IncomingShares(
         }
     }
 
+    /**
+     * A photo the system camera app saved into [photo] becomes a chip like a
+     * picked file (D-053); the camera's own copy is deleted once staged.
+     */
+    fun attachPhoto(threadKey: String, photo: java.io.File, name: String) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val staged = drafts.stage(name) { target -> photo.inputStream().use { IncomingFiles.copyWithLimit(it, target) } }
+                drafts.add(threadKey, listOf(staged))
+            } catch (tooLarge: FileTooLargeException) {
+                refused.update { current -> current + RefusedFile.TooLarge(name, tooLarge.limitBytes) }
+            } catch (failure: IOException) {
+                refused.update { current -> current + RefusedFile.Unreadable(name) }
+            } finally {
+                photo.delete()
+            }
+        }
+    }
+
     /** The user picked a thread for the pending share. */
     fun deliverTo(threadKey: String) {
         val share = pendingShare.value ?: return

@@ -58,15 +58,38 @@ object ChatCompletionRequestBody {
     }
 
     private fun messageJson(message: Message): JsonObject = when (message.role) {
-        Role.USER -> buildJsonObject {
-            put("role", "user")
-            put("content", message.text)
-        }
+        Role.USER -> userMessageJson(message)
         Role.ASSISTANT -> assistantMessageJson(message)
         Role.TOOL -> buildJsonObject {
             put("role", "tool")
             put("tool_call_id", message.toolCallId)
             put("content", message.text)
+        }
+    }
+
+    /**
+     * Plain text stays a string, as before images existed, so the bytes of
+     * older requests do not change and the prompt cache holds (D-049).
+     */
+    private fun userMessageJson(message: Message): JsonObject = buildJsonObject {
+        put("role", "user")
+        if (message.images.isEmpty()) {
+            put("content", message.text)
+            return@buildJsonObject
+        }
+        putJsonArray("content") {
+            if (message.text.isNotEmpty()) {
+                addJsonObject {
+                    put("type", "text")
+                    put("text", message.text)
+                }
+            }
+            for (image in message.images) {
+                addJsonObject {
+                    put("type", "image_url")
+                    putJsonObject("image_url") { put("url", "data:${image.mimeType};base64,${image.base64Data}") }
+                }
+            }
         }
     }
 

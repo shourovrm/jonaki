@@ -37,6 +37,15 @@
         "context_length": 1048576,
         "max_completion_tokens": 65536,
         "is_moderated": false
+      },
+      "architecture": {
+        "input_modalities": [
+          "text",
+          "image",
+          "video",
+          "file",
+          "audio"
+        ]
       }
     },
     {
@@ -80,6 +89,11 @@
         "context_length": 128000,
         "max_completion_tokens": 16000,
         "is_moderated": false
+      },
+      "architecture": {
+        "input_modalities": [
+          "text"
+        ]
       }
     }
   ]

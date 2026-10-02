@@ -8,6 +8,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -49,6 +50,22 @@ class ModelCatalogTest {
         assertEquals(0.15, glm.inputUsdPerMillion!!, 1e-9)
         assertEquals(0.50, glm.outputUsdPerMillion!!, 1e-9)
         assertEquals(0.03, glm.cachedInputUsdPerMillion!!, 1e-9)
+    }
+
+    @Test
+    fun parserReadsImageInputFromInputModalities() {
+        val models = OpenRouterModels.parse(recorded)
+
+        assertTrue(models.first { it.modelId == "google/gemini-3.8-flash" }.acceptsImages)
+        assertFalse(models.first { it.modelId == "deepseek/deepseek-chat" }.acceptsImages)
+        // No architecture block at all: unknown counts as no.
+        assertFalse(models.first { it.modelId == "z-ai/glm-5.3-flash" }.acceptsImages)
+    }
+
+    @Test
+    fun builtInGeminiTakesImagesAndDeepSeekDoesNot() {
+        assertTrue(BuiltInModels.all.first { it.modelId == "gemini-3.8-flash" }.acceptsImages)
+        assertFalse(BuiltInModels.all.first { it.modelId == "deepseek-flash" }.acceptsImages)
     }
 
     @Test

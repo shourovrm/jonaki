@@ -32,7 +32,15 @@ object OpenRouterModels {
             outputUsdPerMillion = pricing?.perMillion("completion"),
             cachedInputUsdPerMillion = pricing?.perMillion("input_cache_read"),
             supportsThinkingLevel = REASONING_PARAMETER in parameterNames(model),
+            acceptsImages = acceptsImages(model),
         )
+    }
+
+    /** From architecture.input_modalities, for example ["text", "image"]. */
+    private fun acceptsImages(model: JsonObject): Boolean {
+        val architecture = model["architecture"] as? JsonObject ?: return false
+        val modalities = architecture["input_modalities"] as? JsonArray ?: return false
+        return modalities.any { modality -> (modality as? JsonPrimitive)?.contentOrNull == "image" }
     }
 
     /** Prices arrive as dollars per token in text; a negative price means "varies" (routers). */

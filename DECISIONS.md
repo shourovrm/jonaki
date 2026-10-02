@@ -479,6 +479,75 @@ lib/chart.js. Why: plan M6 step 4; the user chose Chart.js over uPlot and
 over inline SVG only (2026-10-02), because models write working Chart.js
 code more often. Outcome: pending.
 
+## D-049 · 2026-10-03 · Images reach the model as content parts — proposed
+A user message whose "Attached:" line names a .jpg, .jpeg, .png, .webp,
+.gif, .heic or .heif file carries that image when the thread's model takes
+images: OpenAI-compatible `image_url` data URLs, Gemini `inlineData`. The
+model catalog decides: OpenRouter's `architecture.input_modalities`, and a
+flag on built-in rows copied from OpenRouter's list of 2026-10-03 (Gemini,
+OpenAI, GLM 5.3 Flash, MiMo yes; DeepSeek no); unknown counts as no. The
+database keeps text only (no schema change): before each request
+`ImageMessages` finds the images again from the text. The app shrinks each
+image to at most 1,568 px on the long side, turns it upright from EXIF,
+puts transparency on white and saves JPEG quality 85 in
+`files/image-cache/<thread>/<sha-256 of the file>.jpg`, so the same file
+gives the same bytes on every request and the prompt cache holds. A model
+without images gets "[inbox/photo.jpg is an image; this model cannot see
+images.]"; an image that does not decode gets "[… could not be opened as an
+image.]". Why: user report of 2026-10-03. Rejected: encoding again on every
+request (a system update could change the bytes); images in the database
+(schema change, version 5 is the lead's). Outcome: pending.
+
+## D-050 · 2026-10-03 · view_image tool — proposed
+`view_image path=… [page=N]` lets the model look at an image or a PDF page
+in the thread folder. It answers "Image shown: work/chart.png" and, before
+the next request, `ImageMessages` adds a user message "[view_image:
+work/chart.png]" with the image right after that turn's tool results.
+Offered only to models that take images. PDF pages render through
+Android's PdfRenderer at 1,568 px. Why: tool results are text in OpenAI's
+chat format and Gemini's function responses take images only on some
+models, while a user message with images works in both; tested with
+scripted payloads in `ImageRequestsTest`. Raises D-014's tool count from 16
+to 18 with read_document. Rejected: images inside tool results (not
+portable); an action of read_document (that tool reads, this one shows).
+Outcome: pending.
+
+## D-051 · 2026-10-03 · read_document with PdfBox-Android 2.0.27.0 — proposed
+New tool module `tools/read-document`: PDF text page by page ("--- Page 3
+---"), offset and limit in pages, slides or sheets (default 20, at most
+100), output over 30,000 characters saved through OutputLimiter. A page
+with no text says it may be a scan and names the view_image call. A
+password-locked file is refused by name. PdfBox-Android 2.0.27.0 (Apache
+License 2.0, checked in its POM; the newest release, January 2023) is an
+AAR, so this one tool module is an Android library; it still depends only
+on core/tool-api. The app calls `PDFBoxResourceLoader.init` at start.
+Release APK 4,006,757 → 5,913,535 bytes (+1.9 MB, measured 2026-10-03):
+PdfBox's font and CMap tables are 1.6 MB of it. Bouncy Castle comes along
+for certificate-locked PDFs; its post-quantum tables (4.1 MB compressed)
+are excluded from the APK, which would otherwise be 10.1 MB. Why: user
+ruling of 2026-10-03. Outcome: pending.
+
+## D-052 · 2026-10-03 · Word, Excel and PowerPoint through zip and XML — proposed
+.docx: body paragraphs, "#" for headings, "- " for list items, table rows
+as tab-separated cells (headers, footers, footnotes and comments left
+out). .xlsx: each sheet as tab-separated rows, shared strings resolved,
+formulas as their saved value, dates as Excel day numbers. .pptx: slides
+in the presentation's order, then "Notes:". Read with java.util.zip and
+the platform SAX parser, each part capped at 64 MB unpacked. .doc, .xls
+and .ppt are refused with "save it as .docx (or .xlsx, .pptx) or PDF"; a
+locked Office file is recognised by its OLE container. Why: user ruling
+of 2026-10-03 (no extra library). Rejected: Apache POI (about 10 MB).
+Outcome: pending.
+
+## D-053 · 2026-10-03 · Camera through the system camera app — proposed
+A camera button next to the paper clip opens the system camera with
+ACTION_IMAGE_CAPTURE (`TakePicture`) and a FileProvider link to
+`cache/camera/photo-YYYYMMDD-HHMMSS.jpg`; no CAMERA permission is
+declared (checked with aapt2 on the release APK). The photo becomes a chip
+like a picked file and moves to inbox/ on Send. The pending path is kept
+across a process restart; camera files are not cleaned at start for that
+reason. Why: user ruling of 2026-10-03. Outcome: pending.
+
 ## D-054 · 2026-10-03 · The model's reasoning is saved and shown — proposed
 Reasoning that a model streams (OpenRouter `reasoning`, DeepSeek
 `reasoning_content`, Gemini thought parts) is saved in a new nullable

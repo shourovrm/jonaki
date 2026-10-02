@@ -45,6 +45,8 @@ class AgentLoop(
     private val permissionBroker: PermissionBroker,
     private val recorder: StepRecorder,
     private val settings: AgentSettings,
+    /** Adds images from the thread folder before each request; null sends text only (D-049). */
+    private val imageMessages: ImageMessages? = null,
 ) {
     private val toolsByName: Map<String, Tool> = tools.associateBy { tool -> tool.name }
 
@@ -101,7 +103,7 @@ class AgentLoop(
         val request = ChatRequest(
             model = settings.model,
             systemPrompt = settings.systemPrompt,
-            messages = conversation.toList(),
+            messages = imageMessages?.prepare(conversation) ?: conversation.toList(),
             tools = tools,
             maxOutputTokens = settings.maxOutputTokens,
             thinkingLevel = settings.thinkingLevel,

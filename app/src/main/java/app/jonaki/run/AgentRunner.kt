@@ -11,6 +11,7 @@ import app.jonaki.ToolServices
 import app.jonaki.core.agent.AgentLoop
 import app.jonaki.core.agent.AgentSettings
 import app.jonaki.core.agent.ApprovalDecision
+import app.jonaki.core.agent.ImageMessages
 import app.jonaki.core.agent.MemorySection
 import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.PermissionBroker
@@ -44,6 +45,7 @@ import app.jonaki.settings.ChatService
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
+import app.jonaki.files.ModelImageLoader
 import app.jonaki.skills.ThreadSkills
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.youtubesummarize.VideoAnswer
@@ -324,6 +326,9 @@ class AgentRunner(
             saveError(threadId, "No ${service.displayName} API key. Add one in Settings.")
             return null
         }
+        // Unknown models count as not taking images (D-049).
+        val modelAcceptsImages = catalog.find(modelKey)?.acceptsImages == true
+        val threadFolder = ThreadFolders.create(context, threadId)
         val tools = ToolRegistry.tools(
             ToolServices(
                 searchBackends = searchBackends(snapshot.searchOrder),
@@ -331,6 +336,7 @@ class AgentRunner(
                 webAccessEnabled = thread.webSearchEnabled,
                 memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
                 fileDestinations = fileDestinations,
+                modelAcceptsImages = modelAcceptsImages,
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
@@ -338,7 +344,7 @@ class AgentRunner(
         val loop = AgentLoop(
             provider = provider,
             tools = tools,
-            toolContext = ToolContext(ThreadFolders.create(context, threadId), httpClient, skillLibrary.folder),
+            toolContext = ToolContext(threadFolder, httpClient, skillLibrary.folder),
             permissionBroker = permissionBroker,
             recorder = session,
             settings = AgentSettings(
@@ -353,6 +359,10 @@ class AgentRunner(
                     memorySection = memorySectionFor(threadId),
                     skillSection = skillSectionFor(thread),
                 ),
+            ),
+            imageMessages = ImageMessages(
+                ModelImageLoader(threadFolder, ThreadFolders.imageCache(context, threadId)),
+                modelAcceptsImages,
             ),
         )
         val summary = database.compactionDao().latestForThread(threadId)
@@ -482,7 +492,15 @@ object ThreadFolders {
 
     fun delete(context: Context, threadId: String) {
         java.io.File(context.filesDir, "threads/$threadId").deleteRecursively()
+        imageCache(context, threadId).deleteRecursively()
     }
+
+    /**
+     * Shrunk copies of the thread's images as sent to the model (D-049).
+     * Outside the thread folder, so find_files does not list them.
+     */
+    fun imageCache(context: Context, threadId: String): java.io.File =
+        java.io.File(context.filesDir, "image-cache/$threadId")
 }
 
 internal fun Context.startForegroundServiceCompat(intent: Intent) {

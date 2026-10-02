@@ -24,6 +24,7 @@ import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.SecretStore
 import app.jonaki.settings.UsdRates
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -83,6 +84,8 @@ class JonakiApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // read_document's PDF reading needs PdfBox's font and glyph tables from the assets (D-051).
+        PDFBoxResourceLoader.init(this)
         database = JonakiDatabase.open(this)
         skillLibrary = SkillLibrary(File(filesDir, "skills"), File(filesDir, "skills-builtin.json"))
         settings = AppSettings(this, ChatProviders::defaultModel)

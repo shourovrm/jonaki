@@ -44,3 +44,11 @@ shape `{"detail": {"error": "..."}}`.
 |---|---|---|
 | `models-trimmed.json` | `GET openrouter.ai/api/v1/models` (no key), 2026-10-02; 5 of 464 models kept | Prices are USD per token as text; `openrouter/auto-beta` has price `-1` (varies); `deepseek/deepseek-chat` has no cached-input price |
 | `error-404-data-policy.json` | Chat request to `liquid/lfm-2.5-2.6b:free` with `provider: {data_collection: "deny", sort: "price"}` (D-030) | HTTP 404, "No endpoints found matching your data policy (Free model training)", `failed_routing_step: "Filter by Data Policy"` |
+
+## documents/ (read_document tests, made on 2026-10-03)
+
+`three-pages.pdf` (1,177 bytes) was written by a short Python script: pages 1
+and 2 hold Helvetica text, page 3 holds only a filled square, so it has no
+text layer. `locked.pdf` is the same file after `qpdf --encrypt secret owner
+256`, so it needs the password "secret". Word, Excel and PowerPoint test
+files are built in the tests themselves (`OfficeFixtures.kt`).

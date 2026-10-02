@@ -7,10 +7,12 @@ import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.MemoryTool
+import app.jonaki.tools.readdocument.ReadDocumentTool
 import app.jonaki.tools.readfile.ReadFileTool
 import app.jonaki.tools.searchfiles.SearchFilesTool
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.ShareFileTool
+import app.jonaki.tools.viewimage.ViewImageTool
 import app.jonaki.tools.webfetch.WebFetchTool
 import app.jonaki.tools.websearch.WebSearchTool
 import app.jonaki.tools.writefile.WriteFileTool
@@ -29,6 +31,8 @@ data class ToolServices(
     val memoryStore: MemoryStore?,
     /** Downloads, pickers, the share sheet and the linked folder (D-017); null leaves share_file out. */
     val fileDestinations: FileDestinations? = null,
+    /** From the model catalog; view_image is offered only to models that take images (D-050). */
+    val modelAcceptsImages: Boolean = false,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -41,7 +45,11 @@ object ToolRegistry {
             FindFilesTool(),
             SearchFilesTool(),
             ArtifactTool(),
+            ReadDocumentTool(),
         )
+        if (services.modelAcceptsImages) {
+            tools += ViewImageTool()
+        }
         if (services.webAccessEnabled && services.searchBackends.isNotEmpty()) {
             tools += WebSearchTool(services.searchBackends)
         }

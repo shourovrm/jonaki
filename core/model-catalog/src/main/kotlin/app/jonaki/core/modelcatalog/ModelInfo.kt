@@ -18,6 +18,8 @@ data class ModelInfo(
     val isEstimate: Boolean = false,
     /** OpenRouter lists "reasoning" among the model's parameters (D-057). */
     val supportsThinkingLevel: Boolean = false,
+    /** True only when the list says the model takes images; unknown counts as no (D-049). */
+    val acceptsImages: Boolean = false,
 ) {
     /** "service:modelId", the form stored in settings and on each thread. */
     val key: String

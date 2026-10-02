@@ -64,7 +64,7 @@ object GeminiRequestBody {
                 Role.TOOL -> pendingFunctionResponses += functionResponsePart(message, toolCallsById)
                 Role.USER -> {
                     flushFunctionResponses()
-                    turns += turn("user", listOf(textPart(message.text)))
+                    turns += turn("user", userParts(message))
                 }
                 Role.ASSISTANT -> {
                     flushFunctionResponses()
@@ -82,6 +82,22 @@ object GeminiRequestBody {
     }
 
     private fun textPart(text: String): JsonObject = buildJsonObject { put("text", text) }
+
+    private fun userParts(message: Message): List<JsonObject> {
+        val parts = mutableListOf<JsonObject>()
+        if (message.text.isNotEmpty() || message.images.isEmpty()) {
+            parts += textPart(message.text)
+        }
+        for (image in message.images) {
+            parts += buildJsonObject {
+                putJsonObject("inlineData") {
+                    put("mimeType", image.mimeType)
+                    put("data", image.base64Data)
+                }
+            }
+        }
+        return parts
+    }
 
     private fun modelParts(message: Message): List<JsonObject> {
         val parts = mutableListOf<JsonObject>()

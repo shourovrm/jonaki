@@ -98,6 +98,8 @@ fun ChatScreen(
     focusMessageId: String? = null,
     /** The paper clip: the app opens the system file picker. */
     onAttach: () -> Unit = {},
+    /** The camera button: the app opens the system camera app. */
+    onTakePhoto: () -> Unit = {},
     /** The close mark on an attachment chip. */
     onRemoveAttachment: (attachmentId: String) -> Unit = {},
     /** Edit under a sent prompt: the app puts its text in the field and marks it as editing. */
@@ -138,6 +140,7 @@ fun ChatScreen(
                     onSend = onSend,
                     onStop = onStop,
                     onAttach = onAttach,
+                    onTakePhoto = onTakePhoto,
                 )
             }
         },
@@ -476,6 +479,7 @@ private fun Composer(
     onSend: () -> Unit,
     onStop: () -> Unit,
     onAttach: () -> Unit,
+    onTakePhoto: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier) {
@@ -487,6 +491,13 @@ private fun Composer(
                 Icon(
                     JonakiIcons.AttachFile,
                     contentDescription = stringResource(R.string.chat_attach),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onTakePhoto, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    JonakiIcons.PhotoCamera,
+                    contentDescription = stringResource(R.string.chat_take_photo),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

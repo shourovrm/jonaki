@@ -9,6 +9,14 @@ android {
         versionCode = 6
         versionName = "0.6.0"
     }
+    packaging {
+        resources {
+            // Bouncy Castle comes with PdfBox-Android for certificate-locked PDFs. Its tables for
+            // post-quantum ciphers (4.1 MB compressed) and certificate-path messages are never used (D-051).
+            excludes += "org/bouncycastle/pqc/**"
+            excludes += "org/bouncycastle/x509/*.properties"
+        }
+    }
 }
 
 dependencies {
@@ -25,6 +33,10 @@ dependencies {
     implementation(project(":tools:youtube-summarize"))
     implementation(project(":tools:memory"))
     implementation(project(":tools:share-file"))
+    implementation(project(":tools:view-image"))
+    implementation(project(":tools:read-document"))
+    // Only for PDFBoxResourceLoader.init at start; read_document does the reading (D-051).
+    implementation(libs.pdfbox.android)
     implementation(project(":core:provider-api"))
     implementation(project(":core:search-api"))
     implementation(project(":core:storage"))
