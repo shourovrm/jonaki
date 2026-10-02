@@ -55,12 +55,12 @@
     <string name="chat_working_writing">Writing…</string>
     <string name="chat_working_searching">Searching the web…</string>
     <string name="chat_working_reading_page">Reading a page…</string>
-    <string name="chat_working_watching">Watching the video…</string>
+    <string name="chat_working_watching">Watching a video…</string>
     <string name="chat_working_reading_files">Reading files…</string>
     <string name="chat_working_writing_file">Writing a file…</string>
     <string name="chat_working_memory">Updating memory…</string>
     <string name="chat_working_tool">Running %1$s…</string>
-    <string name="chat_working_seconds">%1$d s</string>
+    <string name="chat_working_seconds">%1$ds</string>
     <string name="chat_reasoning">Thinking</string>
     <string name="chat_copy">Copy</string>
     <string name="chat_edit">Edit</string>
