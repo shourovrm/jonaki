@@ -54,6 +54,11 @@ class SubagentRunner(
     override val extraToolNames: List<String> = givableTools.map { tool -> tool.name }.sorted()
 
     override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> {
+        // The delegate tool refuses more; this guards any other caller of the launcher.
+        if (tasks.size > SubagentLauncher.MAX_PARALLEL) {
+            val refusal = "Error: at most ${SubagentLauncher.MAX_PARALLEL} subagents run at once, not ${tasks.size}."
+            return tasks.map { task -> SubagentReport(task.agentType, refusal) }
+        }
         // The OpenAI-compatible stream gives "" for a call without an id.
         val callId = context.toolCallId?.takeIf { id -> id.isNotBlank() } ?: newId()
         val group = DelegationGroup(

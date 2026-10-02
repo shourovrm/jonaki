@@ -441,6 +441,15 @@ class SubagentRunnerTest {
 
         assertEquals(SubagentStop.COMPLETED, recorder.outcomes.single().stop)
     }
+
+    @Test
+    fun noMoreThanThreeSubagentsStart() = runBlocking {
+        val provider = ScriptedProvider(textTurn("a"))
+        val reports = runner(mapOf("scout" to provider)).launch(List(4) { SubagentTask("scout", "Find") }, context)
+
+        assertTrue(reports.all { it.text.contains("at most 3") })
+        assertTrue(recorder.starts.isEmpty())
+    }
 }
 
 class RecordingSubagents : SubagentRecorder {

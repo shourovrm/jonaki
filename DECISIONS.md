@@ -627,7 +627,8 @@ adapted from the user's pi agents. Outcome: pending.
 ## D-060 · 2026-10-03 · delegate tool — proposed
 `tools/delegate` depends only on `core/tool-api`, whose `SubagentLauncher`
 interface core/agent's `SubagentRunner` implements. Arguments: agent, task,
-extra_tools, model, or tasks[] (at most 4, run in parallel; each
+extra_tools, model, or tasks[] (at most 3, set by the user on
+2026-10-03, run in parallel; nesting stays forbidden; each
 subagent's calls run one after another). No parent conversation is passed.
 model names one of the user's scoped models by key, id or name; an unknown
 one returns an error that lists them. Each answer comes back capped at
