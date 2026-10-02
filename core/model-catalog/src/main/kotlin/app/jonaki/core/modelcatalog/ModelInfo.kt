@@ -16,6 +16,8 @@ data class ModelInfo(
     val cachedInputUsdPerMillion: Double? = null,
     /** True for built-in rows whose prices are copied estimates, not the service's own list. */
     val isEstimate: Boolean = false,
+    /** OpenRouter lists "reasoning" among the model's parameters (D-057). */
+    val supportsThinkingLevel: Boolean = false,
 ) {
     /** "service:modelId", the form stored in settings and on each thread. */
     val key: String

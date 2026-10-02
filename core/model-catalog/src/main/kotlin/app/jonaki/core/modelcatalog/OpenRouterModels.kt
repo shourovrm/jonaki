@@ -31,6 +31,7 @@ object OpenRouterModels {
             inputUsdPerMillion = pricing?.perMillion("prompt"),
             outputUsdPerMillion = pricing?.perMillion("completion"),
             cachedInputUsdPerMillion = pricing?.perMillion("input_cache_read"),
+            supportsThinkingLevel = REASONING_PARAMETER in parameterNames(model),
         )
     }
 
@@ -40,6 +41,13 @@ object OpenRouterModels {
         if (perToken < 0) return null
         return perToken * TOKENS_PER_MILLION
     }
+
+    private fun parameterNames(model: JsonObject): Set<String> {
+        val names = model["supported_parameters"] as? JsonArray ?: return emptySet()
+        return names.mapNotNull { name -> (name as? JsonPrimitive)?.contentOrNull }.toSet()
+    }
+
+    private const val REASONING_PARAMETER = "reasoning"
 
     private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 }

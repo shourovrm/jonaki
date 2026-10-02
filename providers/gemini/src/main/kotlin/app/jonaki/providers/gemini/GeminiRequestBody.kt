@@ -38,8 +38,12 @@ object GeminiRequestBody {
                 }
             }
         }
-        request.maxOutputTokens?.let { maxTokens ->
-            putJsonObject("generationConfig") { put("maxOutputTokens", maxTokens) }
+        val thinkingConfig = GeminiThinking.configFor(request.model, request.thinkingLevel)
+        if (request.maxOutputTokens != null || thinkingConfig != null) {
+            putJsonObject("generationConfig") {
+                request.maxOutputTokens?.let { maxTokens -> put("maxOutputTokens", maxTokens) }
+                thinkingConfig?.let { config -> put("thinkingConfig", config) }
+            }
         }
     }
 

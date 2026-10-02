@@ -45,6 +45,9 @@ interface ThreadDao {
     @Query("UPDATE threads SET updatedAtMillis = :updatedAtMillis WHERE id = :threadId")
     suspend fun touch(threadId: String, updatedAtMillis: Long)
 
+    @Query("UPDATE threads SET thinkingLevel = :thinkingLevel WHERE id = :threadId")
+    suspend fun setThinkingLevel(threadId: String, thinkingLevel: String?)
+
     @Query("UPDATE threads SET webSearchEnabled = :enabled WHERE id = :threadId")
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean)
 

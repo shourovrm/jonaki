@@ -54,6 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
+import app.jonaki.core.ui.ThinkingChoice
+import app.jonaki.core.ui.thinkingChoiceLabel
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
 import app.jonaki.core.ui.UsageFormat
@@ -243,6 +245,7 @@ private fun ModelRow(model: ServiceModelUi, card: ChatServiceCardUi, actions: Se
                 PriceText(R.string.settings_price_out, model.outputPricePerMillion)
                 PriceText(R.string.settings_price_cache, model.cachedInputPricePerMillion)
             }
+            ThinkingLine(model.thinking)
             val label = routingLabelFor(model, card.routing)
             if (label != null) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
@@ -260,6 +263,22 @@ private fun ModelRow(model: ServiceModelUi, card: ChatServiceCardUi, actions: Se
         }
         ModelMenu(model, card, actions)
     }
+}
+
+/** The chosen thinking level, under the prices; nothing while the model decides itself. */
+@Composable
+private fun ThinkingLine(choice: ThinkingChoice?) {
+    if (choice == null || choice == ThinkingChoice.DEFAULT) {
+        return
+    }
+    Text(
+        stringResource(app.jonaki.core.ui.R.string.ui_thinking_is, thinkingChoiceLabel(choice)),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(top = 2.dp),
+    )
 }
 
 @Composable
@@ -334,6 +353,26 @@ private fun ModelMenu(model: ServiceModelUi, card: ChatServiceCardUi, actions: S
                         onClick = {
                             open = false
                             actions.onModelRoutingChange(model.key, option)
+                        },
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+            val thinking = model.thinking
+            if (thinking != null) {
+                Text(
+                    stringResource(app.jonaki.core.ui.R.string.ui_thinking),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                )
+                for (choice in ThinkingChoice.entries) {
+                    RoutingMenuItem(
+                        text = thinkingChoiceLabel(choice),
+                        checked = thinking == choice,
+                        onClick = {
+                            open = false
+                            actions.onModelThinkingChange(model.key, choice)
                         },
                     )
                 }

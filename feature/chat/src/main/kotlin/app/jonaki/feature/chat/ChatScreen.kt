@@ -66,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
+import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MarkdownText
 
@@ -103,6 +104,8 @@ fun ChatScreen(
     onEditMessage: (messageId: String, text: String) -> Unit = { _, _ -> },
     /** The close mark on the editing banner. */
     onCancelEdit: () -> Unit = {},
+    /** A thinking level picked for this thread in the model sheet (D-057). */
+    onThinkingChange: (ThinkingChoice) -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
@@ -158,6 +161,8 @@ fun ChatScreen(
         openSheet == ChatSheet.MODEL -> ModelSheet(
             choices = state.modelChoices,
             selectedKey = state.selectedModelKey,
+            thinking = state.threadThinking,
+            onThinkingChange = onThinkingChange,
             onSelect = { modelKey ->
                 openSheet = ChatSheet.NONE
                 onModelSelect(modelKey)

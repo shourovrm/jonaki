@@ -3,6 +3,7 @@ package app.jonaki.providers.openaicompatible
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
 import app.jonaki.core.providerapi.ChatRequest
+import app.jonaki.core.providerapi.ThinkingLevel
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -18,6 +19,7 @@ object ChatCompletionRequestBody {
         request: ChatRequest,
         askForCost: Boolean = false,
         routing: OpenRouterRouting = OpenRouterRouting.AUTOMATIC,
+        thinkingField: ThinkingField = ThinkingField.NONE,
     ): JsonObject = buildJsonObject {
         routing.providerBlock()?.let { block -> put("provider", block) }
         put("model", request.model)
@@ -29,6 +31,7 @@ object ChatCompletionRequestBody {
             putJsonObject("usage") { put("include", true) }
         }
         request.maxOutputTokens?.let { put("max_tokens", it) }
+        request.thinkingLevel?.let { level -> putThinking(level, thinkingField) }
         putJsonArray("messages") {
             addJsonObject {
                 put("role", "system")
@@ -89,4 +92,20 @@ object ChatCompletionRequestBody {
             }
         }
     }
+
+    private fun kotlinx.serialization.json.JsonObjectBuilder.putThinking(level: ThinkingLevel, field: ThinkingField) {
+        when (field) {
+            ThinkingField.NONE -> Unit
+            ThinkingField.OPENROUTER -> putJsonObject("reasoning") {
+                if (level == ThinkingLevel.OFF) {
+                    put("enabled", false)
+                } else {
+                    put("effort", effortOf(level))
+                }
+            }
+            ThinkingField.OPENAI -> put("reasoning_effort", if (level == ThinkingLevel.OFF) "none" else effortOf(level))
+        }
+    }
+
+    private fun effortOf(level: ThinkingLevel): String = level.name.lowercase()
 }

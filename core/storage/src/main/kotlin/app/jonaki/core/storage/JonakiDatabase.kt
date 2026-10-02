@@ -18,7 +18,7 @@ import kotlinx.coroutines.Dispatchers
         MemoryEntity::class,
         CompactionEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
@@ -31,6 +31,8 @@ import kotlinx.coroutines.Dispatchers
         AutoMigration(from = 3, to = 4),
         // Version 5 adds the nullable reasoningText column (D-054).
         AutoMigration(from = 4, to = 5),
+        // Version 6 adds the nullable threads.thinkingLevel column (D-057).
+        AutoMigration(from = 5, to = 6),
     ],
 )
 abstract class JonakiDatabase : RoomDatabase() {

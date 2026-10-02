@@ -6,6 +6,7 @@ import app.jonaki.core.model.ToolCall
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.providerapi.ChatRequest
 import app.jonaki.core.providerapi.StreamEvent
+import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.providerapi.ToolDefinition
 import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.toolapi.Tool
@@ -26,6 +27,8 @@ data class AgentSettings(
     /** Model turns that may call tools for one user message (D-005). */
     val stepBudget: Int = 15,
     val maxOutputTokens: Int? = null,
+    /** Null leaves the model's own default (D-057). */
+    val thinkingLevel: ThinkingLevel? = null,
 )
 
 /**
@@ -101,6 +104,7 @@ class AgentLoop(
             messages = conversation.toList(),
             tools = tools,
             maxOutputTokens = settings.maxOutputTokens,
+            thinkingLevel = settings.thinkingLevel,
         )
         val text = StringBuilder()
         val toolCalls = mutableListOf<ToolCall>()

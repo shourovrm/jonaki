@@ -1,5 +1,7 @@
 package app.jonaki.feature.settings
 
+import app.jonaki.core.ui.ThinkingChoice
+
 import androidx.compose.runtime.Immutable
 import app.jonaki.core.ui.ThemeMode
 
@@ -102,6 +104,8 @@ data class ServiceModelUi(
     val isDefault: Boolean = false,
     /** Null means the same as the card's routing. */
     val routingOverride: RoutingUi? = null,
+    /** Null when the model takes no thinking level (D-057). */
+    val thinking: ThinkingChoice? = null,
 )
 
 /** A service "Add service" can add. */
@@ -141,6 +145,8 @@ class SettingsActions(
     /** [routing] null means "same as the service". */
     val onModelRoutingChange: (modelKey: String, routing: RoutingUi?) -> Unit = { _, _ -> },
     val onModelRemove: (modelKey: String) -> Unit = {},
+    /** A thinking level picked in a model's menu (D-057). */
+    val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

@@ -12,7 +12,19 @@ data class ProviderPreset(
     val needsApiKey: Boolean = true,
     /** OpenRouter reports each request's cost in USD when asked with `usage.include` (D-027). */
     val reportsCost: Boolean = false,
+    /** Where this service takes the thinking level; NONE means it offers no such setting (D-057). */
+    val thinkingField: ThinkingField = ThinkingField.NONE,
 )
+
+enum class ThinkingField {
+    NONE,
+
+    /** OpenRouter's `reasoning` object. */
+    OPENROUTER,
+
+    /** OpenAI's `reasoning_effort` text. */
+    OPENAI,
+}
 
 object ProviderPresets {
     val openRouter = ProviderPreset(
@@ -21,6 +33,7 @@ object ProviderPresets {
         baseUrl = "https://openrouter.ai/api/v1",
         defaultModel = "z-ai/glm-5.3-flash",
         reportsCost = true,
+        thinkingField = ThinkingField.OPENROUTER,
     )
 
     val deepSeek = ProviderPreset(
@@ -66,6 +79,7 @@ object ProviderPresets {
         displayName = "OpenAI",
         baseUrl = "https://api.openai.com/v1",
         defaultModel = "gpt-5-mini",
+        thinkingField = ThinkingField.OPENAI,
     )
 
     val all: List<ProviderPreset> = listOf(openRouter, deepSeek, glm, xiaomiMimo, ollamaCloud, localOllama, openAi)

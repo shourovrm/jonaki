@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.MonospaceFamily
+import app.jonaki.core.ui.ThinkingChoice
+import app.jonaki.core.ui.ThinkingChoiceRow
 import app.jonaki.core.ui.UsageFormat
 
 /** Picks the model for this thread from the user's scoped models (D-027). */
@@ -40,6 +42,8 @@ import app.jonaki.core.ui.UsageFormat
 internal fun ModelSheet(
     choices: List<ModelChoiceUi>,
     selectedKey: String?,
+    thinking: ThinkingChoice,
+    onThinkingChange: (ThinkingChoice) -> Unit,
     onSelect: (modelKey: String) -> Unit,
     onEditModels: () -> Unit,
     onDismiss: () -> Unit,
@@ -53,7 +57,21 @@ internal fun ModelSheet(
         ) {
             SheetTitle(stringResource(R.string.chat_model_sheet_title))
             for (choice in choices) {
-                ModelRow(choice, isSelected = choice.key == selectedKey, onClick = { onSelect(choice.key) })
+                val isSelected = choice.key == selectedKey
+                ModelRow(choice, isSelected = isSelected, onClick = { onSelect(choice.key) })
+                if (isSelected && choice.supportsThinking) {
+                    Text(
+                        stringResource(app.jonaki.core.ui.R.string.ui_thinking),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 48.dp, bottom = 4.dp),
+                    )
+                    ThinkingChoiceRow(
+                        selected = thinking,
+                        onSelect = onThinkingChange,
+                        modifier = Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 8.dp),
+                    )
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)) {
                 Text(

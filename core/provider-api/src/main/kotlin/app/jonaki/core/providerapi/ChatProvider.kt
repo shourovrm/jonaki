@@ -27,7 +27,17 @@ data class ChatRequest(
     val messages: List<Message>,
     val tools: List<ToolDefinition> = emptyList(),
     val maxOutputTokens: Int? = null,
+    /** How hard the model should think; null leaves the model's own default (D-057). */
+    val thinkingLevel: ThinkingLevel? = null,
 )
+
+/** The thinking setting the user picks per model or per thread (D-057). */
+enum class ThinkingLevel {
+    OFF,
+    LOW,
+    MEDIUM,
+    HIGH,
+}
 
 /** A tool as the model sees it. */
 data class ToolDefinition(

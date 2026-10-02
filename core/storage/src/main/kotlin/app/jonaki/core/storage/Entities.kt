@@ -26,6 +26,8 @@ data class ThreadEntity(
      */
     @ColumnInfo(defaultValue = "")
     val disabledSkills: String = "",
+    /** This thread's thinking level as a ThinkingLevel name; null follows the model's setting (D-057). */
+    val thinkingLevel: String? = null,
 )
 
 /**

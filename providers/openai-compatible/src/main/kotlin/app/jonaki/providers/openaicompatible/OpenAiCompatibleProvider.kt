@@ -98,7 +98,12 @@ class OpenAiCompatibleProvider(
     }
 
     private fun httpRequestFor(request: ChatRequest, routing: OpenRouterRouting): Request {
-        val body = ChatCompletionRequestBody.build(request, askForCost = preset.reportsCost, routing = routing).toString()
+        val body = ChatCompletionRequestBody.build(
+            request,
+            askForCost = preset.reportsCost,
+            routing = routing,
+            thinkingField = preset.thinkingField,
+        ).toString()
         val builder = Request.Builder()
             .url(baseUrl.trimEnd('/') + "/chat/completions")
             .post(body.toRequestBody(jsonMediaType))

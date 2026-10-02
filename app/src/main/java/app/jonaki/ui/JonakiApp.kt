@@ -1,5 +1,8 @@
 package app.jonaki.ui
 
+import app.jonaki.core.modelcatalog.ThinkingSupport
+import app.jonaki.core.providerapi.ThinkingLevel
+import app.jonaki.core.ui.ThinkingChoice
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -379,6 +382,8 @@ private fun ChatRoute(
     }
     // A new thread does not exist yet, so a model picked before the first message is kept here.
     var modelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
+    // A new thread has no row to hold its thinking level until the first message creates it.
+    var thinkingForNewThread by rememberSaveable(threadId) { mutableStateOf(ThinkingChoice.DEFAULT) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -426,6 +431,11 @@ private fun ChatRoute(
         usage = usageOf(modelUsage, catalog, threadCost),
         attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name) },
         editingMessageId = editingMessageId,
+        threadThinking = if (isNew) {
+            thinkingForNewThread
+        } else {
+            thinkingChoiceOf(ThinkingLevel.entries.firstOrNull { level -> level.name == thread?.thinkingLevel })
+        },
     )
     ChatScreen(
         state = state,
@@ -449,6 +459,9 @@ private fun ChatRoute(
                 if (isNew && pickedModel != null) {
                     runner.setThreadModel(targetThreadId, pickedModel)
                 }
+                if (isNew && thinkingForNewThread != ThinkingChoice.DEFAULT) {
+                    runner.setThreadThinking(targetThreadId, thinkingLevelOf(thinkingForNewThread))
+                }
                 // threadId is still "new" for a new thread, which is the key its attachments wait under.
                 val inboxPaths = withContext(Dispatchers.IO) {
                     application.attachmentDrafts.moveIntoInbox(threadId, runner.threadFolder(targetThreadId))
@@ -463,6 +476,13 @@ private fun ChatRoute(
         onEditMessage = { messageId, text ->
             editingMessageId = messageId
             draft = text
+        },
+        onThinkingChange = { choice ->
+            if (isNew) {
+                thinkingForNewThread = choice
+            } else {
+                scope.launch { runner.setThreadThinking(threadId, thinkingLevelOf(choice)) }
+            }
         },
         onCancelEdit = {
             editingMessageId = null
@@ -516,8 +536,26 @@ private fun modelChoices(chatModels: ChatModels, catalog: ModelCatalog): List<Mo
             inputPricePerMillion = info?.inputUsdPerMillion,
             outputPricePerMillion = info?.outputUsdPerMillion,
             cachedInputPricePerMillion = info?.cachedInputUsdPerMillion,
+            supportsThinking = ThinkingSupport.isSupported(key, info),
         )
     }
+
+/** DEFAULT is "no entry": the thread follows the model, the model its own default (D-057). */
+private fun thinkingLevelOf(choice: ThinkingChoice): ThinkingLevel? = when (choice) {
+    ThinkingChoice.DEFAULT -> null
+    ThinkingChoice.OFF -> ThinkingLevel.OFF
+    ThinkingChoice.LOW -> ThinkingLevel.LOW
+    ThinkingChoice.MEDIUM -> ThinkingLevel.MEDIUM
+    ThinkingChoice.HIGH -> ThinkingLevel.HIGH
+}
+
+private fun thinkingChoiceOf(level: ThinkingLevel?): ThinkingChoice = when (level) {
+    null -> ThinkingChoice.DEFAULT
+    ThinkingLevel.OFF -> ThinkingChoice.OFF
+    ThinkingLevel.LOW -> ThinkingChoice.LOW
+    ThinkingLevel.MEDIUM -> ThinkingChoice.MEDIUM
+    ThinkingLevel.HIGH -> ThinkingChoice.HIGH
+}
 
 private fun usageOf(rows: List<ModelUsageRow>, catalog: ModelCatalog, totalCost: Double?): UsageUi? {
     if (rows.isEmpty()) {
@@ -634,6 +672,13 @@ private fun SettingsRoute(
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
         },
         onModelRemove = { modelKey -> settings.updateChatModels { models -> models.removeModel(modelKey) } },
+        onModelThinkingChange = { modelKey, choice ->
+            settings.update { current ->
+                val level = thinkingLevelOf(choice)
+                val levels = if (level == null) current.thinkingLevels - modelKey else current.thinkingLevels + (modelKey to level)
+                current.copy(thinkingLevels = levels)
+            }
+        },
     )
     SettingsScreen(state = state, actions = actions)
 }
@@ -674,6 +719,7 @@ private fun serviceCards(
                     cachedInputPricePerMillion = info?.cachedInputUsdPerMillion,
                     isDefault = key == chatModels.defaultModelKey,
                     routingOverride = if (isOpenRouter) snapshot.routing.overrides[key]?.let(::routingUiOf) else null,
+                    thinking = if (ThinkingSupport.isSupported(key, info)) thinkingChoiceOf(snapshot.thinkingLevels[key]) else null,
                 )
             },
         )

@@ -506,3 +506,19 @@ covered them, and the extraction mark), then runs the new prompt. Facts
 already extracted from deleted messages stay in memory. Why: user request
 (2026-10-03), the user chose "edit and resend" over copying into the
 field. Outcome: pending.
+
+## D-057 · 2026-10-03 · Thinking level per model and per thread — proposed
+A model that takes a thinking level offers Default, Off, Low, Medium and
+High: in Settings, in the model's ⋮ menu (shown under its prices when not
+Default), and for one thread in the chat's model sheet, below the selected
+model. The thread's choice wins over the model's; Default leaves the
+model's own default. Support: OpenRouter models whose supported_parameters
+list "reasoning" (333 of 465 on 2026-10-03), Gemini 2.5 and 3, OpenAI GPT-5,
+GPT-6, o3 and o4; DeepSeek, GLM, MiMo and Ollama offer none. Wire format:
+OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
+`reasoning_effort` ("none" for Off); Gemini 3 `thinkingLevel` (Off is
+"minimal"); Gemini 2.5 `thinkingBudget` 0, 1,024, 8,192, 24,576 (2.5 Pro
+128 for Off). Gemini requests now always ask for thought summaries
+(includeThoughts) so reasoning shows (D-054). Stored as
+settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
+user request (2026-10-03), "Settings and chat". Outcome: pending.

@@ -1,6 +1,7 @@
 package app.jonaki.feature.chat
 
 import androidx.compose.runtime.Immutable
+import app.jonaki.core.ui.ThinkingChoice
 import java.util.Locale
 
 @Immutable
@@ -24,6 +25,8 @@ data class ChatUiState(
     val attachments: List<AttachmentUi> = emptyList(),
     /** A sent prompt being edited; sending replaces it and everything after it. */
     val editingMessageId: String? = null,
+    /** This thread's thinking level; DEFAULT follows the model's setting (D-057). */
+    val threadThinking: ThinkingChoice = ThinkingChoice.DEFAULT,
 )
 
 /** A file waiting to go into the thread's inbox/ with the next message. */
@@ -55,6 +58,8 @@ data class ModelChoiceUi(
     val outputPricePerMillion: Double? = null,
     /** Price of input tokens served from the provider's cache. */
     val cachedInputPricePerMillion: Double? = null,
+    /** False when the model takes no thinking level, so the sheet shows no choice (D-057). */
+    val supportsThinking: Boolean = false,
 )
 
 /** Token and cost totals of one thread for the usage sheet. */

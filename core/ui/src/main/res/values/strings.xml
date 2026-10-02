@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ui_copy_code">Copy code</string>
+    <string name="ui_thinking">Thinking</string>
+    <string name="ui_thinking_default">Default</string>
+    <string name="ui_thinking_off">Off</string>
+    <string name="ui_thinking_low">Low</string>
+    <string name="ui_thinking_medium">Medium</string>
+    <string name="ui_thinking_high">High</string>
+    <string name="ui_thinking_is">Thinking: %1$s</string>
 </resources>

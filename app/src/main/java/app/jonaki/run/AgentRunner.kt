@@ -1,5 +1,8 @@
 package app.jonaki.run
 
+import app.jonaki.core.providerapi.ThinkingLevel
+import app.jonaki.core.modelcatalog.ThinkingSupport
+import app.jonaki.settings.ThinkingLevels
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
@@ -178,6 +181,11 @@ class AgentRunner(
         ThreadFolders.delete(context, threadId)
     }
 
+    /** A thinking level picked for one thread in the model sheet; null follows the model (D-057). */
+    suspend fun setThreadThinking(threadId: String, level: ThinkingLevel?) {
+        database.threadDao().setThinkingLevel(threadId, level?.name)
+    }
+
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean) {
         database.threadDao().setWebSearchEnabled(threadId, enabled)
     }
@@ -335,6 +343,11 @@ class AgentRunner(
             recorder = session,
             settings = AgentSettings(
                 model = ModelKey.modelOf(modelKey),
+                thinkingLevel = ThinkingLevels.effective(
+                    threadLevel = thread.thinkingLevel,
+                    modelLevel = snapshot.thinkingLevels[modelKey],
+                    isSupported = ThinkingSupport.isSupported(modelKey, catalog.find(modelKey)),
+                ),
                 systemPrompt = promptBuilder.systemPrompt(
                     activeTools = tools,
                     memorySection = memorySectionFor(threadId),
