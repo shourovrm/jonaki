@@ -29,7 +29,9 @@ object ChatItems {
         /** Shown after an answer whose OpenRouter call fell back to the cheapest provider (D-030). */
         fallbackNote: String = "",
     ): List<ChatItem> {
-        val turns = splitIntoTurns(rows)
+        // Background usage rows only carry a cost; they would add it to a run's cost line.
+        val visibleRows = rows.filter { row -> row.role != HistoryMapper.BACKGROUND_ROLE }
+        val turns = splitIntoTurns(visibleRows)
         val stepsById = steps.associateBy { step -> step.toolCallId }
         val items = mutableListOf<ChatItem>()
         for ((index, turn) in turns.withIndex()) {
@@ -40,7 +42,7 @@ object ChatItems {
                 items += ChatItem.Approval(pendingApproval.id, pendingApproval.toolName, detail.target.orEmpty())
             }
         }
-        val withRetry = markRetryableError(items, rows, isRunning)
+        val withRetry = markRetryableError(items, visibleRows, isRunning)
         if (isRunning && pendingApproval == null && !somethingIsMoving(withRetry)) {
             return withRetry + ChatItem.AssistantMessage(WAITING_ID, "", isStreaming = true)
         }

@@ -3,7 +3,9 @@ package app.jonaki
 import android.app.Application
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.storage.JonakiDatabase
+import app.jonaki.memory.MemoryExtractor
 import app.jonaki.run.AgentRunner
+import app.jonaki.run.BackgroundModel
 import app.jonaki.run.ChatProviders
 import app.jonaki.run.ThreadTitles
 import app.jonaki.core.model.Role
@@ -36,6 +38,10 @@ class JonakiApplication : Application() {
     lateinit var runner: AgentRunner
         private set
 
+    /** The cheapest set-up model, for memory extraction and compaction (D-036). */
+    lateinit var backgroundModel: BackgroundModel
+        private set
+
     /** Account balances for the settings cards (D-031); call refreshAll() when Settings opens. */
     lateinit var balances: AccountBalances
         private set
@@ -52,7 +58,14 @@ class JonakiApplication : Application() {
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
-        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope)
+        backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog)
+        val memoryExtractor = MemoryExtractor(
+            database = database,
+            backgroundModel = backgroundModel,
+            reviewMode = { settings.snapshot.value.reviewExtractedMemories },
+            clock = System::currentTimeMillis,
+        )
+        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope, memoryExtractor)
         balances = AccountBalances(secrets, httpClient)
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.

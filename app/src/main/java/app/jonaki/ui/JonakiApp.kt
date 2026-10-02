@@ -2,6 +2,7 @@ package app.jonaki.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -236,6 +237,15 @@ private fun ChatRoute(
     var modelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    DisposableEffect(threadId) {
+        // Leaving a thread is one of the two moments memory extraction runs (D-009).
+        onDispose {
+            if (!isNew) {
+                runner.threadLeft(threadId)
+            }
+        }
+    }
 
     val isRunning = threadId in running
     val pending = approvals[threadId]

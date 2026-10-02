@@ -18,9 +18,10 @@ interface ThreadDao {
     /** Each thread with the text of its latest user, assistant or error row, for the thread list. */
     @Query(
         "SELECT threads.*, (SELECT messages.text FROM messages WHERE messages.threadId = threads.id " +
-            "AND messages.role != 'TOOL' AND messages.text != '' ORDER BY messages.position DESC LIMIT 1) AS lastText, " +
+            "AND messages.role NOT IN ('TOOL', 'BACKGROUND') AND messages.text != '' " +
+            "ORDER BY messages.position DESC LIMIT 1) AS lastText, " +
             "(SELECT messages.role FROM messages WHERE messages.threadId = threads.id " +
-            "AND messages.role != 'TOOL' ORDER BY messages.position DESC LIMIT 1) AS lastRole, " +
+            "AND messages.role NOT IN ('TOOL', 'BACKGROUND') ORDER BY messages.position DESC LIMIT 1) AS lastRole, " +
             "(SELECT SUM(messages.costUsd) FROM messages WHERE messages.threadId = threads.id) AS totalCostUsd " +
             "FROM threads ORDER BY updatedAtMillis DESC",
     )
@@ -101,7 +102,7 @@ interface MessageDao {
      */
     @Query(
         "SELECT inputTokens FROM messages WHERE threadId = :threadId AND inputTokens IS NOT NULL " +
-            "ORDER BY position DESC LIMIT 1",
+            "AND role = 'ASSISTANT' ORDER BY position DESC LIMIT 1",
     )
     fun observeLastInputTokens(threadId: String): Flow<Int?>
 

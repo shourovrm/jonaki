@@ -14,6 +14,7 @@ import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.model.Role
+import app.jonaki.memory.MemoryExtractor
 import app.jonaki.memory.RoomMemoryStore
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
@@ -64,8 +65,12 @@ class AgentRunner(
     private val httpClient: OkHttpClient,
     private val catalog: ModelCatalog,
     private val scope: CoroutineScope,
+    private val memoryExtractor: MemoryExtractor,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
+
+    /** Threads the user left while a run was still going; extraction waits for the run's end. */
+    private val leftWhileRunning = MutableStateFlow<Set<String>>(emptySet())
 
     private val running = MutableStateFlow<Set<String>>(emptySet())
     val runningThreadIds: StateFlow<Set<String>> = running.asStateFlow()
@@ -136,6 +141,37 @@ class AgentRunner(
         runningJobs[threadId]?.cancel()
     }
 
+    /**
+     * The user left a thread's chat: background extraction reads what the
+     * thread holds (D-009), now or, while a run is going, when it ends.
+     */
+    fun threadLeft(threadId: String) {
+        if (threadId in running.value) {
+            leftWhileRunning.update { current -> current + threadId }
+            return
+        }
+        launchExtraction(threadId, MemoryExtractor.MESSAGES_FOR_EXTRACTION_ON_LEAVE)
+    }
+
+    private fun extractMemoryAfterRun(threadId: String) {
+        val wasLeft = threadId in leftWhileRunning.value
+        leftWhileRunning.update { current -> current - threadId }
+        val minimumNewMessages = if (wasLeft) {
+            MemoryExtractor.MESSAGES_FOR_EXTRACTION_ON_LEAVE
+        } else {
+            MemoryExtractor.MESSAGES_PER_EXTRACTION
+        }
+        launchExtraction(threadId, minimumNewMessages)
+    }
+
+    /** Its own coroutine, so the thread stops showing as running while extraction works. */
+    private fun launchExtraction(threadId: String, minimumNewMessages: Int) {
+        scope.launch {
+            val thread = database.threadDao().find(threadId) ?: return@launch
+            memoryExtractor.extractIfDue(threadId, modelKeyFor(thread), minimumNewMessages)
+        }
+    }
+
     fun answerApproval(threadId: String, decision: ApprovalDecision) {
         val pending = approvals.value[threadId] ?: return
         approvals.update { current -> current - threadId }
@@ -150,6 +186,7 @@ class AgentRunner(
             try {
                 beforeRun()
                 runWithOneRetry(threadId)
+                extractMemoryAfterRun(threadId)
             } finally {
                 approvals.update { current -> current - threadId }
                 runningJobs.remove(threadId)

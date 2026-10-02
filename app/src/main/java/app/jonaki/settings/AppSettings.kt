@@ -29,6 +29,8 @@ data class SettingsSnapshot(
     val theme: ThemeChoice,
     /** The chat's status strip (D-027). */
     val showStatusStrip: Boolean = true,
+    /** Review mode (M4): facts found by background extraction wait for approval on the memory screen. */
+    val reviewExtractedMemories: Boolean = false,
 )
 
 /** Plain settings in app preferences; keys live in [SecretStore]. */
@@ -71,6 +73,7 @@ class AppSettings(
             webSearchOffInNewThreads = preferences.getBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, false),
             theme = enumOrDefault(preferences.getString(THEME, null), ThemeChoice.SYSTEM),
             showStatusStrip = preferences.getBoolean(SHOW_STATUS_STRIP, true),
+            reviewExtractedMemories = preferences.getBoolean(REVIEW_EXTRACTED_MEMORIES, false),
         )
     }
 
@@ -114,6 +117,7 @@ class AppSettings(
         editor.putBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, snapshot.webSearchOffInNewThreads)
         editor.putString(THEME, snapshot.theme.name)
         editor.putBoolean(SHOW_STATUS_STRIP, snapshot.showStatusStrip)
+        editor.putBoolean(REVIEW_EXTRACTED_MEMORIES, snapshot.reviewExtractedMemories)
         editor.apply()
     }
 
@@ -135,5 +139,6 @@ class AppSettings(
         const val WEB_SEARCH_OFF_IN_NEW_THREADS = "web_search_off_in_new_threads"
         const val THEME = "theme"
         const val SHOW_STATUS_STRIP = "show_status_strip"
+        const val REVIEW_EXTRACTED_MEMORIES = "review_extracted_memories"
     }
 }

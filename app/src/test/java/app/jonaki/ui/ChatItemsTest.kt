@@ -49,6 +49,23 @@ class ChatItemsTest {
     }
 
     @Test
+    fun backgroundUsageRowsAreNotShownAndNotCountedInTheRunCost() {
+        val rows = listOf(
+            row("u1", "USER", "weather?"),
+            row("a1", "ASSISTANT", "", calls = listOf(searchCall)).copy(costUsd = 0.01),
+            row("r1", "TOOL", "results", callId = "c1"),
+            row("a2", "ASSISTANT", "It will rain.").copy(costUsd = 0.02),
+            row("b1", HistoryMapper.BACKGROUND_ROLE, "").copy(costUsd = 0.5),
+        )
+        val steps = listOf(step("c1", "web_search", "DONE", searchCall.argumentsJson))
+
+        val items = ChatItems.build(rows, steps, isRunning = false, pendingApproval = null)
+
+        assertEquals(listOf("u1", "run-u1", "a2"), items.map { it.id })
+        assertEquals(0.03, (items[1] as ChatItem.Run).costUsd!!, 1e-9)
+    }
+
+    @Test
     fun onlyTheLastTurnsRunIsActiveWhileRunning() {
         val rows = listOf(
             row("u1", "USER", "one"),

@@ -269,3 +269,21 @@ pinned, or a recall pulls an older fact in. Facts the memory tool saves
 during a run reach the next run. The section goes last so the base text
 and tool list stay a cached prefix. Rejected: sorting lines by last use
 (new bytes on every run). Outcome: pending.
+
+## D-036 · 2026-10-02 · Background model and memory extraction — proposed
+Background calls (memory extraction, compaction) use `BackgroundModel`: the
+scoped model with a saved key and the lowest input plus output price per
+million tokens in the model catalog, first in scoped order on a tie, else
+the thread's own model. A model with no known price is never picked, so a
+free OpenRouter model can win. Extraction runs after a run once 20 user or
+assistant messages are unread, and when the user leaves a thread with at
+least 2 unread (after the run, if one is going). It sends up to 40 new
+messages (user text cut at 3,000 characters, answers at 1,200) with all
+thread and global facts, and applies add, update and delete to thread
+facts only; pinned and user-written facts, unknown ids and duplicates are
+skipped. Review mode makes added facts wait; updates and deletes of
+extracted facts still apply. A failed call leaves the messages unread; an
+unreadable answer marks them read. Each call's usage is a hidden message
+row (role BACKGROUND) so thread, month and usage-sheet totals include it.
+Rejected: a separate usage table (all cost queries would need a union).
+Outcome: pending.
