@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Jonaki</string>
+    <string name="run_channel_name">Agent runs</string>
+    <string name="run_notification_title">Working…</string>
 </resources>

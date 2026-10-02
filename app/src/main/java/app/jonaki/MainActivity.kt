@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(text = "Jonaki: ${ToolRegistry.allTools.size} tool")
+                        Text(text = "Jonaki")
                     }
                 }
             }
