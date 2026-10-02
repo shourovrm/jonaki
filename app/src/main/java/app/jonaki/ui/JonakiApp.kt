@@ -1,6 +1,7 @@
 package app.jonaki.ui
 
 import android.net.Uri
+import android.content.ActivityNotFoundException
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,6 +35,7 @@ import app.jonaki.core.toolapi.IncomingFiles
 import app.jonaki.feature.chat.ApprovalChoice
 import app.jonaki.feature.chat.AttachmentUi
 import app.jonaki.files.AttachmentDrafts
+import app.jonaki.files.CameraPhotos
 import app.jonaki.files.RefusedFile
 import app.jonaki.feature.chat.ChatScreen
 import app.jonaki.feature.chat.ChatStatusUi
@@ -70,6 +72,7 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.ThemeChoice
+import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
@@ -371,6 +374,18 @@ private fun ChatRoute(
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         application.incomingShares.attach(threadId, uris)
     }
+    // Saveable, because Android may stop Jonaki while the camera app is open (D-053).
+    var pendingPhotoPath by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val photoPath = pendingPhotoPath ?: return@rememberLauncherForActivityResult
+        pendingPhotoPath = null
+        val photo = File(photoPath)
+        if (saved && photo.length() > 0) {
+            application.incomingShares.attachPhoto(threadId, photo, photo.name)
+        } else {
+            photo.delete()
+        }
+    }
     LaunchedEffect(threadId, sharedTexts[threadId]) {
         val sharedText = application.incomingShares.takeText(threadId) ?: return@LaunchedEffect
         draft = if (draft.isBlank()) sharedText else draft.trimEnd() + "\n\n" + sharedText
@@ -469,6 +484,16 @@ private fun ChatRoute(
         onOpenArtifact = onOpenArtifact,
         focusMessageId = focusMessageId,
         onAttach = { filePicker.launch(arrayOf("*/*")) },
+        onTakePhoto = {
+            val photo = CameraPhotos.newFile(application)
+            pendingPhotoPath = photo.path
+            try {
+                camera.launch(CameraPhotos.uriFor(application, photo))
+            } catch (noCameraApp: ActivityNotFoundException) {
+                pendingPhotoPath = null
+                Toast.makeText(application, R.string.files_no_camera, Toast.LENGTH_LONG).show()
+            }
+        },
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
