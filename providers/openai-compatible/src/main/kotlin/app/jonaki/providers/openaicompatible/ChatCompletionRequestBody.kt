@@ -14,7 +14,12 @@ import kotlinx.serialization.json.putJsonObject
 
 /** Builds the JSON body of a streaming chat completions request. */
 object ChatCompletionRequestBody {
-    fun build(request: ChatRequest, askForCost: Boolean = false): JsonObject = buildJsonObject {
+    fun build(
+        request: ChatRequest,
+        askForCost: Boolean = false,
+        routing: OpenRouterRouting = OpenRouterRouting.AUTOMATIC,
+    ): JsonObject = buildJsonObject {
+        routing.providerBlock()?.let { block -> put("provider", block) }
         put("model", request.model)
         put("stream", true)
         // Without this the stream carries no token counts.

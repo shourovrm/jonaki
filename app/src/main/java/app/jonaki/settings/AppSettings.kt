@@ -1,6 +1,7 @@
 package app.jonaki.settings
 
 import android.content.Context
+import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +22,8 @@ enum class SearchService(val secret: SecretName) {
 data class SettingsSnapshot(
     /** Chat services, their models and the starred default (D-028). */
     val chatModels: ChatModels,
+    /** OpenRouter endpoint routing (D-030). */
+    val routing: RoutingSettings,
     val searchOrder: List<SearchService>,
     val webSearchOffInNewThreads: Boolean,
     val theme: ThemeChoice,
@@ -58,6 +61,10 @@ class AppSettings(
         val searchOrder = savedOrder + SearchService.entries.filter { it !in savedOrder }
         return SettingsSnapshot(
             chatModels = readChatModels(presetDefaultModel),
+            routing = RoutingSettings(
+                openRouter = enumOrDefault(preferences.getString(OPENROUTER_ROUTING, null), OpenRouterRouting.PRIVATE_THEN_CHEAPEST),
+                overrides = RoutingSettings.overridesFromText(preferences.getString(ROUTING_OVERRIDES, "").orEmpty()),
+            ),
             searchOrder = searchOrder,
             webSearchOffInNewThreads = preferences.getBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, false),
             theme = enumOrDefault(preferences.getString(THEME, null), ThemeChoice.SYSTEM),
@@ -98,6 +105,8 @@ class AppSettings(
             }
         }
         editor.putString(DEFAULT_MODEL_KEY, chatModels.defaultModelKey)
+        editor.putString(OPENROUTER_ROUTING, snapshot.routing.openRouter.name)
+        editor.putString(ROUTING_OVERRIDES, RoutingSettings.overridesToText(snapshot.routing.overrides))
         editor.putString(SEARCH_ORDER, snapshot.searchOrder.joinToString(",") { it.name })
         editor.putBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, snapshot.webSearchOffInNewThreads)
         editor.putString(THEME, snapshot.theme.name)
@@ -111,6 +120,8 @@ class AppSettings(
         const val ADDED_SERVICES = "chat_services"
         const val MODELS_PREFIX = "chat_models_"
         const val DEFAULT_MODEL_KEY = "default_model_key"
+        const val OPENROUTER_ROUTING = "openrouter_routing"
+        const val ROUTING_OVERRIDES = "routing_overrides"
 
         // Settings of version 0.1.0, read once to migrate.
         const val LEGACY_CHAT_SERVICE = "chat_service"

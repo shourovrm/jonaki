@@ -25,6 +25,7 @@ import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.providers.gemini.GeminiProvider
 import app.jonaki.providers.gemini.VideoSummaryOutcome
 import app.jonaki.providers.gemini.VideoSummaryRequest
+import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
@@ -204,18 +205,6 @@ class AgentRunner(
             saveError(threadId, NO_MODEL_ERROR)
             return null
         }
-        val provider = chatProvider(service)
-        if (provider == null) {
-            saveError(threadId, "No ${service.displayName} API key. Add one in Settings.")
-            return null
-        }
-        val tools = ToolRegistry.tools(
-            ToolServices(
-                searchBackends = searchBackends(snapshot.searchOrder),
-                videoSummarizer = videoSummarizer(),
-                webAccessEnabled = thread.webSearchEnabled,
-            ),
-        )
         val session = RunSession(
             threadId = threadId,
             database = database,
@@ -226,6 +215,19 @@ class AgentRunner(
             },
             modelKey = modelKey,
             priceOf = { usage -> CostCalculator.costUsd(usage, catalog.find(modelKey)) },
+        )
+        val routing = snapshot.routing.effectiveFor(modelKey)
+        val provider = chatProvider(service, routing, onRoutingFallback = session::markRoutingFallback)
+        if (provider == null) {
+            saveError(threadId, "No ${service.displayName} API key. Add one in Settings.")
+            return null
+        }
+        val tools = ToolRegistry.tools(
+            ToolServices(
+                searchBackends = searchBackends(snapshot.searchOrder),
+                videoSummarizer = videoSummarizer(),
+                webAccessEnabled = thread.webSearchEnabled,
+            ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
         val permissionBroker = PermissionBroker(session, allowedForThread)
@@ -266,10 +268,10 @@ class AgentRunner(
     }
 
     /** Null when the service needs a key and none is saved. */
-    private fun chatProvider(service: ChatService): ChatProvider? {
-        val secret = service.secret ?: return ChatProviders.create(service, apiKey = null, httpClient)
-        val key = secrets.read(secret) ?: return null
-        return ChatProviders.create(service, key, httpClient)
+    private fun chatProvider(service: ChatService, routing: OpenRouterRouting, onRoutingFallback: () -> Unit): ChatProvider? {
+        val secret = service.secret
+        val key = if (secret == null) null else secrets.read(secret) ?: return null
+        return ChatProviders.create(service, key, httpClient, routing, onRoutingFallback)
     }
 
     private fun searchBackends(order: List<SearchService>): List<SearchBackend> =

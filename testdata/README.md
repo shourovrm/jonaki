@@ -34,3 +34,4 @@ shape `{"detail": {"error": "..."}}`.
 | File | Request | Result |
 |---|---|---|
 | `models-trimmed.json` | `GET openrouter.ai/api/v1/models` (no key), 2026-10-02; 5 of 464 models kept | Prices are USD per token as text; `openrouter/auto-beta` has price `-1` (varies); `deepseek/deepseek-chat` has no cached-input price |
+| `error-404-data-policy.json` | Chat request to `liquid/lfm-2.5-2.6b:free` with `provider: {data_collection: "deny", sort: "price"}` (D-030) | HTTP 404, "No endpoints found matching your data policy (Free model training)", `failed_routing_step: "Filter by Data Policy"` |

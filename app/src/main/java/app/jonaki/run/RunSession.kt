@@ -35,6 +35,15 @@ class RunSession(
     private val priceOf: (Usage) -> Double?,
 ) : StepRecorder, ApprovalRequester {
 
+    /** Set by the provider during a call; saved on that call's assistant message (D-030). */
+    @Volatile
+    private var routingFellBack = false
+
+    /** Called by the OpenRouter provider when a private-only request ran on the cheapest endpoint. */
+    fun markRoutingFallback() {
+        routingFellBack = true
+    }
+
     private var streamingMessageId: String? = null
     private var streamingPosition: Long = 0
     private val streamingText = StringBuilder()
@@ -114,9 +123,11 @@ class RunSession(
             cachedInputTokens = event.usage?.cachedInputTokens,
             outputTokens = event.usage?.outputTokens,
             costUsd = event.usage?.let(priceOf),
+            routingFallback = if (routingFellBack) true else null,
         )
         messageDao.upsert(row)
         streamingMessageId = null
+        routingFellBack = false
         streamingText.clear()
     }
 

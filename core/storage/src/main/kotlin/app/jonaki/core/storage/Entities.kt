@@ -56,6 +56,11 @@ data class MessageEntity(
     val outputTokens: Int? = null,
     /** Reported by the service or priced from the catalog; null when unknown. */
     val costUsd: Double? = null,
+    /**
+     * True when OpenRouter had no endpoint that keeps prompts private and the
+     * call ran on the cheapest one instead (D-030); the chat shows a note.
+     */
+    val routingFallback: Boolean? = null,
 )
 
 /** One tool call as the user sees it in the step track. */
