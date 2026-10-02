@@ -468,6 +468,7 @@ class AgentRunner(
         memoryStore = RoomMemoryStore(database, thread.id, System::currentTimeMillis),
         fileDestinations = fileDestinations,
         modelAcceptsImages = modelAcceptsImages,
+        codeRuntimes = CodeRuntimes.forApp(context),
     )
 
     /**

@@ -90,6 +90,15 @@ Whether the key is on the free tier is not visible in the response.
 Downloaded with checksum check; micropip packages; first-run tool picker,
 Settings install and remove, just-in-time install card. Rejected: Chaquopy
 bundled (+25–40 MB, fixed packages, reaches app secrets).
+Outcome (2026-10-03, spike S-2 on the A059, WebView 153): passed. Pyodide
+314.0.7 installed over Wi-Fi in 8.4 s (core, 13,532,188 bytes) plus 10.4 s
+(numpy, pandas, python-dateutil, pytz, six: 7,889,748 bytes); 21.4 MB on
+disk. With airplane mode on, run_code read inbox/sales.csv with pandas and
+saved work/summary.csv: 8.7 s from a cold app process, 3.2 to 3.7 s for a
+program without packages. The WebView renderer held 261 MB PSS while
+pandas worked on a 200,000-row frame; the app process 116 to 129 MB.
+Checking the core hashes before a run takes 13 ms. Moved to the
+background by Home, the same run took 36.3 s (see D-070).
 
 ## D-014 · 2026-10-02 · 16 tools, pi token patterns — accepted
 read_file, write_file, edit_file, find_files, search_files, share_file,
@@ -722,6 +731,81 @@ whole task, its steps as a track and its answer. Its approval cards read
 for task, Deny. Several cards can wait at once. Strings reviewed by an
 Opus subagent (6 of 36 changed). Artifacts a subagent
 shows get "Open" cards like the thread agent's. Outcome: pending.
+
+## D-067 · 2026-10-03 · run_code: files in by name, results out from work/ and artifacts/ — proposed
+run_code takes language (javascript or python), code and files (thread
+paths or folders; a list, one path, or a list written as text). The
+program sees exactly those files at the same paths (inbox/sales.csv).
+Afterwards only new or changed files under work/ and artifacts/ are saved;
+anything else the program changed, inbox/ included, is dropped and named
+as "Not saved". This is stricter than write_file, which may write anywhere
+in the thread folder. Limits: 25 MB per file and 50 MB per run each way
+(as D-046), 120 s for the program, 180 s for the tool including Python's
+start, output cut to 20,000 characters through OutputLimiter.
+requiredCapabilities stays empty because only some calls need Python; a
+missing Python is reported per call. Engines come through the
+constructor from core/runtime-api (`CodeRuntime`), one module per engine
+under runtimes/. Why: plan M8 steps 1 and 2, user ruling of 2026-10-03.
+Outcome: pending.
+
+## D-068 · 2026-10-03 · JavaScript through androidx.javascriptengine 1.1.1 — proposed
+runtimes/javascript runs programs in JavaScriptSandbox (V8 in Android
+System WebView's isolated process: no network, no files, no Android API).
+A fresh sandbox and isolate per run, one run at a time per app (the API
+allows one connection), heap 256 MB where the WebView supports the limit.
+The program gets console.log and a files object (read, write, list; text
+only, so binary files are refused with a hint to use Python); the last
+expression's value is the result, and top-level await works. A run past
+the time limit is stopped by closing the isolate. Phones whose WebView
+lacks the sandbox or promise results get "Android System WebView on this
+phone is too old". Adds Guava (shrunk by R8): release APK 5,954,755 to
+5,972,819 bytes. Why: user ruling of 2026-10-03 (new dependency approved).
+Rejected: QuickJS (named in the plan; native code to ship). Outcome: on
+the A059 (WebView 153) a CSV total ran in 155 ms end to end, await worked,
+and an endless loop was stopped at 120.3 s.
+
+## D-069 · 2026-10-03 · Pyodide 314.0.7 pinned, downloaded from jsDelivr — proposed
+runtimes/pyodide downloads Pyodide 314.0.7 (Python 3.14.2; the latest
+stable release on 2026-10-03, npm dist-tag latest) from
+https://cdn.jsdelivr.net/pyodide/v314.0.7/full/ into files/pyodide/314.0.7/.
+The five core files (pyodide.js, pyodide.asm.mjs, pyodide.asm.wasm,
+python_stdlib.zip, pyodide-lock.json; 13,532,188 bytes) have their SHA-256
+pinned in PyodideRelease.kt; each download is hashed while it streams and
+kept only on a match, and the core is hashed again before every run.
+Packages come from the same CDN, checked against the sha256 in the pinned
+lock file, with their dependencies from it; Pyodide checks them again as
+it loads. The data add-on is numpy and pandas (7,889,748 bytes with
+python-dateutil, pytz and six). Only plain file names ending in .whl, .zip,
+.tar, .tar.gz or .tgz are downloaded, so no .so or .dex file is ever
+fetched; wheels hold WebAssembly modules that run only inside the WebView.
+How the hashes were checked: the CDN files, the npm package
+pyodide@314.0.7 (tarball sha512 equal to the registry's integrity
+"sha512-0YvXxEhf…lD2R1A==") and the GitHub release archive
+pyodide-core-314.0.7.tar.bz2 gave the same SHA-256 for all five files; the
+six wheels matched the lock file. Installed state is read from the files,
+no database row (no Room change). Packages outside the lock file (PyPI
+through micropip) are not supported yet. Why: user ruling of 2026-10-03.
+Outcome: see D-013.
+
+## D-070 · 2026-10-03 · Python runs offline in a hidden WebView worker — proposed
+Each Python run gets a new WebView, made on the main thread with the
+application context and destroyed afterwards. Its page (harness.html) and
+Python worker come from the module's resources on a made-up host,
+https://python.jonaki/. Three walls keep programs offline: the request
+filter answers only the harness, the installed Pyodide files and the run's
+input files (403 for everything else); every response carries a
+Content-Security-Policy with connect-src 'self'; and Python runs in a
+dedicated worker, which has no DOM, frames, WebRTC or sendBeacon, nor the
+page's JonakiBridge. Checked on the A059: fetch, XHR, pyfetch and a
+WebSocket to the internet all failed. The program's folder is /thread
+with inbox/, work/ and artifacts/; given files appear at their thread
+paths; all new or changed files go back to the app, which applies D-067.
+The 120 s limit starts when the program starts (Python's start and
+package loading get 45 s of their own); past it the worker is terminated
+and the WebView destroyed. A renderer crash is reported, not fatal.
+Known gap: with the activity in the background the run was 4x slower
+(36.3 s against 8.7 s); runs from the foreground service were not
+measured. Why: user ruling of 2026-10-03. Outcome: pending.
 
 ## D-080 · 2026-10-03 · Parallel read-only tool calls — proposed
 Amends D-026 (user approved 2026-10-03): of the tool calls in one model
