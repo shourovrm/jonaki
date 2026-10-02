@@ -15,6 +15,8 @@ data class ThreadEntity(
     val webSearchEnabled: Boolean,
     /** Tools the user allowed for the whole thread, comma-separated names. */
     val toolsAllowedForThread: String = "",
+    /** The thread's model as "service:modelId" (D-027); null in threads made before version 2. */
+    val modelKey: String? = null,
 )
 
 /**
@@ -46,6 +48,14 @@ data class MessageEntity(
     val toolCallId: String?,
     val isComplete: Boolean,
     val createdAtMillis: Long,
+    // Usage of the model call that produced an assistant message (D-027); null on other rows.
+    /** "service:modelId" of the call. */
+    val model: String? = null,
+    val inputTokens: Int? = null,
+    val cachedInputTokens: Int? = null,
+    val outputTokens: Int? = null,
+    /** Reported by the service or priced from the catalog; null when unknown. */
+    val costUsd: Double? = null,
 )
 
 /** One tool call as the user sees it in the step track. */
