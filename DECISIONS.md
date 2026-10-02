@@ -61,6 +61,11 @@ Rejected: a module per service (same wire format).
 Tavily default, then Ollama, then Exa on quota errors; web_fetch with jsoup
 and Readability4J, capped. YouTube search = web_search on youtube.com.
 Rejected: DuckDuckGo scraping (Kai 9000 hangs), Brave (card required).
+Amendment (user, 2026-10-02): queries hold only general topic words, never
+names, personal details or file contents (tool guideline); every query is
+shown in its step card; web search can be switched off per thread. Why:
+Tavily stores queries with no fixed deletion period and may use them to
+improve its service (privacy policy of 24 November 2025).
 
 ## D-012 · 2026-10-02 · YouTube summaries via Gemini only — accepted
 Rejected: NewPipeExtractor (scraping, breaks), yt-dlp and ffmpeg (no Android).
