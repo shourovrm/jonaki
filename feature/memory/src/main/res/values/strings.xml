@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_title">Memory</string>
+    <string name="memory_back">Back</string>
+    <string name="memory_section_review">Waiting for review</string>
+    <string name="memory_section_thread">This thread</string>
+    <string name="memory_section_global">All threads</string>
+    <string name="memory_empty_thread">Nothing saved for this thread</string>
+    <string name="memory_empty_global">Nothing saved for all threads</string>
+    <string name="memory_review_switch">Review facts found in chats</string>
+    <string name="memory_add">Add fact</string>
+    <string name="memory_add_title">New fact</string>
+    <string name="memory_edit_title">Edit fact</string>
+    <string name="memory_scope_thread">This thread</string>
+    <string name="memory_scope_global">All threads</string>
+    <string name="memory_save">Save</string>
+    <string name="memory_cancel">Cancel</string>
+    <string name="memory_more">More</string>
+    <string name="memory_menu_edit">Edit</string>
+    <string name="memory_menu_pin">Pin</string>
+    <string name="memory_menu_unpin">Unpin</string>
+    <string name="memory_menu_promote">Move to all threads</string>
+    <string name="memory_menu_source">Go to message</string>
+    <string name="memory_menu_delete">Delete</string>
+    <string name="memory_delete_title">Delete fact?</string>
+    <string name="memory_delete">Delete</string>
+    <string name="memory_keep">Keep</string>
+    <string name="memory_discard">Discard</string>
+    <string name="memory_from">From: %1$s</string>
+    <string name="memory_in_thread">In %1$s</string>
+    <string name="memory_pinned">Pinned</string>
+</resources>

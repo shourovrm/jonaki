@@ -16,6 +16,12 @@ object HistoryMapper {
     /** Role of rows that show a failure to the user but are never sent to the model. */
     const val ERROR_ROLE = "ERROR"
 
+    /**
+     * Role of rows that only record the usage of a background call (memory
+     * extraction, compaction); never shown, never sent to the model.
+     */
+    const val BACKGROUND_ROLE = "BACKGROUND"
+
     const val STOPPED_TOOL_RESULT = "Error: this tool call was stopped before it finished."
 
     fun toHistory(rows: List<MessageEntity>): List<Message> {
@@ -24,6 +30,11 @@ object HistoryMapper {
         // what a Stop or a killed app leaves behind; such calls get a stopped result.
         var callsWaitingForResult = mutableListOf<ToolCall>()
         for (row in rows) {
+            // A background call can finish while a run waits for tool results;
+            // its row must not close the open tool calls.
+            if (row.role == BACKGROUND_ROLE) {
+                continue
+            }
             if (row.role == Role.TOOL.name) {
                 callsWaitingForResult.removeAll { call -> call.id == row.toolCallId }
                 history += Message(Role.TOOL, row.text, toolCallId = row.toolCallId)

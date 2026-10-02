@@ -25,8 +25,9 @@ fun interface ApprovalRequester {
 }
 
 /**
- * Decides whether a tool call may run. Read-only tools always run; tools that
- * change something need the user's approval. One broker serves one thread.
+ * Decides whether a tool call may run. Read-only tools and tools that change
+ * only the app's own records always run; tools that change something else
+ * need the user's approval. One broker serves one thread.
  *
  * @param toolsAllowedForThread allowances saved earlier for this thread.
  */
@@ -41,7 +42,8 @@ class PermissionBroker(
         get() = allowedTools.toSet()
 
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
-        if (tool.sideEffect == SideEffect.READ_ONLY) {
+        val needsApproval = tool.sideEffect == SideEffect.CHANGES
+        if (!needsApproval) {
             return true
         }
         if (tool.name in allowedTools) {

@@ -78,6 +78,10 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
                 KeyField(stringResource(R.string.settings_gemini_key), state.geminiKey, actions)
             }
             SearchSection(state, actions)
+            SectionLabel(stringResource(R.string.settings_section_memory))
+            Group {
+                NavigationRow(stringResource(R.string.settings_memory_open), onClick = actions.onOpenMemory)
+            }
             SectionLabel(stringResource(R.string.settings_section_appearance))
             ThemeChooser(state.themeMode, actions.onThemeModeChange)
             Group {

@@ -124,6 +124,8 @@ class SettingsActions(
     val onThemeModeChange: (ThemeMode) -> Unit,
     /** Opens the Status icons page; the app shows [StatusIconsScreen]. */
     val onOpenStatusIcons: () -> Unit = {},
+    /** Opens the memory screen with the global facts (M4). */
+    val onOpenMemory: () -> Unit = {},
     val onAddService: (serviceKey: String) -> Unit = {},
     /** Removes the service, its key and its models. */
     val onRemoveService: (serviceKey: String) -> Unit = {},

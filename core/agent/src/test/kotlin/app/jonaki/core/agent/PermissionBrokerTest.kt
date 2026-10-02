@@ -21,6 +21,17 @@ class PermissionBrokerTest {
     }
 
     @Test
+    fun toolThatChangesOnlyAppDataRunsWithoutAsking() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver)
+        val memory = FakeTool("memory", sideEffect = SideEffect.CHANGES_APP_DATA)
+
+        assertTrue(broker.mayRun(memory, call("1", "memory")))
+        assertTrue(approver.requests.isEmpty())
+        assertTrue(broker.toolsAllowedForThread.isEmpty())
+    }
+
+    @Test
     fun allowOnceAsksAgainNextTime() = runBlocking {
         val approver = FixedApprover(ApprovalDecision.ALLOW_ONCE)
         val broker = PermissionBroker(approver)

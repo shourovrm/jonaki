@@ -256,3 +256,49 @@ read out as "Low balance". A failed refresh keeps the last good value.
 Mockup: docs/mockups/service-card-balance.html. Copy agreed with an Opus
 reviewer. Why: user request. Limit: deleting a thread deletes its usage
 rows, so Jonaki's own count drops with it.
+
+## D-034 · 2026-10-02 · Memory tool runs without approval — proposed
+The memory tool (remember, forget, recall) declares a new cost,
+`SideEffect.CHANGES_APP_DATA`: it changes only Jonaki's own records, which
+the user sees as a step and can edit or undo on the memory screen, so the
+permission broker runs it without an approval card. Guards instead of a
+card: a fact is at most 500 characters; forget refuses a pinned fact; a
+store serves one thread and cannot touch another thread's facts; the
+guideline forbids keys and passwords. Why: an approval card on every
+"remember" would interrupt most answers for facts the user just stated.
+Rejected: `CHANGES` with approval (nags), `READ_ONLY` (false declaration),
+approval only for forget (one tool has one cost; a forgotten fact shows its
+text in the step, so it can be added back). Outcome: pending.
+
+## D-035 · 2026-10-02 · Memory in the system prompt, cache-stable — proposed
+The system prompt ends with a Memory section: global facts, then the
+thread's facts, each within 6,000 characters (about 1,500 tokens at 4
+characters per token), one line "- [id] text" per fact. Facts waiting for
+review are left out. Which facts get in: pinned first, then latest
+lastUsedAt, then highest id. The lines are then written in id order, never
+in use order. The runner builds the section once per run and then sets
+lastUsedAt of the included facts to now; they were already the most
+recent, so the next run picks the same set and writes the same bytes, and
+the prompt cache (D-005) breaks only when a fact is added, edited, removed,
+pinned, or a recall pulls an older fact in. Facts the memory tool saves
+during a run reach the next run. The section goes last so the base text
+and tool list stay a cached prefix. Rejected: sorting lines by last use
+(new bytes on every run). Outcome: pending.
+
+## D-036 · 2026-10-02 · Background model and memory extraction — proposed
+Background calls (memory extraction, compaction) use `BackgroundModel`: the
+scoped model with a saved key and the lowest input plus output price per
+million tokens in the model catalog, first in scoped order on a tie, else
+the thread's own model. A model with no known price is never picked, so a
+free OpenRouter model can win. Extraction runs after a run once 20 user or
+assistant messages are unread, and when the user leaves a thread with at
+least 2 unread (after the run, if one is going). It sends up to 40 new
+messages (user text cut at 3,000 characters, answers at 1,200) with all
+thread and global facts, and applies add, update and delete to thread
+facts only; pinned and user-written facts, unknown ids and duplicates are
+skipped. Review mode makes added facts wait; updates and deletes of
+extracted facts still apply. A failed call leaves the messages unread; an
+unreadable answer marks them read. Each call's usage is a hidden message
+row (role BACKGROUND) so thread, month and usage-sheet totals include it.
+Rejected: a separate usage table (all cost queries would need a union).
+Outcome: pending.

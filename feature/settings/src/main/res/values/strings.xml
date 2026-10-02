@@ -25,6 +25,8 @@
     <string name="settings_key_show">Show key</string>
     <string name="settings_key_hide">Hide key</string>
     <string name="settings_status_icons">Status icons</string>
+    <string name="settings_section_memory">Memory</string>
+    <string name="settings_memory_open">Saved facts</string>
     <string name="settings_icon_model">Model</string>
     <string name="settings_icon_model_help">The model this thread uses. Tap to switch.</string>
     <string name="settings_icon_window">Context window</string>

@@ -5,6 +5,8 @@ import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.SkipQueryVerification
+import androidx.room.Update
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -16,9 +18,10 @@ interface ThreadDao {
     /** Each thread with the text of its latest user, assistant or error row, for the thread list. */
     @Query(
         "SELECT threads.*, (SELECT messages.text FROM messages WHERE messages.threadId = threads.id " +
-            "AND messages.role != 'TOOL' AND messages.text != '' ORDER BY messages.position DESC LIMIT 1) AS lastText, " +
+            "AND messages.role NOT IN ('TOOL', 'BACKGROUND') AND messages.text != '' " +
+            "ORDER BY messages.position DESC LIMIT 1) AS lastText, " +
             "(SELECT messages.role FROM messages WHERE messages.threadId = threads.id " +
-            "AND messages.role != 'TOOL' ORDER BY messages.position DESC LIMIT 1) AS lastRole, " +
+            "AND messages.role NOT IN ('TOOL', 'BACKGROUND') ORDER BY messages.position DESC LIMIT 1) AS lastRole, " +
             "(SELECT SUM(messages.costUsd) FROM messages WHERE messages.threadId = threads.id) AS totalCostUsd " +
             "FROM threads ORDER BY updatedAtMillis DESC",
     )
@@ -44,6 +47,9 @@ interface ThreadDao {
 
     @Query("UPDATE threads SET webSearchEnabled = :enabled WHERE id = :threadId")
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean)
+
+    @Query("UPDATE threads SET memoryExtractedUpToPosition = :position WHERE id = :threadId")
+    suspend fun setMemoryExtractedUpTo(threadId: String, position: Long)
 
     @Query("UPDATE threads SET toolsAllowedForThread = :toolNames WHERE id = :threadId")
     suspend fun setToolsAllowedForThread(threadId: String, toolNames: String)
@@ -107,9 +113,17 @@ interface MessageDao {
      */
     @Query(
         "SELECT inputTokens FROM messages WHERE threadId = :threadId AND inputTokens IS NOT NULL " +
-            "ORDER BY position DESC LIMIT 1",
+            "AND role = 'ASSISTANT' ORDER BY position DESC LIMIT 1",
     )
     fun observeLastInputTokens(threadId: String): Flow<Int?>
+
+    /** The thread's latest user message: the source of a fact the model remembers during a run. */
+    @Query("SELECT id FROM messages WHERE threadId = :threadId AND role = 'USER' ORDER BY position DESC LIMIT 1")
+    suspend fun latestUserMessageId(threadId: String): String?
+
+    /** Source messages of memory facts, for the memory screen. */
+    @Query("SELECT * FROM messages WHERE id IN (:messageIds)")
+    suspend fun findAll(messageIds: List<String>): List<MessageEntity>
 }
 
 data class ServiceCostRow(
@@ -140,6 +154,73 @@ interface StepDao {
     /** Steps left running when Android stopped the app. */
     @Query("UPDATE steps SET status = 'STOPPED' WHERE status IN ('RUNNING', 'WAITING_FOR_APPROVAL')")
     suspend fun stopInterrupted()
+}
+
+@Dao
+interface MemoryDao {
+    /** Global facts, pinned first, then newest; facts waiting for review included (the screen marks them). */
+    @Query("SELECT * FROM memories WHERE threadId IS NULL ORDER BY pinned DESC, updatedAtMillis DESC")
+    fun observeGlobal(): Flow<List<MemoryEntity>>
+
+    @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY pinned DESC, updatedAtMillis DESC")
+    fun observeThread(threadId: String): Flow<List<MemoryEntity>>
+
+    /** Extracted facts of every thread that wait for the user's approval (review mode). */
+    @Query("SELECT * FROM memories WHERE pendingReview = 1 ORDER BY createdAtMillis DESC")
+    fun observePendingReview(): Flow<List<MemoryEntity>>
+
+    /**
+     * Facts the model may see in one thread: global and the thread's own,
+     * without those waiting for review, in the order injection picks them.
+     */
+    @Query(
+        "SELECT * FROM memories WHERE pendingReview = 0 AND (threadId IS NULL OR threadId = :threadId) " +
+            "ORDER BY pinned DESC, lastUsedAtMillis DESC, id DESC",
+    )
+    suspend fun listVisibleFrom(threadId: String): List<MemoryEntity>
+
+    /** A thread's facts, including those waiting for review, for background extraction. */
+    @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY id")
+    suspend fun listThread(threadId: String): List<MemoryEntity>
+
+    @Query("SELECT * FROM memories WHERE threadId IS NULL ORDER BY id")
+    suspend fun listGlobal(): List<MemoryEntity>
+
+    @Query("SELECT * FROM memories WHERE id = :memoryId")
+    suspend fun find(memoryId: Long): MemoryEntity?
+
+    @Insert
+    suspend fun insert(memory: MemoryEntity): Long
+
+    @Update
+    suspend fun update(memory: MemoryEntity)
+
+    @Query("DELETE FROM memories WHERE id = :memoryId")
+    suspend fun delete(memoryId: Long)
+
+    @Query("UPDATE memories SET lastUsedAtMillis = :usedAtMillis WHERE id IN (:memoryIds)")
+    suspend fun markUsed(memoryIds: List<Long>, usedAtMillis: Long)
+
+    /** Full-text search with the FTS5 trigram index; [phrase] comes from [MemorySearchIndex.matchPhrase]. */
+    // Room checks queries against its own tables at build time and cannot see the FTS5 table.
+    @SkipQueryVerification
+    @Query(MemorySearchIndex.MATCH_SEARCH)
+    suspend fun searchByMatch(phrase: String, threadId: String, limit: Int): List<MemoryEntity>
+
+    /** For queries under three characters; [pattern] comes from [MemorySearchIndex.likePattern]. */
+    @Query(MemorySearchIndex.LIKE_SEARCH)
+    suspend fun searchByLike(pattern: String, threadId: String, limit: Int): List<MemoryEntity>
+}
+
+/** Summaries of older messages, written by compaction (M4 step 6). */
+@Dao
+interface CompactionDao {
+    @Insert
+    suspend fun insert(compaction: CompactionEntity)
+
+    /** The summary that covers the most messages of the thread; null before the first compaction. */
+    @Query("SELECT * FROM compactions WHERE threadId = :threadId ORDER BY upToPosition DESC LIMIT 1")
+    suspend fun latestForThread(threadId: String): CompactionEntity?
 }
 
 data class ThreadSummary(

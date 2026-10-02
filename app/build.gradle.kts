@@ -23,6 +23,7 @@ dependencies {
     implementation(project(":tools:web-search"))
     implementation(project(":tools:web-fetch"))
     implementation(project(":tools:youtube-summarize"))
+    implementation(project(":tools:memory"))
     implementation(project(":core:provider-api"))
     implementation(project(":core:search-api"))
     implementation(project(":core:storage"))
@@ -38,6 +39,7 @@ dependencies {
     implementation(project(":feature:threads"))
     implementation(project(":feature:chat"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:memory"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))

@@ -51,6 +51,23 @@ class HistoryMapperTest {
     }
 
     @Test
+    fun backgroundUsageRowBetweenAToolCallAndItsResultChangesNothing() {
+        val call = ToolCall("call_1", "web_search", "{}")
+        val rows = listOf(
+            row("USER", "hi"),
+            row("ASSISTANT", "", toolCalls = listOf(call)),
+            row(HistoryMapper.BACKGROUND_ROLE, ""),
+            row("TOOL", "results", toolCallId = "call_1"),
+            row("ASSISTANT", "done"),
+        )
+
+        val history = HistoryMapper.toHistory(rows)
+
+        assertEquals(listOf(Role.USER, Role.ASSISTANT, Role.TOOL, Role.ASSISTANT), history.map { it.role })
+        assertEquals("results", history[2].text)
+    }
+
+    @Test
     fun emptyAssistantRowLeftByAStopIsDropped() {
         val rows = listOf(row("USER", "hi"), row("ASSISTANT", "", isComplete = false))
 
