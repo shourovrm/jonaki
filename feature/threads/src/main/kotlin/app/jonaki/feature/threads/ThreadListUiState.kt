@@ -11,6 +11,8 @@ import java.util.Locale
 data class ThreadListUiState(
     val threads: List<ThreadRow>,
     val searchQuery: String = "",
+    /** Spent across all threads this calendar month (D-027); null hides the line. */
+    val monthCostUsd: Double? = null,
 )
 
 @Immutable
@@ -21,6 +23,8 @@ data class ThreadRow(
     val lastLine: String,
     val updatedAtMillis: Long,
     val runState: ThreadRunState,
+    /** The thread's total cost; shown under the time while the thread is idle. */
+    val costUsd: Double? = null,
 )
 
 sealed interface ThreadRunState {

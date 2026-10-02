@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.DotStyle
 import app.jonaki.core.ui.GlowDot
 import app.jonaki.core.ui.JonakiTheme
+import app.jonaki.core.ui.MonospaceFamily
+import app.jonaki.core.ui.UsageFormat
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,6 +97,18 @@ fun ThreadListScreen(
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (state.threads.isNotEmpty()) {
                 SearchField(state.searchQuery, onSearchQueryChange)
+            }
+            val monthCost = state.monthCostUsd
+            if (monthCost != null && state.threads.isNotEmpty()) {
+                // Under the search field rather than beside the button: at large font
+                // sizes the two would not fit side by side on a phone.
+                Text(
+                    stringResource(R.string.threads_month_cost, UsageFormat.cost(monthCost)),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 4.dp),
+                )
             }
             when {
                 state.threads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_empty_title), body = null)
@@ -195,7 +209,17 @@ private fun ThreadRowView(thread: ThreadRow, timeLabel: ThreadTimeLabel, onThrea
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            RunStateText(thread.runState)
+            val cost = thread.costUsd
+            if (thread.runState == ThreadRunState.Idle && cost != null) {
+                Text(
+                    UsageFormat.cost(cost),
+                    style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            } else {
+                RunStateText(thread.runState)
+            }
         }
     }
 }
