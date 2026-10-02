@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":search:ollama"))
     implementation(project(":search:exa"))
     implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
