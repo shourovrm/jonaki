@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,6 +66,9 @@ internal fun StatusStrip(
                 ContextRing(percent)
                 PillNumber("$percent%")
             }
+        }
+        if (status.bypassApprovals) {
+            BypassPill()
         }
         val costText = UsageFormat.cost(status.costUsd)
         Pill(description = stringResource(R.string.chat_status_cost, costText), onClick = onCostClick) {
@@ -140,6 +144,30 @@ private fun Pill(description: String, onClick: (() -> Unit)? = null, content: @C
         Surface(shape = shape, color = color, contentColor = contentColor, modifier = pillModifier, content = body)
     } else {
         Surface(onClick = onClick, shape = shape, color = color, contentColor = contentColor, modifier = pillModifier, content = body)
+    }
+}
+
+/** Drawn in the warning colour, so a thread where nothing asks is never mistaken for one that does. */
+@Composable
+private fun BypassPill() {
+    val deny = JonakiTheme.colors.deny
+    val description = stringResource(R.string.chat_status_bypass_description)
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = deny.copy(alpha = 0.14f),
+        contentColor = deny,
+        modifier = Modifier.height(28.dp).clearAndSetSemantics {
+            contentDescription = description
+        },
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 7.dp),
+        ) {
+            Icon(Icons.Filled.Warning, contentDescription = null, modifier = Modifier.size(PillIconSize))
+            Text(stringResource(R.string.chat_status_bypass), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        }
     }
 }
 

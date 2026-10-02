@@ -40,6 +40,9 @@
     <string name="settings_icon_used_help">How full it is.</string>
     <string name="settings_icon_cost">Cost</string>
     <string name="settings_icon_cost_help">Spent in this thread, in US dollars. Tap for details.</string>
+    <string name="settings_icon_bypass">Bypass</string>
+    <string name="settings_icon_bypass_help">Tools in this thread run without asking.</string>
+    <string name="settings_section_approvals">Approvals</string>
     <string name="settings_show_status_strip">Show status strip</string>
     <string name="settings_key_change">Change key</string>
     <string name="settings_key_delete">Delete key</string>

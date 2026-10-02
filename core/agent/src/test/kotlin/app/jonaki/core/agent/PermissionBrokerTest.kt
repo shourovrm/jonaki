@@ -10,6 +10,8 @@ import org.junit.Test
 class PermissionBrokerTest {
     private val writer = FakeTool("write_file", sideEffect = SideEffect.CHANGES)
     private val reader = FakeTool("read_file", sideEffect = SideEffect.READ_ONLY)
+    private val threadFolderWriter = FakeTool("edit_file", sideEffect = SideEffect.CHANGES_THREAD_FOLDER)
+    private val sharer = FakeTool("share_file", sideEffect = SideEffect.CHANGES)
 
     @Test
     fun readOnlyToolRunsWithoutAsking() = runBlocking {
@@ -67,5 +69,74 @@ class PermissionBrokerTest {
 
         assertTrue(broker.mayRun(writer, call("1", "write_file")))
         assertTrue(approver.requests.isEmpty())
+    }
+
+    @Test
+    fun askModeAsksForThreadFolderAndOutsideChanges() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_ONCE)
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.ASK })
+
+        assertTrue(broker.mayRun(threadFolderWriter, call("1", "edit_file")))
+        assertTrue(broker.mayRun(sharer, call("2", "share_file")))
+        assertEquals(listOf("edit_file", "share_file"), approver.requests.map { it.toolName })
+    }
+
+    @Test
+    fun autoModeRunsThreadFolderChangesWithoutAsking() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.AUTO })
+
+        assertTrue(broker.mayRun(threadFolderWriter, call("1", "edit_file")))
+        assertTrue(approver.requests.isEmpty())
+    }
+
+    @Test
+    fun autoModeStillAsksForChangesOutsideTheApp() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.AUTO })
+
+        assertFalse(broker.mayRun(sharer, call("1", "share_file")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun bypassModeNeverAsks() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.BYPASS })
+
+        assertTrue(broker.mayRun(sharer, call("1", "share_file")))
+        assertTrue(broker.mayRun(threadFolderWriter, call("2", "edit_file")))
+        assertTrue(approver.requests.isEmpty())
+        // Bypass is not an allowance: switching back to Ask asks again.
+        assertTrue(broker.toolsAllowedForThread.isEmpty())
+    }
+
+    @Test
+    fun aModeChangeDuringARunAppliesToTheNextCall() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        var mode = ApprovalMode.ASK
+        val broker = PermissionBroker(approver, approvalMode = { mode })
+
+        assertFalse(broker.mayRun(threadFolderWriter, call("1", "edit_file")))
+        mode = ApprovalMode.AUTO
+        assertTrue(broker.mayRun(threadFolderWriter, call("2", "edit_file")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun allowanceForThreadStillSkipsTheCardInAutoMode() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, toolsAllowedForThread = setOf("share_file"), approvalMode = { ApprovalMode.AUTO })
+
+        assertTrue(broker.mayRun(sharer, call("1", "share_file")))
+        assertTrue(approver.requests.isEmpty())
+    }
+
+    @Test
+    fun readOnlyAndAppDataNeverAskInAnyMode() {
+        for (mode in ApprovalMode.entries) {
+            assertFalse(ApprovalMode.needsApproval(SideEffect.READ_ONLY, mode))
+            assertFalse(ApprovalMode.needsApproval(SideEffect.CHANGES_APP_DATA, mode))
+        }
     }
 }

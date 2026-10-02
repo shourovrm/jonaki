@@ -1,6 +1,7 @@
 package app.jonaki.feature.chat
 
 import androidx.compose.runtime.Immutable
+import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.ui.ThinkingChoice
 import java.util.Locale
 
@@ -27,6 +28,9 @@ data class ChatUiState(
     val editingMessageId: String? = null,
     /** This thread's thinking level; DEFAULT follows the model's setting (D-057). */
     val threadThinking: ThinkingChoice = ThinkingChoice.DEFAULT,
+    /** This thread's own approval mode; null follows [defaultApprovalMode] from Settings (D-058). */
+    val threadApprovalMode: ApprovalModeChoice? = null,
+    val defaultApprovalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
 )
 
 /** A file waiting to go into the thread's inbox/ with the next message. */
@@ -45,6 +49,8 @@ data class ChatStatusUi(
     /** Input tokens of the latest request, which is what the next request starts from. */
     val contextUsedTokens: Int,
     val costUsd: Double,
+    /** The thread runs in Bypass mode: no tool asks first, so the strip shows a marker (D-058). */
+    val bypassApprovals: Boolean = false,
 )
 
 /** One scoped model in the model sheet. Prices are US dollars per million tokens, when known. */

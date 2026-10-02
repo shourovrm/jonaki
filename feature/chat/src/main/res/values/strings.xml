@@ -35,6 +35,11 @@
     <string name="chat_status_context_window">Context window: %1$s tokens</string>
     <string name="chat_status_context_used">Context used: %1$d%%</string>
     <string name="chat_status_cost">Cost: %1$s</string>
+    <string name="chat_status_bypass">Bypass</string>
+    <string name="chat_status_bypass_description">Bypass: tools run without asking</string>
+    <string name="chat_menu_approvals">Approvals</string>
+    <string name="chat_approvals_title">Approvals in this thread</string>
+    <string name="chat_approvals_close">Close</string>
     <string name="chat_model_sheet_title">Model for this thread</string>
     <string name="chat_model_sheet_prices">Prices per million tokens</string>
     <string name="chat_price_in">in %1$s</string>

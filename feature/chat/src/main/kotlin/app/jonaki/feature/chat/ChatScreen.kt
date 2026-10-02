@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -65,7 +66,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.ApprovalModeChoice
+import app.jonaki.core.ui.ApprovalModeOptions
 import app.jonaki.core.ui.JonakiIcons
+import app.jonaki.core.ui.approvalModeLabel
 import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MarkdownText
@@ -108,13 +112,25 @@ fun ChatScreen(
     onCancelEdit: () -> Unit = {},
     /** A thinking level picked for this thread in the model sheet (D-057). */
     onThinkingChange: (ThinkingChoice) -> Unit = {},
+    /** An approval mode picked for this thread in the menu; null follows Settings (D-058). */
+    onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
-        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory, onOpenSkills) },
+        topBar = {
+            ChatTopBar(
+                state = state,
+                onBack = onBack,
+                onWebSearchChange = onWebSearchChange,
+                onRename = onRename,
+                onOpenMemory = onOpenMemory,
+                onOpenSkills = onOpenSkills,
+                onOpenApprovals = { openSheet = ChatSheet.APPROVALS },
+            )
+        },
         bottomBar = {
             Column(Modifier.navigationBarsPadding().imePadding()) {
                 val status = state.status
@@ -177,6 +193,15 @@ fun ChatScreen(
             onDismiss = { openSheet = ChatSheet.NONE },
         )
         openSheet == ChatSheet.USAGE && usage != null -> UsageSheet(usage, onDismiss = { openSheet = ChatSheet.NONE })
+        openSheet == ChatSheet.APPROVALS -> ApprovalModeDialog(
+            selected = state.threadApprovalMode,
+            defaultChoice = state.defaultApprovalMode,
+            onSelect = { choice ->
+                openSheet = ChatSheet.NONE
+                onApprovalModeChange(choice)
+            },
+            onDismiss = { openSheet = ChatSheet.NONE },
+        )
     }
 }
 
@@ -184,6 +209,27 @@ private enum class ChatSheet {
     NONE,
     MODEL,
     USAGE,
+    APPROVALS,
+}
+
+/** Follow Settings, or this thread's own mode (D-058). */
+@Composable
+private fun ApprovalModeDialog(
+    selected: ApprovalModeChoice?,
+    defaultChoice: ApprovalModeChoice,
+    onSelect: (ApprovalModeChoice?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.chat_approvals_title)) },
+        text = { ApprovalModeOptions(selected = selected, onSelect = onSelect, defaultChoice = defaultChoice) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.chat_approvals_close))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -195,6 +241,7 @@ private fun ChatTopBar(
     onRename: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenApprovals: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     TopAppBar(
@@ -250,6 +297,20 @@ private fun ChatTopBar(
                             onClick = {
                                 menuOpen = false
                                 onOpenSkills()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.chat_menu_approvals)) },
+                            trailingIcon = {
+                                Text(
+                                    approvalModeLabel(state.threadApprovalMode ?: state.defaultApprovalMode),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onOpenApprovals()
                             },
                         )
                     }

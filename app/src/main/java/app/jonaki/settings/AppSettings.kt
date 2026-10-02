@@ -1,5 +1,6 @@
 package app.jonaki.settings
 
+import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.providerapi.ThinkingLevel
 import android.content.Context
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
@@ -34,6 +35,8 @@ data class SettingsSnapshot(
     val reviewExtractedMemories: Boolean = false,
     /** Thinking level per model key; a model without an entry keeps its own default (D-057). */
     val thinkingLevels: Map<String, ThinkingLevel> = emptyMap(),
+    /** When tools ask before a change, in every thread without its own mode (D-058). */
+    val defaultApprovalMode: ApprovalMode = ApprovalMode.ASK,
 )
 
 /** Plain settings in app preferences; keys live in [SecretStore]. */
@@ -78,6 +81,7 @@ class AppSettings(
             showStatusStrip = preferences.getBoolean(SHOW_STATUS_STRIP, true),
             reviewExtractedMemories = preferences.getBoolean(REVIEW_EXTRACTED_MEMORIES, false),
             thinkingLevels = ThinkingLevels.fromText(preferences.getString(THINKING_LEVELS, "").orEmpty()),
+            defaultApprovalMode = ApprovalModes.fromName(preferences.getString(APPROVAL_MODE, null)),
         )
     }
 
@@ -123,6 +127,7 @@ class AppSettings(
         editor.putBoolean(SHOW_STATUS_STRIP, snapshot.showStatusStrip)
         editor.putBoolean(REVIEW_EXTRACTED_MEMORIES, snapshot.reviewExtractedMemories)
         editor.putString(THINKING_LEVELS, ThinkingLevels.toText(snapshot.thinkingLevels))
+        editor.putString(APPROVAL_MODE, snapshot.defaultApprovalMode.name)
         editor.apply()
     }
 
@@ -146,5 +151,6 @@ class AppSettings(
         const val SHOW_STATUS_STRIP = "show_status_strip"
         const val REVIEW_EXTRACTED_MEMORIES = "review_extracted_memories"
         const val THINKING_LEVELS = "thinking_levels"
+        const val APPROVAL_MODE = "approval_mode"
     }
 }

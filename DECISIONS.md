@@ -591,3 +591,17 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-058 · 2026-10-03 · Approval modes Ask, Auto and Bypass — proposed
+Three modes decide which tool calls show an approval card. Ask: every
+`CHANGES` and `CHANGES_THREAD_FOLDER` call (the behaviour before). Auto:
+`CHANGES_THREAD_FOLDER` (write_file, edit_file) runs, `CHANGES` (share_file,
+later phone, schedule, MCP) still asks. Bypass: nothing asks, also not a
+subagent's request. `READ_ONLY` and `CHANGES_APP_DATA` never ask, and
+"Allow in thread" allowances still apply. Settings > Approvals holds the
+default (Ask for new installs); the chat's ⋮ > Approvals sets one thread's
+own mode (Default, Ask, Auto, Bypass), stored as the nullable
+`threads.approvalMode` (null follows Settings; Room version 7). The broker
+reads the mode before every call, so a change during a run applies from the
+next call. The status strip shows a red "Bypass" pill while a thread's mode
+is Bypass. Why: user ruling (2026-10-03). Outcome: pending.

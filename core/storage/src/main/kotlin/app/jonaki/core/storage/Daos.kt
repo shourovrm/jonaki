@@ -48,6 +48,9 @@ interface ThreadDao {
     @Query("UPDATE threads SET thinkingLevel = :thinkingLevel WHERE id = :threadId")
     suspend fun setThinkingLevel(threadId: String, thinkingLevel: String?)
 
+    @Query("UPDATE threads SET approvalMode = :approvalMode WHERE id = :threadId")
+    suspend fun setApprovalMode(threadId: String, approvalMode: String?)
+
     @Query("UPDATE threads SET webSearchEnabled = :enabled WHERE id = :threadId")
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean)
 
@@ -154,6 +157,32 @@ interface StepDao {
 
     @Query("DELETE FROM steps WHERE toolCallId IN (:toolCallIds)")
     suspend fun deleteAll(toolCallIds: List<String>)
+
+    /** The steps of the subagents that the delegate calls [parentToolCallIds] started. */
+    @Query(
+        "DELETE FROM steps WHERE subagentId IN " +
+            "(SELECT id FROM subagents WHERE parentToolCallId IN (:parentToolCallIds))",
+    )
+    suspend fun deleteOfSubagentsUnder(parentToolCallIds: List<String>)
+}
+
+@Dao
+interface SubagentDao {
+    @Query("SELECT * FROM subagents WHERE threadId = :threadId ORDER BY startedAtMillis, orderInCall")
+    fun observeThread(threadId: String): Flow<List<SubagentEntity>>
+
+    @Query("SELECT * FROM subagents WHERE id = :subagentId")
+    suspend fun find(subagentId: String): SubagentEntity?
+
+    @Upsert
+    suspend fun upsert(subagent: SubagentEntity)
+
+    @Query("DELETE FROM subagents WHERE parentToolCallId IN (:parentToolCallIds)")
+    suspend fun deleteUnder(parentToolCallIds: List<String>)
+
+    /** Subagents left running when Android stopped the app. */
+    @Query("UPDATE subagents SET status = 'STOPPED' WHERE status = 'RUNNING'")
+    suspend fun stopInterrupted()
 }
 
 @Dao

@@ -11,6 +11,7 @@ import app.jonaki.ToolServices
 import app.jonaki.core.agent.AgentLoop
 import app.jonaki.core.agent.AgentSettings
 import app.jonaki.core.agent.ApprovalDecision
+import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.agent.ImageMessages
 import app.jonaki.core.agent.MemorySection
 import app.jonaki.core.agent.PromptFact
@@ -41,6 +42,7 @@ import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
 import app.jonaki.settings.AppSettings
+import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
@@ -52,6 +54,7 @@ import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import java.time.ZonedDateTime
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -99,6 +102,13 @@ class AgentRunner(
     val runStepCounts: StateFlow<Map<String, Int>> = stepCounts.asStateFlow()
 
     private val promptBuilder = PromptBuilder(SystemPrompt.BASE)
+
+    /**
+     * Each running thread's own approval mode name, "" when it follows
+     * Settings. The broker reads it before every tool call, so a mode picked
+     * in the chat during a run applies from the next call (D-058).
+     */
+    private val threadApprovalModes = ConcurrentHashMap<String, String>()
 
     /** Creates a thread and returns its id. */
     suspend fun createThread(): String {
@@ -187,6 +197,19 @@ class AgentRunner(
     suspend fun setThreadThinking(threadId: String, level: ThinkingLevel?) {
         database.threadDao().setThinkingLevel(threadId, level?.name)
     }
+
+    /** A thread's own approval mode; null follows the default in Settings (D-058). */
+    suspend fun setThreadApprovalMode(threadId: String, mode: ApprovalMode?) {
+        database.threadDao().setApprovalMode(threadId, mode?.name)
+        threadApprovalModes[threadId] = mode?.name.orEmpty()
+    }
+
+    /** The mode a thread's tools ask with: its own, else the default from Settings. */
+    fun approvalModeFor(thread: ThreadEntity?): ApprovalMode =
+        ApprovalModes.effective(thread?.approvalMode, settings.snapshot.value.defaultApprovalMode)
+
+    private fun currentApprovalMode(threadId: String): ApprovalMode =
+        ApprovalModes.effective(threadApprovalModes[threadId], settings.snapshot.value.defaultApprovalMode)
 
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean) {
         database.threadDao().setWebSearchEnabled(threadId, enabled)
@@ -340,7 +363,8 @@ class AgentRunner(
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
-        val permissionBroker = PermissionBroker(session, allowedForThread)
+        threadApprovalModes[threadId] = thread.approvalMode.orEmpty()
+        val permissionBroker = PermissionBroker(session, allowedForThread, approvalMode = { currentApprovalMode(threadId) })
         val loop = AgentLoop(
             provider = provider,
             tools = tools,

@@ -25,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import app.jonaki.JonakiApplication
 import app.jonaki.R
 import app.jonaki.core.agent.ApprovalDecision
+import app.jonaki.core.agent.ApprovalMode
+import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
@@ -423,6 +425,7 @@ private fun ChatRoute(
             contextWindowTokens = modelInfo?.contextWindowTokens,
             contextUsedTokens = lastInputTokens ?: 0,
             costUsd = threadCost ?: 0.0,
+            bypassApprovals = !isNew && runner.approvalModeFor(thread) == ApprovalMode.BYPASS,
         )
     } else {
         null
@@ -451,6 +454,8 @@ private fun ChatRoute(
         } else {
             thinkingChoiceOf(ThinkingLevel.entries.firstOrNull { level -> level.name == thread?.thinkingLevel })
         },
+        threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
+        defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
     )
     ChatScreen(
         state = state,
@@ -497,6 +502,11 @@ private fun ChatRoute(
                 thinkingForNewThread = choice
             } else {
                 scope.launch { runner.setThreadThinking(threadId, thinkingLevelOf(choice)) }
+            }
+        },
+        onApprovalModeChange = { choice ->
+            if (!isNew) {
+                scope.launch { runner.setThreadApprovalMode(threadId, choice?.let(::approvalModeOf)) }
             }
         },
         onCancelEdit = {
@@ -657,6 +667,7 @@ private fun SettingsRoute(
         themeMode = themeModeOf(snapshot.theme),
         showStatusStrip = snapshot.showStatusStrip,
         linkedFolderName = linkedFolder?.name,
+        approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -697,6 +708,7 @@ private fun SettingsRoute(
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
         },
         onModelRemove = { modelKey -> settings.updateChatModels { models -> models.removeModel(modelKey) } },
+        onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },
         onModelThinkingChange = { modelKey, choice ->
             settings.update { current ->
                 val level = thinkingLevelOf(choice)
@@ -828,6 +840,18 @@ private fun decisionOf(choice: ApprovalChoice): ApprovalDecision = when (choice)
     ApprovalChoice.ALLOW_ONCE -> ApprovalDecision.ALLOW_ONCE
     ApprovalChoice.ALLOW_FOR_THREAD -> ApprovalDecision.ALLOW_FOR_THREAD
     ApprovalChoice.DENY -> ApprovalDecision.DENY
+}
+
+private fun approvalChoiceOf(mode: ApprovalMode): ApprovalModeChoice = when (mode) {
+    ApprovalMode.ASK -> ApprovalModeChoice.ASK
+    ApprovalMode.AUTO -> ApprovalModeChoice.AUTO
+    ApprovalMode.BYPASS -> ApprovalModeChoice.BYPASS
+}
+
+private fun approvalModeOf(choice: ApprovalModeChoice): ApprovalMode = when (choice) {
+    ApprovalModeChoice.ASK -> ApprovalMode.ASK
+    ApprovalModeChoice.AUTO -> ApprovalMode.AUTO
+    ApprovalModeChoice.BYPASS -> ApprovalMode.BYPASS
 }
 
 private fun themeModeOf(choice: ThemeChoice): ThemeMode = when (choice) {

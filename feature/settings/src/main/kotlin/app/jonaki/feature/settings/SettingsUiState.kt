@@ -1,5 +1,6 @@
 package app.jonaki.feature.settings
 
+import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.ui.ThinkingChoice
 
 import androidx.compose.runtime.Immutable
@@ -24,6 +25,8 @@ data class SettingsUiState(
     val showStatusStrip: Boolean = true,
     /** The folder linked for share_file and imports (D-043); null while none is linked. */
     val linkedFolderName: String? = null,
+    /** When tools ask first, in every thread without its own mode (D-058). */
+    val approvalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -147,6 +150,7 @@ class SettingsActions(
     val onModelRemove: (modelKey: String) -> Unit = {},
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
+    val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},
