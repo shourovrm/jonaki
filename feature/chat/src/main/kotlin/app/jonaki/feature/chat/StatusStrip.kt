@@ -1,6 +1,5 @@
 package app.jonaki.feature.chat
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -18,10 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -31,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.ContextRing
 import app.jonaki.core.ui.DotStyle
 import app.jonaki.core.ui.GlowDot
 import app.jonaki.core.ui.JonakiIcons
@@ -155,33 +151,3 @@ private fun PillNumber(text: String) {
         maxLines = 1,
     )
 }
-
-/** A small gauge: the filled arc is the share of the context window in use. */
-@Composable
-internal fun ContextRing(percent: Int, modifier: Modifier = Modifier, ringSize: androidx.compose.ui.unit.Dp = 14.dp) {
-    val trackColor = MaterialTheme.colorScheme.outlineVariant
-    val fillColor = ringColor(percent)
-    Canvas(modifier.size(ringSize)) {
-        val strokeWidth = 2.5.dp.toPx()
-        val inset = strokeWidth / 2
-        val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
-        val topLeft = Offset(inset, inset)
-        drawArc(trackColor, 0f, 360f, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(strokeWidth))
-        drawArc(
-            fillColor,
-            startAngle = -90f,
-            sweepAngle = 360f * percent / 100f,
-            useCenter = false,
-            topLeft = topLeft,
-            size = arcSize,
-            style = Stroke(strokeWidth),
-        )
-    }
-}
-
-/** The ring turns to the warning colour once the thread nears the point where it gets summarised. */
-@Composable
-private fun ringColor(percent: Int): Color =
-    if (percent >= RING_WARNING_PERCENT) JonakiTheme.colors.deny else MaterialTheme.colorScheme.primary
-
-private const val RING_WARNING_PERCENT = 80

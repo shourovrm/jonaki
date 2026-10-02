@@ -17,6 +17,8 @@ data class SettingsUiState(
     val searchServices: List<SearchServiceRow>,
     val webSearchOffInNewThreads: Boolean,
     val themeMode: ThemeMode,
+    /** The chat's status strip (D-027); its switch lives on the Status icons page. */
+    val showStatusStrip: Boolean = true,
 )
 
 @Immutable
@@ -52,6 +54,8 @@ class SettingsActions(
     val onSearchServiceMove: (serviceKey: String, offset: Int) -> Unit,
     val onWebSearchOffInNewThreadsChange: (Boolean) -> Unit,
     val onThemeModeChange: (ThemeMode) -> Unit,
+    /** Opens the Status icons page; the app shows [StatusIconsScreen]. */
+    val onOpenStatusIcons: () -> Unit = {},
 )
 
 object SettingsSample {

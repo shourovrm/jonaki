@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,6 +88,9 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
             SearchSection(state, actions)
             SectionLabel(stringResource(R.string.settings_section_appearance))
             ThemeChooser(state.themeMode, actions.onThemeModeChange)
+            Group {
+                NavigationRow(stringResource(R.string.settings_status_icons), onClick = actions.onOpenStatusIcons)
+            }
         }
     }
 }
@@ -296,6 +300,25 @@ private fun ThemeChooser(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
                 Text(stringResource(label))
             }
         }
+    }
+}
+
+@Composable
+private fun NavigationRow(text: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 56.dp)
+            .padding(horizontal = 16.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
