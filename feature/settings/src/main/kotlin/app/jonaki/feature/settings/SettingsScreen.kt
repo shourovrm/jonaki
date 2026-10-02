@@ -94,6 +94,12 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
                     SubagentModelRows(state.subagentModels, state.subagentModelOptions, actions.onSubagentModelChange)
                 }
             }
+            SectionLabel(stringResource(R.string.settings_section_tools))
+            Group {
+                NavigationRow(stringResource(R.string.settings_tools), onClick = actions.onOpenTools)
+                GroupDivider()
+                NavigationRow(stringResource(R.string.settings_python), onClick = actions.onOpenPython)
+            }
             SectionLabel(stringResource(R.string.settings_section_memory))
             Group {
                 NavigationRow(stringResource(R.string.settings_memory_open), onClick = actions.onOpenMemory)

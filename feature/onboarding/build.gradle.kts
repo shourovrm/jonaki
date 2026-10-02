@@ -3,12 +3,12 @@ plugins {
 }
 
 android {
-    namespace = "app.jonaki.feature.settings"
+    namespace = "app.jonaki.feature.onboarding"
 }
 
 dependencies {
-    // ThemeMode is part of this module's public state.
-    api(project(":core:ui"))
+    // The tool group rows are shared with Settings > Tools.
+    implementation(project(":core:ui"))
     // For the 360 dp and font scale 1.3 previews (D-029); already a dependency of the app.
     implementation(libs.compose.ui.tooling.preview)
 }

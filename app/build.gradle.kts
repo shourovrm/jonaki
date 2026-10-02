@@ -63,6 +63,7 @@ dependencies {
     implementation(project(":feature:memory"))
     implementation(project(":feature:skills"))
     implementation(project(":feature:gallery"))
+    implementation(project(":feature:onboarding"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))
@@ -72,4 +73,6 @@ dependencies {
     implementation(libs.core.ktx)
 
     testImplementation(libs.junit)
+    // PythonSetupTest serves a fake Pyodide release, as the pyodide module's own tests do.
+    testImplementation(libs.okhttp.mockwebserver)
 }

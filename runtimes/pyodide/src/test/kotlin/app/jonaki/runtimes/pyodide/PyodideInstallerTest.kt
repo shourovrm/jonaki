@@ -28,12 +28,14 @@ class PyodideInstallerTest {
         "python-dateutil" to "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
         "pytz" to "pytz-2026.1.post1-py2.py3-none-any.whl",
         "six" to "six-1.17.0-py2.py3-none-any.whl",
+        "six-user" to "six_user-1.0-py3-none-any.whl",
         "native-trick" to "libtrick.so",
         "nested-trick" to "../outside.whl",
     )
     private val depends = mapOf(
         "pandas" to listOf("numpy", "python-dateutil", "pytz"),
         "python-dateutil" to listOf("six"),
+        "six-user" to listOf("six"),
     )
 
     init {
@@ -200,5 +202,36 @@ class PyodideInstallerTest {
 
         assertFalse(folder.isCoreInstalled())
         assertEquals(0L, folder.storageBytes())
+    }
+
+    @Test
+    fun removingTheDataAddOnRemovesItsDependencies() {
+        installCore()
+        installPackages(*PyodideRelease.DATA_ADD_ON.toTypedArray())
+
+        folder.removePackages(PyodideRelease.DATA_ADD_ON)
+
+        assertTrue(folder.installedPackageNames().isEmpty())
+        assertTrue(folder.isCoreInstalled())
+    }
+
+    @Test
+    fun removingPackagesKeepsADependencyAnotherPackageNeeds() {
+        installCore()
+        installPackages("pandas", "six-user")
+
+        folder.removePackages(listOf("numpy", "pandas"))
+
+        assertEquals(setOf("six", "six-user"), folder.installedPackageNames().toSet())
+    }
+
+    @Test
+    fun removingADependencyAlsoRemovesThePackagesThatNeedIt() {
+        installCore()
+        installPackages("pandas")
+
+        folder.removePackages(listOf("numpy"))
+
+        assertEquals(setOf("python-dateutil", "pytz", "six"), folder.installedPackageNames().toSet())
     }
 }

@@ -139,6 +139,10 @@ class SettingsActions(
     val onOpenMemory: () -> Unit = {},
     /** Opens the skill library (M5). */
     val onOpenSkills: () -> Unit = {},
+    /** Opens Settings > Tools, the tool group switches (plan M8 step 3). */
+    val onOpenTools: () -> Unit = {},
+    /** Opens Settings > Python (plan M8 step 4). */
+    val onOpenPython: () -> Unit = {},
     /** Opens Android's folder picker; the app keeps the picked folder. */
     val onLinkFolder: () -> Unit = {},
     val onUnlinkFolder: () -> Unit = {},
