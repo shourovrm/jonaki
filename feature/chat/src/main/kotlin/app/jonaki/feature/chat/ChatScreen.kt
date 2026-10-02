@@ -108,13 +108,15 @@ fun ChatScreen(
     onCancelEdit: () -> Unit = {},
     /** A thinking level picked for this thread in the model sheet (D-057). */
     onThinkingChange: (ThinkingChoice) -> Unit = {},
+    /** Style and persona in the overflow menu: the app shows [ThreadStyleSheet] (D-STY-1 to D-STY-3). */
+    onOpenStyle: () -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
-        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory, onOpenSkills) },
+        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory, onOpenSkills, onOpenStyle) },
         bottomBar = {
             Column(Modifier.navigationBarsPadding().imePadding()) {
                 val status = state.status
@@ -195,6 +197,7 @@ private fun ChatTopBar(
     onRename: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenStyle: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     TopAppBar(
@@ -253,6 +256,14 @@ private fun ChatTopBar(
                             },
                         )
                     }
+                    // Shown before the first message too, so a new thread can start with a persona.
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.chat_menu_style)) },
+                        onClick = {
+                            menuOpen = false
+                            onOpenStyle()
+                        },
+                    )
                 }
             }
         },

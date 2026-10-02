@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jonaki — custom instructions, answer style and personas</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,300..800&family=Noto+Sans+Bengali:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap" rel="stylesheet">
+<style>
+/* ---------- page around the phones (not part of the app design) ---------- */
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px 32px 80px; font-family: "Roboto Flex", "Noto Sans Bengali", system-ui, sans-serif; background: #e4e6e5; color: #1a1d1c; }
+body.page-dark { background: #161817; color: #e3e6e4; }
+.page-head { max-width: 1240px; margin: 0 auto 28px; display: flex; gap: 24px; align-items: end; justify-content: space-between; flex-wrap: wrap; }
+.page-head h1 { font-size: 28px; font-weight: 650; margin: 0 0 6px; }
+.page-head p { margin: 0; max-width: 72ch; line-height: 1.5; opacity: .8; }
+.theme-switch { display: flex; border: 1px solid currentColor; border-radius: 999px; overflow: hidden; }
+.theme-switch button { font: inherit; font-size: 14px; padding: 10px 18px; background: none; color: inherit; border: 0; cursor: pointer; }
+.theme-switch button[aria-pressed="true"] { background: currentColor; }
+.theme-switch button[aria-pressed="true"] span { filter: invert(1); }
+.direction { max-width: 1240px; margin: 0 auto 64px; }
+.direction-head { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 40px; margin-bottom: 22px; }
+.direction-head h2 { grid-column: 1 / -1; font-size: 24px; margin: 0; font-weight: 650; }
+.direction-head dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14px; line-height: 1.45; }
+.direction-head dt { font-weight: 600; opacity: .7; }
+.direction-head dd { margin: 0; }
+.phones { display: flex; gap: 28px; flex-wrap: wrap; }
+.phone-wrap figcaption { font-size: 13px; opacity: .7; margin-top: 10px; text-align: center; }
+
+/* ---------- phone frame and Firefly colours (D-024) ---------- */
+.phone { width: 360px; height: 780px; border-radius: 34px; overflow: hidden; position: relative; box-shadow: 0 0 0 9px #0d0f0e, 0 18px 40px -12px rgba(0,0,0,.45); display: flex; flex-direction: column; background: var(--surface); color: var(--on-surface); font-family: "Roboto Flex", "Noto Sans Bengali", sans-serif; }
+.phone[data-theme="dark"] {
+  --surface: #11140f; --surface-container: #1a1e17; --surface-container-high: #22271e; --surface-container-highest: #2c3227;
+  --on-surface: #e4e8dc; --on-surface-variant: #a9b19d; --outline: #7a8370; --outline-variant: #33392d;
+  --primary: #c9e86b; --on-primary: #263400; --primary-container: #3a4a12; --on-primary-container: #e6f7b0;
+  --secondary-container: #333b27; --on-secondary-container: #dde6c8; --deny: #f2b8a9;
+}
+.phone[data-theme="light"] {
+  --surface: #f6f8f0; --surface-container: #edf1e4; --surface-container-high: #e6ebdb; --surface-container-highest: #dde3d0;
+  --on-surface: #1a1f12; --on-surface-variant: #50593f; --outline: #7a8468; --outline-variant: #cdd4bd;
+  --primary: #4b6300; --on-primary: #ffffff; --primary-container: #d4ee7c; --on-primary-container: #161f00;
+  --secondary-container: #dfe6c9; --on-secondary-container: #1c2410; --deny: #a1361c;
+}
+.statusbar { height: 32px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 500; }
+.statusbar .material-symbols-rounded { font-size: 16px; }
+.gesturebar { height: 22px; flex: none; display: grid; place-items: center; }
+.gesturebar::after { content: ""; width: 108px; height: 4px; border-radius: 2px; background: var(--on-surface); opacity: .55; }
+.material-symbols-rounded { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; display: inline-block; font-feature-settings: "liga"; }
+.icon-button { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: var(--on-surface-variant); flex: none; }
+.app-bar { height: 64px; flex: none; display: flex; align-items: center; padding: 0 4px; gap: 4px; }
+.app-bar .title { flex: 1; min-width: 0; }
+.app-bar .title strong { display: block; font-size: 20px; font-weight: 620; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bar .title small { display: block; font-size: 12px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.text-action { color: var(--primary); font-weight: 600; font-size: 15px; padding: 0 16px; }
+.content { flex: 1; overflow: hidden; position: relative; }
+.section-label { font-size: 13px; font-weight: 600; color: var(--on-surface-variant); padding: 18px 20px 8px; }
+.group { margin: 0 16px; border-radius: 16px; background: var(--surface-container); overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; min-height: 56px; }
+.row + .row { border-top: 1px solid var(--outline-variant); }
+.row .text { flex: 1; min-width: 0; }
+.row strong { display: block; font-size: 15px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row small { display: block; font-size: 13px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .material-symbols-rounded { color: var(--on-surface-variant); }
+.row.add { color: var(--primary); font-weight: 600; font-size: 15px; }
+.row.add .material-symbols-rounded { color: var(--primary); }
+.seg { display: flex; border: 1px solid var(--outline); border-radius: 20px; overflow: hidden; font-size: 14px; margin: 0 16px; }
+.seg span { flex: 1; text-align: center; padding: 9px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg span + span { border-left: 1px solid var(--outline); }
+.seg span.on { background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 600; }
+.field { margin: 8px 16px 0; border: 1px solid var(--outline); border-radius: 8px; padding: 10px 14px; font-size: 15px; line-height: 1.45; position: relative; }
+.field.focus { border: 2px solid var(--primary); }
+.field label { position: absolute; top: -9px; left: 10px; padding: 0 4px; font-size: 12px; background: var(--surface); color: var(--on-surface-variant); }
+.field.focus label { color: var(--primary); }
+.sheet .field label { background: var(--surface-container); }
+.counter { margin: 4px 16px 0; font-size: 12px; color: var(--on-surface-variant); text-align: right; font-family: "Roboto Mono", monospace; }
+.btn-text { color: var(--deny); font-weight: 600; font-size: 15px; padding: 18px 20px; }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.42); }
+.chat { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.bubble-user { align-self: flex-end; max-width: 84%; padding: 10px 14px; border-radius: 22px 22px 6px 22px; background: var(--surface-container-highest); font-size: 15px; line-height: 1.45; }
+.answer { font-size: 15px; line-height: 1.55; }
+.menu { position: absolute; right: 8px; top: 0; width: 230px; z-index: 3; padding: 8px 0; border-radius: 12px; background: var(--surface-container-high); box-shadow: 0 6px 18px -4px rgba(0,0,0,.45); }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 48px; font-size: 15px; }
+.menu-item .grow { flex: 1; }
+.menu-item.new { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.switch { width: 44px; height: 26px; border-radius: 13px; position: relative; background: var(--primary); }
+.switch::after { content: ""; position: absolute; width: 18px; height: 18px; border-radius: 50%; top: 4px; left: 22px; background: var(--on-primary); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 0 20px; border-radius: 28px 28px 0 0; background: var(--surface-container); z-index: 2; }
+.sheet .handle { width: 32px; height: 4px; border-radius: 2px; background: var(--outline); margin: 6px auto 12px; opacity: .6; }
+.sheet-title { font-size: 18px; font-weight: 600; padding: 0 20px 4px; }
+.sheet .section-label { padding: 14px 20px 8px; }
+.pick { display: flex; align-items: center; gap: 14px; padding: 0 20px; min-height: 48px; font-size: 15px; }
+.pick span.name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--outline); flex: none; position: relative; }
+.radio.on { border-color: var(--primary); }
+.radio.on::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--primary); }
+.sheet-actions { display: flex; justify-content: flex-end; padding: 10px 16px 0; }
+.btn-filled { height: 40px; padding: 0 22px; border-radius: 20px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; background: var(--primary); color: var(--on-primary); }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div>
+    <h1>Jonaki — custom instructions, answer style and personas</h1>
+    <p>Settings holds the general instructions, the default answer style and the saved personas. In a thread, the ⋮ menu opens one sheet for that thread's answer style, persona and own instructions. The model reads them in this order, and the later part wins: answer style, general instructions, persona, this thread's instructions. Decisions D-STY-1 to D-STY-3.</p>
+  </div>
+  <div class="theme-switch" role="group" aria-label="Theme">
+    <button data-set-theme="light" aria-pressed="false"><span>Light</span></button>
+    <button data-set-theme="dark" aria-pressed="true"><span>Dark</span></button>
+  </div>
+</header>
+
+<section class="direction">
+  <div class="direction-head">
+    <h2>Settings</h2>
+    <dl>
+      <dt>Answers</dt><dd>Answer style for every thread that has not picked its own. "Custom instructions" opens an editor; its first line shows under the row, or "None".</dd>
+      <dt>Personas</dt><dd>One row per persona, the name on one line with "…". Tapping opens the editor; "Add persona" opens an empty one.</dd>
+    </dl>
+    <dl>
+      <dt>Editor</dt><dd>Name (personas only) and instructions, at most 8,000 characters each text; the counter shows the length. Save in the app bar. Delete asks first; threads that used the persona go back to none.</dd>
+    </dl>
+  </div>
+  <div class="phones">
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone">
+        <div class="statusbar"><span>10:12</span><span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Settings</strong></div></div>
+        <div class="content">
+          <div class="section-label">Skills</div>
+          <div class="group"><div class="row"><div class="text"><strong>Skill library</strong></div><span class="material-symbols-rounded">chevron_right</span></div></div>
+          <div class="section-label">Answers</div>
+          <div class="seg"><span>Concise</span><span class="on">Normal</span><span>Detailed</span></div>
+          <div style="height:12px"></div>
+          <div class="group">
+            <div class="row"><div class="text"><strong>Custom instructions</strong><small>Answer in Bangla unless I write in English. Use metric units.</small></div><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="section-label">Personas</div>
+          <div class="group">
+            <div class="row"><div class="text"><strong>Tutor</strong></div><span class="material-symbols-rounded">chevron_right</span></div>
+            <div class="row"><div class="text"><strong>Grumpy ship's cook from a 1920s novel set</strong></div><span class="material-symbols-rounded">chevron_right</span></div>
+            <div class="row add"><span class="material-symbols-rounded">add</span>Add persona</div>
+          </div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Two new sections under Skills</figcaption>
+    </figure>
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone">
+        <div class="statusbar"><span>10:13</span><span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Edit persona</strong></div><span class="text-action">Save</span></div>
+        <div class="content">
+          <div style="height:10px"></div>
+          <div class="field"><label>Name</label>Tutor</div>
+          <div style="height:16px"></div>
+          <div class="field focus" style="min-height:300px"><label>Instructions</label>You are a patient maths tutor for a Class 9 student in Dhaka. Ask one question at a time, wait for the answer, and give a hint before the solution. Speak warmly and use short sentences.</div>
+          <div class="counter">213 / 8,000</div>
+          <div class="btn-text">Delete</div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Persona editor; custom instructions use the same screen without Name and Delete</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="direction">
+  <div class="direction-head">
+    <h2>In a thread</h2>
+    <dl>
+      <dt>Menu</dt><dd>One new item, "Style and persona", shown in every thread, also before the first message.</dd>
+      <dt>Sheet</dt><dd>Answer style with Default (follow Settings), persona with None, and this thread's instructions with Save. Style and persona apply on tap; all three reach the next message.</dd>
+    </dl>
+    <dl>
+      <dt>Cache</dt><dd>Each change rewrites the system prompt once, so the next request misses the provider's prompt cache once; requests after it hit the cache again (D-005).</dd>
+      <dt>No personas</dt><dd>The persona part shows "No personas. Add one in Settings."</dd>
+    </dl>
+  </div>
+  <div class="phones">
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone">
+        <div class="statusbar"><span>10:20</span><span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Quadratic equations</strong><small>GLM 5.3 Flash · web search on</small></div><span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span></div>
+        <div class="content">
+          <div class="chat">
+            <div class="bubble-user">How do I solve x² − 5x + 6 = 0?</div>
+            <div class="answer">Good question! Before I show you, what two numbers multiply to 6 and add up to −5?</div>
+          </div>
+          <div class="menu">
+            <div class="menu-item"><span class="grow">Web search</span><span class="switch"></span></div>
+            <div class="menu-item">Rename</div>
+            <div class="menu-item">Memory</div>
+            <div class="menu-item">Skills</div>
+            <div class="menu-item new">Style and persona</div>
+          </div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>⋮ menu with the new item (highlighted here only)</figcaption>
+    </figure>
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone">
+        <div class="statusbar"><span>10:21</span><span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Quadratic equations</strong><small>GLM 5.3 Flash · web search on</small></div><span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span></div>
+        <div class="content">
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="handle"></div>
+            <div class="sheet-title">Style and persona</div>
+            <div class="section-label">Answer style</div>
+            <div class="seg"><span class="on">Default</span><span>Concise</span><span>Normal</span><span>Detailed</span></div>
+            <div class="section-label">Persona</div>
+            <div class="pick"><span class="radio"></span><span class="name">None</span></div>
+            <div class="pick"><span class="radio on"></span><span class="name">Tutor</span></div>
+            <div class="pick"><span class="radio"></span><span class="name">Grumpy ship's cook from a 1920s novel set</span></div>
+            <div style="height:14px"></div>
+            <div class="field" style="min-height:96px"><label>Instructions for this thread</label>Use the textbook's method, not the formula.</div>
+            <div class="sheet-actions"><span class="btn-filled">Save</span></div>
+          </div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Style and persona sheet for one thread</figcaption>
+    </figure>
+  </div>
+</section>
+<script>
+  function setTheme(theme) {
+    for (const phone of document.querySelectorAll(".phone")) phone.dataset.theme = theme;
+    document.body.classList.toggle("page-dark", theme === "dark");
+    for (const button of document.querySelectorAll("[data-set-theme]")) button.setAttribute("aria-pressed", String(button.dataset.setTheme === theme));
+  }
+  for (const button of document.querySelectorAll("[data-set-theme]")) button.addEventListener("click", () => setTheme(button.dataset.setTheme));
+  setTheme(new URLSearchParams(location.search).get("theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+</script>
+</body>
+</html>

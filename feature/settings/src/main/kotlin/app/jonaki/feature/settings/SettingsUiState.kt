@@ -1,5 +1,6 @@
 package app.jonaki.feature.settings
 
+import app.jonaki.core.ui.AnswerStyleChoice
 import app.jonaki.core.ui.ThinkingChoice
 
 import androidx.compose.runtime.Immutable
@@ -28,6 +29,12 @@ data class SettingsUiState(
     val scheduledItems: List<ScheduledItemUi> = emptyList(),
     /** Remote MCP servers the mcp tool reaches (D-MCP-4). */
     val mcpServers: List<McpServerUi> = emptyList(),
+    /** Answer style of every thread that has not picked its own (D-STY-2); never DEFAULT here. */
+    val answerStyle: AnswerStyleChoice = AnswerStyleChoice.NORMAL,
+    /** The general custom instructions (D-STY-1); the row shows their first line. */
+    val customInstructions: String = "",
+    /** Saved personas, sorted by name (D-STY-3). */
+    val personas: List<PersonaRowUi> = emptyList(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -156,6 +163,11 @@ class SettingsActions(
     /** Adds or edits an MCP server; the dialog has already checked the input. */
     val onMcpServerSave: (McpServerInput) -> Unit = {},
     val onMcpServerRemove: (id: String) -> Unit = {},
+    val onAnswerStyleChange: (AnswerStyleChoice) -> Unit = {},
+    /** Opens the editor for the general custom instructions. */
+    val onOpenCustomInstructions: () -> Unit = {},
+    /** Opens a persona's editor; null opens an empty one for a new persona. */
+    val onOpenPersona: (personaId: String?) -> Unit = {},
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

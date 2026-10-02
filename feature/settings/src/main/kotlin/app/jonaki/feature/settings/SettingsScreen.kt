@@ -91,6 +91,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
             Group {
                 McpServerRows(state.mcpServers, actions)
             }
+            AnswersAndPersonasSections(state, actions)
             SectionLabel(stringResource(R.string.settings_section_files))
             Group {
                 LinkedFolderRow(state.linkedFolderName, actions)
@@ -258,7 +259,7 @@ private fun LinkedFolderRow(folderName: String?, actions: SettingsActions) {
 }
 
 @Composable
-private fun NavigationRow(text: String, onClick: () -> Unit) {
+internal fun NavigationRow(text: String, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -277,7 +278,7 @@ private fun NavigationRow(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+internal fun SectionLabel(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.labelLarge,
@@ -288,7 +289,7 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun Group(content: @Composable () -> Unit) {
+internal fun Group(content: @Composable () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = MaterialTheme.shapes.medium,
@@ -299,6 +300,6 @@ private fun Group(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun GroupDivider() {
+internal fun GroupDivider() {
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
