@@ -71,6 +71,40 @@ interface ThreadDao {
 
     @Query("UPDATE threads SET instructions = :instructions WHERE id = :threadId")
     suspend fun setInstructions(threadId: String, instructions: String)
+    /** Moves a thread into a project, or out of every project with null (D-PRJ-1). */
+    @Query("UPDATE threads SET projectId = :projectId WHERE id = :threadId")
+    suspend fun setProject(threadId: String, projectId: String?)
+
+    /** Leaves a deleted project's threads without a project; the threads themselves stay. */
+    @Query("UPDATE threads SET projectId = NULL WHERE projectId = :projectId")
+    suspend fun clearProject(projectId: String)
+
+    /** Incognito threads with their last message time, for the deletion a day later (D-PRJ-2). */
+    @Query(IncognitoQueries.ACTIVITY)
+    suspend fun listIncognitoActivity(): List<IncognitoThreadActivity>
+
+    /** "Keep as a regular thread": stops the deletion; past messages stay out of memory (D-PRJ-2). */
+    @Query(IncognitoQueries.KEEP)
+    suspend fun keepIncognito(threadId: String)
+}
+
+/** Projects that group threads (D-PRJ-1). */
+@Dao
+interface ProjectDao {
+    @Query("SELECT * FROM projects ORDER BY name COLLATE NOCASE, createdAtMillis")
+    fun observeAll(): Flow<List<ProjectEntity>>
+
+    @Query("SELECT * FROM projects WHERE id = :projectId")
+    suspend fun find(projectId: String): ProjectEntity?
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(project: ProjectEntity)
+
+    @Update
+    suspend fun update(project: ProjectEntity)
+
+    @Query("DELETE FROM projects WHERE id = :projectId")
+    suspend fun delete(projectId: String)
 }
 
 @Dao

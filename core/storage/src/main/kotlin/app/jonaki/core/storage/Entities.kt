@@ -35,6 +35,31 @@ data class ThreadEntity(
     /** The user's own instructions for this thread, added after the general ones (D-STY-1). */
     @ColumnInfo(defaultValue = "")
     val instructions: String = "",
+    /** The project the thread belongs to; null when it has none (D-PRJ-1). */
+    val projectId: String? = null,
+    /**
+     * An incognito thread uses no memory and is deleted a day after its last
+     * message, unless the user keeps it as a regular thread (D-PRJ-2).
+     */
+    @ColumnInfo(defaultValue = "0")
+    val incognito: Boolean = false,
+)
+
+/**
+ * A group of threads (D-PRJ-1). Threads point to it with projectId; there is
+ * no foreign key, so deleting a project clears that column instead of
+ * deleting threads.
+ */
+@Entity(tableName = "projects")
+data class ProjectEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    /** Added to the system prompt of every thread in the project; empty for none. */
+    @ColumnInfo(defaultValue = "")
+    val instructions: String = "",
+    /** The model new threads in the project start with, as "service:modelId"; null uses the default model. */
+    val modelKey: String? = null,
+    val createdAtMillis: Long,
 )
 
 /**

@@ -110,13 +110,23 @@ fun ChatScreen(
     onThinkingChange: (ThinkingChoice) -> Unit = {},
     /** Style and persona in the overflow menu: the app shows [ThreadStyleSheet] (D-STY-1 to D-STY-3). */
     onOpenStyle: () -> Unit = {},
+    /** Keep on the incognito banner: the thread becomes a regular one (D-PRJ-2). */
+    onKeepThread: () -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
-        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory, onOpenSkills, onOpenStyle) },
+        topBar = {
+            Column {
+                ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory, onOpenSkills, onOpenStyle)
+                if (state.incognito) {
+                    // A thread that has no message yet does not exist, so there is nothing to keep.
+                    IncognitoBanner(onKeep = if (state.title.isNotBlank()) onKeepThread else null)
+                }
+            }
+        },
         bottomBar = {
             Column(Modifier.navigationBarsPadding().imePadding()) {
                 val status = state.status
@@ -241,13 +251,16 @@ private fun ChatTopBar(
                                 onRename()
                             },
                         )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.chat_menu_memory)) },
-                            onClick = {
-                                menuOpen = false
-                                onOpenMemory()
-                            },
-                        )
+                        // An incognito thread uses no memory (D-PRJ-2).
+                        if (!state.incognito) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.chat_menu_memory)) },
+                                onClick = {
+                                    menuOpen = false
+                                    onOpenMemory()
+                                },
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.chat_menu_skills)) },
                             onClick = {

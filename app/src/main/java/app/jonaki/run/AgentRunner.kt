@@ -14,6 +14,7 @@ import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.agent.ImageMessages
 import app.jonaki.core.agent.MemorySection
 import app.jonaki.core.agent.PromptFact
+import app.jonaki.core.agent.ProjectSection
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
@@ -25,6 +26,7 @@ import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.core.model.Role
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.memory.RoomMemoryStore
+import app.jonaki.memory.ThreadMemory
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
@@ -112,16 +114,22 @@ class AgentRunner(
 
     private val promptBuilder = PromptBuilder(SystemPrompt.BASE)
 
-    /** Creates a thread and returns its id. */
-    suspend fun createThread(): String {
+    /**
+     * Creates a thread and returns its id. A thread made inside a project
+     * starts with the project's model when it has one (D-PRJ-1).
+     */
+    suspend fun createThread(projectId: String? = null, incognito: Boolean = false): String {
         val now = System.currentTimeMillis()
+        val project = projectId?.let { id -> database.projectDao().find(id) }
         val thread = ThreadEntity(
             id = UUID.randomUUID().toString(),
             title = "",
             createdAtMillis = now,
             updatedAtMillis = now,
             webSearchEnabled = !settings.snapshot.value.webSearchOffInNewThreads,
-            modelKey = settings.snapshot.value.chatModels.defaultModelKey,
+            modelKey = project?.modelKey ?: settings.snapshot.value.chatModels.defaultModelKey,
+            projectId = project?.id,
+            incognito = incognito,
         )
         database.threadDao().insert(thread)
         ThreadFolders.create(context, thread.id)
@@ -204,6 +212,23 @@ class AgentRunner(
         ThreadFolders.delete(context, threadId)
     }
 
+    private val incognitoCleanup = IncognitoCleanup(
+        listIncognito = { database.threadDao().listIncognitoActivity() },
+        isRunning = { threadId -> threadId in running.value },
+        deleteThread = ::deleteThread,
+        clock = System::currentTimeMillis,
+    )
+
+    /** Deletes incognito threads whose last message is a day old (D-PRJ-2). */
+    suspend fun deleteExpiredIncognitoThreads() {
+        incognitoCleanup.deleteExpired()
+    }
+
+    /** "Keep as a regular thread": the thread stays, and only later messages reach memory (D-PRJ-2). */
+    suspend fun keepIncognitoThread(threadId: String) {
+        database.threadDao().keepIncognito(threadId)
+    }
+
     /** A thinking level picked for one thread in the model sheet; null follows the model (D-057). */
     suspend fun setThreadThinking(threadId: String, level: ThinkingLevel?) {
         database.threadDao().setThinkingLevel(threadId, level?.name)
@@ -244,6 +269,9 @@ class AgentRunner(
     private fun launchExtraction(threadId: String, minimumNewMessages: Int) {
         scope.launch {
             val thread = database.threadDao().find(threadId) ?: return@launch
+            if (!ThreadMemory.isOn(thread)) {
+                return@launch
+            }
             memoryExtractor.extractIfDue(threadId, modelKeyFor(thread), minimumNewMessages)
         }
     }
@@ -355,7 +383,7 @@ class AgentRunner(
                 searchBackends = searchBackends(snapshot.searchOrder),
                 videoSummarizer = videoSummarizer(),
                 webAccessEnabled = thread.webSearchEnabled,
-                memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
+                memoryStore = ThreadMemory.storeFor(thread) { RoomMemoryStore(database, threadId, System::currentTimeMillis) },
                 fileDestinations = fileDestinations,
                 modelAcceptsImages = modelAcceptsImages,
                 phone = phone,
@@ -381,7 +409,7 @@ class AgentRunner(
                 ),
                 systemPrompt = promptBuilder.systemPrompt(
                     activeTools = tools,
-                    memorySection = memorySectionFor(threadId),
+                    memorySection = ThreadMemory.sectionFor(thread) { memorySectionFor(threadId) },
                     skillSection = skillSectionFor(thread),
                     instructionsSection = instructionsSectionFor(thread, snapshot),
                 ),
@@ -428,6 +456,13 @@ class AgentRunner(
         return section.text
     }
 
+    /** The instructions of the thread's project, read once per run like the skills (D-PRJ-1). */
+    private suspend fun projectSectionFor(thread: ThreadEntity): String {
+        val projectId = thread.projectId ?: return ""
+        val project = database.projectDao().find(projectId) ?: return ""
+        return ProjectSection.build(project.name, project.instructions)
+    }
+
     /**
      * The thread's enabled skills, read from the library once per run, so
      * the prompt stays the same for every request of the run (D-005). A
@@ -439,8 +474,8 @@ class AgentRunner(
     }
 
     /**
-     * The answer style, general and thread instructions and the thread's
-     * persona, read once per run so every request of the run sends the same
+     * The answer style, the general, project and thread instructions and the
+     * thread's persona, read once per run so every request of the run sends the same
      * bytes (D-005, D-STY-1). A persona deleted meanwhile counts as none.
      */
     private suspend fun instructionsSectionFor(thread: ThreadEntity, snapshot: SettingsSnapshot): String {
@@ -450,6 +485,7 @@ class AgentRunner(
             generalInstructions = snapshot.customInstructions,
             persona = persona?.let { found -> PromptPersona(found.name, found.instructions) },
             threadInstructions = thread.instructions,
+            projectPart = projectSectionFor(thread),
         )
     }
 

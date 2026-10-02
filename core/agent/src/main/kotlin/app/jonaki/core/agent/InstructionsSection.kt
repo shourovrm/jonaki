@@ -15,9 +15,10 @@ data class PromptPersona(
 
 /**
  * Builds the user's part of the system prompt (D-STY-1): the answer style,
- * the general instructions from Settings, the thread's persona and the
- * thread's own instructions, in that order, so that a later, more specific
- * part wins over an earlier one. Every part changes only when the user edits
+ * the general instructions from Settings, the thread's project
+ * (from [ProjectSection.build]), the thread's persona and the thread's own
+ * instructions, in that order, so that a later, more specific part wins over
+ * an earlier one (D-114). Every part changes only when the user edits
  * it, so the prompt stays byte-identical between requests (D-005). With
  * nothing set the section is empty and the prompt is the same as without it.
  */
@@ -35,11 +36,15 @@ object InstructionsSection {
         generalInstructions: String,
         persona: PromptPersona?,
         threadInstructions: String,
+        projectPart: String = "",
     ): String {
         val parts = mutableListOf<String>()
         styleLine(answerStyle)?.let { line -> parts += line }
         if (generalInstructions.isNotBlank()) {
             parts += "General:\n" + generalInstructions.trim()
+        }
+        if (projectPart.isNotBlank()) {
+            parts += projectPart.trim()
         }
         if (persona != null) {
             parts += personaPart(persona)

@@ -19,7 +19,9 @@ class PromptBuilder(private val basePrompt: String) {
      * [skillSection] comes from [SkillSection.build] and goes before it, as
      * skills change less often than facts. [instructionsSection] comes from
      * [InstructionsSection.build] and goes right after the tools, as the user
-     * edits it less often than skills and facts change (D-STY-1).
+     * edits it less often than skills and facts change (D-107). It holds the
+     * project's instructions too (D-110), so that one "later part wins" order
+     * covers style, general, project, persona and thread text (D-114).
      */
     fun systemPrompt(
         activeTools: List<Tool>,

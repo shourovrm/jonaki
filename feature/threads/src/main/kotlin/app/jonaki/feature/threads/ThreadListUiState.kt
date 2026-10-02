@@ -13,6 +13,12 @@ data class ThreadListUiState(
     val searchQuery: String = "",
     /** Spent across all threads this calendar month (D-027); null hides the line. */
     val monthCostUsd: Double? = null,
+    /** Projects for the filter chips, in name order (D-PRJ-1). */
+    val projects: List<ProjectUi> = emptyList(),
+    /** The project whose threads show; null shows all threads. */
+    val selectedProjectId: String? = null,
+    /** Models a project can start its threads with, for the project dialog. */
+    val projectModelOptions: List<ProjectModelOption> = emptyList(),
 )
 
 @Immutable
@@ -25,6 +31,37 @@ data class ThreadRow(
     val runState: ThreadRunState,
     /** The thread's total cost; shown under the time while the thread is idle. */
     val costUsd: Double? = null,
+    val projectId: String? = null,
+    /** Shown before the last line when all threads show. */
+    val projectName: String? = null,
+    /** Marked with a lock; deleted a day after its last message (D-PRJ-2). */
+    val incognito: Boolean = false,
+)
+
+/** A project that groups threads (D-PRJ-1). */
+@Immutable
+data class ProjectUi(
+    val id: String,
+    val name: String,
+    val instructions: String,
+    /** Null starts new threads with the default model. */
+    val modelKey: String?,
+    /** The model's display name, for the project header; null when unset. */
+    val modelName: String?,
+)
+
+/** What the project dialog saves. */
+@Immutable
+data class ProjectDraft(
+    val name: String,
+    val instructions: String,
+    val modelKey: String?,
+)
+
+@Immutable
+data class ProjectModelOption(
+    val key: String,
+    val name: String,
 )
 
 sealed interface ThreadRunState {
@@ -65,6 +102,14 @@ sealed interface ThreadTimeLabel {
             return Text(formatter.format(updated))
         }
     }
+}
+
+/** The threads of one project, or every thread when [selectedProjectId] is null. */
+fun threadsInProject(threads: List<ThreadRow>, selectedProjectId: String?): List<ThreadRow> {
+    if (selectedProjectId == null) {
+        return threads
+    }
+    return threads.filter { thread -> thread.projectId == selectedProjectId }
 }
 
 fun filterThreads(threads: List<ThreadRow>, query: String): List<ThreadRow> {

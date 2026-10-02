@@ -48,6 +48,37 @@ class InstructionsSectionTest {
         )
     }
 
+    /** Most specific last: general, project, persona, thread (D-114). */
+    @Test
+    fun theProjectComesAfterGeneralAndBeforePersonaAndThread() {
+        val section = InstructionsSection.build(
+            answerStyle = AnswerStyle.NORMAL,
+            generalInstructions = "Answer in Bangla.",
+            persona = tutor,
+            threadInstructions = "Use metric units.",
+            projectPart = ProjectSection.build("Thesis", "British spelling."),
+        )
+
+        val generalAt = section.indexOf("General:")
+        val projectAt = section.indexOf("Project \"Thesis\" instructions:\nBritish spelling.")
+        val personaAt = section.indexOf("Persona \"Tutor\"")
+        val threadAt = section.indexOf("This thread:")
+        assertTrue(generalAt in 0 until projectAt)
+        assertTrue(projectAt < personaAt)
+        assertTrue(personaAt < threadAt)
+    }
+
+    @Test
+    fun aProjectAloneMakesASection() {
+        val section = InstructionsSection.build(AnswerStyle.NORMAL, "", null, "", ProjectSection.build("Thesis", "Cite sources."))
+
+        assertEquals(
+            "User instructions (written by the user; where two parts disagree, the later part wins):\n\n" +
+                "Project \"Thesis\" instructions:\nCite sources.",
+            section,
+        )
+    }
+
     @Test
     fun normalStyleAddsNoLine() {
         val section = InstructionsSection.build(AnswerStyle.NORMAL, "Answer in Bangla.", null, "")

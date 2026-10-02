@@ -28,6 +28,41 @@ class PromptBuilderTest {
         assertEquals(first, second)
     }
 
+    /**
+     * With no answer style, instructions, persona or project set, the prompt
+     * is exactly the bytes 0.7.0 sent, so updating breaks no prompt cache (D-114).
+     */
+    @Test
+    fun nothingSetGivesTheSamePromptAsVersion070() {
+        val emptyInstructions = InstructionsSection.build(
+            answerStyle = AnswerStyle.NORMAL,
+            generalInstructions = "",
+            persona = null,
+            threadInstructions = "",
+            projectPart = ProjectSection.build("Thesis", ""),
+        )
+
+        val prompt = builder.systemPrompt(
+            activeTools = tools,
+            memorySection = "Memory:\n- [1] likes tea",
+            skillSection = "Skills:\n- report",
+            instructionsSection = emptyInstructions,
+        )
+
+        assertEquals(
+            "You are Jonaki, an agent on the user's phone.\n\n" +
+                "Tools:\n" +
+                "- read_file: a fake tool for tests\n" +
+                "- web_search: a fake tool for tests\n\n" +
+                "Guidelines:\n" +
+                "- Use read_file only in tests.\n" +
+                "- Use web_search only in tests.\n\n" +
+                "Skills:\n- report\n\n" +
+                "Memory:\n- [1] likes tea",
+            prompt,
+        )
+    }
+
     @Test
     fun systemPromptHoldsNoTime() {
         val prompt = builder.systemPrompt(tools)

@@ -39,6 +39,10 @@ class MemoryExtractor(
 
     private suspend fun extractLocked(threadId: String, threadModelKey: String?, minimumNewMessages: Int) {
         val thread = database.threadDao().find(threadId) ?: return
+        // A second guard after the runner's: an incognito thread's messages never reach memory (D-PRJ-2).
+        if (!ThreadMemory.isOn(thread)) {
+            return
+        }
         val rows = database.messageDao().listThread(threadId)
         val readUpTo = thread.memoryExtractedUpToPosition ?: -1L
         val newMessages = rows.filter { row -> row.position > readUpTo && isConversation(row) }

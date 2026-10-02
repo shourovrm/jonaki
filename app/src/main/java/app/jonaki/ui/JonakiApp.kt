@@ -62,6 +62,7 @@ import app.jonaki.feature.settings.SettingsScreen
 import app.jonaki.feature.settings.SettingsUiState
 import app.jonaki.feature.settings.StatusIconsScreen
 import app.jonaki.feature.settings.moveInOrder
+import app.jonaki.feature.threads.ProjectModelOption
 import app.jonaki.feature.threads.RenameThreadDialog
 import app.jonaki.feature.threads.ShareTargetRow
 import app.jonaki.feature.threads.ShareTargetScreen
@@ -113,6 +114,9 @@ private const val FOCUS_SEPARATOR = '@'
 /** A thread is only created on its first message, so backing out leaves no empty thread. */
 private const val NEW_THREAD = "new"
 
+/** Like [NEW_THREAD], for an incognito chat (D-PRJ-2). */
+private const val NEW_INCOGNITO_THREAD = "new-incognito"
+
 @Composable
 fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Unit) {
     val settingsSnapshot by application.settings.snapshot.collectAsState()
@@ -121,6 +125,8 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
     LaunchedEffect(isDark) { onDarkThemeChange(isDark) }
     JonakiTheme(themeMode = themeMode) {
         var route by rememberSaveable { mutableStateOf(ROUTE_THREADS) }
+        // The project chip picked in the thread list; kept here so it survives opening a chat (D-PRJ-1).
+        var selectedProjectId by rememberSaveable { mutableStateOf<String?>(null) }
         RefusedFilesMessage(application)
         val pendingShare by application.incomingShares.pending.collectAsState()
         val share = pendingShare
@@ -235,6 +241,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
                     onOpenSkills = { route = ROUTE_SKILLS_THREAD_PREFIX + chatThreadId },
                     onOpenArtifact = { path -> route = ROUTE_ARTIFACT_PREFIX + chatThreadId + FOCUS_SEPARATOR + path },
+                    newThreadProjectId = selectedProjectId,
                 )
             }
             else -> ThreadsRoute(
@@ -242,6 +249,9 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 onOpenThread = { threadId -> route = ROUTE_CHAT_PREFIX + threadId },
                 onNewThread = { route = ROUTE_CHAT_PREFIX + NEW_THREAD },
                 onOpenSettings = { route = ROUTE_SETTINGS },
+                onNewIncognitoThread = { route = ROUTE_CHAT_PREFIX + NEW_INCOGNITO_THREAD },
+                selectedProjectId = selectedProjectId,
+                onProjectSelect = { projectId -> selectedProjectId = projectId },
             )
         }
     }
@@ -289,9 +299,14 @@ private fun ThreadsRoute(
     onOpenThread: (String) -> Unit,
     onNewThread: () -> Unit,
     onOpenSettings: () -> Unit,
+    onNewIncognitoThread: () -> Unit,
+    selectedProjectId: String?,
+    onProjectSelect: (String?) -> Unit,
 ) {
     val database = application.database
     val summaries by remember { database.threadDao().observeSummaries() }.collectAsState(initial = emptyList())
+    val projects by remember { database.projectDao().observeAll() }.collectAsState(initial = emptyList())
+    val settingsSnapshot by application.settings.snapshot.collectAsState()
     val monthCost by remember { database.messageDao().observeCostSince(startOfThisMonthMillis()) }.collectAsState(initial = null)
     val running by application.runner.runningThreadIds.collectAsState()
     val approvals by application.runner.pendingApprovals.collectAsState()
@@ -300,6 +315,10 @@ private fun ThreadsRoute(
     var threadToRename by rememberSaveable { mutableStateOf<String?>(null) }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        // The list is one of the two moments incognito threads a day old are deleted (D-PRJ-2).
+        application.runner.deleteExpiredIncognitoThreads()
+    }
     LaunchedEffect(Unit) {
         // Keeps "now" and the HH:mm labels current while the list is open.
         while (true) {
@@ -321,10 +340,21 @@ private fun ThreadsRoute(
             updatedAtMillis = summary.thread.updatedAtMillis,
             runState = runState,
             costUsd = summary.totalCostUsd,
+            projectId = summary.thread.projectId,
+            projectName = projects.firstOrNull { project -> project.id == summary.thread.projectId }?.name,
+            incognito = summary.thread.incognito,
         )
     }
     ThreadListScreen(
-        state = ThreadListUiState(threads = rows, searchQuery = searchQuery, monthCostUsd = monthCost),
+        state = ThreadListUiState(
+            threads = rows,
+            searchQuery = searchQuery,
+            monthCostUsd = monthCost,
+            projects = projects.map { project -> Projects.uiOf(project, application.catalog) },
+            selectedProjectId = selectedProjectId,
+            projectModelOptions = modelChoices(settingsSnapshot.chatModels, application.catalog)
+                .map { choice -> ProjectModelOption(choice.key, choice.name) },
+        ),
         nowMillis = nowMillis,
         onSearchQueryChange = { query -> searchQuery = query },
         onThreadClick = onOpenThread,
@@ -332,6 +362,20 @@ private fun ThreadsRoute(
         onOpenSettings = onOpenSettings,
         onRename = { threadId -> threadToRename = threadId },
         onDelete = { threadId -> scope.launch { application.runner.deleteThread(threadId) } },
+        onNewIncognitoThread = onNewIncognitoThread,
+        onProjectSelect = onProjectSelect,
+        onSaveProject = { projectId, draft ->
+            scope.launch {
+                val savedId = Projects.save(database, projectId, draft)
+                // A new project opens at once, so its first thread can be started there.
+                onProjectSelect(savedId)
+            }
+        },
+        onDeleteProject = { projectId ->
+            onProjectSelect(null)
+            scope.launch { Projects.delete(database, projectId) }
+        },
+        onMoveThread = { threadId, projectId -> scope.launch { database.threadDao().setProject(threadId, projectId) } },
     )
     val renaming = threadToRename?.let { id -> summaries.firstOrNull { it.thread.id == id } }
     if (renaming != null) {
@@ -365,11 +409,20 @@ private fun ChatRoute(
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenArtifact: (path: String) -> Unit,
+    /** The project a new regular thread joins: the one selected in the thread list (D-PRJ-1). */
+    newThreadProjectId: String?,
 ) {
     val database = application.database
     val runner = application.runner
     val catalog = application.catalog
-    val isNew = threadId == NEW_THREAD
+    val isNewIncognito = threadId == NEW_INCOGNITO_THREAD
+    val isNew = threadId == NEW_THREAD || isNewIncognito
+    // An incognito chat stays out of projects, so the project's instructions never reach it.
+    val projectIdForNewThread = if (isNew && !isNewIncognito) newThreadProjectId else null
+    val projectForNewThread by remember(projectIdForNewThread) {
+        if (projectIdForNewThread == null) flowOf(null) else database.projectDao().observeAll()
+    }.collectAsState(initial = null)
+    val newThreadProjectModel = projectForNewThread?.firstOrNull { project -> project.id == projectIdForNewThread }?.modelKey
     val thread by remember(threadId) {
         if (isNew) flowOf(null) else database.threadDao().observe(threadId)
     }.collectAsState(initial = null)
@@ -437,7 +490,7 @@ private fun ChatRoute(
     val isRunning = threadId in running
     val pending = approvals[threadId]
     val webSearchEnabled = thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
-    val modelKey = (if (isNew) modelForNewThread else null) ?: runner.modelKeyFor(thread)
+    val modelKey = (if (isNew) modelForNewThread ?: newThreadProjectModel else null) ?: runner.modelKeyFor(thread)
     val modelInfo = modelKey?.let(catalog::find)
     val modelName = modelInfo?.displayName ?: modelKey?.let(ModelKey::modelOf).orEmpty()
     val status = if (settingsSnapshot.showStatusStrip && modelKey != null) {
@@ -474,6 +527,7 @@ private fun ChatRoute(
         } else {
             thinkingChoiceOf(ThinkingLevel.entries.firstOrNull { level -> level.name == thread?.thinkingLevel })
         },
+        incognito = if (isNew) isNewIncognito else thread?.incognito == true,
     )
     ChatScreen(
         state = state,
@@ -492,7 +546,11 @@ private fun ChatRoute(
                     runner.editAndResend(threadId, editedMessageId, AttachmentDrafts.messageWith(text, inboxPaths))
                     return@launch
                 }
-                val targetThreadId = if (isNew) runner.createThread() else threadId
+                val targetThreadId = if (isNew) {
+                    runner.createThread(projectId = projectIdForNewThread, incognito = isNewIncognito)
+                } else {
+                    threadId
+                }
                 val pickedModel = modelForNewThread
                 if (isNew && pickedModel != null) {
                     runner.setThreadModel(targetThreadId, pickedModel)
@@ -560,6 +618,7 @@ private fun ChatRoute(
                 Toast.makeText(application, R.string.files_no_camera, Toast.LENGTH_LONG).show()
             }
         },
+        onKeepThread = { scope.launch { runner.keepIncognitoThread(threadId) } },
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
