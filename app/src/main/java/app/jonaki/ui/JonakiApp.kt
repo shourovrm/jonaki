@@ -31,6 +31,7 @@ import app.jonaki.feature.chat.ChatUiState
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
 import app.jonaki.feature.chat.UsageUi
+import app.jonaki.feature.settings.AccountLineUi
 import app.jonaki.feature.settings.AddModelsScreen
 import app.jonaki.feature.settings.AddModelsUiState
 import app.jonaki.feature.settings.AddableModelUi
@@ -374,7 +375,17 @@ private fun SettingsRoute(
         moneyLeft = { amount -> application.getString(R.string.balance_money_left, amount) },
         creditsOfLimit = { used, limit -> application.getString(R.string.balance_credits_of_limit, used, limit) },
         creditsUsed = { used -> application.getString(R.string.balance_credits_used, used) },
+        leftAndMonth = { left, month -> application.getString(R.string.balance_left_and_month, left, month) },
+        monthOnly = { month -> application.getString(R.string.balance_month_only, month) },
     )
+    val serviceCosts by remember { application.database.messageDao().observeServiceCostSince(startOfThisMonthMillis()) }
+        .collectAsState(initial = emptyList())
+    val appCountedMonth = serviceCosts.associate { row -> row.service to row.costUsd }
+    fun accountFor(service: ChatService): AccountLineUi? {
+        val balance = service.secret?.let { secret -> balances[secret] }
+        val line = BalanceText.cardLine(balance, appCountedMonth[service.key], balanceWords) ?: return null
+        return AccountLineUi(line.text, line.isLow, line.monthCountedByApp)
+    }
     fun slotFor(secret: SecretName) = KeySlot(
         id = secret.name,
         isSet = secret in savedKeys,
@@ -383,7 +394,7 @@ private fun SettingsRoute(
     )
 
     val state = SettingsUiState(
-        chatServices = serviceCards(snapshot, application.catalog, ::slotFor),
+        chatServices = serviceCards(snapshot, application.catalog, ::slotFor, ::accountFor),
         addableServices = ChatService.entries
             .filter { service -> service !in snapshot.chatModels.addedServices }
             .map { service -> AddableServiceUi(service.key, service.displayName, hintFor(service)) },
@@ -438,6 +449,7 @@ private fun serviceCards(
     snapshot: SettingsSnapshot,
     catalog: ModelCatalog,
     slotFor: (SecretName) -> KeySlot,
+    accountFor: (ChatService) -> AccountLineUi?,
 ): List<ChatServiceCardUi> {
     val chatModels = snapshot.chatModels
     return chatModels.addedServices.map { service ->
@@ -447,6 +459,7 @@ private fun serviceCards(
             displayName = service.displayName,
             apiKey = service.secret?.let(slotFor),
             routing = if (isOpenRouter) routingUiOf(snapshot.routing.openRouter) else null,
+            account = accountFor(service),
             models = chatModels.modelsByService[service].orEmpty().map { modelId ->
                 val key = ModelKey.of(service.key, modelId)
                 val info = catalog.find(key)

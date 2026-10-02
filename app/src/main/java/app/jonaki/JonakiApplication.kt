@@ -10,6 +10,7 @@ import app.jonaki.core.model.Role
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.SecretStore
+import app.jonaki.settings.UsdRates
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -53,7 +54,7 @@ class JonakiApplication : Application() {
             .build()
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
         runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope)
-        balances = AccountBalances(secrets, httpClient)
+        balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
             database.messageDao().closeInterrupted()

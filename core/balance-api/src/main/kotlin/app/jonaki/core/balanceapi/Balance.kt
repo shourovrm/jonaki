@@ -10,8 +10,12 @@ fun interface BalanceSource {
 }
 
 sealed interface Balance {
-    /** Money left, for example 12.87 USD on OpenRouter or a CNY balance on DeepSeek. */
-    data class Money(val amount: Double, val currency: String) : Balance
+    /**
+     * Money left, for example 12.87 USD on OpenRouter or a CNY balance on
+     * DeepSeek. [spentThisMonth] is in the same currency and only set when the
+     * service itself reports it (OpenRouter's key usage).
+     */
+    data class Money(val amount: Double, val currency: String, val spentThisMonth: Double? = null) : Balance
 
     /** Credits used and allowed in the current period, for example Tavily's 3 of 1,000. */
     data class Credits(val used: Long, val limit: Long?) : Balance

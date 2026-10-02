@@ -17,7 +17,8 @@ import okhttp3.Request
 /**
  * OpenRouter credits left in USD (D-031): purchased credits minus usage from
  * GET /credits; when the key may not read that, the key's own spending limit
- * left from GET /key.
+ * left from GET /key. The key's spend this calendar month also comes from
+ * GET /key (D-032).
  */
 class OpenRouterBalance(
     private val apiKey: String,
@@ -26,17 +27,20 @@ class OpenRouterBalance(
 ) : BalanceSource {
     override suspend fun fetch(): Balance {
         val credits = getJson(httpClient, apiKey, baseUrl, "/credits")
-        val creditsData = (credits.json?.get("data") as? JsonObject)
+        val key = getJson(httpClient, apiKey, baseUrl, "/key")
+        val creditsData = credits.json?.get("data") as? JsonObject
+        val keyData = key.json?.get("data") as? JsonObject
+        val spentThisMonth = keyData?.number("usage_monthly")
         val total = creditsData?.number("total_credits")
         val used = creditsData?.number("total_usage")
         if (total != null && used != null) {
-            return Balance.Money(total - used, USD)
+            return Balance.Money(total - used, USD, spentThisMonth)
         }
-        val key = getJson(httpClient, apiKey, baseUrl, "/key")
-        val keyData = key.json?.get("data") as? JsonObject
-            ?: return Balance.Failed("OpenRouter answered ${credits.problem ?: key.problem}")
+        if (keyData == null) {
+            return Balance.Failed("OpenRouter answered ${credits.problem ?: key.problem}")
+        }
         val remaining = keyData.number("limit_remaining") ?: return Balance.Unavailable
-        return Balance.Money(remaining, USD)
+        return Balance.Money(remaining, USD, spentThisMonth)
     }
 
     private companion object {
@@ -44,7 +48,10 @@ class OpenRouterBalance(
     }
 }
 
-/** DeepSeek's account balance in its own currency (GET /user/balance, D-031). */
+/**
+ * DeepSeek's account balance (GET /user/balance, D-031): the USD entry when
+ * the account has one, else its first currency, which the app converts.
+ */
 class DeepSeekBalance(
     private val apiKey: String,
     private val httpClient: OkHttpClient,
@@ -53,10 +60,13 @@ class DeepSeekBalance(
     override suspend fun fetch(): Balance {
         val answer = getJson(httpClient, apiKey, baseUrl, "/user/balance")
         val root = answer.json ?: return Balance.Failed("DeepSeek answered ${answer.problem}")
-        // The first entry is the account's main currency.
-        val first = (root["balance_infos"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return Balance.Unavailable
-        val currency = (first["currency"] as? JsonPrimitive)?.contentOrNull ?: return Balance.Unavailable
-        val amount = first.number("total_balance") ?: return Balance.Unavailable
+        val entries = (root["balance_infos"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+        // A dollar entry needs no conversion; otherwise the first entry is the account's main currency.
+        val chosen = entries.firstOrNull { entry -> entry.text("currency") == "USD" }
+            ?: entries.firstOrNull()
+            ?: return Balance.Unavailable
+        val currency = chosen.text("currency") ?: return Balance.Unavailable
+        val amount = chosen.number("total_balance") ?: return Balance.Unavailable
         return Balance.Money(amount, currency)
     }
 }
@@ -88,3 +98,5 @@ private fun JsonObject.number(key: String): Double? {
     val primitive = this[key] as? JsonPrimitive ?: return null
     return primitive.doubleOrNull ?: primitive.contentOrNull?.toDoubleOrNull()
 }
+
+private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull

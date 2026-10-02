@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -108,6 +110,7 @@ private fun CardHeader(card: ChatServiceCardUi, open: Boolean, onToggle: () -> U
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                card.account?.let { account -> AccountLine(account) }
             }
         }
         Icon(
@@ -130,11 +133,36 @@ private fun collapsedSummary(card: ChatServiceCardUi): String {
     }
 }
 
+/** Money left and this month's spend (D-032); red when under one dollar is left. */
+@Composable
+private fun AccountLine(account: AccountLineUi) {
+    val lowDescription = stringResource(R.string.settings_balance_low)
+    val color = if (account.isLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    // Colour alone does not reach a screen reader user, so a low balance is also said.
+    val description = if (account.isLow) "${account.text}. $lowDescription" else account.text
+    Text(
+        account.text,
+        style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+        color = color,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.semantics { contentDescription = description },
+    )
+}
+
 @Composable
 private fun CardBody(card: ChatServiceCardUi, actions: SettingsActions) {
     val slot = card.apiKey
     if (slot != null) {
         KeyField(stringResource(R.string.settings_api_key), slot, actions)
+    }
+    if (card.account?.countedByJonaki == true) {
+        Text(
+            stringResource(R.string.settings_spend_counted_by_app),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
     }
     val routing = card.routing
     if (routing != null) {

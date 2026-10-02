@@ -241,3 +241,18 @@ applied to the next turn (usage sheet: 5 turns GLM, 1 turn DeepSeek);
 OpenRouter balance "$12.87 left" and Tavily "3 / 1,000 credits"; model
 search listed 464 OpenRouter models. Routing fallback is covered by JVM
 tests with a recorded 404, not yet seen on the phone.
+
+## D-032 · 2026-10-02 · Balance and month spend on the closed service card — proposed
+A closed chat service card in Settings shows one line, all in USD: "$12.87
+left · $0.08 this month". The month comes from the service when it reports
+one (OpenRouter GET /key usage_monthly, for this key), else from Jonaki's
+own call records; the open card then says "Spend counted by Jonaki only".
+DeepSeek's USD entry is used when present; other currencies convert with
+the daily rates of ExchangeRate-API's free open endpoint (open.er-api.com,
+no key, fetched once per app run); without a rate the balance is dropped
+rather than shown in the wrong currency. From $100 the balance drops the
+cents; spend under one cent shows "<$0.01"; under $1 left turns red and is
+read out as "Low balance". A failed refresh keeps the last good value.
+Mockup: docs/mockups/service-card-balance.html. Copy agreed with an Opus
+reviewer. Why: user request. Limit: deleting a thread deletes its usage
+rows, so Jonaki's own count drops with it.

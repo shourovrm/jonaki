@@ -4,6 +4,9 @@
     "limit_reset": "monthly",
     "limit_remaining": 19.927821514,
     "usage": 11.117053445,
+    "usage_daily": 0.008181722,
+    "usage_weekly": 0.109312616,
+    "usage_monthly": 0.077305828,
     "is_free_tier": false
   }
 }

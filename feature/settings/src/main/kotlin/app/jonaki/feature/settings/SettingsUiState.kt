@@ -75,6 +75,18 @@ data class ChatServiceCardUi(
     /** OpenRouter only: the routing every model uses unless it overrides it. */
     val routing: RoutingUi? = null,
     val models: List<ServiceModelUi> = emptyList(),
+    /** Money left and this month's spend for the closed card (D-032); null shows no line. */
+    val account: AccountLineUi? = null,
+)
+
+/** "$12.87 left · $0.08 this month", already formatted by the app. */
+@Immutable
+data class AccountLineUi(
+    val text: String,
+    /** Under one dollar left: drawn in the error colour and read out as low. */
+    val isLow: Boolean,
+    /** The month was counted by Jonaki from its own calls; the open card says so. */
+    val countedByJonaki: Boolean,
 )
 
 @Immutable
@@ -143,6 +155,7 @@ object SettingsSample {
                 serviceKey = "openrouter",
                 displayName = "OpenRouter",
                 apiKey = KeySlot("OPENROUTER", isSet = true, maskedKey = "sk-o••••", balance = "$12.87 left"),
+                account = AccountLineUi("$12.87 left · $0.08 this month", isLow = false, countedByJonaki = false),
                 routing = RoutingUi.PRIVATE_THEN_CHEAPEST,
                 models = listOf(
                     ServiceModelUi("openrouter:z-ai/glm-5.3-flash", "GLM 5.3 Flash", 200_000, 0.10, 0.40, 0.03, isDefault = true),

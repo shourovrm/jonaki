@@ -15,24 +15,37 @@ import okhttp3.OkHttpClient
 
 /**
  * Balances of the accounts whose keys are saved (D-031), refreshed when
- * Settings opens. Gemini and Ollama have no balance API, so they never appear.
+ * Settings opens and shown in USD (D-032). Gemini and Ollama have no balance
+ * API, so they never appear.
  */
 class AccountBalances(
     private val secrets: SecretStore,
     private val httpClient: OkHttpClient,
+    private val usdRates: UsdRates,
 ) {
     private val latest = MutableStateFlow<Map<SecretName, Balance>>(emptyMap())
 
     /** The last answer per account; an account without a saved key has no entry. */
     val balances: StateFlow<Map<SecretName, Balance>> = latest.asStateFlow()
 
-    /** Asks every account at once and replaces [balances] with the answers. */
+    /**
+     * Asks every account at once and replaces [balances] with the answers. A
+     * failed answer keeps the account's last good value, so a dropped
+     * connection does not blank the card.
+     */
     suspend fun refreshAll() {
         val sources = sourcesWithKeys()
         val answers = coroutineScope {
             sources.map { (name, source) -> async { name to source.fetch() } }.awaitAll()
         }
-        latest.value = answers.toMap()
+        val needsRates = answers.any { (_, balance) -> balance is Balance.Money && balance.currency != "USD" }
+        val rates = if (needsRates) usdRates.current() else null
+        val previous = latest.value
+        latest.value = answers.associate { (name, balance) ->
+            val inDollars = balance.inDollars(rates)
+            val kept = if (inDollars is Balance.Failed) previous[name] ?: inDollars else inDollars
+            name to kept
+        }
     }
 
     private fun sourcesWithKeys(): Map<SecretName, BalanceSource> {

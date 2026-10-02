@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jonaki — balance on the chat service card</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,300..800&family=Noto+Sans+Bengali:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap" rel="stylesheet">
+<style>
+/* ---------- page around the phones (not part of the app design) ---------- */
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 32px 80px;
+  font-family: "Roboto Flex", "Noto Sans Bengali", system-ui, sans-serif;
+  background: #e4e6e5; color: #1a1d1c;
+}
+body.page-dark { background: #161817; color: #e3e6e4; }
+.page-head { max-width: 1240px; margin: 0 auto 28px; display: flex; gap: 24px; align-items: end; justify-content: space-between; flex-wrap: wrap; }
+.page-head h1 { font-size: 28px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+.page-head p { margin: 0; max-width: 70ch; line-height: 1.5; opacity: .8; }
+.theme-switch { display: flex; border: 1px solid currentColor; border-radius: 999px; overflow: hidden; }
+.theme-switch button { font: inherit; font-size: 14px; padding: 10px 18px; background: none; color: inherit; border: 0; cursor: pointer; }
+.theme-switch button[aria-pressed="true"] { background: currentColor; }
+.theme-switch button[aria-pressed="true"] span { filter: invert(1); color: inherit; }
+.direction { max-width: 1240px; margin: 0 auto 64px; }
+.direction-head { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 40px; margin-bottom: 22px; }
+.direction-head h2 { grid-column: 1 / -1; font-size: 24px; margin: 0; font-weight: 650; }
+.direction-head dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14px; line-height: 1.45; }
+.direction-head dt { font-weight: 600; opacity: .7; }
+.direction-head dd { margin: 0; }
+.phones { display: flex; gap: 28px; flex-wrap: wrap; }
+.phone-wrap figcaption { font-size: 13px; opacity: .7; margin-top: 10px; text-align: center; }
+
+/* ---------- phone frame ---------- */
+.phone {
+  width: 360px; height: 780px; border-radius: 34px; overflow: hidden; position: relative;
+  box-shadow: 0 0 0 9px #0d0f0e, 0 18px 40px -12px rgba(0,0,0,.45);
+  display: flex; flex-direction: column;
+  background: var(--surface); color: var(--on-surface);
+  font-family: var(--font-body);
+}
+.statusbar { height: 32px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 500; color: var(--on-surface); }
+.statusbar .icons { display: flex; gap: 4px; }
+.statusbar .material-symbols-rounded { font-size: 16px; }
+.gesturebar { height: 22px; flex: none; display: grid; place-items: center; }
+.gesturebar::after { content: ""; width: 108px; height: 4px; border-radius: 2px; background: var(--on-surface); opacity: .55; }
+.material-symbols-rounded { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; display: inline-block; -webkit-font-feature-settings: "liga"; font-feature-settings: "liga"; font-variation-settings: "FILL" 0, "wght" 400, "opsz" 24; }
+.icon-button { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: var(--on-surface-variant); flex: none; }
+.app-bar { height: 64px; flex: none; display: flex; align-items: center; padding: 0 4px 0 4px; gap: 4px; }
+.app-bar .title { flex: 1; min-width: 0; }
+.app-bar .title strong { display: block; font-size: 20px; font-weight: 560; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bar .title small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+.content { flex: 1; overflow: hidden; position: relative; }
+.bn { font-family: "Noto Sans Bengali", var(--font-body); }
+.mono { font-family: "Roboto Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* ---------- shared component structure ---------- */
+.thread-list { list-style: none; margin: 0; padding: 0; }
+.thread { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 20px; min-height: 72px; align-content: center; position: relative; }
+.thread .name { font-size: 16px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .last { grid-column: 1; font-size: 14px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .when { grid-row: 1; grid-column: 2; font-size: 12px; color: var(--on-surface-variant); text-align: right; }
+.thread .state { grid-row: 2; grid-column: 2; font-size: 12px; text-align: right; }
+.fab { position: absolute; right: 16px; bottom: 16px; height: 56px; padding: 0 20px 0 16px; border-radius: 16px; display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 560; background: var(--primary-container); color: var(--on-primary-container); box-shadow: 0 3px 8px -2px rgba(0,0,0,.3); }
+.search-field { margin: 4px 16px 8px; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; gap: 12px; padding: 0 16px; color: var(--on-surface-variant); font-size: 16px; }
+.section-label { font-size: 13px; font-weight: 600; color: var(--on-surface-variant); padding: 14px 20px 6px; letter-spacing: .02em; }
+
+.chat { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.bubble-user { align-self: flex-end; max-width: 84%; padding: 10px 14px; border-radius: 20px 20px 6px 20px; background: var(--primary-container); color: var(--on-primary-container); font-size: 15px; line-height: 1.45; }
+.answer { font-size: 15px; line-height: 1.55; }
+.answer p { margin: 0 0 8px; }
+.caret { display: inline-block; width: 8px; height: 16px; vertical-align: -2px; background: var(--live); border-radius: 2px; }
+.composer { flex: none; padding: 8px 12px 6px; display: flex; gap: 8px; align-items: center; }
+.composer .field { flex: 1; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; padding: 0 6px 0 4px; color: var(--on-surface-variant); font-size: 15px; gap: 2px; }
+.composer .field span.ph { flex: 1; }
+.stop-button { height: 52px; padding: 0 18px 0 14px; border-radius: 26px; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; background: var(--stop); color: var(--on-stop); }
+
+.steps { list-style: none; margin: 0; padding: 0; }
+.step .tool { font-weight: 600; }
+.step .detail { color: var(--on-surface-variant); }
+.step .query { color: var(--on-surface); }
+
+.approval { border-radius: 20px; padding: 14px 16px 12px; background: var(--surface-container-high); }
+.approval h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.approval p { margin: 0 0 12px; font-size: 14px; color: var(--on-surface-variant); line-height: 1.45; }
+.approval .path { font-family: "Roboto Mono", monospace; font-size: 13px; color: var(--on-surface); }
+.approval .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { height: 40px; padding: 0 16px; border-radius: 20px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 560; }
+.btn.filled { background: var(--primary); color: var(--on-primary); }
+.btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.text { color: var(--deny); margin-left: auto; }
+
+.settings-group { margin: 0 16px 14px; border-radius: 20px; background: var(--surface-container); overflow: hidden; }
+.setting { display: flex; gap: 14px; align-items: center; padding: 14px 16px; min-height: 64px; }
+.setting + .setting { border-top: 1px solid var(--outline-variant); }
+.setting .text { flex: 1; min-width: 0; }
+.setting .text strong { display: block; font-size: 15px; font-weight: 560; }
+.setting .text small { display: block; font-size: 13px; color: var(--on-surface-variant); line-height: 1.4; margin-top: 2px; }
+.switch { width: 52px; height: 32px; border-radius: 16px; position: relative; flex: none; background: var(--surface-container-highest); border: 2px solid var(--outline); }
+.switch::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; top: 6px; left: 6px; background: var(--outline); }
+.switch.on { background: var(--primary); border-color: var(--primary); }
+.switch.on::after { width: 24px; height: 24px; top: 2px; left: 22px; background: var(--on-primary); }
+.rank { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex: none; background: var(--secondary-container); color: var(--on-secondary-container); }
+.key-state { font-size: 12px; font-weight: 600; }
+
+/* =====================================================================
+   Direction B — Firefly
+   ===================================================================== */
+.dir-firefly { --font-body: "Roboto Flex", "Noto Sans Bengali", sans-serif; }
+.dir-firefly[data-theme="dark"] {
+  --surface: #11140f; --surface-container: #1a1e17; --surface-container-high: #22271e; --surface-container-highest: #2c3227;
+  --on-surface: #e4e8dc; --on-surface-variant: #a9b19d; --outline: #7a8370; --outline-variant: #33392d;
+  --primary: #c9e86b; --on-primary: #263400; --primary-container: #3a4a12; --on-primary-container: #e6f7b0;
+  --secondary-container: #333b27; --on-secondary-container: #dde6c8;
+  --live: #d8f36a; --done: #8d9a7c; --stop: #3a4a12; --on-stop: #e6f7b0; --deny: #f2b8a9; --track: #33392d;
+  --glow: rgba(216, 243, 106, .55);
+}
+.dir-firefly[data-theme="light"] {
+  --surface: #f6f8f0; --surface-container: #edf1e4; --surface-container-high: #e6ebdb; --surface-container-highest: #dde3d0;
+  --on-surface: #1a1f12; --on-surface-variant: #50593f; --outline: #7a8468; --outline-variant: #cdd4bd;
+  --primary: #4b6300; --on-primary: #ffffff; --primary-container: #d4ee7c; --on-primary-container: #161f00;
+  --secondary-container: #dfe6c9; --on-secondary-container: #1c2410;
+  --live: #6a8a00; --done: #7a8468; --stop: #1a1f12; --on-stop: #e6f7b0; --deny: #a1361c; --track: #d6dcc6;
+  --glow: rgba(150, 190, 20, .35);
+}
+.dir-firefly .app-bar .title strong { font-weight: 620; }
+.dir-firefly .thread { grid-template-columns: 28px 1fr auto; padding-left: 12px; }
+.dir-firefly .thread .light { grid-row: 1 / span 2; width: 10px; height: 10px; border-radius: 50%; margin-left: 8px; align-self: center; background: var(--track); }
+.dir-firefly .thread .light.on { background: var(--live); box-shadow: 0 0 10px 3px var(--glow); }
+.dir-firefly .thread .light.waiting { background: var(--deny); }
+.dir-firefly .thread .last { grid-column: 2; }
+.dir-firefly .thread .when, .dir-firefly .thread .state { grid-column: 3; }
+.dir-firefly .thread .state { color: var(--on-surface-variant); }
+.dir-firefly .thread .state.running { color: var(--live); font-weight: 600; }
+.dir-firefly .thread .state.waiting { color: var(--deny); font-weight: 600; }
+.dir-firefly .thread.active { background: var(--surface-container); border-radius: 20px; margin: 0 8px; }
+/* the run as a quiet trail; only the step that is working gives off light */
+.dir-firefly .run { border-radius: 20px; background: var(--surface-container); padding: 12px 14px 10px; }
+.dir-firefly .run-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--on-surface-variant); margin-bottom: 8px; }
+.dir-firefly .run-head .live { color: var(--live); font-weight: 600; }
+.dir-firefly .run-head .count { margin-left: auto; font-family: "Roboto Mono", monospace; font-size: 12px; }
+.dir-firefly .step { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; padding: 5px 0; font-size: 13.5px; line-height: 1.4; }
+.dir-firefly .step .dot { grid-row: 1 / span 2; width: 8px; height: 8px; border-radius: 50%; margin: 6px 0 0 6px; background: var(--done); }
+.dir-firefly .step.running .dot { background: var(--live); box-shadow: 0 0 10px 4px var(--glow); }
+.dir-firefly .step.done .tool { color: var(--on-surface-variant); font-weight: 500; }
+.dir-firefly .step.running .tool { color: var(--on-surface); }
+.dir-firefly .step .time { display: none; }
+.dir-firefly .step .detail { grid-column: 2; }
+.dir-firefly .step .query { font-style: italic; }
+.dir-firefly .approval { background: var(--primary-container); color: var(--on-primary-container); border-radius: 24px; }
+.dir-firefly .approval p { color: var(--on-primary-container); opacity: .85; }
+.dir-firefly .approval .path { color: var(--on-primary-container); }
+.dir-firefly .approval .btn.tonal { background: color-mix(in srgb, var(--on-primary-container) 12%, transparent); color: var(--on-primary-container); }
+.dir-firefly .bubble-user { border-radius: 22px 22px 6px 22px; background: var(--surface-container-highest); color: var(--on-surface); }
+.dir-firefly .fab { border-radius: 20px; background: var(--primary); color: var(--on-primary); }
+.dir-firefly .search-field { background: var(--surface-container); }
+.dir-firefly .rank { background: var(--primary-container); color: var(--on-primary-container); }
+
+/* additions for cost and model switching */
+.cost { color: var(--on-surface); font-weight: 600; }
+.run-line { display: flex; gap: 10px; align-items: center; border-radius: 16px; background: var(--surface-container); padding: 10px 14px; font-size: 13.5px; color: var(--on-surface-variant); }
+.run-line .material-symbols-rounded { margin-left: auto; font-size: 20px; }
+.model-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px 0 10px; margin-left: 6px; border-radius: 17px; background: var(--surface-container-highest); color: var(--on-surface); font-size: 13px; font-weight: 560; white-space: nowrap; }
+.model-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px 2px var(--glow); }
+.composer .field .ph { padding-left: 10px; }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.42); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 20px 34px; border-radius: 28px 28px 0 0; background: var(--surface-container); z-index: 2; }
+.sheet .handle { width: 32px; height: 4px; border-radius: 2px; background: var(--outline); margin: 6px auto 14px; opacity: .6; }
+.sheet-title { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+.model-row { display: flex; gap: 14px; align-items: center; min-height: 60px; }
+.model-row .text strong { display: block; font-size: 15px; font-weight: 560; }
+.model-row .text small { display: block; font-size: 13px; color: var(--on-surface-variant); font-family: "Roboto Mono", monospace; }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--outline); flex: none; position: relative; }
+.radio.on { border-color: var(--primary); }
+.radio.on::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--primary); }
+.sheet-foot { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--on-surface-variant); margin-top: 12px; line-height: 1.4; }
+.sheet-foot .link { color: var(--primary); font-weight: 600; white-space: nowrap; }
+.month-total { position: absolute; left: 20px; bottom: 30px; display: flex; gap: 10px; font-size: 13px; color: var(--on-surface-variant); }
+.dir-firefly .thread .state { font-family: "Roboto Mono", monospace; font-size: 12px; }
+.cost-chip { height: 32px; padding: 0 12px; border-radius: 16px; display: grid; place-items: center; font-size: 13px; background: var(--secondary-container); color: var(--on-secondary-container); flex: none; }
+.tappable { color: var(--on-surface) !important; text-decoration: underline dotted; text-underline-offset: 3px; }
+.menu { position: absolute; left: 52px; top: 0; width: 240px; z-index: 3; padding: 8px 0; border-radius: 16px; background: var(--surface-container-high); box-shadow: 0 6px 18px -4px rgba(0,0,0,.45); }
+.menu-item { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: center; padding: 8px 14px; min-height: 52px; }
+.menu-item strong { display: block; font-size: 14.5px; font-weight: 560; }
+.menu-item small { display: block; font-size: 12px; color: var(--on-surface-variant); font-family: "Roboto Mono", monospace; }
+.menu-item .material-symbols-rounded { font-size: 20px; color: var(--on-surface-variant); }
+.menu-item.selected .material-symbols-rounded { color: var(--primary); }
+.menu-sep { height: 1px; background: var(--outline-variant); margin: 6px 0; }
+.chat.dim { opacity: .5; }
+.send-button { width: 52px; height: 52px; border-radius: 26px; display: grid; place-items: center; background: var(--surface-container-highest); color: var(--on-surface-variant); flex: none; }
+.usage-total { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; color: var(--on-surface-variant); font-size: 14px; }
+.usage-total .big { font-size: 32px; font-weight: 600; color: var(--on-surface); }
+.usage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.usage-grid div { border-radius: 14px; background: var(--surface-container-high); padding: 10px 12px; }
+.usage-grid small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+.usage-grid strong { font-size: 15px; font-weight: 600; }
+.usage-row { display: grid; grid-template-columns: 1fr auto 72px; gap: 10px; padding: 10px 0; border-top: 1px solid var(--outline-variant); font-size: 14px; }
+.usage-row span:last-child { text-align: right; }
+.usage-row.muted { color: var(--on-surface-variant); }
+.add-row { margin: -2px 16px 10px; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--primary); font-weight: 600; font-size: 15px; }
+
+.status-strip { flex: none; display: flex; gap: 4px; align-items: center; padding: 6px 10px; font-size: 12px; color: var(--on-surface-variant); overflow: hidden; }
+.status-strip.top { border-bottom: 1px solid var(--outline-variant); }
+.status-strip.bottom { padding-bottom: 0; }
+.status-strip .stat { display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 7px; border-radius: 14px; background: var(--surface-container); white-space: nowrap; }
+.status-strip .stat:first-child { color: var(--on-surface); font-weight: 560; }
+.status-strip .material-symbols-rounded { font-size: 16px; }
+.status-strip .dot, .legend .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px 2px var(--glow); }
+.ring { width: 16px; height: 16px; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke: var(--outline-variant); stroke-width: 3; }
+.ring circle.fill { stroke: var(--primary); }
+.legend { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-container-highest); color: var(--on-surface); flex: none; }
+.legend .ring { width: 20px; height: 20px; }
+.seg { display: inline-flex; border: 1px solid var(--outline); border-radius: 16px; overflow: hidden; font-size: 13px; }
+.seg span { padding: 6px 12px; }
+.seg span.on { background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 600; }
+
+/* additions for the balance on the collapsed chat service card */
+.section-label { font-size: 15px; font-weight: 600; color: var(--on-surface-variant); padding: 14px 20px 8px; }
+.card { margin: 0 16px 10px; border-radius: 20px; background: var(--surface-container); display: flex; align-items: center; padding: 12px 12px 12px 16px; min-height: 64px; }
+.card .text { flex: 1; min-width: 0; }
+.card strong { display: block; font-size: 16.5px; font-weight: 600; }
+.card small { display: block; font-family: "Roboto Mono", monospace; font-size: 13px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
+.card small b { color: var(--on-surface); font-weight: 600; }
+.card small .low { color: var(--deny); }
+.card small .src { font-family: var(--font-body); font-size: 11.5px; }
+.card .material-symbols-rounded { color: var(--on-surface-variant); }
+.add-service { margin: 0 16px 10px; height: 52px; border-radius: 8px; border: 1px solid var(--outline); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; color: var(--primary); font-weight: 600; }
+.card small.new { white-space: normal; }
+.new { outline: 2px dashed var(--primary); outline-offset: 2px; border-radius: 4px; }
+.notes { max-width: 1240px; margin: 0 auto 40px; font-size: 14px; line-height: 1.5; }
+.notes table { border-collapse: collapse; font-size: 13.5px; }
+.notes td, .notes th { text-align: left; padding: 5px 14px 5px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); vertical-align: top; }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div>
+    <h1>Jonaki — balance on the collapsed chat service card</h1>
+    <p>Mockup only. A third line on the closed card in Settings › Chat models shows what is left on the account and what was spent this month, the way the Tavily row already shows its credits. Dashed outlines mark the new line.</p>
+  </div>
+  <div class="theme-switch" role="group" aria-label="Theme">
+    <button data-set-theme="dark"><span>Dark</span></button>
+    <button data-set-theme="light"><span>Light</span></button>
+  </div>
+</header>
+
+<section class="notes">
+  <table>
+    <tr><th>Service</th><th>Left</th><th>This month</th></tr>
+    <tr><td>OpenRouter</td><td>GET /credits (already fetched)</td><td>GET /key <code>usage_monthly</code>: this key, every app using it</td></tr>
+    <tr><td>DeepSeek</td><td>GET /user/balance (already fetched)</td><td>No API; counted by Jonaki (noted only inside the opened card)</td></tr>
+    <tr><td>Gemini, Ollama, GLM, MiMo</td><td>No API, so no "left"</td><td>Counted by Jonaki</td></tr>
+  </table>
+</section>
+
+<section class="direction">
+  <div class="phones">
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>17:20</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Settings</strong></div></div>
+        <div class="content">
+          <div class="section-label">Chat models</div>
+          <div class="card"><div class="text"><strong>OpenRouter</strong><small>sk-•••• · 3 models</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          <div class="add-service"><span>Add service</span><span class="material-symbols-rounded">arrow_drop_down</span></div>
+          <div class="section-label">YouTube summaries</div>
+          <div class="card"><div class="text"><small>Gemini API key</small><strong class="mono" style="font-weight:500">AIz••••</strong></div><span class="material-symbols-rounded">edit</span></div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Now (v0.2.0)</figcaption>
+    </figure>
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>17:20</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Settings</strong></div></div>
+        <div class="content">
+          <div class="section-label">Chat models</div>
+          <div class="card"><div class="text"><strong>OpenRouter</strong><small>sk-•••• · 3 models</small><small class="new"><b>$12.87</b> left · $0.08 this month</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          <div class="add-service"><span>Add service</span><span class="material-symbols-rounded">arrow_drop_down</span></div>
+          <div class="section-label">YouTube summaries</div>
+          <div class="card"><div class="text"><small>Gemini API key</small><strong class="mono" style="font-weight:500">AIz••••</strong></div><span class="material-symbols-rounded">edit</span></div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Proposed: OpenRouter only (your setup)</figcaption>
+    </figure>
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>17:20</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Settings</strong></div></div>
+        <div class="content">
+          <div class="section-label">Chat models</div>
+          <div class="card"><div class="text"><strong>OpenRouter</strong><small>sk-•••• · 3 models</small><small class="new"><b class="low">$0.42</b> left · $11.40 this month</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          <div class="card"><div class="text"><strong>DeepSeek</strong><small>sk-•••• · 1 model</small><small class="new"><b>¥110</b> left · ¥3.20 this month</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          <div class="card"><div class="text"><strong>Gemini</strong><small>AIz•••• · 2 models</small><small class="new">$0.21 this month</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          <div class="add-service"><span>Add service</span><span class="material-symbols-rounded">arrow_drop_down</span></div>
+          <div class="section-label">YouTube summaries</div>
+          <div class="card"><div class="text"><small>Gemini API key</small><strong class="mono" style="font-weight:500">AIz••••</strong></div><span class="material-symbols-rounded">edit</span></div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Proposed: other services and a low balance</figcaption>
+    </figure>
+  </div>
+</section>
+<script>
+  function setTheme(theme) {
+    for (const phone of document.querySelectorAll(".phone")) phone.dataset.theme = theme;
+    document.body.classList.toggle("page-dark", theme === "dark");
+    for (const button of document.querySelectorAll("[data-set-theme]")) button.setAttribute("aria-pressed", String(button.dataset.setTheme === theme));
+  }
+  for (const button of document.querySelectorAll("[data-set-theme]")) button.addEventListener("click", () => setTheme(button.dataset.setTheme));
+  setTheme(new URLSearchParams(location.search).get("theme") || "light");
+</script>
+</body>
+</html>

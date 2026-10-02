@@ -8,6 +8,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -33,15 +34,29 @@ class BalanceTest {
     private fun deepSeek() = DeepSeekBalance("k", OkHttpClient(), server.url("/").toString())
 
     @Test
-    fun openRouterRemainingIsCreditsMinusUsage() = runBlocking {
+    fun openRouterRemainingIsCreditsMinusUsageWithTheKeysMonth() = runBlocking {
         server.enqueue(MockResponse().setBody(recorded("openrouter-credits.json")))
+        server.enqueue(MockResponse().setBody(recorded("openrouter-key.json")))
 
         val balance = openRouter().fetch() as Balance.Money
 
         // 24 credits minus 11.126219445 used.
         assertEquals(12.873780555, balance.amount, 1e-9)
         assertEquals("USD", balance.currency)
+        assertEquals(0.077305828, balance.spentThisMonth!!, 1e-9)
         assertEquals("/api/v1/credits", server.takeRequest().path)
+        assertEquals("/api/v1/key", server.takeRequest().path)
+    }
+
+    @Test
+    fun openRouterBalanceStaysWhenTheMonthCannotBeRead() = runBlocking {
+        server.enqueue(MockResponse().setBody(recorded("openrouter-credits.json")))
+        server.enqueue(MockResponse().setResponseCode(500))
+
+        val balance = openRouter().fetch() as Balance.Money
+
+        assertEquals(12.873780555, balance.amount, 1e-9)
+        assertNull(balance.spentThisMonth)
     }
 
     @Test
@@ -52,6 +67,7 @@ class BalanceTest {
         val balance = openRouter().fetch() as Balance.Money
 
         assertEquals(19.927821514, balance.amount, 1e-9)
+        assertEquals(0.077305828, balance.spentThisMonth!!, 1e-9)
         server.takeRequest()
         assertEquals("/api/v1/key", server.takeRequest().path)
     }
@@ -72,6 +88,16 @@ class BalanceTest {
         val balance = openRouter().fetch()
 
         assertTrue(balance is Balance.Failed && balance.message.contains("401"))
+    }
+
+    @Test
+    fun deepSeekPrefersItsDollarBalance() = runBlocking {
+        server.enqueue(MockResponse().setBody(recorded("deepseek-balance-two-currencies.json")))
+
+        val balance = deepSeek().fetch() as Balance.Money
+
+        assertEquals(2.50, balance.amount, 1e-9)
+        assertEquals("USD", balance.currency)
     }
 
     @Test
