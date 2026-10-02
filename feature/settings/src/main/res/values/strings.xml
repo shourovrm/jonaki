@@ -30,7 +30,7 @@
     <string name="settings_section_skills">Skills</string>
     <string name="settings_skills_open">Skill library</string>
     <string name="settings_section_files">Files</string>
-    <string name="settings_link_folder">Link a folder</string>
+    <string name="settings_link_folder">Link folder</string>
     <string name="settings_linked_folder">Linked folder</string>
     <string name="settings_unlink_folder">Unlink</string>
     <string name="settings_icon_model">Model</string>

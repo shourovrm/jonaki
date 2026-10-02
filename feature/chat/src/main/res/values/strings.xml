@@ -10,7 +10,7 @@
     <string name="chat_menu_skills">Skills</string>
     <string name="chat_message_hint">Message</string>
     <string name="chat_send">Send</string>
-    <string name="chat_attach">Attach files</string>
+    <string name="chat_attach">Attach</string>
     <string name="chat_attachment_remove">Remove %1$s</string>
     <string name="chat_stop">Stop</string>
     <string name="chat_run_working">Working</string>

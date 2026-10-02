@@ -176,7 +176,7 @@ private class ArtifactWebViewClient(private val requests: ArtifactRequests) : We
             ArtifactResponse.ChartLibrary -> WebResourceResponse(
                 "text/javascript",
                 "utf-8",
-                view.context.assets.open(CHART_LIBRARY_ASSET),
+                view.context.assets.open(StandaloneHtml.CHART_LIBRARY_ASSET),
             )
             ArtifactResponse.Blocked -> WebResourceResponse(
                 "text/plain",
@@ -199,10 +199,6 @@ private class ArtifactWebViewClient(private val requests: ArtifactRequests) : We
             runCatching { view.context.startActivity(browser) }
         }
         return true
-    }
-
-    private companion object {
-        const val CHART_LIBRARY_ASSET = "jonaki-lib/chart.umd.min.js"
     }
 }
 

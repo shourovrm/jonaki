@@ -463,8 +463,9 @@ inside artifacts/ and the bundled Chart.js, everything else gets an empty
 403. Documents carry a Content-Security-Policy with connect-src 'none'.
 Tapped web links open in the browser. A version picker shows older copies;
 the print button opens Android's print dialog, which offers "Save as PDF".
-Why: plan M6 step 3, D-018. Limit: a shared HTML file that uses lib/chart.js
-shows no chart outside Jonaki. Outcome: pending.
+A page that leaves the app through share_file (Downloads, save as, share,
+linked folder) gets a copy with Chart.js inside, so its charts work in any
+browser. Why: plan M6 step 3, D-018. Outcome: pending.
 
 ## D-048 · 2026-10-02 · Chart.js bundled for artifacts — proposed
 Chart.js 4.5.1 (MIT, chart.umd.min.js, 208 KB, about 71 KB compressed in

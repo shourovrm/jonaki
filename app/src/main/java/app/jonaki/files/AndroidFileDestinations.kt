@@ -17,6 +17,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import app.jonaki.core.toolapi.FileTooLargeException
 import app.jonaki.core.toolapi.IncomingFiles
+import app.jonaki.feature.artifact.StandaloneHtml
 import app.jonaki.tools.sharefile.DestinationResult
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.LinkedEntry
@@ -44,7 +45,7 @@ class AndroidFileDestinations(
             // MediaStore.Downloads starts at Android 10; earlier phones would need a storage permission (D-044).
             return saveAs(file)
         }
-        return withContext(Dispatchers.IO) { insertIntoDownloads(file) }
+        return withContext(Dispatchers.IO) { insertIntoDownloads(outgoing(file)) }
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -70,7 +71,8 @@ class AndroidFileDestinations(
         }
     }
 
-    override suspend fun saveAs(file: File): DestinationResult {
+    override suspend fun saveAs(original: File): DestinationResult {
+        val file = withContext(Dispatchers.IO) { outgoing(original) }
         val answer = visibleActivity.launchForResult(ActivityResultContracts.CreateDocument(mimeTypeOf(file)), file.name)
         val uri = when (answer) {
             is VisibleActivity.Answer.Result -> answer.value ?: return DestinationResult.Cancelled
@@ -89,7 +91,8 @@ class AndroidFileDestinations(
         }
     }
 
-    override suspend fun share(file: File): DestinationResult {
+    override suspend fun share(original: File): DestinationResult {
+        val file = withContext(Dispatchers.IO) { outgoing(original) }
         val uri = FileProvider.getUriForFile(context, "${context.packageName}$FILE_PROVIDER_SUFFIX", file)
         val send = Intent(Intent.ACTION_SEND).apply {
             type = mimeTypeOf(file)
@@ -104,7 +107,8 @@ class AndroidFileDestinations(
         }
     }
 
-    override suspend fun copyToLinkedFolder(file: File): DestinationResult = withLinkedFolder { info ->
+    override suspend fun copyToLinkedFolder(original: File): DestinationResult = withLinkedFolder { info ->
+        val file = outgoing(original)
         val rootUri = documentUri(info, DocumentsContract.getTreeDocumentId(info.treeUri))
         val created = DocumentsContract.createDocument(resolver, rootUri, mimeTypeOf(file), file.name)
             ?: return@withLinkedFolder DestinationResult.Failed("the folder's app did not create the file")
@@ -214,6 +218,25 @@ class AndroidFileDestinations(
     private fun documentUri(info: LinkedFolderInfo, documentId: String): Uri =
         DocumentsContract.buildDocumentUriUsingTree(info.treeUri, documentId)
 
+    /**
+     * The file as it should leave the app: an HTML page that loads the
+     * viewer's lib/chart.js gets a copy with Chart.js inside, so its charts
+     * work in any browser (D-047). The copy sits in a hidden folder next to
+     * the original, inside threads/, where the FileProvider can serve it.
+     */
+    private fun outgoing(file: File): File {
+        if (!file.name.endsWith(".html", ignoreCase = true)) {
+            return file
+        }
+        val standalone = StandaloneHtml.withLibraries(file.readText()) {
+            context.assets.open(StandaloneHtml.CHART_LIBRARY_ASSET).bufferedReader().use { reader -> reader.readText() }
+        } ?: return file
+        val copy = File(file.parentFile, "$STANDALONE_FOLDER/${file.name}")
+        copy.parentFile?.mkdirs()
+        copy.writeText(standalone)
+        return copy
+    }
+
     private fun copyInto(file: File, uri: Uri) {
         val output = resolver.openOutputStream(uri, "w") ?: throw IOException("the target could not be opened")
         output.use { stream -> file.inputStream().use { input -> input.copyTo(stream) } }
@@ -232,6 +255,7 @@ class AndroidFileDestinations(
         /** MediaStore's path for what the Files app shows as Downloads/Jonaki. */
         private const val DOWNLOADS_SUBFOLDER = "Download/Jonaki"
         private const val NO_APP = "no app on this phone can handle it"
+        private const val STANDALONE_FOLDER = ".standalone"
 
         fun mimeTypeOf(file: File): String =
             MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())

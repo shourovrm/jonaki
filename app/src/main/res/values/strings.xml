@@ -10,6 +10,6 @@
     <string name="balance_month_only">%1$s this month</string>
     <string name="files_refused_too_large">%1$s is over %2$s</string>
     <string name="files_refused_unreadable">Can\'t read %1$s</string>
-    <string name="files_link_failed">Can\'t keep access to that folder</string>
+    <string name="files_link_failed">Can\'t link that folder</string>
     <string name="routing_fallback_note">No private provider for this model; used the cheapest.</string>
 </resources>
