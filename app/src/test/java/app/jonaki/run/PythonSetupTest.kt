@@ -193,6 +193,20 @@ class PythonSetupTest {
     }
 
     @Test
+    fun aDownloadStartedRightAfterCancelKeepsShowing() {
+        slowFiles += "pyodide.asm.wasm"
+        val cancelled = setup.installCore()!!
+
+        setup.cancel()
+        val second = setup.installCore()
+        runBlocking { cancelled.join() }
+
+        assertNotNull(second)
+        assertNotNull(setup.state.value.download)
+        second!!.cancel()
+    }
+
+    @Test
     fun theDataAddOnInstallsTheCoreFirst() {
         runBlocking { setup.installDataAddOn()!!.join() }
 

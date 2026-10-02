@@ -937,7 +937,7 @@ download at a time in the application scope (leaving the screen does not
 stop it) and reads the state back from the files after every change.
 Removing packages also removes the installed packages that need them,
 and their dependencies no other installed package needs
-(`PyodideFolder.removePackages`). Code tests: PythonSetupTest (14),
+(`PyodideFolder.removePackages`). Code tests: PythonSetupTest (15),
 PyodideInstallerTest (3 new). Outcome: pending.
 
 ## D-094 · 2026-10-03 · Just-in-time Python install card from the saved step — proposed

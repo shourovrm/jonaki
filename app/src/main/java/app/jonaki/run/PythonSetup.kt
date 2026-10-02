@@ -76,6 +76,8 @@ class PythonSetup(
     private val mutableState = MutableStateFlow(PythonState())
     val state: StateFlow<PythonState> = mutableState.asStateFlow()
 
+    // Set from the screens and cleared from the download's own coroutine.
+    @Volatile
     private var downloadJob: Job? = null
 
     val release: PyodideRelease get() = folder.release
@@ -161,13 +163,17 @@ class PythonSetup(
             current.copy(download = PythonDownload(packageNames, doneBytes = 0, totalBytes = totalBytes), problem = null)
         }
         val job = scope.launch {
+            val ownJob = coroutineContext[Job]
             val result = download(packageNames)
             // A cancelled call can end as an IOException, which is the user's Cancel, not a problem.
             val problem = if (isActive) (result as? InstallResult.Failed)?.message else null
             // Saved even when Cancel arrives at the last moment, so the state matches the files.
             withContext(NonCancellable) {
-                mutableState.update { current ->
-                    current.copy(download = null, problem = problem, problemPackages = packageNames)
+                // After Cancel a newer download may already show; this one must not clear it.
+                if (downloadJob === ownJob) {
+                    mutableState.update { current ->
+                        current.copy(download = null, problem = problem, problemPackages = packageNames)
+                    }
                 }
                 refresh()
             }
