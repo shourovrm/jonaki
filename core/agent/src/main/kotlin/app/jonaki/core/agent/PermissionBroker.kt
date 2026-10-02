@@ -3,6 +3,8 @@ package app.jonaki.core.agent
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 /** What the user answered on an approval card. */
 enum class ApprovalDecision {
@@ -46,6 +48,9 @@ class PermissionBroker(
         if (!needsApproval) {
             return true
         }
+        if (tool.isReadOnlyCall(argumentsOf(toolCall))) {
+            return true
+        }
         if (tool.name in allowedTools) {
             return true
         }
@@ -59,4 +64,9 @@ class PermissionBroker(
             ApprovalDecision.DENY -> false
         }
     }
+
+    /** Unreadable arguments count as no arguments, so the call is not taken for read-only. */
+    private fun argumentsOf(toolCall: ToolCall): JsonObject =
+        runCatching { Json.parseToJsonElement(toolCall.argumentsJson) as? JsonObject }.getOrNull()
+            ?: JsonObject(emptyMap())
 }

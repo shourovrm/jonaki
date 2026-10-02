@@ -1,7 +1,10 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.toolapi.SideEffect
+import app.jonaki.core.toolapi.Tool
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -29,6 +32,21 @@ class PermissionBrokerTest {
         assertTrue(broker.mayRun(memory, call("1", "memory")))
         assertTrue(approver.requests.isEmpty())
         assertTrue(broker.toolsAllowedForThread.isEmpty())
+    }
+
+    @Test
+    fun aReadOnlyCallOfAChangingToolRunsWithoutAsking() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver)
+        val proxy = object : Tool by FakeTool("mcp", sideEffect = SideEffect.CHANGES) {
+            override fun isReadOnlyCall(arguments: JsonObject): Boolean =
+                arguments["action"]?.jsonPrimitive?.content == "search"
+        }
+
+        assertTrue(broker.mayRun(proxy, call("1", "mcp", "action" to "search")))
+        assertTrue(approver.requests.isEmpty())
+        assertFalse(broker.mayRun(proxy, call("2", "mcp", "action" to "call")))
+        assertEquals(1, approver.requests.size)
     }
 
     @Test

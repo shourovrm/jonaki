@@ -30,6 +30,13 @@ interface Tool {
     val timeLimit: Duration
 
     suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput
+
+    /**
+     * True when this one call only reads, even though the tool can change
+     * things; such a call runs without an approval card. The mcp tool's
+     * search and describe only read, its call does not (D-MCP-3).
+     */
+    fun isReadOnlyCall(arguments: JsonObject): Boolean = sideEffect == SideEffect.READ_ONLY
 }
 
 /** Whether a tool only reads, or changes something and so needs approval. */
