@@ -45,9 +45,25 @@ object UsageFormat {
         return percent.coerceIn(1, 100)
     }
 
-    /** Model prices per million tokens, input then output. */
-    fun pricePerMillion(inputUsd: Double, outputUsd: Double): String =
-        String.format(Locale.ENGLISH, "$%.2f / $%.2f", inputUsd, outputUsd)
+    /**
+     * One price per million tokens: two decimals, or three when a cheap cached
+     * price would otherwise round to the same cent; a dash when unknown.
+     */
+    fun price(usdPerMillion: Double?): String {
+        if (usdPerMillion == null) {
+            return UNKNOWN
+        }
+        val hasSubCentPart = (usdPerMillion * 1000).roundToInt() % 10 != 0
+        val decimals = if (hasSubCentPart && usdPerMillion < 0.1) 3 else 2
+        return "$" + String.format(Locale.ENGLISH, "%.${decimals}f", usdPerMillion)
+    }
+
+    /** A usage tile's count: exact while it fits a third of a phone's width, short form above. */
+    fun tileTokens(tokens: Int): String =
+        if (tokens < EXACT_TILE_LIMIT) exactTokens(tokens) else tokenCount(tokens)
+
+    private const val UNKNOWN = "–"
+    private const val EXACT_TILE_LIMIT = 100_000
 
     private fun trimmedOneDecimal(value: Double): String {
         val rounded = (value * 10).roundToInt() / 10.0

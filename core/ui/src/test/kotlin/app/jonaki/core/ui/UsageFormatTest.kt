@@ -52,8 +52,18 @@ class UsageFormatTest {
     }
 
     @Test
-    fun priceIsPerMillionInAndOut() {
-        assertEquals("$0.10 / $0.40", UsageFormat.pricePerMillion(0.10, 0.40))
-        assertEquals("$3.00 / $15.00", UsageFormat.pricePerMillion(3.0, 15.0))
+    fun onePriceShowsTwoDecimalsOrADashWhenUnknown() {
+        assertEquals("$0.10", UsageFormat.price(0.10))
+        assertEquals("$15.00", UsageFormat.price(15.0))
+        assertEquals("$0.025", UsageFormat.price(0.025))
+        assertEquals("–", UsageFormat.price(null))
+    }
+
+    @Test
+    fun tileCountIsExactUntilItGetsTooWide() {
+        assertEquals("48,210", UsageFormat.tileTokens(48_210))
+        assertEquals("99,999", UsageFormat.tileTokens(99_999))
+        assertEquals("131K", UsageFormat.tileTokens(131_072))
+        assertEquals("1.2M", UsageFormat.tileTokens(1_234_567))
     }
 }

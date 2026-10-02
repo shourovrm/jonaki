@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * The few Material icons that the core icon set lacks. The extended icon
- * library is a large download for three glyphs, so their paths live here.
+ * library is a large download for a handful of glyphs, so their paths live here.
  */
 object JonakiIcons {
     val Stop: ImageVector by lazy { icon("Stop", "M8,6h8c1.1,0 2,0.9 2,2v8c0,1.1 -0.9,2 -2,2H8c-1.1,0 -2,-0.9 -2,-2V8c0,-1.1 0.9,-2 2,-2z") }
@@ -37,6 +37,25 @@ object JonakiIcons {
 
     val ArrowUpward: ImageVector by lazy {
         icon("ArrowUpward", "M4,12l1.41,1.41L11,7.83V20h2V7.83l5.58,5.59L20,12l-8,-8 -8,8z")
+    }
+
+    /** Material "memory" (a chip): the context window in the status strip. */
+    val Memory: ImageVector by lazy {
+        icon(
+            "Memory",
+            "M15,9H9v6h6V9zm-2,4h-2v-2h2v2zm8,-2V9h-2V7c0,-1.1 -0.9,-2 -2,-2h-2V3h-2v2h-2V3H9v2H7c-1.1,0 -2,0.9 -2,2v2H3v2h2v2H3v2h2v2" +
+                "c0,1.1 0.9,2 2,2h2v2h2v-2h2v2h2v-2h2c1.1,0 2,-0.9 2,-2v-2h2v-2h-2v-2h2zm-4,6H7V7h10v10z",
+        )
+    }
+
+    /** Material "payments" (banknotes): cost in the status strip. */
+    val Payments: ImageVector by lazy {
+        icon(
+            "Payments",
+            "M19,14V6c0,-1.1 -0.9,-2 -2,-2H3c-1.1,0 -2,0.9 -2,2v8c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2z" +
+                "m-9,-1c-1.66,0 -3,-1.34 -3,-3s1.34,-3 3,-3 3,1.34 3,3 -1.34,3 -3,3z" +
+                "m13,-6v11c0,1.1 -0.9,2 -2,2H4v-2h17V7h2z",
+        )
     }
 
     private fun icon(name: String, pathData: String): ImageVector =

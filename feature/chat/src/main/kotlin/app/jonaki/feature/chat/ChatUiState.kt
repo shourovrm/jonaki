@@ -13,6 +13,54 @@ data class ChatUiState(
     /** True while the agent works on this thread; the Send button becomes Stop. */
     val isRunning: Boolean,
     val draft: String,
+    /** The strip above the message field (D-027); null hides it. */
+    val status: ChatStatusUi? = null,
+    /** The scoped models offered in the model sheet, in the user's order. */
+    val modelChoices: List<ModelChoiceUi> = emptyList(),
+    val selectedModelKey: String? = null,
+    /** What the usage sheet shows; null disables tapping the cost. */
+    val usage: UsageUi? = null,
+)
+
+/** The model, context and cost of this thread, shown as pills above the message field. */
+@Immutable
+data class ChatStatusUi(
+    val modelName: String,
+    /** Null when the model's context window is unknown; the context pills are then hidden. */
+    val contextWindowTokens: Int?,
+    /** Input tokens of the latest request, which is what the next request starts from. */
+    val contextUsedTokens: Int,
+    val costUsd: Double,
+)
+
+/** One scoped model in the model sheet. Prices are US dollars per million tokens, when known. */
+@Immutable
+data class ModelChoiceUi(
+    /** Stable id the app uses, for example "openrouter:z-ai/glm-5.3-flash". */
+    val key: String,
+    val name: String,
+    val serviceName: String,
+    val inputPricePerMillion: Double? = null,
+    val outputPricePerMillion: Double? = null,
+    /** Price of input tokens served from the provider's cache. */
+    val cachedInputPricePerMillion: Double? = null,
+)
+
+/** Token and cost totals of one thread for the usage sheet. */
+@Immutable
+data class UsageUi(
+    val totalCostUsd: Double,
+    val inputTokens: Int,
+    val cachedTokens: Int,
+    val outputTokens: Int,
+    val perModel: List<ModelUsageUi>,
+)
+
+@Immutable
+data class ModelUsageUi(
+    val modelName: String,
+    val turns: Int,
+    val costUsd: Double,
 )
 
 /** One entry in the message list, in display order. */
@@ -24,7 +72,13 @@ sealed interface ChatItem {
     data class AssistantMessage(override val id: String, val markdown: String, val isStreaming: Boolean) : ChatItem
 
     /** The tool steps of one agent turn, drawn as a track with one station per step. */
-    data class Run(override val id: String, val steps: List<StepUi>, val isActive: Boolean) : ChatItem
+    data class Run(
+        override val id: String,
+        val steps: List<StepUi>,
+        val isActive: Boolean,
+        /** Cost of this turn's model calls; shown on the folded summary line when known. */
+        val costUsd: Double? = null,
+    ) : ChatItem
 
     /** A tool that changes something and waits for the user (D-015 permission broker). */
     data class Approval(

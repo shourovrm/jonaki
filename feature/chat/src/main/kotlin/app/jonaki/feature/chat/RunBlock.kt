@@ -39,6 +39,7 @@ import app.jonaki.core.ui.DotStyle
 import app.jonaki.core.ui.GlowDot
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
+import app.jonaki.core.ui.UsageFormat
 
 private val TrackColumnWidth = 24.dp
 
@@ -107,6 +108,15 @@ private fun RunHeader(run: ChatItem.Run, open: Boolean, onToggle: () -> Unit) {
                 style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            val cost = run.costUsd
+            if (cost != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    UsageFormat.cost(cost),
+                    style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         Spacer(Modifier.weight(1f))
         if (!run.isActive) {
