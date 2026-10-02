@@ -42,6 +42,7 @@ import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ChatService
+import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
@@ -81,6 +82,7 @@ class AgentRunner(
     private val threadCompactor: ThreadCompactor,
     private val skillLibrary: SkillLibrary,
     private val fileDestinations: FileDestinations,
+    private val mcpServers: McpServerStore,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -337,6 +339,8 @@ class AgentRunner(
                 memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
                 fileDestinations = fileDestinations,
                 modelAcceptsImages = modelAcceptsImages,
+                mcpServers = mcpServers.forTools(),
+                mcpToolListFolder = mcpServers.toolListFolder,
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()

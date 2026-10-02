@@ -591,3 +591,59 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-MCP-1 · 2026-10-03 · MCP client on OkHttp, one session per tool run — proposed
+`tools/mcp` speaks MCP Streamable HTTP itself on OkHttp and
+kotlinx.serialization; the official Kotlin SDK would force a Kotlin upgrade.
+Each POST carries one JSON-RPC 2.0 message with `Accept: application/json,
+text/event-stream`; an answer may be one JSON object or an event stream, in
+which the client skips the server's own notifications until the answer with
+its id. Order: initialize (asks for 2025-06-18), notifications/initialized,
+then tools/list (follows nextCursor, at most 20 pages) or tools/call. The
+`Mcp-Session-Id` from initialize goes on every later request, with
+`MCP-Protocol-Version` set to the version the server answered. HTTP 404 on a
+session opens a new one once; the session ends with DELETE (405 ignored). An
+optional header per server (name and value) goes on every request. Each run
+of the tool opens and closes its own session, so nothing outlives a call
+(AGENTS.md: no hidden state); the cost is two extra round trips per call.
+Live check (2026-10-03, `DeepWikiLiveTest`, no key, no cost): against
+https://mcp.deepwiki.com/mcp search found read_wiki_structure, describe showed
+repoName, and the call returned square/okhttp's page list in 5.7 s; DeepWiki
+answers as an event stream and gives no session id. Outcome: pending.
+
+## D-MCP-2 · 2026-10-03 · MCP tool lists cached in files for a day — proposed
+Each server's tools/list answer is saved as `files/mcp-tools/<server id>.json`
+with its address and fetch time. search and describe read it while it is
+under 24 hours old and from the same address; otherwise they fetch it again.
+describe of a tool missing from a cached list fetches once more. A call the
+server refuses with a JSON-RPC error (unknown tool, bad arguments) fetches
+the list on the same session, saves it, and tells the model whether the tool
+still exists. Saving or removing a server in Settings deletes its file. Why:
+search should not cost a connection per server on every use. Rejected: a
+Room table (schema change for data that is only a cache). Outcome: pending.
+
+## D-MCP-3 · 2026-10-03 · mcp tool: read-only search and describe, approved call — proposed
+One tool `mcp` with action search (keywords over every server's tools; a word
+in the name counts 3, in the description 1; blank lists all; default 10
+results, at most 50), describe (full description and input schema) and call
+(arguments as a JSON object, or JSON text). Results over 30,000 characters
+go through OutputLimiter; images and audio become "[image/png image, not
+shown]". The tool declares `SideEffect.CHANGES`; a new
+`Tool.isReadOnlyCall(arguments)` (default: sideEffect is READ_ONLY) lets the
+permission broker run search and describe without a card, while call shows
+the existing card with "server: tool". "Allow in thread" then covers every
+mcp call in that thread. For the coming approval modes, mcp counts as
+leaving the app: Auto asks, only Bypass skips the card. The tool is offered
+only when at least one server exists; its prompt line names the servers.
+Changes D-034's "one tool has one cost" for this tool. Outcome: pending.
+
+## D-MCP-4 · 2026-10-03 · MCP servers in Settings — proposed
+Settings has an "MCP servers" group between Skills and Files: one row per
+server (name on one line, URL up to two lines), and "Add server". A dialog
+takes Name, URL, Header (optional) and Header value; it checks for a name,
+a name not used by another server (case ignored, since the model names
+servers) and an http or https URL; edit offers "Remove server". The list is
+JSON in app preferences; header values are encrypted with the API keys'
+Keystore key (`SecretStore` run-time secrets) and never shown again; the
+value field then says "Saved" and empty keeps it. A value with no header
+name is sent as Authorization. Outcome: pending.

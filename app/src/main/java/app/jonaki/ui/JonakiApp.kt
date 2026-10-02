@@ -53,6 +53,7 @@ import app.jonaki.feature.settings.AddableModelUi
 import app.jonaki.feature.settings.AddableServiceUi
 import app.jonaki.feature.settings.ChatServiceCardUi
 import app.jonaki.feature.settings.KeySlot
+import app.jonaki.feature.settings.McpServerUi
 import app.jonaki.feature.settings.RoutingUi
 import app.jonaki.feature.settings.SearchServiceRow
 import app.jonaki.feature.settings.ServiceModelUi
@@ -627,6 +628,7 @@ private fun SettingsRoute(
         leftAndMonth = { left, month -> application.getString(R.string.balance_left_and_month, left, month) },
     )
     val linkedFolder by application.linkedFolder.current.collectAsState()
+    val mcpServers by application.mcpServers.servers.collectAsState()
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
         if (treeUri != null) {
             linkFolder(application, treeUri)
@@ -657,6 +659,9 @@ private fun SettingsRoute(
         themeMode = themeModeOf(snapshot.theme),
         showStatusStrip = snapshot.showStatusStrip,
         linkedFolderName = linkedFolder?.name,
+        mcpServers = mcpServers.map { server ->
+            McpServerUi(server.id, server.name, server.url, server.headerName, application.mcpServers.hasHeaderValue(server.id))
+        },
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -704,6 +709,10 @@ private fun SettingsRoute(
                 current.copy(thinkingLevels = levels)
             }
         },
+        onMcpServerSave = { input ->
+            application.mcpServers.save(input.id, input.name, input.url, input.headerName, input.headerValue)
+        },
+        onMcpServerRemove = { id -> application.mcpServers.remove(id) },
     )
     SettingsScreen(state = state, actions = actions)
 }

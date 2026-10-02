@@ -5,6 +5,8 @@ import app.jonaki.core.toolapi.Tool
 import app.jonaki.tools.artifact.ArtifactTool
 import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.findfiles.FindFilesTool
+import app.jonaki.tools.mcp.McpServer
+import app.jonaki.tools.mcp.McpTool
 import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.MemoryTool
 import app.jonaki.tools.readdocument.ReadDocumentTool
@@ -18,6 +20,7 @@ import app.jonaki.tools.websearch.WebSearchTool
 import app.jonaki.tools.writefile.WriteFileTool
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import app.jonaki.tools.youtubesummarize.YouTubeSummarizeTool
+import java.io.File
 
 /** What the optional tools need; built from the user's keys and the thread's settings. */
 data class ToolServices(
@@ -33,6 +36,10 @@ data class ToolServices(
     val fileDestinations: FileDestinations? = null,
     /** From the model catalog; view_image is offered only to models that take images (D-050). */
     val modelAcceptsImages: Boolean = false,
+    /** Servers from Settings; none leaves the mcp tool out (D-MCP-3). */
+    val mcpServers: List<McpServer> = emptyList(),
+    /** Where the mcp tool caches tool lists (D-MCP-2). */
+    val mcpToolListFolder: File? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -64,6 +71,9 @@ object ToolRegistry {
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)
+        }
+        if (services.mcpServers.isNotEmpty() && services.mcpToolListFolder != null) {
+            tools += McpTool(services.mcpServers, services.mcpToolListFolder)
         }
         return tools
     }

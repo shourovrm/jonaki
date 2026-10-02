@@ -3,6 +3,7 @@ package app.jonaki
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.searchapi.SearchOutcome
 import app.jonaki.core.searchapi.SearchQuery
+import app.jonaki.tools.mcp.McpServer
 import app.jonaki.tools.memory.Fact
 import app.jonaki.tools.memory.FactScope
 import app.jonaki.tools.memory.ForgetResult
@@ -115,5 +116,13 @@ class ToolRegistryTest {
         val names = namesFor(everything.copy(modelAcceptsImages = false)).toSet()
         assertEquals(false, "view_image" in names)
         assertEquals(true, "read_document" in names)
+    }
+
+    @Test
+    fun mcpNeedsAtLeastOneServer() {
+        val folder = File("unused")
+        val server = McpServer(id = "a", name = "deepwiki", url = "https://mcp.deepwiki.com/mcp")
+        assertEquals(false, "mcp" in namesFor(everything.copy(mcpToolListFolder = folder)))
+        assertEquals(true, "mcp" in namesFor(everything.copy(mcpServers = listOf(server), mcpToolListFolder = folder)))
     }
 }

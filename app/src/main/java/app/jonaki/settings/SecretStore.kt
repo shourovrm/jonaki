@@ -45,15 +45,7 @@ class SecretStore(context: Context) {
     /** For each saved key, its first three characters and a mask (D-028); never the whole key. */
     val previews: StateFlow<Map<SecretName, String>> = savedPreviews.asStateFlow()
 
-    fun read(name: SecretName): String? {
-        val stored = preferences.getString(name.name, null) ?: return null
-        val bytes = Base64.decode(stored, Base64.NO_WRAP)
-        val initializationVector = bytes.copyOfRange(0, IV_LENGTH)
-        val cipherText = bytes.copyOfRange(IV_LENGTH, bytes.size)
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(TAG_BITS, initializationVector))
-        return String(cipher.doFinal(cipherText), Charsets.UTF_8)
-    }
+    fun read(name: SecretName): String? = decrypt(name.name)
 
     fun save(name: SecretName, value: String) {
         val trimmed = value.trim()
@@ -61,10 +53,7 @@ class SecretStore(context: Context) {
             remove(name)
             return
         }
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, keystoreKey())
-        val stored = cipher.iv + cipher.doFinal(trimmed.toByteArray(Charsets.UTF_8))
-        preferences.edit().putString(name.name, Base64.encodeToString(stored, Base64.NO_WRAP)).apply()
+        encrypt(name.name, trimmed)
         savedNames.value = readSavedNames()
         savedPreviews.value = savedPreviews.value + (name to maskedKeyPreview(trimmed))
     }
@@ -73,6 +62,47 @@ class SecretStore(context: Context) {
         preferences.edit().remove(name.name).apply()
         savedNames.value = readSavedNames()
         savedPreviews.value = savedPreviews.value - name
+    }
+
+    /**
+     * Secrets whose names are made at run time, such as the header of each
+     * MCP server (D-MCP-4). They are encrypted like the API keys but are not
+     * part of [names] or [previews].
+     */
+    fun readRuntimeSecret(name: String): String? =
+        runCatching { decrypt(RUNTIME_PREFIX + name) }.getOrNull()
+
+    /** Checks without decrypting, so a screen can ask on every frame. */
+    fun hasRuntimeSecret(name: String): Boolean = preferences.contains(RUNTIME_PREFIX + name)
+
+    fun saveRuntimeSecret(name: String, value: String) {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) {
+            removeRuntimeSecret(name)
+            return
+        }
+        encrypt(RUNTIME_PREFIX + name, trimmed)
+    }
+
+    fun removeRuntimeSecret(name: String) {
+        preferences.edit().remove(RUNTIME_PREFIX + name).apply()
+    }
+
+    private fun decrypt(preferenceKey: String): String? {
+        val stored = preferences.getString(preferenceKey, null) ?: return null
+        val bytes = Base64.decode(stored, Base64.NO_WRAP)
+        val initializationVector = bytes.copyOfRange(0, IV_LENGTH)
+        val cipherText = bytes.copyOfRange(IV_LENGTH, bytes.size)
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(TAG_BITS, initializationVector))
+        return String(cipher.doFinal(cipherText), Charsets.UTF_8)
+    }
+
+    private fun encrypt(preferenceKey: String, value: String) {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, keystoreKey())
+        val stored = cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+        preferences.edit().putString(preferenceKey, Base64.encodeToString(stored, Base64.NO_WRAP)).apply()
     }
 
     private fun readSavedNames(): Set<SecretName> =
@@ -108,5 +138,8 @@ class SecretStore(context: Context) {
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_LENGTH = 12
         const val TAG_BITS = 128
+
+        /** Keeps run-time names apart from the [SecretName] entries in the same preferences file. */
+        const val RUNTIME_PREFIX = "runtime:"
     }
 }
