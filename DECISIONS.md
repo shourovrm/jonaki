@@ -724,3 +724,25 @@ changes D-060's "each subagent's calls run one after another"). The run's
 folded line counts overlapping steps' time once. Code:
 `ToolCallScheduler` in core/agent; tests in `ParallelToolCallsTest`.
 Outcome: pending (not checked on a device).
+
+## D-081 · 2026-10-03 · Context sheet on the ring pill — proposed
+Tapping the context ring in the status strip opens a sheet like Claude
+Code's /context (user request, 2026-10-03): percent used, "N of M tokens",
+a bar, then one row per part with tokens and percent of the window: System
+prompt, Tool definitions (prompt lines, guidelines and schemas, with the
+tool count), Skills (count), Memory (fact count), Summary of older
+messages (with the messages it covers), Messages, Tool results, Images,
+Free; then "Older messages are summarised at 70 % (N tokens)", from
+`CompactionPlan.thresholdTokens`, the compactor's own check. The total is
+the input count the service reported for the latest request, which the
+ring already shows; the split is an estimate: each part is measured in
+characters (4 per token; 1,500 tokens per image, as images are shrunk to
+1,568 pixels) from the pieces the next request would send (the runner's
+tools, sections and history after compaction, without marking memory as
+used), then scaled to that total. Before the first request everything is
+estimated and the sheet says so. No token counter exists in the
+repository, so none was reused. Code: `ContextBreakdown` (core/agent, JVM
+tests), `AgentRunner.contextBreakdown`, `ContextSheet`. Limit: the parts
+describe the next request, the total the last one, so they differ by the
+last answer and any compaction since. Outcome: pending (not checked on a
+device).

@@ -45,7 +45,7 @@ class SubagentRunner(
 ) : SubagentLauncher {
     private val givableTools: List<Tool> = threadTools.filter { tool -> tool.name !in AgentTypes.NEVER_GIVEN }
 
-    override val agentTypes: List<SubagentTypeInfo> = AgentTypes.ALL.map { type -> SubagentTypeInfo(type.name, type.description) }
+    override val agentTypes: List<SubagentTypeInfo> = AGENT_TYPES
 
     override val models: List<SubagentModelInfo>
         get() = subagentModels.scoped
@@ -142,6 +142,9 @@ class SubagentRunner(
     private fun safeFileName(id: String): String = id.replace(Regex("[^A-Za-z0-9_-]"), "_")
 
     companion object {
+        /** The built-in types as the delegate tool lists them. */
+        val AGENT_TYPES: List<SubagentTypeInfo> = AgentTypes.ALL.map { type -> SubagentTypeInfo(type.name, type.description) }
+
         /** Relative to the thread folder. */
         const val DELEGATIONS_FOLDER = "work/delegations"
 

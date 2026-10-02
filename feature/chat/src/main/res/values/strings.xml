@@ -57,6 +57,40 @@
         <item quantity="one">%1$d turn</item>
         <item quantity="other">%1$d turns</item>
     </plurals>
+    <string name="chat_context_sheet_title">Context</string>
+    <string name="chat_context_total">%1$s of %2$s tokens</string>
+    <string name="chat_context_system_prompt">System prompt</string>
+    <string name="chat_context_tools">Tool definitions</string>
+    <string name="chat_context_skills">Skills</string>
+    <string name="chat_context_memory">Memory</string>
+    <string name="chat_context_summary">Summary of older messages</string>
+    <string name="chat_context_messages">Messages</string>
+    <string name="chat_context_tool_results">Tool results</string>
+    <string name="chat_context_images">Images</string>
+    <string name="chat_context_free">Free</string>
+    <plurals name="chat_context_tool_count">
+        <item quantity="one">%d tool</item>
+        <item quantity="other">%d tools</item>
+    </plurals>
+    <plurals name="chat_context_skill_count">
+        <item quantity="one">%d skill</item>
+        <item quantity="other">%d skills</item>
+    </plurals>
+    <plurals name="chat_context_fact_count">
+        <item quantity="one">%d fact</item>
+        <item quantity="other">%d facts</item>
+    </plurals>
+    <plurals name="chat_context_summary_covers">
+        <item quantity="one">Covers %d message</item>
+        <item quantity="other">Covers %d messages</item>
+    </plurals>
+    <plurals name="chat_context_image_count">
+        <item quantity="one">%d image</item>
+        <item quantity="other">%d images</item>
+    </plurals>
+    <string name="chat_context_estimated">Total from the last request. Split estimated.</string>
+    <string name="chat_context_no_request">Estimated. No request yet.</string>
+    <string name="chat_context_compact_at">Older messages are summarised at %1$d%% (%2$s tokens).</string>
     <string name="chat_usage_footnote">OpenRouter reports cost; others are priced from token counts.</string>
     <string name="chat_artifact_open">Open</string>
     <string name="chat_working_thinking">Thinking…</string>

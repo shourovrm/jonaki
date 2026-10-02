@@ -47,6 +47,8 @@ internal fun StatusStrip(
     onModelClick: () -> Unit,
     onCostClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    /** Opens the context sheet (D-081); null leaves the ring pill without a tap. */
+    onContextClick: (() -> Unit)? = null,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -62,7 +64,7 @@ internal fun StatusStrip(
                 PillNumber(windowText)
             }
             val percent = UsageFormat.percentUsed(status.contextUsedTokens, window)
-            Pill(description = stringResource(R.string.chat_status_context_used, percent)) {
+            Pill(description = stringResource(R.string.chat_status_context_used, percent), onClick = onContextClick) {
                 ContextRing(percent)
                 PillNumber("$percent%")
             }

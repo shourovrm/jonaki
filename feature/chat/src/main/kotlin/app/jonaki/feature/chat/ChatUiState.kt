@@ -31,6 +31,8 @@ data class ChatUiState(
     /** This thread's own approval mode; null follows [defaultApprovalMode] from Settings (D-058). */
     val threadApprovalMode: ApprovalModeChoice? = null,
     val defaultApprovalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
+    /** What the context sheet shows; null while it is being worked out (D-081). */
+    val context: ContextUi? = null,
 )
 
 /** A file waiting to go into the thread's inbox/ with the next message. */
@@ -52,6 +54,36 @@ data class ChatStatusUi(
     /** The thread runs in Bypass mode: no tool asks first, so the strip shows a marker (D-058). */
     val bypassApprovals: Boolean = false,
 )
+
+/** How the context window is used, like Claude Code's /context (D-081). */
+@Immutable
+data class ContextUi(
+    val windowTokens: Int,
+    /** The service's count for the latest request, or an estimate before the first one. */
+    val usedTokens: Int,
+    /** False before the first request: the total is then estimated too. */
+    val totalIsReported: Boolean,
+    /** Estimated parts that add up to [usedTokens]. */
+    val parts: List<ContextPartUi>,
+    val freeTokens: Int,
+    /** Older messages are summarised after a run whose last request reached this many tokens (D-033). */
+    val compactAtTokens: Int,
+)
+
+/** [count] is shown beside the label: tools, skills, facts, images, or messages a summary covers. */
+@Immutable
+data class ContextPartUi(val kind: ContextPartUiKind, val tokens: Int, val count: Int? = null)
+
+enum class ContextPartUiKind {
+    SYSTEM_PROMPT,
+    TOOLS,
+    SKILLS,
+    MEMORY,
+    SUMMARY,
+    MESSAGES,
+    TOOL_RESULTS,
+    IMAGES,
+}
 
 /** One scoped model in the model sheet. Prices are US dollars per million tokens, when known. */
 @Immutable

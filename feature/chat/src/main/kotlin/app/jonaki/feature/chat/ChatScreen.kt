@@ -114,6 +114,8 @@ fun ChatScreen(
     onThinkingChange: (ThinkingChoice) -> Unit = {},
     /** An approval mode picked for this thread in the menu; null follows Settings (D-058). */
     onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
+    /** The ring pill: the app works out [ChatUiState.context] for the sheet; null leaves the pill without a tap. */
+    onOpenContext: (() -> Unit)? = null,
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
@@ -140,6 +142,12 @@ fun ChatScreen(
                         isRunning = state.isRunning,
                         onModelClick = { openSheet = ChatSheet.MODEL },
                         onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
+                        onContextClick = onOpenContext?.let { openContext ->
+                            {
+                                openSheet = ChatSheet.CONTEXT
+                                openContext()
+                            }
+                        },
                     )
                 }
                 if (state.attachments.isNotEmpty()) {
@@ -193,6 +201,7 @@ fun ChatScreen(
             onDismiss = { openSheet = ChatSheet.NONE },
         )
         openSheet == ChatSheet.USAGE && usage != null -> UsageSheet(usage, onDismiss = { openSheet = ChatSheet.NONE })
+        openSheet == ChatSheet.CONTEXT -> ContextSheet(state.context, onDismiss = { openSheet = ChatSheet.NONE })
         openSheet == ChatSheet.APPROVALS -> ApprovalModeDialog(
             selected = state.threadApprovalMode,
             defaultChoice = state.defaultApprovalMode,
@@ -210,6 +219,7 @@ private enum class ChatSheet {
     MODEL,
     USAGE,
     APPROVALS,
+    CONTEXT,
 }
 
 /** Follow Settings, or this thread's own mode (D-058). */

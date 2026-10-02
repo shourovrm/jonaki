@@ -9,6 +9,14 @@ import androidx.core.content.ContextCompat
 import app.jonaki.ToolRegistry
 import app.jonaki.ToolServices
 import app.jonaki.core.agent.AgentLoop
+import app.jonaki.core.agent.ContextBreakdown
+import app.jonaki.core.agent.PromptSkill
+import app.jonaki.core.model.ImagePart
+import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentModelInfo
+import app.jonaki.core.toolapi.SubagentReport
+import app.jonaki.core.toolapi.SubagentTask
+import app.jonaki.core.toolapi.SubagentTypeInfo
 import app.jonaki.core.agent.AgentSettings
 import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.agent.ApprovalMode
@@ -375,14 +383,7 @@ class AgentRunner(
         // Unknown models count as not taking images (D-049).
         val modelAcceptsImages = catalog.find(modelKey)?.acceptsImages == true
         val threadFolder = ThreadFolders.create(context, threadId)
-        val toolServices = ToolServices(
-            searchBackends = searchBackends(snapshot.searchOrder),
-            videoSummarizer = videoSummarizer(),
-            webAccessEnabled = thread.webSearchEnabled,
-            memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
-            fileDestinations = fileDestinations,
-            modelAcceptsImages = modelAcceptsImages,
-        )
+        val toolServices = toolServicesFor(thread, modelAcceptsImages)
         val threadTools = ToolRegistry.tools(toolServices)
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
         threadApprovalModes[threadId] = thread.approvalMode.orEmpty()
@@ -446,6 +447,56 @@ class AgentRunner(
         }
     }
 
+    /** What the thread's tools need, from the user's keys and the thread's switches. */
+    private fun toolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices = ToolServices(
+        searchBackends = searchBackends(settings.snapshot.value.searchOrder),
+        videoSummarizer = videoSummarizer(),
+        webAccessEnabled = thread.webSearchEnabled,
+        memoryStore = RoomMemoryStore(database, thread.id, System::currentTimeMillis),
+        fileDestinations = fileDestinations,
+        modelAcceptsImages = modelAcceptsImages,
+    )
+
+    /**
+     * The pieces the thread's next request would send, for the context
+     * sheet (D-081): the same tools, sections and history as [runOnce]
+     * builds, without its side effects. Null for a thread not yet created.
+     */
+    suspend fun contextBreakdown(threadId: String): ContextBreakdown? {
+        val thread = database.threadDao().find(threadId) ?: return null
+        val modelKey = modelKeyFor(thread)
+        val modelAcceptsImages = modelKey?.let { key -> catalog.find(key)?.acceptsImages } == true
+        val tools = ToolRegistry.tools(toolServicesFor(thread, modelAcceptsImages)) + ToolRegistry.delegateTool(PromptOnlySubagents)
+        val memory = MemorySection.build(promptFactsOf(threadId))
+        val skills = enabledSkillsOf(thread)
+        val rows = database.messageDao().listThread(threadId)
+        val summary = database.compactionDao().latestForThread(threadId)
+        val history = CompactionPlan.historyAfter(rows, summary?.summaryText, summary?.upToPosition)
+        // Images are counted, not loaded: a placeholder stands for each one the request would carry.
+        val withImages = ImageMessages({ ImagePart("image/jpeg", "") }, modelAcceptsImages).prepare(history)
+        return ContextBreakdown(
+            basePrompt = SystemPrompt.BASE,
+            tools = tools,
+            skillSection = SkillSection.build(skills),
+            skillCount = skills.size,
+            memorySection = memory.text,
+            factCount = memory.includedIds.size,
+            messages = withImages,
+            summaryBlock = summary?.let { compaction -> CompactionPlan.summaryBlock(compaction.summaryText) },
+            summaryCoversMessages = summary?.let { compaction -> CompactionPlan.coveredMessageCount(rows, compaction.upToPosition) } ?: 0,
+        )
+    }
+
+    /** Stands in for the subagent runner where only the delegate tool's prompt text is needed. */
+    private object PromptOnlySubagents : SubagentLauncher {
+        override val agentTypes: List<SubagentTypeInfo> = SubagentRunner.AGENT_TYPES
+        override val models: List<SubagentModelInfo> = emptyList()
+        override val extraToolNames: List<String> = emptyList()
+
+        override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> =
+            error("PromptOnlySubagents never runs subagents")
+    }
+
     /**
      * A subagent's ask_parent (D-063): one call on the thread's model with
      * the thread's conversation up to the delegate call, without tools. Its
@@ -485,8 +536,16 @@ class AgentRunner(
      * the memory tool saves during the run reach the next run.
      */
     private suspend fun memorySectionFor(threadId: String): String {
-        val memoryDao = database.memoryDao()
-        val facts = memoryDao.listVisibleFrom(threadId).map { memory ->
+        val section = MemorySection.build(promptFactsOf(threadId))
+        if (section.includedIds.isNotEmpty()) {
+            // Safe for the cache: the section is chosen by use time but written in id order (D-035).
+            database.memoryDao().markUsed(section.includedIds, System.currentTimeMillis())
+        }
+        return section.text
+    }
+
+    private suspend fun promptFactsOf(threadId: String): List<PromptFact> =
+        database.memoryDao().listVisibleFrom(threadId).map { memory ->
             PromptFact(
                 id = memory.id,
                 text = memory.text,
@@ -495,22 +554,17 @@ class AgentRunner(
                 lastUsedAtMillis = memory.lastUsedAtMillis,
             )
         }
-        val section = MemorySection.build(facts)
-        if (section.includedIds.isNotEmpty()) {
-            // Safe for the cache: the section is chosen by use time but written in id order (D-035).
-            memoryDao.markUsed(section.includedIds, System.currentTimeMillis())
-        }
-        return section.text
-    }
 
     /**
      * The thread's enabled skills, read from the library once per run, so
      * the prompt stays the same for every request of the run (D-005). A
      * skill edited or imported during a run reaches the next run.
      */
-    private suspend fun skillSectionFor(thread: ThreadEntity): String {
+    private suspend fun skillSectionFor(thread: ThreadEntity): String = SkillSection.build(enabledSkillsOf(thread))
+
+    private suspend fun enabledSkillsOf(thread: ThreadEntity): List<PromptSkill> {
         val entries = withContext(Dispatchers.IO) { skillLibrary.list() }
-        return SkillSection.build(ThreadSkills.forPrompt(entries, thread.disabledSkills))
+        return ThreadSkills.forPrompt(entries, thread.disabledSkills)
     }
 
     /** Switches one skill on or off for one thread; the next run's prompt follows (D-040). */
