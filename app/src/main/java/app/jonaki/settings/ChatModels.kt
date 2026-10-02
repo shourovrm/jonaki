@@ -20,6 +20,8 @@ enum class ChatService(
     OLLAMA_CLOUD("ollama-cloud", "Ollama Cloud", SecretName.OLLAMA),
     OLLAMA_LOCAL("ollama-local", "Ollama on this network", null),
     OPENAI("openai", "OpenAI", SecretName.OPENAI),
+    MINIMAX("minimax", "MiniMax", SecretName.MINIMAX),
+    QWEN("qwen", "Qwen", SecretName.QWEN),
     ;
 
     companion object {

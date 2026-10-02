@@ -21,6 +21,7 @@ data class StepDetail(
                 "share_file" -> StepDetail(query = null, target = shareFileTarget(arguments.text("action"), arguments.text("path")))
                 "phone" -> StepDetail(query = null, target = phoneTarget(arguments))
                 "schedule" -> StepDetail(query = null, target = scheduleTarget(arguments))
+                "mcp" -> mcpDetail(arguments)
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
@@ -64,6 +65,17 @@ data class StepDetail(
                 return where
             }
             return "$where: $path"
+        }
+
+        /** search shows its words; describe and call show "server: tool", so the approval card names what runs where. */
+        private fun mcpDetail(arguments: JsonObject): StepDetail {
+            if (arguments.text("action") == "search") {
+                return StepDetail(query = arguments.text("query"), target = null)
+            }
+            val server = arguments.text("server")
+            val tool = arguments.text("tool")
+            val target = if (server == null) tool else "$server: ${tool.orEmpty()}"
+            return StepDetail(query = null, target = target)
         }
 
         private fun parse(argumentsJson: String): JsonObject? =

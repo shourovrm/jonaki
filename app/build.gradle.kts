@@ -39,6 +39,7 @@ dependencies {
     implementation(project(":tools:schedule"))
     // Scheduled tasks (plan M9).
     implementation(libs.work.runtime)
+    implementation(project(":tools:mcp"))
     // Only for PDFBoxResourceLoader.init at start; read_document does the reading (D-051).
     implementation(libs.pdfbox.android)
     implementation(project(":core:provider-api"))

@@ -53,6 +53,7 @@ import app.jonaki.feature.settings.AddableModelUi
 import app.jonaki.feature.settings.AddableServiceUi
 import app.jonaki.feature.settings.ChatServiceCardUi
 import app.jonaki.feature.settings.KeySlot
+import app.jonaki.feature.settings.McpServerUi
 import app.jonaki.feature.settings.RoutingUi
 import app.jonaki.feature.settings.SearchServiceRow
 import app.jonaki.feature.settings.ServiceModelUi
@@ -69,6 +70,7 @@ import app.jonaki.feature.threads.ThreadListUiState
 import app.jonaki.feature.threads.ThreadRow
 import app.jonaki.feature.threads.ThreadRunState
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
+import app.jonaki.run.ChatProviders
 import app.jonaki.settings.ChatModels
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.SearchService
@@ -629,6 +631,7 @@ private fun SettingsRoute(
     val linkedFolder by application.linkedFolder.current.collectAsState()
     val reminders by application.reminders.book.reminders.collectAsState()
     val scheduledTasks by application.scheduledTasks.book.tasks.collectAsState()
+    val mcpServers by application.mcpServers.servers.collectAsState()
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
         if (treeUri != null) {
             linkFolder(application, treeUri)
@@ -660,6 +663,9 @@ private fun SettingsRoute(
         showStatusStrip = snapshot.showStatusStrip,
         linkedFolderName = linkedFolder?.name,
         scheduledItems = ScheduledItems.of(application, reminders, scheduledTasks),
+        mcpServers = mcpServers.map { server ->
+            McpServerUi(server.id, server.name, server.url, server.headerName, application.mcpServers.hasHeaderValue(server.id))
+        },
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -708,6 +714,10 @@ private fun SettingsRoute(
                 current.copy(thinkingLevels = levels)
             }
         },
+        onMcpServerSave = { input ->
+            application.mcpServers.save(input.id, input.name, input.url, input.headerName, input.headerValue)
+        },
+        onMcpServerRemove = { id -> application.mcpServers.remove(id) },
     )
     SettingsScreen(state = state, actions = actions)
 }
@@ -785,7 +795,12 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
     }
     val snapshot by application.settings.snapshot.collectAsState()
     val alreadyAdded = snapshot.chatModels.modelsByService[service].orEmpty().toSet()
-    val models = remember(serviceKey) { application.catalog.models(serviceKey) }
+    var models by remember(serviceKey) { mutableStateOf(application.catalog.models(serviceKey)) }
+    LaunchedEffect(serviceKey) {
+        // Services with their own list add the ids they serve today; listing is free (D-MCP-5).
+        refreshServiceModels(application, service)
+        models = application.catalog.models(serviceKey)
+    }
     AddModelsScreen(
         state = AddModelsUiState(
             serviceDisplayName = service.displayName,
@@ -811,6 +826,23 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
     )
 }
 
+/**
+ * Asks the service's GET /models when it has one. A service that needs a
+ * key is asked only once one is saved; Ollama Cloud lists its models to anyone.
+ */
+private suspend fun refreshServiceModels(application: JonakiApplication, service: ChatService) {
+    val preset = ChatProviders.presetOrNull(service) ?: return
+    if (!preset.listsModels) {
+        return
+    }
+    val apiKey = service.secret?.let { secret -> withContext(Dispatchers.IO) { application.secrets.read(secret) } }
+    val mayListWithoutKey = !preset.needsApiKey || service == ChatService.OLLAMA_CLOUD
+    if (apiKey == null && !mayListWithoutKey) {
+        return
+    }
+    application.catalog.refreshServiceModels(service.key, preset.baseUrl, apiKey)
+}
+
 private fun hintFor(service: ChatService): String = when (service) {
     ChatService.OPENROUTER -> "openrouter.ai"
     ChatService.DEEPSEEK -> "deepseek.com"
@@ -820,6 +852,8 @@ private fun hintFor(service: ChatService): String = when (service) {
     ChatService.OLLAMA_CLOUD -> "ollama.com"
     ChatService.OLLAMA_LOCAL -> "localhost:11434"
     ChatService.OPENAI -> "openai.com"
+    ChatService.MINIMAX -> "minimax.io"
+    ChatService.QWEN -> "Alibaba Cloud"
 }
 
 private fun displayNameOf(service: SearchService): String = when (service) {

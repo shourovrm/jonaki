@@ -1,9 +1,10 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.toolapi.SideEffect
+import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.stringArgument
-import kotlinx.serialization.json.JsonObject
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,6 +32,21 @@ class PermissionBrokerTest {
         assertTrue(broker.mayRun(memory, call("1", "memory")))
         assertTrue(approver.requests.isEmpty())
         assertTrue(broker.toolsAllowedForThread.isEmpty())
+    }
+
+    @Test
+    fun aReadOnlyCallOfAChangingToolRunsWithoutAsking() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver)
+        val proxy = object : Tool by FakeTool("mcp", sideEffect = SideEffect.CHANGES) {
+            override fun sideEffectOf(arguments: JsonObject): SideEffect =
+                if (arguments.stringArgument("action") == "search") SideEffect.READ_ONLY else SideEffect.CHANGES
+        }
+
+        assertTrue(broker.mayRun(proxy, call("1", "mcp", "action" to "search")))
+        assertTrue(approver.requests.isEmpty())
+        assertFalse(broker.mayRun(proxy, call("2", "mcp", "action" to "call")))
+        assertEquals(1, approver.requests.size)
     }
 
     @Test
@@ -72,7 +88,7 @@ class PermissionBrokerTest {
     }
 
     /** Like the phone tool: reading the calendar runs at once, adding to it asks (D-M9-1). */
-    private class ActionTool : app.jonaki.core.toolapi.Tool by FakeTool("phone", sideEffect = SideEffect.CHANGES) {
+    private class ActionTool : Tool by FakeTool("phone", sideEffect = SideEffect.CHANGES) {
         override fun sideEffectOf(arguments: JsonObject): SideEffect =
             if (arguments.stringArgument("action") == "calendar_list") SideEffect.READ_ONLY else SideEffect.CHANGES
     }

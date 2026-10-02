@@ -26,6 +26,8 @@ data class SettingsUiState(
     val linkedFolderName: String? = null,
     /** Reminders and scheduled tasks, soonest first (plan M9). */
     val scheduledItems: List<ScheduledItemUi> = emptyList(),
+    /** Remote MCP servers the mcp tool reaches (D-MCP-4). */
+    val mcpServers: List<McpServerUi> = emptyList(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -151,6 +153,9 @@ class SettingsActions(
     val onModelRemove: (modelKey: String) -> Unit = {},
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
+    /** Adds or edits an MCP server; the dialog has already checked the input. */
+    val onMcpServerSave: (McpServerInput) -> Unit = {},
+    val onMcpServerRemove: (id: String) -> Unit = {},
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

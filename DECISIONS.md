@@ -662,3 +662,107 @@ the running worker keeps the process alive. Why: plan M9 step 2, one code
 path for runs. Rejected: a separate background loop (a second code path);
 setForeground on the worker (more manifest work for the same limit).
 Outcome: pending.
+
+## D-MCP-1 · 2026-10-03 · MCP client on OkHttp, one session per tool run — proposed
+`tools/mcp` speaks MCP Streamable HTTP itself on OkHttp and
+kotlinx.serialization; the official Kotlin SDK would force a Kotlin upgrade.
+Each POST carries one JSON-RPC 2.0 message with `Accept: application/json,
+text/event-stream`; an answer may be one JSON object or an event stream, in
+which the client skips the server's own notifications until the answer with
+its id. Order: initialize (asks for 2025-06-18), notifications/initialized,
+then tools/list (follows nextCursor, at most 20 pages) or tools/call. The
+`Mcp-Session-Id` from initialize goes on every later request, with
+`MCP-Protocol-Version` set to the version the server answered. HTTP 404 on a
+session opens a new one once; the session ends with DELETE (405 ignored). An
+optional header per server (name and value) goes on every request. Each run
+of the tool opens and closes its own session, so nothing outlives a call
+(AGENTS.md: no hidden state); the cost is two extra round trips per call.
+Live check (2026-10-03, `DeepWikiLiveTest`, no key, no cost): against
+https://mcp.deepwiki.com/mcp search found read_wiki_structure, describe showed
+repoName, and the call returned square/okhttp's page list in 5.7 s; DeepWiki
+answers as an event stream and gives no session id. Outcome: pending.
+
+## D-MCP-2 · 2026-10-03 · MCP tool lists cached in files for a day — proposed
+Each server's tools/list answer is saved as `files/mcp-tools/<server id>.json`
+with its address and fetch time. search and describe read it while it is
+under 24 hours old and from the same address; otherwise they fetch it again.
+describe of a tool missing from a cached list fetches once more. A call the
+server refuses with a JSON-RPC error (unknown tool, bad arguments) fetches
+the list on the same session, saves it, and tells the model whether the tool
+still exists. Saving or removing a server in Settings deletes its file. Why:
+search should not cost a connection per server on every use. Rejected: a
+Room table (schema change for data that is only a cache). Outcome: pending.
+
+## D-MCP-3 · 2026-10-03 · mcp tool: read-only search and describe, approved call — proposed
+One tool `mcp` with action search (keywords over every server's tools; a word
+in the name counts 3, in the description 1; blank lists all; default 10
+results, at most 50), describe (full description and input schema) and call
+(arguments as a JSON object, or JSON text). Results over 30,000 characters
+go through OutputLimiter; images and audio become "[image/png image, not
+shown]". The tool declares `SideEffect.CHANGES` and overrides
+`Tool.sideEffectOf(arguments)` (D-M9-1) to return READ_ONLY for search and
+describe, so the permission broker runs them without a card, while call
+shows the existing card with "server: tool". "Allow in thread" then covers every
+mcp call in that thread. For the coming approval modes, mcp counts as
+leaving the app: Auto asks, only Bypass skips the card. The tool is offered
+only when at least one server exists; its prompt line names the servers.
+Changes D-034's "one tool has one cost" for this tool. Outcome: pending.
+
+## D-MCP-4 · 2026-10-03 · MCP servers in Settings — proposed
+Settings has an "MCP servers" group between Skills and Files: one row per
+server (name on one line, URL up to two lines), and "Add server". A dialog
+takes Name, URL, Header (optional) and Header value; it checks for a name,
+a name not used by another server (case ignored, since the model names
+servers) and an http or https URL; edit offers "Remove server". The list is
+JSON in app preferences; header values are encrypted with the API keys'
+Keystore key (`SecretStore` run-time secrets) and never shown again; the
+value field then says "Saved" and empty keeps it. A value with no header
+name is sent as Authorization. Outcome: pending.
+
+## D-MCP-5 · 2026-10-03 · Model lists from each service's GET /models — proposed
+A preset with `listsModels` (OpenAI, MiniMax, Qwen, Xiaomi MiMo, Ollama Cloud,
+Ollama on the network) is asked for `<base URL>/models` with the saved key
+each time its Add models screen opens; listing is free. The OpenAI-format
+ids join the built-in rows, which keep their prices; an id without a row is
+offered without a price, like a typed id. Ids with embed, tts, whisper,
+transcribe, dall-e, image, moderation, realtime, audio, search, davinci or
+babbage are left out. The answer is cached as `cache/models-<service>.json`;
+a failure keeps the last list. Ollama Cloud lists without a key. Z.ai
+documents no model list, so GLM keeps the built-in rows. MiMo's list is
+undocumented: GET /v1/models answers 401 without a key where an unknown path
+answers 404 (curl, 2026-10-03); the same check holds for Qwen. Tested with
+MockWebServer only (no keys for these services). Outcome: pending.
+
+## D-MCP-6 · 2026-10-03 · Presets and prices for GLM, MiMo, OpenAI, MiniMax and Qwen — proposed
+New services MiniMax (`https://api.minimax.io/v1`, default MiniMax-M3) and
+Qwen (Alibaba Model Studio, Singapore, OpenAI-compatible mode,
+`https://dashscope-intl.aliyuncs.com/compatible-mode/v1`, default
+qwen3.8-flash) are cards with their own keys. Built-in rows now carry each
+service's own pay-as-you-go price per million tokens (input, output,
+cache read), read on 2026-10-03:
+GLM 5.3 Flash 0.15/0.50/0.03, 5.3 FlashX 0.37/1.25/0.075, 5.3 and 5.2
+1.40/4.40/0.26, 4.7 Flash free (docs.z.ai/guides/overview/pricing; context
+from docs.z.ai/guides/llm/glm-5.3 and guides/vlm/glm-5.3-flash). MiMo V2.6
+Flash 0.14/0.28/0.0028, Pro 0.435/0.87/0.0036, Pro UltraSpeed 4.35/8.70/0.036
+(mimo.mi.com/docs/en-US/price/pay-as-you-go). OpenAI GPT-6 Luna
+0.10/0.50/0.01, GPT-6 Sol 2/10/0.20, GPT-6.1 Sol 2/10/0.10, GPT-6 Astra
+10/50/1, GPT-5.6 Luna 0.20/1.20/0.02, GPT-5 Mini, GPT-5.4 Nano and GPT-5.5
+as before (developers.openai.com/api/docs/pricing, Standard tier). MiniMax
+M3 0.30/1.20/0.06 up to 512K input tokens, M2.7 0.30/1.20/0.06, M2.7
+Highspeed 0.60/2.40/0.06 (platform.minimax.io/docs/guides/pricing-paygo;
+base URL from platform.minimax.io/docs/api-reference/text-openai-api, list
+from .../models/openai/list-models). Qwen3.8 Max 2/6, Qwen3.7 Plus 0.40/1.60,
+Qwen3.8 Flash 0.15/0.47, Qwen3.7 Flash 0.03/0.13 for requests up to 32K
+tokens, cache reads at 20 % of input
+(alibabacloud.com/help/en/model-studio/model-pricing and .../context-cache).
+Ollama: docs.ollama.com/api/openai-compatibility; Ollama Cloud is a
+subscription without token prices. Context windows and image input not on
+the services' pages come from OpenRouter's list of 2026-10-03. Balances: none
+of these services offers a balance a normal API key can read (Z.ai and
+MiniMax document none; MiMo's console balance needs a login session; OpenAI
+and Alibaba need admin or AccessKey credentials), so their cards show no
+balance line, as D-032 already says for GLM and MiMo. Limits: one price per
+model, so MiniMax M3 above 512K and Qwen3.7 Flash above 32K tokens are
+priced too low (Qwen3.7 Flash costs 0.10/0.40 from 32K to 256K); Qwen
+serves the Singapore region only. Thinking levels stay off for MiniMax and
+Qwen. Outcome: pending.

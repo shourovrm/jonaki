@@ -29,6 +29,7 @@ import app.jonaki.skills.AssetSkills
 import app.jonaki.skills.SkillImporter
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
+import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.SecretStore
 import app.jonaki.settings.UsdRates
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
@@ -77,6 +78,10 @@ class JonakiApplication : Application() {
     /** The activity on screen, for pickers and the share sheet that share_file opens (D-045). */
     val visibleActivity = VisibleActivity()
 
+    /** MCP servers from Settings, for the mcp tool (D-MCP-4). */
+    lateinit var mcpServers: McpServerStore
+        private set
+
     /** The folder linked in Settings (D-043). */
     lateinit var linkedFolder: LinkedFolder
         private set
@@ -111,6 +116,7 @@ class JonakiApplication : Application() {
             // Streaming replies can pause while a model thinks; the agent loop's own limits apply on top.
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
+        mcpServers = McpServerStore(this, secrets, File(filesDir, "mcp-tools"))
         linkedFolder = LinkedFolder(this)
         attachmentDrafts = AttachmentDrafts(File(cacheDir, "incoming"))
         incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
@@ -141,6 +147,7 @@ class JonakiApplication : Application() {
             AndroidFileDestinations(this, visibleActivity, linkedFolder),
             AndroidPhone(this, permissions, visibleActivity, reminders),
             taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, permissions) },
+            mcpServers = mcpServers,
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {

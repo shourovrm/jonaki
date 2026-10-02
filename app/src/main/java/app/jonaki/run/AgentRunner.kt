@@ -42,6 +42,7 @@ import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ChatService
+import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
@@ -87,6 +88,7 @@ class AgentRunner(
     private val phone: Phone? = null,
     /** The schedule tool's tasks, seen from one thread (plan M9). */
     private val taskSchedulerFor: ((threadId: String) -> TaskScheduler)? = null,
+    private val mcpServers: McpServerStore,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -354,6 +356,8 @@ class AgentRunner(
                 modelAcceptsImages = modelAcceptsImages,
                 phone = phone,
                 taskScheduler = taskSchedulerFor?.invoke(threadId),
+                mcpServers = mcpServers.forTools(),
+                mcpToolListFolder = mcpServers.toolListFolder,
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()

@@ -87,6 +87,10 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
             Group {
                 NavigationRow(stringResource(R.string.settings_skills_open), onClick = actions.onOpenSkills)
             }
+            SectionLabel(stringResource(R.string.settings_section_mcp))
+            Group {
+                McpServerRows(state.mcpServers, actions)
+            }
             SectionLabel(stringResource(R.string.settings_section_files))
             Group {
                 LinkedFolderRow(state.linkedFolderName, actions)

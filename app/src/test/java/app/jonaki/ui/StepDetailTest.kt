@@ -43,4 +43,10 @@ class StepDetailTest {
         assertEquals("From linked folder: Invoices/may.pdf", StepDetail.of("share_file", """{"action":"import_linked","path":"Invoices/may.pdf"}""").target)
         assertEquals("List linked folder", StepDetail.of("share_file", """{"action":"list_linked"}""").target)
     }
+
+    @Test
+    fun mcpNamesTheServerAndToolOrTheSearchWords() {
+        assertEquals("deepwiki: ask_wiki_question", StepDetail.of("mcp", """{"action":"call","server":"deepwiki","tool":"ask_wiki_question"}""").target)
+        assertEquals("wiki pages", StepDetail.of("mcp", """{"action":"search","query":"wiki pages"}""").query)
+    }
 }

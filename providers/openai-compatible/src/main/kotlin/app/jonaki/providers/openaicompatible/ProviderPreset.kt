@@ -14,6 +14,8 @@ data class ProviderPreset(
     val reportsCost: Boolean = false,
     /** Where this service takes the thinking level; NONE means it offers no such setting (D-057). */
     val thinkingField: ThinkingField = ThinkingField.NONE,
+    /** The service answers GET <baseUrl>/models in the OpenAI format, so the model picker can list its ids (D-MCP-5). */
+    val listsModels: Boolean = false,
 )
 
 enum class ThinkingField {
@@ -43,8 +45,8 @@ object ProviderPresets {
         defaultModel = "deepseek-flash",
     )
 
-    // The rows below come from the author's pi setup or the services' documentation
-    // and are checked against the live service in M10.
+    // Base URLs below were checked against each service's documentation on
+    // 2026-10-03 (sources in D-MCP-6). Z.ai documents no model list.
     val glm = ProviderPreset(
         key = "glm",
         displayName = "GLM (Z.ai)",
@@ -57,6 +59,8 @@ object ProviderPresets {
         displayName = "Xiaomi MiMo",
         baseUrl = "https://api.xiaomimimo.com/v1",
         defaultModel = "mimo-v2.6-flash",
+        // Undocumented, but GET /v1/models answers 401 without a key where an unknown path answers 404.
+        listsModels = true,
     )
 
     val ollamaCloud = ProviderPreset(
@@ -64,6 +68,7 @@ object ProviderPresets {
         displayName = "Ollama Cloud",
         baseUrl = "https://ollama.com/v1",
         defaultModel = "gpt-oss:120b",
+        listsModels = true,
     )
 
     val localOllama = ProviderPreset(
@@ -72,6 +77,7 @@ object ProviderPresets {
         baseUrl = "http://localhost:11434/v1",
         defaultModel = "llama3.2",
         needsApiKey = false,
+        listsModels = true,
     )
 
     val openAi = ProviderPreset(
@@ -80,7 +86,35 @@ object ProviderPresets {
         baseUrl = "https://api.openai.com/v1",
         defaultModel = "gpt-5-mini",
         thinkingField = ThinkingField.OPENAI,
+        listsModels = true,
     )
 
-    val all: List<ProviderPreset> = listOf(openRouter, deepSeek, glm, xiaomiMimo, ollamaCloud, localOllama, openAi)
+    val miniMax = ProviderPreset(
+        key = "minimax",
+        displayName = "MiniMax",
+        baseUrl = "https://api.minimax.io/v1",
+        defaultModel = "MiniMax-M3",
+        listsModels = true,
+    )
+
+    /** Alibaba Model Studio's international (Singapore) endpoint in OpenAI-compatible mode. */
+    val qwen = ProviderPreset(
+        key = "qwen",
+        displayName = "Qwen",
+        baseUrl = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        defaultModel = "qwen3.8-flash",
+        listsModels = true,
+    )
+
+    val all: List<ProviderPreset> = listOf(
+        openRouter,
+        deepSeek,
+        glm,
+        xiaomiMimo,
+        ollamaCloud,
+        localOllama,
+        openAi,
+        miniMax,
+        qwen,
+    )
 }
