@@ -37,6 +37,8 @@ data class SettingsSnapshot(
     val thinkingLevels: Map<String, ThinkingLevel> = emptyMap(),
     /** When tools ask before a change, in every thread without its own mode (D-058). */
     val defaultApprovalMode: ApprovalMode = ApprovalMode.ASK,
+    /** Model key per subagent type; a type without an entry uses its default (D-065). */
+    val subagentModels: Map<String, String> = emptyMap(),
 )
 
 /** Plain settings in app preferences; keys live in [SecretStore]. */
@@ -82,6 +84,7 @@ class AppSettings(
             reviewExtractedMemories = preferences.getBoolean(REVIEW_EXTRACTED_MEMORIES, false),
             thinkingLevels = ThinkingLevels.fromText(preferences.getString(THINKING_LEVELS, "").orEmpty()),
             defaultApprovalMode = ApprovalModes.fromName(preferences.getString(APPROVAL_MODE, null)),
+            subagentModels = SubagentModelChoice.fromText(preferences.getString(SUBAGENT_MODELS, "").orEmpty()),
         )
     }
 
@@ -128,6 +131,7 @@ class AppSettings(
         editor.putBoolean(REVIEW_EXTRACTED_MEMORIES, snapshot.reviewExtractedMemories)
         editor.putString(THINKING_LEVELS, ThinkingLevels.toText(snapshot.thinkingLevels))
         editor.putString(APPROVAL_MODE, snapshot.defaultApprovalMode.name)
+        editor.putString(SUBAGENT_MODELS, SubagentModelChoice.toText(snapshot.subagentModels))
         editor.apply()
     }
 
@@ -152,5 +156,6 @@ class AppSettings(
         const val REVIEW_EXTRACTED_MEMORIES = "review_extracted_memories"
         const val THINKING_LEVELS = "thinking_levels"
         const val APPROVAL_MODE = "approval_mode"
+        const val SUBAGENT_MODELS = "subagent_models"
     }
 }

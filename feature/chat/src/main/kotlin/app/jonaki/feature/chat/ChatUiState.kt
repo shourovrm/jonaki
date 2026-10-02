@@ -108,6 +108,24 @@ sealed interface ChatItem {
         val toolName: String,
         /** What the tool will do, for example "Create work/notes.md (2.3 KB)". */
         val description: String,
+        /** The subagent that asks, for example "researcher 2"; null for the thread's own agent (D-062). */
+        val agentLabel: String? = null,
+    ) : ChatItem
+
+    /** One subagent of a delegate call, as a card that opens to its steps and answer (M7). */
+    data class Subagent(
+        override val id: String,
+        /** "researcher", or "researcher 2" when one call started several. */
+        val label: String,
+        val task: String,
+        val status: SubagentUiStatus,
+        val steps: List<StepUi>,
+        /** Null while no call has a known cost. */
+        val costUsd: Double?,
+        /** The start of the latest text it wrote, for the folded card. */
+        val latestText: String?,
+        /** What it returned; null while it runs. */
+        val answer: String?,
     ) : ChatItem
 
     data class Error(override val id: String, val message: String, val canRetry: Boolean) : ChatItem
@@ -153,11 +171,27 @@ enum class StepUiStatus {
     FAILED,
     DENIED,
     STOPPED,
+
+    /** A subagent's approval went unanswered for 3 minutes (D-062). */
+    SKIPPED,
+}
+
+enum class SubagentUiStatus {
+    RUNNING,
+    DONE,
+    STEP_LIMIT,
+    COST_LIMIT,
+    TIME_LIMIT,
+    FAILED,
+    STOPPED,
 }
 
 enum class ApprovalChoice {
     ALLOW_ONCE,
     ALLOW_FOR_THREAD,
+
+    /** On a subagent's card: until that subagent ends. */
+    ALLOW_FOR_TASK,
     DENY,
 }
 

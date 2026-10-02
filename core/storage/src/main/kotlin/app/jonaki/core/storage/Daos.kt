@@ -148,6 +148,9 @@ interface StepDao {
     @Query("SELECT * FROM steps WHERE toolCallId = :toolCallId")
     suspend fun find(toolCallId: String): StepEntity?
 
+    @Query("SELECT * FROM steps WHERE subagentId = :subagentId ORDER BY startedAtMillis")
+    suspend fun listOfSubagent(subagentId: String): List<StepEntity>
+
     @Upsert
     suspend fun upsert(step: StepEntity)
 

@@ -58,6 +58,21 @@ class BackgroundModel(
         maxOutputTokens: Int,
     ): BackgroundAnswer {
         val modelKey = modelFor(threadModelKey) ?: return BackgroundAnswer.Failed("no chat model is set up")
+        return completeOn(threadId, modelKey, systemPrompt, listOf(Message(Role.USER, userText)), maxOutputTokens)
+    }
+
+    /**
+     * Sends [messages] to [modelKey] without tools and returns the whole
+     * answer; the usage is saved like any background call. A subagent's
+     * ask_parent uses it with the thread's own model and conversation (D-063).
+     */
+    suspend fun completeOn(
+        threadId: String,
+        modelKey: String,
+        systemPrompt: String,
+        messages: List<Message>,
+        maxOutputTokens: Int,
+    ): BackgroundAnswer {
         val service = ChatService.byKey(ModelKey.serviceOf(modelKey))
             ?: return BackgroundAnswer.Failed("unknown service in $modelKey")
         val secret = service.secret
@@ -67,7 +82,7 @@ class BackgroundModel(
         val request = ChatRequest(
             model = ModelKey.modelOf(modelKey),
             systemPrompt = systemPrompt,
-            messages = listOf(Message(Role.USER, userText)),
+            messages = messages,
             maxOutputTokens = maxOutputTokens,
         )
         val answer = StringBuilder()
@@ -87,7 +102,7 @@ class BackgroundModel(
                 }
             }
         }
-        usage?.let { reported -> saveUsage(threadId, modelKey, reported) }
+        usage?.let { reported -> saveUsage(threadId, modelKey, reported, CostCalculator.costUsd(reported, catalog.find(modelKey))) }
         return when {
             finished == null -> BackgroundAnswer.Failed("$modelKey gave no answer within ${TIME_LIMIT_MILLIS / 1000} s")
             failure != null -> BackgroundAnswer.Failed(failure.orEmpty())
@@ -110,8 +125,12 @@ class BackgroundModel(
         return input + output
     }
 
-    /** A row the chat never shows and the model never sees; it only carries the call's cost (D-027). */
-    private suspend fun saveUsage(threadId: String, modelKey: String, usage: Usage) {
+    /**
+     * A row the chat never shows and the model never sees; it only carries
+     * the call's cost (D-027). Subagents' model calls are saved the same way
+     * (D-064), with the cost their loop already computed.
+     */
+    suspend fun saveUsage(threadId: String, modelKey: String, usage: Usage, costUsd: Double?) {
         val messageDao = database.messageDao()
         messageDao.upsert(
             MessageEntity(
@@ -128,7 +147,7 @@ class BackgroundModel(
                 inputTokens = usage.inputTokens,
                 cachedInputTokens = usage.cachedInputTokens,
                 outputTokens = usage.outputTokens,
-                costUsd = CostCalculator.costUsd(usage, catalog.find(modelKey)),
+                costUsd = costUsd,
             ),
         )
     }

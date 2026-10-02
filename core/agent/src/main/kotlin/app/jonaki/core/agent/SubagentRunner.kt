@@ -119,7 +119,7 @@ class SubagentRunner(
         val typeTools = if (type.usesEveryThreadTool) usableTools else usableTools.filter { tool -> tool.name in type.defaultTools }
         val extraTools = usableTools.filter { tool -> tool.name in task.extraTools }
         val threadToolsAtStart = (typeTools + extraTools).distinctBy { tool -> tool.name }
-        val helpers = mutableListOf<Tool>(RequestTool(), AskParentTool(parentAsker))
+        val helpers = mutableListOf<Tool>(RequestTool(), AskParentTool(parentAsker, label, group.parentToolCallId))
         if (group.size > 1) {
             helpers += NotesTool(context.threadFolder, "${group.folder}/notes.md", label, group.notesLock)
         }

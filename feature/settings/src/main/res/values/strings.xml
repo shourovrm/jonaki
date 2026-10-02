@@ -84,4 +84,11 @@
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>
     </plurals>
+    <string name="settings_section_subagents">Subagent models</string>
+    <string name="settings_subagent_researcher">Researcher</string>
+    <string name="settings_subagent_scout">Scout</string>
+    <string name="settings_subagent_writer">Writer</string>
+    <string name="settings_subagent_worker">Worker</string>
+    <string name="settings_subagent_thread_model">Thread\'s model</string>
+    <string name="settings_subagent_cheapest_model">Cheapest model</string>
 </resources>

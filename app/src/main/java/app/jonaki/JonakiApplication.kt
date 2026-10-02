@@ -121,12 +121,14 @@ class JonakiApplication : Application() {
             threadCompactor,
             skillLibrary,
             AndroidFileDestinations(this, visibleActivity, linkedFolder),
+            backgroundModel,
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
             database.messageDao().closeInterrupted()
             database.stepDao().stopInterrupted()
+            database.subagentDao().stopInterrupted()
         }
         applicationScope.launch {
             catalog.refreshIfStale()

@@ -14,6 +14,10 @@ import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.agent.ImageMessages
 import app.jonaki.core.agent.MemorySection
+import app.jonaki.core.agent.ParentAnswer
+import app.jonaki.core.agent.ParentAsker
+import app.jonaki.core.agent.ParentQuestion
+import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
@@ -84,6 +88,8 @@ class AgentRunner(
     private val threadCompactor: ThreadCompactor,
     private val skillLibrary: SkillLibrary,
     private val fileDestinations: FileDestinations,
+    /** Answers subagents' ask_parent and saves their model calls' usage (M7). */
+    private val backgroundModel: BackgroundModel,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -93,8 +99,9 @@ class AgentRunner(
     private val running = MutableStateFlow<Set<String>>(emptySet())
     val runningThreadIds: StateFlow<Set<String>> = running.asStateFlow()
 
-    private val approvals = MutableStateFlow<Map<String, PendingApproval>>(emptyMap())
-    val pendingApprovals: StateFlow<Map<String, PendingApproval>> = approvals.asStateFlow()
+    /** Cards waiting per thread, oldest first; parallel subagents can ask at the same time (M7). */
+    private val approvals = MutableStateFlow<Map<String, List<PendingApproval>>>(emptyMap())
+    val pendingApprovals: StateFlow<Map<String, List<PendingApproval>>> = approvals.asStateFlow()
 
     private val stepCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
 
@@ -165,6 +172,9 @@ class AgentRunner(
         val removed = rows.filter { row -> row.position >= edited.position }
         val toolCallIds = removed.flatMap { row -> HistoryMapper.toolCallsFromJson(row.toolCallsJson) }.map { call -> call.id }
         if (toolCallIds.isNotEmpty()) {
+            // Subagents' steps first: the query finds them through their subagent rows.
+            database.stepDao().deleteOfSubagentsUnder(toolCallIds)
+            database.subagentDao().deleteUnder(toolCallIds)
             database.stepDao().deleteAll(toolCallIds)
         }
         database.compactionDao().deleteCoveringFrom(threadId, edited.position)
@@ -258,10 +268,22 @@ class AgentRunner(
         }
     }
 
-    fun answerApproval(threadId: String, decision: ApprovalDecision) {
-        val pending = approvals.value[threadId] ?: return
-        approvals.update { current -> current - threadId }
+    /** [approvalId] is the waiting call's id, which the card carries. */
+    fun answerApproval(threadId: String, approvalId: String, decision: ApprovalDecision) {
+        val pending = approvals.value[threadId].orEmpty().firstOrNull { card -> card.toolCall.id == approvalId } ?: return
+        withdrawApproval(pending)
         pending.answer.complete(decision)
+    }
+
+    private fun addApproval(pending: PendingApproval) {
+        approvals.update { current -> current + (pending.threadId to current[pending.threadId].orEmpty() + pending) }
+    }
+
+    private fun withdrawApproval(pending: PendingApproval) {
+        approvals.update { current ->
+            val remaining = current[pending.threadId].orEmpty() - pending
+            if (remaining.isEmpty()) current - pending.threadId else current + (pending.threadId to remaining)
+        }
     }
 
     private fun startRun(threadId: String, beforeRun: suspend () -> Unit) {
@@ -336,7 +358,8 @@ class AgentRunner(
             threadId = threadId,
             database = database,
             clock = System::currentTimeMillis,
-            onApprovalNeeded = { pending -> approvals.update { current -> current + (threadId to pending) } },
+            onApprovalNeeded = ::addApproval,
+            onApprovalWithdrawn = ::withdrawApproval,
             onStepStarted = {
                 stepCounts.update { current -> current + (threadId to (current[threadId] ?: 0) + 1) }
             },
@@ -352,19 +375,47 @@ class AgentRunner(
         // Unknown models count as not taking images (D-049).
         val modelAcceptsImages = catalog.find(modelKey)?.acceptsImages == true
         val threadFolder = ThreadFolders.create(context, threadId)
-        val tools = ToolRegistry.tools(
-            ToolServices(
-                searchBackends = searchBackends(snapshot.searchOrder),
-                videoSummarizer = videoSummarizer(),
-                webAccessEnabled = thread.webSearchEnabled,
-                memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
-                fileDestinations = fileDestinations,
-                modelAcceptsImages = modelAcceptsImages,
-            ),
+        val toolServices = ToolServices(
+            searchBackends = searchBackends(snapshot.searchOrder),
+            videoSummarizer = videoSummarizer(),
+            webAccessEnabled = thread.webSearchEnabled,
+            memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
+            fileDestinations = fileDestinations,
+            modelAcceptsImages = modelAcceptsImages,
         )
+        val threadTools = ToolRegistry.tools(toolServices)
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
         threadApprovalModes[threadId] = thread.approvalMode.orEmpty()
         val permissionBroker = PermissionBroker(session, allowedForThread, approvalMode = { currentApprovalMode(threadId) })
+        val memorySection = memorySectionFor(threadId)
+        val skillSection = skillSectionFor(thread)
+        val imageCache = ThreadFolders.imageCache(context, threadId)
+        // Built before the system prompt it answers with; the asker reads it only when a question comes.
+        var systemPrompt = ""
+        val subagents = SubagentRunner(
+            // As a vision model sees them: each subagent keeps view_image only if its own model takes images.
+            threadTools = ToolRegistry.tools(toolServices.copy(modelAcceptsImages = true)),
+            broker = permissionBroker,
+            subagentModels = AppSubagentModels(
+                snapshot = snapshot,
+                catalog = catalog,
+                threadModelKey = modelKey,
+                backgroundModelKey = backgroundModel.modelFor(modelKey),
+                providerFor = ::subagentProvider,
+                imageMessagesFor = { acceptsImages -> ImageMessages(ModelImageLoader(threadFolder, imageCache), acceptsImages) },
+            ),
+            recorder = SubagentSession(threadId, database, System::currentTimeMillis) { usageModelKey, usage, cost ->
+                backgroundModel.saveUsage(threadId, usageModelKey, usage, cost)
+            },
+            parentAsker = ParentAsker { question, agentLabel, delegateToolCallId ->
+                answerParentQuestion(threadId, modelKey, systemPrompt, question, agentLabel, delegateToolCallId)
+            },
+            memorySection = memorySection,
+            skillSection = skillSection,
+            now = ZonedDateTime::now,
+        )
+        val tools = threadTools + ToolRegistry.delegateTool(subagents)
+        systemPrompt = promptBuilder.systemPrompt(activeTools = tools, memorySection = memorySection, skillSection = skillSection)
         val loop = AgentLoop(
             provider = provider,
             tools = tools,
@@ -378,16 +429,9 @@ class AgentRunner(
                     modelLevel = snapshot.thinkingLevels[modelKey],
                     isSupported = ThinkingSupport.isSupported(modelKey, catalog.find(modelKey)),
                 ),
-                systemPrompt = promptBuilder.systemPrompt(
-                    activeTools = tools,
-                    memorySection = memorySectionFor(threadId),
-                    skillSection = skillSectionFor(thread),
-                ),
+                systemPrompt = systemPrompt,
             ),
-            imageMessages = ImageMessages(
-                ModelImageLoader(threadFolder, ThreadFolders.imageCache(context, threadId)),
-                modelAcceptsImages,
-            ),
+            imageMessages = ImageMessages(ModelImageLoader(threadFolder, imageCache), modelAcceptsImages),
         )
         val summary = database.compactionDao().latestForThread(threadId)
         val history = CompactionPlan.historyAfter(
@@ -400,6 +444,39 @@ class AgentRunner(
         } finally {
             database.threadDao().setToolsAllowedForThread(threadId, permissionBroker.toolsAllowedForThread.joinToString(","))
         }
+    }
+
+    /**
+     * A subagent's ask_parent (D-063): one call on the thread's model with
+     * the thread's conversation up to the delegate call, without tools. Its
+     * cost counts to the thread like a background call.
+     */
+    private suspend fun answerParentQuestion(
+        threadId: String,
+        modelKey: String,
+        systemPrompt: String,
+        question: String,
+        agentLabel: String,
+        delegateToolCallId: String,
+    ): ParentAnswer {
+        val summary = database.compactionDao().latestForThread(threadId)
+        val history = CompactionPlan.historyAfter(
+            rows = database.messageDao().listThread(threadId),
+            summaryText = summary?.summaryText,
+            upToPosition = summary?.upToPosition,
+        )
+        val conversation = ParentQuestion.conversation(history, delegateToolCallId, agentLabel, question)
+        return when (val answer = backgroundModel.completeOn(threadId, modelKey, systemPrompt, conversation, PARENT_ANSWER_TOKENS)) {
+            is BackgroundAnswer.Success -> ParentAnswer.Answered(answer.text.trim())
+            is BackgroundAnswer.Failed -> ParentAnswer.Failed(answer.message)
+        }
+    }
+
+    /** A provider for a subagent's model; null when its service has no saved key. */
+    private fun subagentProvider(modelKey: String): ChatProvider? {
+        val service = ChatService.byKey(ModelKey.serviceOf(modelKey)) ?: return null
+        val routing = settings.snapshot.value.routing.effectiveFor(modelKey)
+        return chatProvider(service, routing, onRoutingFallback = {})
     }
 
     /**
@@ -500,6 +577,9 @@ class AgentRunner(
 
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
+
+        /** A parent's answer to a subagent is a few sentences. */
+        const val PARENT_ANSWER_TOKENS = 1_000
         const val NO_MODEL_ERROR = "No model. Add one in Settings."
     }
 }

@@ -26,9 +26,12 @@
     <string name="chat_step_failed">Failed</string>
     <string name="chat_step_denied">Denied</string>
     <string name="chat_step_stopped">Stopped</string>
+    <string name="chat_step_skipped">Skipped</string>
     <string name="chat_approval_title">Allow %1$s?</string>
     <string name="chat_approval_once">Allow once</string>
     <string name="chat_approval_thread">Allow in thread</string>
+    <string name="chat_approval_title_subagent">%1$s asks for %2$s</string>
+    <string name="chat_approval_task">Allow for task</string>
     <string name="chat_approval_deny">Deny</string>
     <string name="chat_retry">Retry</string>
     <string name="chat_status_model">Model: %1$s. Change</string>
@@ -64,6 +67,7 @@
     <string name="chat_working_reading_files">Reading files…</string>
     <string name="chat_working_writing_file">Writing a file…</string>
     <string name="chat_working_memory">Updating memory…</string>
+    <string name="chat_working_subagents">Subagents working…</string>
     <string name="chat_working_tool">Running %1$s…</string>
     <string name="chat_working_seconds">%1$ds</string>
     <string name="chat_reasoning">Thinking</string>
@@ -71,4 +75,14 @@
     <string name="chat_edit">Edit</string>
     <string name="chat_editing">Editing message</string>
     <string name="chat_edit_cancel">Cancel edit</string>
+    <string name="chat_subagent_running">Working</string>
+    <string name="chat_subagent_done">Done</string>
+    <string name="chat_subagent_step_limit">Step limit</string>
+    <string name="chat_subagent_cost_limit">Cost limit</string>
+    <string name="chat_subagent_time_limit">Time limit</string>
+    <string name="chat_subagent_failed">Failed</string>
+    <string name="chat_subagent_stopped">Stopped</string>
+    <string name="chat_subagent_answer">Answer</string>
+    <string name="chat_subagent_show">Show details</string>
+    <string name="chat_subagent_hide">Hide details</string>
 </resources>

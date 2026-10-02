@@ -25,7 +25,11 @@ import androidx.compose.ui.res.stringResource
 import app.jonaki.JonakiApplication
 import app.jonaki.R
 import app.jonaki.core.agent.ApprovalDecision
+import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.ApprovalMode
+import app.jonaki.feature.settings.ModelOptionUi
+import app.jonaki.feature.settings.SubagentModelRowUi
+import app.jonaki.settings.SubagentModelChoice
 import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
@@ -367,6 +371,9 @@ private fun ChatRoute(
     val lastInputTokens by remember(threadId) {
         if (isNew) flowOf(null) else database.messageDao().observeLastInputTokens(threadId)
     }.collectAsState(initial = null)
+    val subagents by remember(threadId) {
+        if (isNew) flowOf(emptyList()) else database.subagentDao().observeThread(threadId)
+    }.collectAsState(initial = emptyList())
     val modelUsage by remember(threadId) {
         if (isNew) flowOf(emptyList()) else database.messageDao().observeModelUsage(threadId)
     }.collectAsState(initial = emptyList())
@@ -414,7 +421,7 @@ private fun ChatRoute(
     }
 
     val isRunning = threadId in running
-    val pending = approvals[threadId]
+    val pending = approvals[threadId].orEmpty()
     val webSearchEnabled = thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
     val modelKey = (if (isNew) modelForNewThread else null) ?: runner.modelKeyFor(thread)
     val modelInfo = modelKey?.let(catalog::find)
@@ -438,8 +445,9 @@ private fun ChatRoute(
             rows = messages,
             steps = steps,
             isRunning = isRunning,
-            pendingApproval = pending?.toolCall,
+            pendingApprovals = pending,
             fallbackNote = stringResource(R.string.routing_fallback_note),
+            subagents = subagents,
         ),
         isRunning = isRunning,
         draft = draft,
@@ -513,7 +521,7 @@ private fun ChatRoute(
             editingMessageId = null
             draft = ""
         },
-        onApprovalChoice = { _, choice -> runner.answerApproval(threadId, decisionOf(choice)) },
+        onApprovalChoice = { approvalId, choice -> runner.answerApproval(threadId, approvalId, decisionOf(choice)) },
         onRetry = { runner.retry(threadId) },
         onWebSearchChange = { enabled ->
             if (!isNew) {
@@ -668,6 +676,16 @@ private fun SettingsRoute(
         showStatusStrip = snapshot.showStatusStrip,
         linkedFolderName = linkedFolder?.name,
         approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
+        subagentModels = AgentTypes.ALL.map { type ->
+            SubagentModelRowUi(
+                agentType = type.name,
+                selectedKey = snapshot.subagentModels[type.name]?.takeIf { key -> key in snapshot.chatModels.allModelKeys },
+                defaultIsCheapest = type.name == SubagentModelChoice.SCOUT,
+            )
+        },
+        subagentModelOptions = snapshot.chatModels.allModelKeys.map { key ->
+            ModelOptionUi(key, application.catalog.find(key)?.displayName ?: ModelKey.modelOf(key))
+        },
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -708,6 +726,12 @@ private fun SettingsRoute(
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
         },
         onModelRemove = { modelKey -> settings.updateChatModels { models -> models.removeModel(modelKey) } },
+        onSubagentModelChange = { agentType, modelKey ->
+            settings.update { current ->
+                val choices = if (modelKey == null) current.subagentModels - agentType else current.subagentModels + (agentType to modelKey)
+                current.copy(subagentModels = choices)
+            }
+        },
         onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },
         onModelThinkingChange = { modelKey, choice ->
             settings.update { current ->
@@ -839,6 +863,7 @@ private fun routingUiOf(routing: OpenRouterRouting): RoutingUi = when (routing) 
 private fun decisionOf(choice: ApprovalChoice): ApprovalDecision = when (choice) {
     ApprovalChoice.ALLOW_ONCE -> ApprovalDecision.ALLOW_ONCE
     ApprovalChoice.ALLOW_FOR_THREAD -> ApprovalDecision.ALLOW_FOR_THREAD
+    ApprovalChoice.ALLOW_FOR_TASK -> ApprovalDecision.ALLOW_FOR_TASK
     ApprovalChoice.DENY -> ApprovalDecision.DENY
 }
 

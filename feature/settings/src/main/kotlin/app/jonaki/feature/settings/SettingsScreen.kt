@@ -88,6 +88,12 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
             }
+            if (state.subagentModels.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.settings_section_subagents))
+                Group {
+                    SubagentModelRows(state.subagentModels, state.subagentModelOptions, actions.onSubagentModelChange)
+                }
+            }
             SectionLabel(stringResource(R.string.settings_section_memory))
             Group {
                 NavigationRow(stringResource(R.string.settings_memory_open), onClick = actions.onOpenMemory)

@@ -2,7 +2,9 @@ package app.jonaki
 
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.toolapi.Tool
+import app.jonaki.core.toolapi.SubagentLauncher
 import app.jonaki.tools.artifact.ArtifactTool
+import app.jonaki.tools.delegate.DelegateTool
 import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.memory.MemoryStore
@@ -67,4 +69,10 @@ object ToolRegistry {
         }
         return tools
     }
+
+    /**
+     * The delegate tool joins last, because its subagents get the thread's
+     * other tools (M7); a subagent never gets delegate itself.
+     */
+    fun delegateTool(launcher: SubagentLauncher): Tool = DelegateTool(launcher)
 }

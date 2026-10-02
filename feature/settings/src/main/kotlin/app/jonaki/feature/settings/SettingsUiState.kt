@@ -27,6 +27,10 @@ data class SettingsUiState(
     val linkedFolderName: String? = null,
     /** When tools ask first, in every thread without its own mode (D-058). */
     val approvalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
+    /** The model each subagent type runs on (D-065). */
+    val subagentModels: List<SubagentModelRowUi> = emptyList(),
+    /** The user's scoped models, offered for each type. */
+    val subagentModelOptions: List<ModelOptionUi> = emptyList(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -151,6 +155,8 @@ class SettingsActions(
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
+    /** [modelKey] null returns the type to its default. */
+    val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

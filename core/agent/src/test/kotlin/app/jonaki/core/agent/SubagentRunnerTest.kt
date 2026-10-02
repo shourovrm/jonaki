@@ -47,7 +47,7 @@ class SubagentRunnerTest {
         limits: SubagentLimits = SubagentLimits(),
         acceptsImages: Boolean = false,
         pricePerCall: Double? = 0.01,
-        asker: ParentAsker = ParentAsker { question -> ParentAnswer.Answered("Answer to $question") },
+        asker: ParentAsker = ParentAsker { question, _, _ -> ParentAnswer.Answered("Answer to $question") },
     ): SubagentRunner {
         var nextId = 0
         val models = object : SubagentModels {
@@ -258,7 +258,7 @@ class SubagentRunnerTest {
             broker = PermissionBroker(FixedApprover(ApprovalDecision.ALLOW_ONCE)),
             subagentModels = singleModel(provider),
             recorder = recorder,
-            parentAsker = ParentAsker { ParentAnswer.Failed("none") },
+            parentAsker = ParentAsker { _, _, _ -> ParentAnswer.Failed("none") },
             memorySection = "",
             skillSection = "",
             now = { ZonedDateTime.now(ZoneOffset.UTC) },

@@ -120,7 +120,8 @@ sealed interface ParentAnswer {
  * and the thread's conversation so far, without tools. The app implements it.
  */
 fun interface ParentAsker {
-    suspend fun ask(question: String): ParentAnswer
+    /** [delegateToolCallId] marks where the thread's conversation is cut; [agentLabel] names who asks. */
+    suspend fun ask(question: String, agentLabel: String, delegateToolCallId: String): ParentAnswer
 }
 
 /**

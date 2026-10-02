@@ -1,6 +1,7 @@
 package app.jonaki.ui
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -19,6 +20,9 @@ data class StepDetail(
                 "web_fetch", "youtube_summarize" -> StepDetail(query = null, target = arguments.text("url")?.let(::withoutScheme))
                 "find_files", "search_files" -> StepDetail(query = null, target = arguments.text("pattern") ?: arguments.text("path"))
                 "share_file" -> StepDetail(query = null, target = shareFileTarget(arguments.text("action"), arguments.text("path")))
+                "delegate" -> StepDetail(query = null, target = delegateTarget(arguments))
+                "request_tool" -> StepDetail(query = null, target = arguments.text("name"))
+                "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
@@ -41,6 +45,15 @@ data class StepDetail(
                 return where
             }
             return "$where: $path"
+        }
+
+        /** "researcher, scout" for parallel tasks, else the one agent type. */
+        private fun delegateTarget(arguments: JsonObject): String? {
+            val tasks = arguments["tasks"] as? JsonArray
+            if (tasks != null && tasks.isNotEmpty()) {
+                return tasks.mapNotNull { task -> (task as? JsonObject)?.text("agent") }.joinToString(", ")
+            }
+            return arguments.text("agent")
         }
 
         private fun parse(argumentsJson: String): JsonObject? =

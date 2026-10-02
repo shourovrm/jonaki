@@ -381,6 +381,7 @@ private fun MessageList(
                 is ChatItem.Reasoning -> ReasoningBlock(item)
                 is ChatItem.Working -> WorkingRow(item)
                 is ChatItem.Run -> RunBlock(item)
+                is ChatItem.Subagent -> SubagentCard(item)
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)
@@ -398,6 +399,7 @@ private fun contentLength(item: ChatItem?): Int = when (item) {
     is ChatItem.AssistantMessage -> item.markdown.length
     is ChatItem.Reasoning -> item.text.length
     is ChatItem.Run -> item.steps.size
+    is ChatItem.Subagent -> item.steps.size + item.latestText.orEmpty().length
     else -> 0
 }
 
@@ -431,8 +433,14 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
+                val agentLabel = approval.agentLabel
+                val title = if (agentLabel == null) {
+                    stringResource(R.string.chat_approval_title, approval.toolName)
+                } else {
+                    stringResource(R.string.chat_approval_title_subagent, agentLabel.replaceFirstChar { it.uppercase() }, approval.toolName)
+                }
                 Text(
-                    stringResource(R.string.chat_approval_title, approval.toolName),
+                    title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -453,14 +461,18 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                 ) {
                     Text(stringResource(R.string.chat_approval_once))
                 }
+                // A subagent's allowance lasts for its task; the thread's own agent's for the thread (D-062).
+                val isSubagent = approval.agentLabel != null
                 FilledTonalButton(
-                    onClick = { onChoice(approval.id, ApprovalChoice.ALLOW_FOR_THREAD) },
+                    onClick = {
+                        onChoice(approval.id, if (isSubagent) ApprovalChoice.ALLOW_FOR_TASK else ApprovalChoice.ALLOW_FOR_THREAD)
+                    },
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = onContainer.copy(alpha = 0.12f),
                         contentColor = onContainer,
                     ),
                 ) {
-                    Text(stringResource(R.string.chat_approval_thread))
+                    Text(stringResource(if (isSubagent) R.string.chat_approval_task else R.string.chat_approval_thread))
                 }
                 TextButton(
                     onClick = { onChoice(approval.id, ApprovalChoice.DENY) },

@@ -130,7 +130,7 @@ private fun RunHeader(run: ChatItem.Run, open: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-private fun StepRow(step: StepUi, isFirst: Boolean, isLast: Boolean, nextIsDone: Boolean) {
+internal fun StepRow(step: StepUi, isFirst: Boolean, isLast: Boolean, nextIsDone: Boolean) {
     val colors = JonakiTheme.colors
     val doneColor = colors.done
     val trackColor = colors.track
@@ -191,6 +191,7 @@ private fun StationDot(status: StepUiStatus) {
         StepUiStatus.FAILED -> colors.deny to DotStyle.QUIET
         StepUiStatus.DENIED -> outline to DotStyle.QUIET
         StepUiStatus.STOPPED -> outline to DotStyle.RING
+        StepUiStatus.SKIPPED -> outline to DotStyle.RING
     }
     // GlowDot's canvas is 2.4x the dot; 10 dp dot -> 24 dp box, centred on the track.
     GlowDot(color, style, dotSize = 10.dp)
@@ -203,6 +204,7 @@ private fun StepDetail(step: StepUi) {
         StepUiStatus.FAILED -> stringResource(R.string.chat_step_failed)
         StepUiStatus.DENIED -> stringResource(R.string.chat_step_denied)
         StepUiStatus.STOPPED -> stringResource(R.string.chat_step_stopped)
+        StepUiStatus.SKIPPED -> stringResource(R.string.chat_step_skipped)
         StepUiStatus.DONE, StepUiStatus.RUNNING -> null
     }
     val onSurface = MaterialTheme.colorScheme.onSurface

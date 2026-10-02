@@ -66,6 +66,8 @@ internal class RequestTool : Tool {
 /** ask_parent: one question to the thread's agent, at most [maxQuestions] per subagent (D-015). */
 internal class AskParentTool(
     private val asker: ParentAsker,
+    private val agentLabel: String,
+    private val delegateToolCallId: String,
     private val maxQuestions: Int = MAX_QUESTIONS,
 ) : Tool {
     private var questionsAsked = 0
@@ -101,7 +103,7 @@ internal class AskParentTool(
             )
         }
         questionsAsked += 1
-        return when (val answer = asker.ask(question)) {
+        return when (val answer = asker.ask(question, agentLabel, delegateToolCallId)) {
             is ParentAnswer.Answered -> ToolOutput.success(answer.text)
             is ParentAnswer.Failed -> ToolOutput.error(
                 "the question could not be answered (${answer.message})",

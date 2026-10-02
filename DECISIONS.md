@@ -624,6 +624,23 @@ system prompt is built once from its starting tools (D-005); a tool granted
 later joins only the request's tool list. Why: user rulings (2026-10-03),
 adapted from the user's pi agents. Outcome: pending.
 
+## D-060 · 2026-10-03 · delegate tool — proposed
+`tools/delegate` depends only on `core/tool-api`, whose `SubagentLauncher`
+interface core/agent's `SubagentRunner` implements. Arguments: agent, task,
+extra_tools, model, or tasks[] (at most 4, run in parallel; each
+subagent's calls run one after another). No parent conversation is passed.
+model names one of the user's scoped models by key, id or name; an unknown
+one returns an error that lists them. Each answer comes back capped at
+16 KB (16,384 characters, user ruling 2026-10-03); a longer one is saved
+whole to `work/delegations/<call id>/<agent>-<n>.md` and the result names
+the read_file call that continues it. The notes board of a call is
+`work/delegations/<call id>/notes.md`. Time limit 11 minutes, one more than
+a subagent's own, so a subagent at its limit still returns its work. Stop
+cancels every subagent. Declared read-only: the subagents' own calls go
+through the broker. Guidelines tell the model to delegate reasoning-heavy
+work, not single searches, and that subagents have no context. The
+working line says "Subagents working…". Outcome: pending.
+
 ## D-061 · 2026-10-03 · Subagent budgets — proposed
 A subagent has 10 tool steps (every call counts, request_tool and notes
 too), $0.10 of model cost (only known costs count; a model without a price
@@ -646,3 +663,40 @@ model is told to go on with the other parts or stop, and the result lists
 every skipped part. The thread's own agent waits without limit. Tested
 with a hand-made virtual clock (`ApprovalTimer`), because
 kotlinx-coroutines-test would be a new dependency. Outcome: pending.
+
+## D-063 · 2026-10-03 · ask_parent — proposed
+ask_parent(question), at most two per subagent, is answered by one call
+on the thread's model with the thread's system prompt and its history up
+to, not including, the turn that called delegate (that turn's calls have
+no results yet), then the question as a user message; no tools, at most
+1,000 output tokens, through `BackgroundModel.completeOn`. Its usage is a
+BACKGROUND row, so it counts to the thread. Outcome: pending.
+
+## D-064 · 2026-10-03 · Subagents in the database — proposed
+Room version 7 (one AutoMigration from 6, with D-058's column) adds the
+`subagents` table (thread, delegate call id, order, type, task, model,
+status, answer, latest text, cost, times; deleted with its thread) and the
+nullable `steps.subagentId`. A subagent's steps are saved as they happen
+under "<subagent id>/<call id>", so ids from two providers cannot clash;
+its model calls are BACKGROUND rows with their cost, so thread, month and
+usage-sheet totals include them, and the run's cost line adds them. Edit
+and resend (D-056) deletes the subagents of removed delegate calls; a
+killed app marks running subagents stopped. Outcome: pending.
+
+## D-065 · 2026-10-03 · Model per subagent type — proposed
+Settings > Subagent models picks a model per type from the scoped models.
+Default: the thread's model; for the scout the background model (D-036),
+which is the thread's model when no priced model has a key. A model named
+in the delegate call wins; a setting whose model is no longer scoped is
+ignored. A subagent uses its model's own thinking level, not the
+thread's. Stored as settings.subagent_models. Outcome: pending.
+
+## D-066 · 2026-10-03 · Subagent cards in the chat — proposed
+Under the run that called delegate, one card per subagent: a dot, its
+name ("Researcher 2"), status (Working, Done, Step limit, Cost limit, Time
+limit, Failed, Stopped), step count and cost, then its task and the first
+line of the latest text it wrote, each on one line. Tapped, it shows the
+whole task, its steps as a track and its answer. Its approval cards read
+"Researcher 2 asks for share_file" with the reason, and Allow once, Allow
+for task, Deny. Several cards can wait at once. Artifacts a subagent
+shows get "Open" cards like the thread agent's. Outcome: pending.
