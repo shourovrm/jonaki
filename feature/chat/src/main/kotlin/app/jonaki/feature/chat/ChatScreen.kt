@@ -122,6 +122,11 @@ fun ChatScreen(
     onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
     /** The ring pill: the app works out [ChatUiState.context] for the sheet; null leaves the pill without a tap. */
     onOpenContext: (() -> Unit)? = null,
+    /** A run_code step was tapped: the app fills [ChatUiState.codeRun] for the code sheet (D-090). */
+    onOpenStep: (stepId: String) -> Unit = {},
+    onCloseCodeRun: () -> Unit = {},
+    /** A file the program saved was tapped in the code sheet. */
+    onOpenFile: (path: String) -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
@@ -184,11 +189,16 @@ fun ChatScreen(
                     onRetry = onRetry,
                     focusMessageId = focusMessageId,
                     onOpenArtifact = onOpenArtifact,
+                    onOpenStep = onOpenStep,
                     // Editing while the agent works would change the history under the run.
                     onEditMessage = if (state.isRunning) null else onEditMessage,
                 )
             }
         }
+    }
+    val codeRun = state.codeRun
+    if (codeRun != null) {
+        CodeRunSheet(codeRun, onOpenFile = onOpenFile, onDismiss = onCloseCodeRun)
     }
     val usage = state.usage
     when {
@@ -344,6 +354,7 @@ private fun MessageList(
     onRetry: (String) -> Unit,
     focusMessageId: String?,
     onOpenArtifact: (path: String) -> Unit,
+    onOpenStep: (stepId: String) -> Unit,
     onEditMessage: ((messageId: String, text: String) -> Unit)?,
 ) {
     val listState = rememberLazyListState()
@@ -397,8 +408,8 @@ private fun MessageList(
                 }
                 is ChatItem.Reasoning -> ReasoningBlock(item)
                 is ChatItem.Working -> WorkingRow(item)
-                is ChatItem.Run -> RunBlock(item)
-                is ChatItem.Subagent -> SubagentCard(item)
+                is ChatItem.Run -> RunBlock(item, onOpenStep)
+                is ChatItem.Subagent -> SubagentCard(item, onOpenStep)
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)

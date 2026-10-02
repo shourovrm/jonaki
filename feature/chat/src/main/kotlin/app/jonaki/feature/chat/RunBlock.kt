@@ -49,7 +49,7 @@ private val TrackColumnWidth = 24.dp
  * folds to its summary line; an active run is always open.
  */
 @Composable
-internal fun RunBlock(run: ChatItem.Run, modifier: Modifier = Modifier) {
+internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, modifier: Modifier = Modifier) {
     var expanded by rememberSaveable(run.id) { mutableStateOf(false) }
     val open = run.isActive || expanded
     Surface(
@@ -67,6 +67,7 @@ internal fun RunBlock(run: ChatItem.Run, modifier: Modifier = Modifier) {
                             isFirst = index == 0,
                             isLast = index == run.steps.lastIndex,
                             nextIsDone = run.steps.getOrNull(index + 1)?.status == StepUiStatus.DONE,
+                            onOpen = onOpenStep,
                         )
                     }
                 }
@@ -130,15 +131,22 @@ private fun RunHeader(run: ChatItem.Run, open: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-internal fun StepRow(step: StepUi, isFirst: Boolean, isLast: Boolean, nextIsDone: Boolean) {
+internal fun StepRow(
+    step: StepUi,
+    isFirst: Boolean,
+    isLast: Boolean,
+    nextIsDone: Boolean,
+    onOpen: (stepId: String) -> Unit,
+) {
     val colors = JonakiTheme.colors
     val doneColor = colors.done
     val trackColor = colors.track
     // The segment below a station is "travelled" when this step and the next are done.
     val segmentBelowColor = if (step.status == StepUiStatus.DONE && nextIsDone) doneColor else trackColor
     val segmentAboveColor = if (step.status == StepUiStatus.DONE) doneColor else trackColor
+    val openModifier = if (step.opensDetail) Modifier.clickable { onOpen(step.id) } else Modifier
     Row(
-        modifier = Modifier
+        modifier = openModifier
             .fillMaxWidth()
             .drawBehind {
                 val x = TrackColumnWidth.toPx() / 2

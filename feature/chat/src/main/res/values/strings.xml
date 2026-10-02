@@ -121,4 +121,17 @@
     <string name="chat_subagent_answer">Answer</string>
     <string name="chat_subagent_show">Show details</string>
     <string name="chat_subagent_hide">Hide details</string>
+    <string name="chat_code_tab_code">Code</string>
+    <string name="chat_code_tab_output">Output</string>
+    <plurals name="chat_code_lines">
+        <item quantity="one">%1$d line</item>
+        <item quantity="other">%1$d lines</item>
+    </plurals>
+    <string name="chat_code_running">Still running</string>
+    <string name="chat_code_no_output">No output</string>
+    <string name="chat_code_result">Result</string>
+    <string name="chat_code_error">Error</string>
+    <string name="chat_code_saved">Saved</string>
+    <string name="chat_code_not_saved">Not saved</string>
+    <string name="chat_code_cut">Output cut</string>
 </resources>

@@ -413,6 +413,10 @@ private fun ChatRoute(
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
     // Worked out each time the ring pill is tapped, so the sheet matches the thread at that moment (D-081).
     var contextUi by remember(threadId) { mutableStateOf<ContextUi?>(null) }
+    // The run_code step whose code sheet is open (D-090); saved so the sheet survives rotation.
+    var openCodeStepId by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
+    val codeRun by codeRunOf(application, threadId, steps.firstOrNull { step -> step.toolCallId == openCodeStepId })
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     DisposableEffect(threadId) {
@@ -469,6 +473,7 @@ private fun ChatRoute(
         threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
         defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
         context = contextUi,
+        codeRun = codeRun.takeIf { openCodeStepId != null },
     )
     val contextWindowTokens = modelInfo?.contextWindowTokens
     ChatScreen(
@@ -570,6 +575,9 @@ private fun ChatRoute(
                 Toast.makeText(application, R.string.files_no_camera, Toast.LENGTH_LONG).show()
             }
         },
+        onOpenStep = { stepId -> openCodeStepId = stepId },
+        onCloseCodeRun = { openCodeStepId = null },
+        onOpenFile = { path -> openSavedFile(context, runner.threadFolder(threadId), path, onOpenArtifact) },
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },

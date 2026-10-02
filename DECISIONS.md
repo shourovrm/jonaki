@@ -889,3 +889,30 @@ access is granted in system settings; the grant is read again on every
 tap and on return to the app. Why: user request of 2026-10-03; Android's
 guidance for partial access. Rejected: asking again after a refusal
 (Android blocks the dialog after two refusals anyway). Outcome: pending.
+
+## D-090 · 2026-10-03 · Code sheet for run_code steps — proposed
+Tapping a run_code step (in the run track or a subagent card) opens a
+sheet with "Python · 12 lines", a copy button and two tabs. Code: line
+numbers, colours, no wrapping (long lines scroll sideways), and the line
+an error points at marked red. Output: printed text, stderr in amber, the
+result, the error, saved files as links (a page in artifacts/ opens in
+the artifact viewer, anything else in another app through the FileProvider
+of D-044, ACTION_VIEW) and "Not saved" files in grey. The folded step
+reads "Python · 12 lines". Data, without a Room change: the code from the
+step's arguments; the output from the TOOL row of that call (the step
+keeps 2,000 characters), or from OutputLimiter's file when the row was cut
+at 20,000; a subagent's step has no TOOL row, so its 2,000-character
+preview is shown with "Output cut". Printed text over 50,000 characters is
+cut for the screen. `RunCodeReport` (tools/run-code) reads the tool's own
+text back, with the labels shared with RunCodeTool; `ProgramErrorLine`
+reads the line from Pyodide's `File "main.py", line N` and from V8's
+`eval at …, <anonymous>:N:C` frames; the JavaScript runner now keeps the
+program on line 1 when it wraps top-level await. Colours: `CodeColors` in
+core/ui, one set per theme, off the firefly yellow-green (D-024); computed
+contrast at least 5.1:1 on surfaceContainer. The tokenizer is our own
+(`CodeTokenizer`, about 200 lines, JVM tests), no new dependency. Why: user
+request of 2026-10-03. Limits: printed text that itself contains a label
+line ("Result: …" with no result of its own) is read wrongly; JavaScript
+syntax errors name no line; previews at 360 dp and font scale 1.3 exist
+in CodeRunPreviews.kt but were not rendered (no emulator). Outcome:
+pending.

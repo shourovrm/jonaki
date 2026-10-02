@@ -41,7 +41,7 @@ import app.jonaki.core.ui.UsageFormat
  * task and its latest line; open, its steps and its answer.
  */
 @Composable
-internal fun SubagentCard(subagent: ChatItem.Subagent, modifier: Modifier = Modifier) {
+internal fun SubagentCard(subagent: ChatItem.Subagent, onOpenStep: (stepId: String) -> Unit, modifier: Modifier = Modifier) {
     var open by rememberSaveable(subagent.id) { mutableStateOf(false) }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -75,7 +75,7 @@ internal fun SubagentCard(subagent: ChatItem.Subagent, modifier: Modifier = Modi
                 )
             }
             if (open) {
-                SubagentDetails(subagent)
+                SubagentDetails(subagent, onOpenStep)
             }
         }
     }
@@ -133,7 +133,7 @@ private fun SubagentHeader(subagent: ChatItem.Subagent, open: Boolean) {
 }
 
 @Composable
-private fun SubagentDetails(subagent: ChatItem.Subagent) {
+private fun SubagentDetails(subagent: ChatItem.Subagent, onOpenStep: (stepId: String) -> Unit) {
     if (subagent.steps.isNotEmpty()) {
         Column(Modifier.padding(top = 6.dp)) {
             subagent.steps.forEachIndexed { index, step ->
@@ -142,6 +142,7 @@ private fun SubagentDetails(subagent: ChatItem.Subagent) {
                     isFirst = index == 0,
                     isLast = index == subagent.steps.lastIndex,
                     nextIsDone = subagent.steps.getOrNull(index + 1)?.status == StepUiStatus.DONE,
+                    onOpen = onOpenStep,
                 )
             }
         }

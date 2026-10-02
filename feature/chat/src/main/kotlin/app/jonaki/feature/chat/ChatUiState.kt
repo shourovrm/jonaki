@@ -33,7 +33,34 @@ data class ChatUiState(
     val defaultApprovalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
     /** What the context sheet shows; null while it is being worked out (D-081). */
     val context: ContextUi? = null,
+    /** The run_code step opened from its card; null when no code sheet is open (D-090). */
+    val codeRun: CodeRunUi? = null,
 )
+
+/** One run_code call for the code sheet: the program and what came out of it (D-090). */
+@Immutable
+data class CodeRunUi(
+    val stepId: String,
+    /** Null when the language is not one the viewer colours; the code is then shown plain. */
+    val syntax: CodeSyntax?,
+    /** "Python", or the language the model named; empty when it named none. */
+    val languageName: String,
+    val code: String,
+    val isRunning: Boolean,
+    val printed: String,
+    val printedToStderr: String,
+    val result: String?,
+    val error: String?,
+    /** The program's line the error points at, from 1; marked red in the code. */
+    val errorLine: Int?,
+    val savedFiles: List<String>,
+    val notSavedFiles: List<NotSavedFileUi>,
+    /** Only the start of the output was kept, so the sheet says that more existed. */
+    val outputIsCut: Boolean,
+)
+
+@Immutable
+data class NotSavedFileUi(val path: String, val reason: String)
 
 /** A file waiting to go into the thread's inbox/ with the next message. */
 @Immutable
@@ -196,6 +223,8 @@ data class StepUi(
     val durationMillis: Long? = null,
     /** When the step started; steps that ran side by side overlap (D-080). */
     val startedAtMillis: Long? = null,
+    /** Tapping the step opens a sheet with its details; true for run_code (D-090). */
+    val opensDetail: Boolean = false,
 )
 
 enum class StepUiStatus {

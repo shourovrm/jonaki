@@ -172,6 +172,9 @@ object ChatItems {
 
     private const val ARTIFACT_TOOL = "artifact"
 
+    /** Its steps open the code sheet (D-090). */
+    private const val RUN_CODE_TOOL = "run_code"
+
     /** The turn's own model calls plus its subagents', whose usage rows are hidden. */
     private fun costOf(turn: List<MessageEntity>, subagents: List<SubagentEntity>): Double? {
         val costs = turn.mapNotNull { row -> row.costUsd } + subagents.mapNotNull { subagent -> subagent.costUsd }
@@ -206,6 +209,7 @@ object ChatItems {
             query = detail.query,
             durationMillis = if (finished == null) null else finished - step.startedAtMillis,
             startedAtMillis = step.startedAtMillis,
+            opensDetail = step.toolName == RUN_CODE_TOOL,
         )
     }
 

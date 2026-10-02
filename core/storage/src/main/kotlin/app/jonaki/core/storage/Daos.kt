@@ -129,6 +129,10 @@ interface MessageDao {
     /** Source messages of memory facts, for the memory screen. */
     @Query("SELECT * FROM messages WHERE id IN (:messageIds)")
     suspend fun findAll(messageIds: List<String>): List<MessageEntity>
+
+    /** The full result the model got for one tool call; the step row keeps only a preview. */
+    @Query("SELECT * FROM messages WHERE toolCallId = :toolCallId AND role = 'TOOL' LIMIT 1")
+    suspend fun findToolResult(toolCallId: String): MessageEntity?
 }
 
 data class ModelUsageRow(

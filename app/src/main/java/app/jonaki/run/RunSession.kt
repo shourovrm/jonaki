@@ -226,7 +226,7 @@ class RunSession(
 
     private fun newMessageId(): String = UUID.randomUUID().toString()
 
-    private companion object {
+    companion object {
         /** The step card shows a short preview; the model got the full text. */
         const val STEP_RESULT_PREVIEW_LENGTH = 2_000
     }
