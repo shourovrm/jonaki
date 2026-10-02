@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jonaki — chat model settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,300..800&family=Noto+Sans+Bengali:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap" rel="stylesheet">
+<style>
+/* ---------- page around the phones (not part of the app design) ---------- */
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 32px 80px;
+  font-family: "Roboto Flex", "Noto Sans Bengali", system-ui, sans-serif;
+  background: #e4e6e5; color: #1a1d1c;
+}
+body.page-dark { background: #161817; color: #e3e6e4; }
+.page-head { max-width: 1240px; margin: 0 auto 28px; display: flex; gap: 24px; align-items: end; justify-content: space-between; flex-wrap: wrap; }
+.page-head h1 { font-size: 28px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+.page-head p { margin: 0; max-width: 70ch; line-height: 1.5; opacity: .8; }
+.theme-switch { display: flex; border: 1px solid currentColor; border-radius: 999px; overflow: hidden; }
+.theme-switch button { font: inherit; font-size: 14px; padding: 10px 18px; background: none; color: inherit; border: 0; cursor: pointer; }
+.theme-switch button[aria-pressed="true"] { background: currentColor; }
+.theme-switch button[aria-pressed="true"] span { filter: invert(1); color: inherit; }
+.direction { max-width: 1240px; margin: 0 auto 64px; }
+.direction-head { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 40px; margin-bottom: 22px; }
+.direction-head h2 { grid-column: 1 / -1; font-size: 24px; margin: 0; font-weight: 650; }
+.direction-head dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14px; line-height: 1.45; }
+.direction-head dt { font-weight: 600; opacity: .7; }
+.direction-head dd { margin: 0; }
+.phones { display: flex; gap: 28px; flex-wrap: wrap; }
+.phone-wrap figcaption { font-size: 13px; opacity: .7; margin-top: 10px; text-align: center; }
+
+/* ---------- phone frame ---------- */
+.phone {
+  width: 360px; height: 780px; border-radius: 34px; overflow: hidden; position: relative;
+  box-shadow: 0 0 0 9px #0d0f0e, 0 18px 40px -12px rgba(0,0,0,.45);
+  display: flex; flex-direction: column;
+  background: var(--surface); color: var(--on-surface);
+  font-family: var(--font-body);
+}
+.statusbar { height: 32px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 500; color: var(--on-surface); }
+.statusbar .icons { display: flex; gap: 4px; }
+.statusbar .material-symbols-rounded { font-size: 16px; }
+.gesturebar { height: 22px; flex: none; display: grid; place-items: center; }
+.gesturebar::after { content: ""; width: 108px; height: 4px; border-radius: 2px; background: var(--on-surface); opacity: .55; }
+.material-symbols-rounded { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; display: inline-block; -webkit-font-feature-settings: "liga"; font-feature-settings: "liga"; font-variation-settings: "FILL" 0, "wght" 400, "opsz" 24; }
+.icon-button { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: var(--on-surface-variant); flex: none; }
+.app-bar { height: 64px; flex: none; display: flex; align-items: center; padding: 0 4px 0 4px; gap: 4px; }
+.app-bar .title { flex: 1; min-width: 0; }
+.app-bar .title strong { display: block; font-size: 20px; font-weight: 560; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bar .title small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+.content { flex: 1; overflow: hidden; position: relative; }
+.bn { font-family: "Noto Sans Bengali", var(--font-body); }
+.mono { font-family: "Roboto Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* ---------- shared component structure ---------- */
+.thread-list { list-style: none; margin: 0; padding: 0; }
+.thread { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 20px; min-height: 72px; align-content: center; position: relative; }
+.thread .name { font-size: 16px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .last { grid-column: 1; font-size: 14px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .when { grid-row: 1; grid-column: 2; font-size: 12px; color: var(--on-surface-variant); text-align: right; }
+.thread .state { grid-row: 2; grid-column: 2; font-size: 12px; text-align: right; }
+.fab { position: absolute; right: 16px; bottom: 16px; height: 56px; padding: 0 20px 0 16px; border-radius: 16px; display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 560; background: var(--primary-container); color: var(--on-primary-container); box-shadow: 0 3px 8px -2px rgba(0,0,0,.3); }
+.search-field { margin: 4px 16px 8px; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; gap: 12px; padding: 0 16px; color: var(--on-surface-variant); font-size: 16px; }
+.section-label { font-size: 13px; font-weight: 600; color: var(--on-surface-variant); padding: 14px 20px 6px; letter-spacing: .02em; }
+
+.chat { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.bubble-user { align-self: flex-end; max-width: 84%; padding: 10px 14px; border-radius: 20px 20px 6px 20px; background: var(--primary-container); color: var(--on-primary-container); font-size: 15px; line-height: 1.45; }
+.answer { font-size: 15px; line-height: 1.55; }
+.answer p { margin: 0 0 8px; }
+.caret { display: inline-block; width: 8px; height: 16px; vertical-align: -2px; background: var(--live); border-radius: 2px; }
+.composer { flex: none; padding: 8px 12px 6px; display: flex; gap: 8px; align-items: center; }
+.composer .field { flex: 1; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; padding: 0 6px 0 4px; color: var(--on-surface-variant); font-size: 15px; gap: 2px; }
+.composer .field span.ph { flex: 1; }
+.stop-button { height: 52px; padding: 0 18px 0 14px; border-radius: 26px; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; background: var(--stop); color: var(--on-stop); }
+
+.steps { list-style: none; margin: 0; padding: 0; }
+.step .tool { font-weight: 600; }
+.step .detail { color: var(--on-surface-variant); }
+.step .query { color: var(--on-surface); }
+
+.approval { border-radius: 20px; padding: 14px 16px 12px; background: var(--surface-container-high); }
+.approval h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.approval p { margin: 0 0 12px; font-size: 14px; color: var(--on-surface-variant); line-height: 1.45; }
+.approval .path { font-family: "Roboto Mono", monospace; font-size: 13px; color: var(--on-surface); }
+.approval .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { height: 40px; padding: 0 16px; border-radius: 20px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 560; }
+.btn.filled { background: var(--primary); color: var(--on-primary); }
+.btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.text { color: var(--deny); margin-left: auto; }
+
+.settings-group { margin: 0 16px 14px; border-radius: 20px; background: var(--surface-container); overflow: hidden; }
+.setting { display: flex; gap: 14px; align-items: center; padding: 14px 16px; min-height: 64px; }
+.setting + .setting { border-top: 1px solid var(--outline-variant); }
+.setting .text { flex: 1; min-width: 0; }
+.setting .text strong { display: block; font-size: 15px; font-weight: 560; }
+.setting .text small { display: block; font-size: 13px; color: var(--on-surface-variant); line-height: 1.4; margin-top: 2px; }
+.switch { width: 52px; height: 32px; border-radius: 16px; position: relative; flex: none; background: var(--surface-container-highest); border: 2px solid var(--outline); }
+.switch::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; top: 6px; left: 6px; background: var(--outline); }
+.switch.on { background: var(--primary); border-color: var(--primary); }
+.switch.on::after { width: 24px; height: 24px; top: 2px; left: 22px; background: var(--on-primary); }
+.rank { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex: none; background: var(--secondary-container); color: var(--on-secondary-container); }
+.key-state { font-size: 12px; font-weight: 600; }
+
+/* =====================================================================
+   Direction B — Firefly
+   ===================================================================== */
+.dir-firefly { --font-body: "Roboto Flex", "Noto Sans Bengali", sans-serif; }
+.dir-firefly[data-theme="dark"] {
+  --surface: #11140f; --surface-container: #1a1e17; --surface-container-high: #22271e; --surface-container-highest: #2c3227;
+  --on-surface: #e4e8dc; --on-surface-variant: #a9b19d; --outline: #7a8370; --outline-variant: #33392d;
+  --primary: #c9e86b; --on-primary: #263400; --primary-container: #3a4a12; --on-primary-container: #e6f7b0;
+  --secondary-container: #333b27; --on-secondary-container: #dde6c8;
+  --live: #d8f36a; --done: #8d9a7c; --stop: #3a4a12; --on-stop: #e6f7b0; --deny: #f2b8a9; --track: #33392d;
+  --glow: rgba(216, 243, 106, .55);
+}
+.dir-firefly[data-theme="light"] {
+  --surface: #f6f8f0; --surface-container: #edf1e4; --surface-container-high: #e6ebdb; --surface-container-highest: #dde3d0;
+  --on-surface: #1a1f12; --on-surface-variant: #50593f; --outline: #7a8468; --outline-variant: #cdd4bd;
+  --primary: #4b6300; --on-primary: #ffffff; --primary-container: #d4ee7c; --on-primary-container: #161f00;
+  --secondary-container: #dfe6c9; --on-secondary-container: #1c2410;
+  --live: #6a8a00; --done: #7a8468; --stop: #1a1f12; --on-stop: #e6f7b0; --deny: #a1361c; --track: #d6dcc6;
+  --glow: rgba(150, 190, 20, .35);
+}
+.dir-firefly .app-bar .title strong { font-weight: 620; }
+.dir-firefly .thread { grid-template-columns: 28px 1fr auto; padding-left: 12px; }
+.dir-firefly .thread .light { grid-row: 1 / span 2; width: 10px; height: 10px; border-radius: 50%; margin-left: 8px; align-self: center; background: var(--track); }
+.dir-firefly .thread .light.on { background: var(--live); box-shadow: 0 0 10px 3px var(--glow); }
+.dir-firefly .thread .light.waiting { background: var(--deny); }
+.dir-firefly .thread .last { grid-column: 2; }
+.dir-firefly .thread .when, .dir-firefly .thread .state { grid-column: 3; }
+.dir-firefly .thread .state { color: var(--on-surface-variant); }
+.dir-firefly .thread .state.running { color: var(--live); font-weight: 600; }
+.dir-firefly .thread .state.waiting { color: var(--deny); font-weight: 600; }
+.dir-firefly .thread.active { background: var(--surface-container); border-radius: 20px; margin: 0 8px; }
+/* the run as a quiet trail; only the step that is working gives off light */
+.dir-firefly .run { border-radius: 20px; background: var(--surface-container); padding: 12px 14px 10px; }
+.dir-firefly .run-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--on-surface-variant); margin-bottom: 8px; }
+.dir-firefly .run-head .live { color: var(--live); font-weight: 600; }
+.dir-firefly .run-head .count { margin-left: auto; font-family: "Roboto Mono", monospace; font-size: 12px; }
+.dir-firefly .step { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; padding: 5px 0; font-size: 13.5px; line-height: 1.4; }
+.dir-firefly .step .dot { grid-row: 1 / span 2; width: 8px; height: 8px; border-radius: 50%; margin: 6px 0 0 6px; background: var(--done); }
+.dir-firefly .step.running .dot { background: var(--live); box-shadow: 0 0 10px 4px var(--glow); }
+.dir-firefly .step.done .tool { color: var(--on-surface-variant); font-weight: 500; }
+.dir-firefly .step.running .tool { color: var(--on-surface); }
+.dir-firefly .step .time { display: none; }
+.dir-firefly .step .detail { grid-column: 2; }
+.dir-firefly .step .query { font-style: italic; }
+.dir-firefly .approval { background: var(--primary-container); color: var(--on-primary-container); border-radius: 24px; }
+.dir-firefly .approval p { color: var(--on-primary-container); opacity: .85; }
+.dir-firefly .approval .path { color: var(--on-primary-container); }
+.dir-firefly .approval .btn.tonal { background: color-mix(in srgb, var(--on-primary-container) 12%, transparent); color: var(--on-primary-container); }
+.dir-firefly .bubble-user { border-radius: 22px 22px 6px 22px; background: var(--surface-container-highest); color: var(--on-surface); }
+.dir-firefly .fab { border-radius: 20px; background: var(--primary); color: var(--on-primary); }
+.dir-firefly .search-field { background: var(--surface-container); }
+.dir-firefly .rank { background: var(--primary-container); color: var(--on-primary-container); }
+
+.svc-card { margin: 0 16px 10px; border-radius: 20px; background: var(--surface-container); overflow: hidden; }
+.svc-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; min-height: 64px; }
+.svc-head .text { flex: 1; } .svc-head strong { display: block; font-size: 15.5px; font-weight: 600; }
+.svc-head small { display: block; font-size: 12.5px; color: var(--on-surface-variant); margin-top: 2px; }
+.svc-head .material-symbols-rounded { color: var(--on-surface-variant); }
+.key-field { margin: 0 16px 10px; border: 1px solid var(--outline); border-radius: 12px; padding: 8px 12px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; }
+.key-field small { grid-column: 1 / -1; font-size: 11.5px; color: var(--on-surface-variant); }
+.key-field .mono { font-size: 15px; letter-spacing: .02em; }
+.key-field.solo { margin: 0 16px 6px; min-height: 52px; }
+.key-actions { display: flex; gap: 14px; color: var(--on-surface-variant); }
+.key-actions .material-symbols-rounded { font-size: 20px; }
+.model-list { border-top: 1px solid var(--outline-variant); }
+.mrow { display: grid; grid-template-columns: 28px 1fr 24px; gap: 10px; align-items: center; padding: 10px 16px; min-height: 58px; }
+.mrow.pad { padding: 12px 16px; }
+.mrow strong { display: block; font-size: 14.5px; font-weight: 560; } .mrow small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+.star { color: var(--outline); font-size: 22px; } .star.on { color: var(--live); font-variation-settings: "FILL" 1; }
+.more { color: var(--on-surface-variant); font-size: 20px; }
+.dropdown-field { margin: 4px 16px 0; height: 52px; border: 1px solid var(--outline); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 16px; font-size: 15px; color: var(--primary); font-weight: 600; }
+.dropdown-field.open { border-color: var(--primary); border-width: 2px; }
+.dropdown-menu { margin: 4px 16px; border-radius: 12px; background: var(--surface-container-high); box-shadow: 0 6px 18px -4px rgba(0,0,0,.4); padding: 6px 0; }
+.dd-item { padding: 10px 16px; min-height: 48px; } .dd-item strong { display: block; font-size: 14.5px; font-weight: 560; } .dd-item small { font-size: 12px; color: var(--on-surface-variant); }
+.text-action { color: var(--primary); font-weight: 600; font-size: 15px; padding: 0 16px; }
+.filter-row { display: flex; gap: 8px; padding: 0 16px 8px; }
+.fchip { height: 32px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--outline); display: grid; place-items: center; font-size: 13px; }
+.fchip.on { background: var(--secondary-container); border-color: transparent; color: var(--on-secondary-container); font-weight: 600; }
+.pick { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: center; padding: 10px 20px; min-height: 60px; }
+.pick strong { display: block; font-size: 14.5px; font-weight: 560; } .pick small { display: block; font-size: 11.5px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--outline); display: grid; place-items: center; }
+.check.on { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.check .material-symbols-rounded { font-size: 16px; }
+.pick-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 20px; font-size: 13px; color: var(--on-surface-variant); background: var(--surface-container); }
+.add-row { margin: 0 16px 10px; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 4px; color: var(--primary); font-weight: 600; font-size: 15px; }
+.svc-card .add-row { margin: 0; padding: 0 16px; }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div>
+    <h1>Jonaki — chat model settings</h1>
+    <p>You add a service from a drop-down list, then its key, then any number of its models, found by search. Saved keys show their first three characters and dots. One model, marked with a star, is the default for new threads; the status strip's model menu lists every model you added. Two layouts: A keeps everything on the Settings page in cards that open, B gives each service its own page.</p>
+  </div>
+  <div class="theme-switch" role="group" aria-label="Theme">
+    <button data-set-theme="light" aria-pressed="false"><span>Light</span></button>
+    <button data-set-theme="dark" aria-pressed="true"><span>Dark</span></button>
+  </div>
+</header>
+
+<section class="direction">
+  <div class="direction-head">
+    <h2>A · Cards on the Settings page</h2>
+    <dl>
+      <dt>Flow</dt><dd>"Add service" opens a drop-down of the services you haven't added. Each added service is a card; tap it to open the key and its models.</dd>
+    </dl>
+    <dl>
+      <dt>Strength</dt><dd>Everything is on one page and one tap away.</dd>
+      <dt>Risk</dt><dd>With three or four services open, the page gets long.</dd>
+    </dl>
+  </div>
+  <div class="phones">
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:50</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Settings</strong></div></div>
+        <div class="content">
+          <div class="section-label">Chat models</div>
+          <div class="svc-card">
+            <div class="svc-head"><div class="text"><strong>OpenRouter</strong><small class="mono">sk-•••••••• · 3 models</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          </div>
+          <div class="svc-card">
+            <div class="svc-head"><div class="text"><strong>DeepSeek</strong><small class="mono">sk-•••••••• · 1 model</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          </div>
+          <div class="dropdown-field open"><span>Add service</span><span class="material-symbols-rounded">arrow_drop_up</span></div>
+          <div class="dropdown-menu">
+            <div class="dd-item"><strong>Gemini</strong><small>Google</small></div>
+            <div class="dd-item"><strong>GLM</strong><small>Z.ai</small></div>
+            <div class="dd-item"><strong>MiMo</strong><small>Xiaomi</small></div>
+            <div class="dd-item"><strong>Ollama Cloud</strong><small>ollama.com</small></div>
+            <div class="dd-item"><strong>Ollama on this network</strong><small>No key</small></div>
+            <div class="dd-item"><strong>OpenAI</strong><small>platform.openai.com</small></div>
+          </div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Add service: drop-down of services not added yet</figcaption>
+    </figure>
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:51</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Settings</strong></div></div>
+        <div class="content">
+          <div class="section-label">Chat models</div>
+          <div class="svc-card open">
+            <div class="svc-head"><div class="text"><strong>OpenRouter</strong></div><span class="material-symbols-rounded">expand_less</span></div>
+            <div class="key-field"><small>API key</small><span class="mono">sk-o•••••••••••••••</span><span class="key-actions"><span class="material-symbols-rounded">edit</span><span class="material-symbols-rounded">delete</span></span></div>
+            <div class="model-list">
+              <div class="mrow"><span class="material-symbols-rounded star on">star</span><div class="text"><strong>GLM 5.3 Flash</strong><small class="mono">200K · $0.10 / $0.40</small></div><span class="material-symbols-rounded more">more_vert</span></div>
+              <div class="mrow"><span class="material-symbols-rounded star">star</span><div class="text"><strong>Claude Sonnet 5.5</strong><small class="mono">1M · $3.00 / $15.00</small></div><span class="material-symbols-rounded more">more_vert</span></div>
+              <div class="mrow"><span class="material-symbols-rounded star">star</span><div class="text"><strong>Kimi K3</strong><small class="mono">256K · $0.60 / $2.50</small></div><span class="material-symbols-rounded more">more_vert</span></div>
+            </div>
+            <div class="add-row"><span class="material-symbols-rounded">add</span>Add model</div>
+          </div>
+          <div class="svc-card">
+            <div class="svc-head"><div class="text"><strong>DeepSeek</strong><small class="mono">sk-•••••••• · 1 model</small></div><span class="material-symbols-rounded">expand_more</span></div>
+          </div>
+          <div class="dropdown-field"><span>Add service</span><span class="material-symbols-rounded">arrow_drop_down</span></div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Card open: masked key, models, star = default</figcaption>
+    </figure>
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:51</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">close</span></span><div class="title"><strong>Add OpenRouter models</strong></div><span class="text-action">Done</span></div>
+        <div class="content">
+          <div class="search-field"><span class="material-symbols-rounded">search</span><span style="color:var(--on-surface)">deepseek</span></div>
+          <div class="filter-row"><span class="fchip on">All</span><span class="fchip">Free</span><span class="fchip">Tools</span><span class="fchip">Vision</span></div>
+          <div class="pick-list">
+            <div class="pick"><span class="check on"><span class="material-symbols-rounded">check</span></span><div class="text"><strong>DeepSeek V4</strong><small class="mono">deepseek/deepseek-v4 · 128K · $0.27 / $1.10</small></div></div>
+            <div class="pick"><span class="check"></span><div class="text"><strong>DeepSeek V4 Flash</strong><small class="mono">deepseek/deepseek-v4-flash · 128K · $0.07 / $0.28</small></div></div>
+            <div class="pick"><span class="check"></span><div class="text"><strong>DeepSeek R2</strong><small class="mono">deepseek/deepseek-r2 · 128K · $0.55 / $2.19</small></div></div>
+            <div class="pick"><span class="check"></span><div class="text"><strong>DeepSeek V4 (free)</strong><small class="mono">deepseek/deepseek-v4:free · 64K · free</small></div></div>
+            <div class="pick"><span class="check"></span><div class="text"><strong>DeepSeek Coder 3</strong><small class="mono">deepseek/deepseek-coder-3 · 128K · $0.14 / $0.28</small></div></div>
+          </div>
+          <div class="pick-foot">2 selected · 312 models in the list</div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Add model: search the service's list, tick several</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="direction">
+  <div class="direction-head">
+    <h2>B · A page per service</h2>
+    <dl>
+      <dt>Flow</dt><dd>Settings shows one row per service with its masked key and model count. Tapping a row opens that service's page: key, models, default. Adding a service uses the same drop-down.</dd>
+    </dl>
+    <dl>
+      <dt>Strength</dt><dd>Settings stays short; each service's page has room for its own options later (base URL for Ollama, for example).</dd>
+      <dt>Risk</dt><dd>One more tap to reach the models.</dd>
+    </dl>
+  </div>
+  <div class="phones">
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:50</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>Settings</strong></div></div>
+        <div class="content">
+          <div class="section-label">Chat models</div>
+          <div class="settings-group">
+            <div class="setting"><div class="text"><strong>OpenRouter</strong><small class="mono">sk-•••••••• · 3 models</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">chevron_right</span></div>
+            <div class="setting"><div class="text"><strong>DeepSeek</strong><small class="mono">sk-•••••••• · 1 model</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">chevron_right</span></div>
+            <div class="setting"><div class="text"><strong>Default model</strong><small>GLM 5.3 Flash · OpenRouter</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">arrow_drop_down</span></div>
+          </div>
+          <div class="dropdown-field"><span>Add service</span><span class="material-symbols-rounded">arrow_drop_down</span></div>
+          <div class="section-label">YouTube summaries</div>
+          <div class="settings-group">
+            <div class="setting"><div class="text"><strong>Gemini</strong><small class="mono">AIz•••••••••</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">chevron_right</span></div>
+          </div>
+          <div class="section-label">Web search</div>
+          <div class="settings-group">
+            <div class="setting"><span class="rank">1</span><div class="text"><strong>Tavily</strong><small class="mono">tvl•••••••••</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+            <div class="setting"><span class="rank">2</span><div class="text"><strong>Ollama</strong><small class="mono">6c4•••••••••</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+          </div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Settings: one row per service, default model drop-down</figcaption>
+    </figure>
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:51</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar"><span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span><div class="title"><strong>OpenRouter</strong></div><span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span></div>
+        <div class="content">
+          <div class="section-label">API key</div>
+          <div class="key-field solo"><span class="mono">sk-o•••••••••••••••</span><span class="key-actions"><span class="material-symbols-rounded">edit</span></span></div>
+          <div class="section-label">Models</div>
+          <div class="settings-group">
+            <div class="mrow pad"><span class="material-symbols-rounded star on">star</span><div class="text"><strong>GLM 5.3 Flash</strong><small class="mono">200K · $0.10 / $0.40</small></div><span class="material-symbols-rounded more">close</span></div>
+            <div class="mrow pad"><span class="material-symbols-rounded star">star</span><div class="text"><strong>Claude Sonnet 5.5</strong><small class="mono">1M · $3.00 / $15.00</small></div><span class="material-symbols-rounded more">close</span></div>
+            <div class="mrow pad"><span class="material-symbols-rounded star">star</span><div class="text"><strong>Kimi K3</strong><small class="mono">256K · $0.60 / $2.50</small></div><span class="material-symbols-rounded more">close</span></div>
+          </div>
+          <div class="add-row"><span class="material-symbols-rounded">add</span>Add model</div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Service page: key, models, star = default</figcaption>
+    </figure>
+  </div>
+</section>
+
+<script>
+  function setTheme(theme) {
+    for (const phone of document.querySelectorAll(".phone")) phone.dataset.theme = theme;
+    document.body.classList.toggle("page-dark", theme === "dark");
+    for (const button of document.querySelectorAll("[data-set-theme]")) button.setAttribute("aria-pressed", String(button.dataset.setTheme === theme));
+  }
+  for (const button of document.querySelectorAll("[data-set-theme]")) button.addEventListener("click", () => setTheme(button.dataset.setTheme));
+  setTheme(new URLSearchParams(location.search).get("theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+</script>
+</body>
+</html>
