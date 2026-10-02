@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_back">Back</string>
+    <string name="chat_more">More</string>
+    <string name="chat_subtitle_search_on">%1$s · web search on</string>
+    <string name="chat_subtitle_search_off">%1$s · web search off</string>
+    <string name="chat_menu_web_search">Web search</string>
+    <string name="chat_message_hint">Message</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_stop">Stop</string>
+    <string name="chat_run_working">Working</string>
+    <string name="chat_run_step">step %1$d</string>
+    <plurals name="chat_run_steps">
+        <item quantity="one">%1$d step</item>
+        <item quantity="other">%1$d steps</item>
+    </plurals>
+    <string name="chat_run_show">Show steps</string>
+    <string name="chat_run_hide">Hide steps</string>
+    <string name="chat_step_waiting">Waiting for you</string>
+    <string name="chat_step_failed">Failed</string>
+    <string name="chat_step_denied">Denied</string>
+    <string name="chat_step_stopped">Stopped</string>
+    <string name="chat_approval_title">Allow %1$s?</string>
+    <string name="chat_approval_once">Allow once</string>
+    <string name="chat_approval_thread">Allow in thread</string>
+    <string name="chat_approval_deny">Deny</string>
+    <string name="chat_retry">Retry</string>
+    <string name="chat_empty">Ask anything.</string>
+</resources>
