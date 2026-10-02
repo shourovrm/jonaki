@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -85,6 +86,10 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
             SectionLabel(stringResource(R.string.settings_section_skills))
             Group {
                 NavigationRow(stringResource(R.string.settings_skills_open), onClick = actions.onOpenSkills)
+            }
+            SectionLabel(stringResource(R.string.settings_section_files))
+            Group {
+                LinkedFolderRow(state.linkedFolderName, actions)
             }
             SectionLabel(stringResource(R.string.settings_section_appearance))
             ThemeChooser(state.themeMode, actions.onThemeModeChange)
@@ -214,6 +219,35 @@ private fun ThemeChooser(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
             ) {
                 Text(stringResource(label))
             }
+        }
+    }
+}
+
+/** The linked folder's name wraps in full, like a path in an opened view (D-029). */
+@Composable
+private fun LinkedFolderRow(folderName: String?, actions: SettingsActions) {
+    if (folderName == null) {
+        NavigationRow(stringResource(R.string.settings_link_folder), onClick = actions.onLinkFolder)
+        return
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = actions.onLinkFolder)
+            .heightIn(min = 56.dp)
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_linked_folder), style = MaterialTheme.typography.titleSmall)
+            Text(
+                folderName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = actions.onUnlinkFolder) {
+            Text(stringResource(R.string.settings_unlink_folder))
         }
     }
 }

@@ -20,6 +20,15 @@ data class ChatUiState(
     val selectedModelKey: String? = null,
     /** What the usage sheet shows; null disables tapping the cost. */
     val usage: UsageUi? = null,
+    /** Files picked or shared for the next message, shown as chips above the field. */
+    val attachments: List<AttachmentUi> = emptyList(),
+)
+
+/** A file waiting to go into the thread's inbox/ with the next message. */
+@Immutable
+data class AttachmentUi(
+    val id: String,
+    val name: String,
 )
 
 /** The model, context and cost of this thread, shown as pills above the message field. */
