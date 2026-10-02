@@ -81,13 +81,15 @@ fun ChatScreen(
     onModelSelect: (modelKey: String) -> Unit = {},
     /** "Edit list" in the model sheet: open the models in Settings. */
     onEditModels: () -> Unit = {},
+    /** Rename in the overflow menu: the app shows the rename dialog. */
+    onRename: () -> Unit = {},
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
-        topBar = { ChatTopBar(state, onBack, onWebSearchChange) },
+        topBar = { ChatTopBar(state, onBack, onWebSearchChange, onRename) },
         bottomBar = {
             Column(Modifier.navigationBarsPadding().imePadding()) {
                 val status = state.status
@@ -142,7 +144,12 @@ private enum class ChatSheet {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatTopBar(state: ChatUiState, onBack: () -> Unit, onWebSearchChange: (Boolean) -> Unit) {
+private fun ChatTopBar(
+    state: ChatUiState,
+    onBack: () -> Unit,
+    onWebSearchChange: (Boolean) -> Unit,
+    onRename: () -> Unit,
+) {
     var menuOpen by remember { mutableStateOf(false) }
     TopAppBar(
         navigationIcon = {
@@ -176,6 +183,16 @@ private fun ChatTopBar(state: ChatUiState, onBack: () -> Unit, onWebSearchChange
                         },
                         onClick = { onWebSearchChange(!state.webSearchEnabled) },
                     )
+                    // A thread that has no message yet has no name to change.
+                    if (state.title.isNotBlank()) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.chat_menu_rename)) },
+                            onClick = {
+                                menuOpen = false
+                                onRename()
+                            },
+                        )
+                    }
                 }
             }
         },

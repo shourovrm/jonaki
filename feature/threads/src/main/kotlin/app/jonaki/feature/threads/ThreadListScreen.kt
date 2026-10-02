@@ -1,5 +1,15 @@
 package app.jonaki.feature.threads
 
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -64,7 +74,12 @@ fun ThreadListScreen(
     onNewThread: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Long-press menu: the app shows [RenameThreadDialog]. */
+    onRename: (threadId: String) -> Unit = {},
+    /** Called after the user confirms deletion. */
+    onDelete: (threadId: String) -> Unit = {},
 ) {
+    var threadToDelete by remember { mutableStateOf<ThreadRow?>(null) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val visibleThreads = remember(state.threads, state.searchQuery) { filterThreads(state.threads, state.searchQuery) }
     val zone = remember { ZoneId.systemDefault() }
@@ -115,11 +130,28 @@ fun ThreadListScreen(
                 visibleThreads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_no_matches), body = null)
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
                     items(visibleThreads, key = { thread -> thread.id }) { thread ->
-                        ThreadRowView(thread, ThreadTimeLabel.of(thread.updatedAtMillis, nowMillis, zone), onThreadClick)
+                        ThreadRowView(
+                            thread = thread,
+                            timeLabel = ThreadTimeLabel.of(thread.updatedAtMillis, nowMillis, zone),
+                            onThreadClick = onThreadClick,
+                            onRename = onRename,
+                            onDeleteRequest = { threadToDelete = thread },
+                        )
                     }
                 }
             }
         }
+    }
+    val deleting = threadToDelete
+    if (deleting != null) {
+        DeleteThreadDialog(
+            title = deleting.title,
+            onConfirm = {
+                threadToDelete = null
+                onDelete(deleting.id)
+            },
+            onDismiss = { threadToDelete = null },
+        )
     }
 }
 
@@ -150,8 +182,16 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ThreadRowView(thread: ThreadRow, timeLabel: ThreadTimeLabel, onThreadClick: (String) -> Unit) {
+private fun ThreadRowView(
+    thread: ThreadRow,
+    timeLabel: ThreadTimeLabel,
+    onThreadClick: (String) -> Unit,
+    onRename: (String) -> Unit,
+    onDeleteRequest: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
     val colors = JonakiTheme.colors
     val dotColor: Color
     val dotStyle: DotStyle
@@ -174,51 +214,89 @@ private fun ThreadRowView(thread: ThreadRow, timeLabel: ThreadTimeLabel, onThrea
     } else {
         Color.Transparent
     }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(rowBackground)
-            .clickable { onThreadClick(thread.id) }
-            .heightIn(min = 72.dp)
-            .padding(start = 4.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
-    ) {
-        GlowDot(dotColor, dotStyle)
-        Spacer(Modifier.width(8.dp))
-        Column(Modifier.weight(1f)) {
-            // The title wraps so the whole name shows; only the preview line is cut short.
-            Text(
-                thread.title,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                thread.lastLine,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                timeText(timeLabel),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val cost = thread.costUsd
-            if (thread.runState == ThreadRunState.Idle && cost != null) {
+    val renameLabel = stringResource(R.string.threads_rename)
+    val deleteLabel = stringResource(R.string.threads_delete)
+    Box {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(rowBackground)
+                .combinedClickable(
+                    onClick = { onThreadClick(thread.id) },
+                    onLongClick = { menuOpen = true },
+                )
+                .semantics {
+                    // TalkBack users reach Rename and Delete without a long-press.
+                    customActions = listOf(
+                        CustomAccessibilityAction(renameLabel) {
+                            onRename(thread.id)
+                            true
+                        },
+                        CustomAccessibilityAction(deleteLabel) {
+                            onDeleteRequest()
+                            true
+                        },
+                    )
+                }
+                .heightIn(min = 72.dp)
+                .padding(start = 4.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+        ) {
+            GlowDot(dotColor, dotStyle)
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                // The title wraps so the whole name shows; only the preview line is cut short.
                 Text(
-                    UsageFormat.cost(cost),
-                    style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+                    thread.title,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    thread.lastLine,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            } else {
-                RunStateText(thread.runState)
             }
+            Spacer(Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    timeText(timeLabel),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val cost = thread.costUsd
+                if (thread.runState == ThreadRunState.Idle && cost != null) {
+                    Text(
+                        UsageFormat.cost(cost),
+                        style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                } else {
+                    RunStateText(thread.runState)
+                }
+            }
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(renameLabel) },
+                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    onRename(thread.id)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(deleteLabel, color = JonakiTheme.colors.deny) },
+                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = JonakiTheme.colors.deny) },
+                onClick = {
+                    menuOpen = false
+                    onDeleteRequest()
+                },
+            )
         }
     }
 }

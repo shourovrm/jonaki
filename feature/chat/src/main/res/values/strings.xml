@@ -5,6 +5,7 @@
     <string name="chat_subtitle_search_on">%1$s · web search on</string>
     <string name="chat_subtitle_search_off">%1$s · web search off</string>
     <string name="chat_menu_web_search">Web search</string>
+    <string name="chat_menu_rename">Rename</string>
     <string name="chat_message_hint">Message</string>
     <string name="chat_send">Send</string>
     <string name="chat_stop">Stop</string>

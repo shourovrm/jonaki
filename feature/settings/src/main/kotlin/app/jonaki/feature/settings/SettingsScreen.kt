@@ -1,7 +1,6 @@
 package app.jonaki.feature.settings
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,9 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -28,8 +25,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -37,7 +32,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,14 +41,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.ThemeMode
+import androidx.compose.ui.text.style.TextOverflow
+import app.jonaki.core.ui.MonospaceFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +71,8 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
-            ChatModelSection(state, actions)
+            SectionLabel(stringResource(R.string.settings_section_chat))
+            ChatServicesSection(state, actions)
             SectionLabel(stringResource(R.string.settings_section_youtube))
             Group {
                 KeyField(stringResource(R.string.settings_gemini_key), state.geminiKey, actions)
@@ -92,48 +84,6 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
                 NavigationRow(stringResource(R.string.settings_status_icons), onClick = actions.onOpenStatusIcons)
             }
         }
-    }
-}
-
-@Composable
-private fun ChatModelSection(state: SettingsUiState, actions: SettingsActions) {
-    SectionLabel(stringResource(R.string.settings_section_chat))
-    Group {
-        state.providers.forEachIndexed { index, provider ->
-            if (index > 0) GroupDivider()
-            val selected = provider.key == state.selectedProviderKey
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(selected = selected, role = Role.RadioButton) { actions.onProviderSelect(provider.key) }
-                    .heightIn(min = 56.dp)
-                    .padding(horizontal = 8.dp),
-            ) {
-                RadioButton(selected = selected, onClick = null, modifier = Modifier.padding(8.dp))
-                Text(provider.displayName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                KeyStatus(provider.apiKey.isSet)
-                Spacer(Modifier.width(8.dp))
-            }
-        }
-        val selectedProvider = state.providers.firstOrNull { provider -> provider.key == state.selectedProviderKey }
-        if (selectedProvider != null) {
-            GroupDivider()
-            KeyField(
-                label = "${selectedProvider.displayName} · ${stringResource(R.string.settings_api_key)}",
-                slot = selectedProvider.apiKey,
-                actions = actions,
-            )
-        }
-        GroupDivider()
-        OutlinedTextField(
-            value = state.model,
-            onValueChange = actions.onModelChange,
-            label = { Text(stringResource(R.string.settings_model)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-        )
     }
 }
 
@@ -200,7 +150,18 @@ private fun SearchServiceItem(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(service.displayName, style = MaterialTheme.typography.titleSmall)
-                KeyStatus(service.apiKey.isSet)
+                if (service.apiKey.isSet) {
+                    Text(
+                        service.apiKey.maskedKey.orEmpty(),
+                        style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    BalanceLine(service.apiKey.balance)
+                } else {
+                    KeyStatus(isSet = false)
+                }
             }
             IconButton(onClick = { actions.onSearchServiceMove(service.key, -1) }, enabled = canMoveUp) {
                 Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.settings_move_up, service.displayName))
@@ -214,61 +175,7 @@ private fun SearchServiceItem(
                 label = "${service.displayName} · ${stringResource(R.string.settings_api_key)}",
                 slot = service.apiKey,
                 actions = actions,
-                onDone = { editing = false },
             )
-        }
-    }
-}
-
-/**
- * Entry for one secret. A saved key is never shown again: the field starts
- * empty, and saving replaces the stored key.
- */
-@Composable
-private fun KeyField(label: String, slot: KeySlot, actions: SettingsActions, onDone: () -> Unit = {}) {
-    var entered by rememberSaveable(slot.id) { mutableStateOf("") }
-    var visible by rememberSaveable(slot.id) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
-        OutlinedTextField(
-            value = entered,
-            onValueChange = { entered = it.trim() },
-            label = { Text(label) },
-            placeholder = {
-                Text(stringResource(if (slot.isSet) R.string.settings_key_replace_hint else R.string.settings_key_hint))
-            },
-            singleLine = true,
-            visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
-            trailingIcon = {
-                IconButton(onClick = { visible = !visible }) {
-                    Icon(
-                        if (visible) JonakiIcons.VisibilityOff else JonakiIcons.Visibility,
-                        contentDescription = stringResource(if (visible) R.string.settings_key_hide else R.string.settings_key_show),
-                    )
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-            if (slot.isSet) {
-                TextButton(onClick = {
-                    actions.onKeyClear(slot.id)
-                    onDone()
-                }) {
-                    Text(stringResource(R.string.settings_key_remove))
-                }
-            }
-            TextButton(
-                onClick = {
-                    actions.onKeySave(slot.id, entered)
-                    entered = ""
-                    visible = false
-                    onDone()
-                },
-                enabled = entered.isNotEmpty(),
-            ) {
-                Text(stringResource(R.string.settings_key_save))
-            }
         }
     }
 }
