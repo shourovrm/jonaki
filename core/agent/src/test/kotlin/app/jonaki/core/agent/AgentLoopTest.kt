@@ -1,13 +1,16 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.model.ImagePart
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.providerapi.StreamEvent
+import app.jonaki.core.toolapi.ImageSource
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
+import app.jonaki.core.toolapi.ViewedImages
 import java.nio.file.Files
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
@@ -42,6 +45,35 @@ class AgentLoopTest {
         recorder = recorder,
         settings = AgentSettings(model = "test-model", systemPrompt = "You are Jonaki.", stepBudget = stepBudget),
     )
+
+    @Test
+    fun aViewedImageReachesTheNextRequestAndStaysThereUnchanged() = runBlocking {
+        val viewTool = FakeTool(ViewedImages.TOOL_NAME) { ToolOutput.success(ViewedImages.resultText(ImageSource("work/a.png"))) }
+        val provider = ScriptedProvider(
+            toolCallTurn(call("call-1", ViewedImages.TOOL_NAME, "path" to "work/a.png")),
+            toolCallTurn(call("call-2", "lookup")),
+            textTurn("A bar chart."),
+        )
+        val imageLoop = AgentLoop(
+            provider = provider,
+            tools = listOf(viewTool, FakeTool("lookup")),
+            toolContext = toolContext,
+            permissionBroker = PermissionBroker(FixedApprover(ApprovalDecision.ALLOW_ONCE)),
+            recorder = recorder,
+            settings = AgentSettings(model = "test-model", systemPrompt = "You are Jonaki."),
+            imageMessages = ImageMessages({ ImagePart("image/jpeg", "abc") }, modelAcceptsImages = true),
+        )
+
+        imageLoop.run(history)
+
+        val second = provider.requests[1].messages
+        assertEquals(Role.USER, second.last().role)
+        assertEquals(listOf(ImagePart("image/jpeg", "abc")), second.last().images)
+        // The third request starts with exactly the second one, so the prompt cache holds.
+        assertEquals(second, provider.requests[2].messages.subList(0, second.size))
+        val recordedTool = recorder.events.filterIsInstance<AgentEvent.ToolFinished>().first().message
+        assertTrue(recordedTool.images.isEmpty())
+    }
 
     private fun toolResults(): List<ToolOutput> =
         recorder.events.filterIsInstance<AgentEvent.ToolFinished>().map { event -> event.output }
