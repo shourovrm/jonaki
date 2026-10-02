@@ -110,16 +110,16 @@ System Gradle 9.7.1, AGP 8.7.3, Kotlin 2.1.0, KSP 2.1.0-1.0.29, Compose BOM
 BD-calendar. Why: all already in ~/.gradle (865 MB), no new toolchain
 download. Rejected: latest versions (new downloads, untested with Gradle 9.7).
 
-## D-022 · 2026-10-02 · Jev as an optional decider module — proposed
-deciders/jev, behind a Decider interface, called once per user message with
-several questions in parallel: which skill (if any), which memories among
-full-text candidates are relevant, does the message hold a durable fact
-(gates memory extraction), model size for routing, follow-up or new task;
-also re-ranks web_search results before the model sees them. Endpoint:
-OpenRouter decisions API or TypeSafe direct; user's choice. Without a Jev
-key, fallbacks: list all skills, inject top memories by recency and pin,
-extract on a timer. Results only as hints in the latest message, never in
-the system prompt (keeps the cache). Why: $0.042 per million input tokens;
-TypeSafe reports 2.3x fewer wrong skill loads. Rejected: typesafe/jev-router
-as the main model (OpenRouter models only); routing per tool step (breaks
-cache). Risk: English-first model; test with Bangla in spike S-5.
+## D-022 · 2026-10-02 · Jev as an optional helper — accepted
+deciders/jev behind a Decider interface, one call per user message with
+parallel questions: which skill (if any); which memories among full-text
+candidates are relevant; does the message hold a durable fact (gates memory
+extraction); which web_search results to keep. Settings: Jev on/off plus a
+switch each for skills, memory and search filtering; endpoint OpenRouter or
+TypeSafe direct. Off or no key: list all skills, inject top memories by pin
+and recency, extract on a timer, keep all results. Hints go in the latest
+message, never the system prompt. Answers under 0.6 confidence or slower
+than 1.5 s are ignored. Why: $0.042 per million input tokens; TypeSafe
+reports 2.3x fewer wrong skill loads. Rejected: Jev for model routing and
+jev-router as main model (user ruling). Risk: English-first; spike S-5
+tests Bangla.
