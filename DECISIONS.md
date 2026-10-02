@@ -205,3 +205,23 @@ services is starred as the default for new threads; the status strip's
 model menu (D-027) lists all added models. Mockups:
 docs/mockups/settings-models.html (option A). Rejected: a page per service
 (B; one more tap), first-and-last-3 masking.
+
+## D-029 · 2026-10-02 · Long text never runs off the screen — accepted
+In lists a name keeps one line and ends in "…"; ids, context and prices get
+lines of their own; prices show in, out and cache per million tokens (a dash
+when unknown). Opened views (a model's sheet) wrap the full name. Thread
+names wrap in full in the thread list. Links and paths in steps and approval
+cards wrap to two lines, then "…". The status strip shrinks the model name
+first. Threads can be renamed (long-press in the list, ⋮ in a thread).
+Mockups: docs/mockups/text-overflow.html, routing.html (Threads).
+
+## D-030 · 2026-10-02 · OpenRouter provider routing — accepted
+Three choices: Private, then cheapest (provider.data_collection "deny",
+sort "price"); Cheapest (sort "price"); Automatic (no provider block). The
+OpenRouter card sets the choice for all its models; a model's ⋮ menu
+overrides it, and a model that differs shows a short label in the list.
+Default: Private, then cheapest; when no private provider serves the model,
+the request is retried once with Cheapest and the step says so. Source:
+openrouter.ai/docs/features/provider-routing. Mockups:
+docs/mockups/routing.html (option A). Rejected: a chip per model (B), a
+model sheet (C).

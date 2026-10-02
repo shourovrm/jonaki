@@ -119,6 +119,13 @@ adversarially (it argues for cutting words and challenges every sentence
 that explains); the final strings are agreed between the two. Spawn it only
 when a screen's text is being written.
 
+Long text never runs off the screen or gets cut mid-character (D-029). In a
+list, a name keeps one line and ends in "…", and ids, numbers and prices get
+lines of their own. A view that shows one item (a model's sheet, a thread
+title in the list) wraps the full name. Links and paths wrap to two lines,
+then "…". Check every new screen with a 40-character name at 360 dp width
+and font scale 1.3.
+
 ## Verification
 Claim nothing you have not run. "Done" means the module builds, its tests
 pass and, for anything visible, it was checked on an emulator or device.
