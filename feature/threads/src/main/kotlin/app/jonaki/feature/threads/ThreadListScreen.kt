@@ -32,6 +32,10 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -78,10 +82,29 @@ fun ThreadListScreen(
     onRename: (threadId: String) -> Unit = {},
     /** Called after the user confirms deletion. */
     onDelete: (threadId: String) -> Unit = {},
+    /** The lock in the top bar: a new incognito chat (D-PRJ-2). */
+    onNewIncognitoThread: () -> Unit = {},
+    /** A project chip was tapped; null is All (D-PRJ-1). */
+    onProjectSelect: (projectId: String?) -> Unit = {},
+    /** The project dialog was saved; [projectId] is null for a new project. */
+    onSaveProject: (projectId: String?, draft: ProjectDraft) -> Unit = { _, _ -> },
+    /** Called after the user confirms; the project's threads stay. */
+    onDeleteProject: (projectId: String) -> Unit = {},
+    /** Move to project; null takes the thread out of its project. */
+    onMoveThread: (threadId: String, projectId: String?) -> Unit = { _, _ -> },
 ) {
     var threadToDelete by remember { mutableStateOf<ThreadRow?>(null) }
+    var threadToMove by remember { mutableStateOf<ThreadRow?>(null) }
+    var projectDialogOpen by rememberSaveable { mutableStateOf(false) }
+    // Null with the dialog open means a new project.
+    var projectToEdit by remember { mutableStateOf<ProjectUi?>(null) }
+    var projectToDelete by remember { mutableStateOf<ProjectUi?>(null) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val visibleThreads = remember(state.threads, state.searchQuery) { filterThreads(state.threads, state.searchQuery) }
+    val selectedProject = state.projects.firstOrNull { project -> project.id == state.selectedProjectId }
+    val visibleThreads = remember(state.threads, state.searchQuery, selectedProject) {
+        filterThreads(threadsInProject(state.threads, selectedProject?.id), state.searchQuery)
+    }
+    val projectThreadCount = remember(state.threads, selectedProject) { threadsInProject(state.threads, selectedProject?.id).size }
     val zone = remember { ZoneId.systemDefault() }
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -89,6 +112,9 @@ fun ThreadListScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.threads_title), fontWeight = FontWeight.SemiBold) },
                 actions = {
+                    IconButton(onClick = onNewIncognitoThread) {
+                        Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.threads_new_incognito))
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.threads_settings))
                     }
@@ -125,8 +151,30 @@ fun ThreadListScreen(
                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 4.dp),
                 )
             }
+            if (state.threads.isNotEmpty() || state.projects.isNotEmpty()) {
+                ProjectChips(
+                    projects = state.projects,
+                    selectedProjectId = selectedProject?.id,
+                    onSelect = onProjectSelect,
+                    onNewProject = {
+                        projectToEdit = null
+                        projectDialogOpen = true
+                    },
+                )
+            }
+            if (selectedProject != null) {
+                ProjectHeader(
+                    project = selectedProject,
+                    onEdit = {
+                        projectToEdit = selectedProject
+                        projectDialogOpen = true
+                    },
+                    onDelete = { projectToDelete = selectedProject },
+                )
+            }
             when {
                 state.threads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_empty_title), body = null)
+                projectThreadCount == 0 -> EmptyState(title = stringResource(R.string.threads_project_empty), body = null)
                 visibleThreads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_no_matches), body = null)
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
                     items(visibleThreads, key = { thread -> thread.id }) { thread ->
@@ -136,6 +184,9 @@ fun ThreadListScreen(
                             onThreadClick = onThreadClick,
                             onRename = onRename,
                             onDeleteRequest = { threadToDelete = thread },
+                            // Inside one project its name would repeat on every row.
+                            showProjectName = selectedProject == null,
+                            onMoveRequest = if (state.projects.isEmpty()) null else ({ threadToMove = thread }),
                         )
                     }
                 }
@@ -151,6 +202,45 @@ fun ThreadListScreen(
                 onDelete(deleting.id)
             },
             onDismiss = { threadToDelete = null },
+        )
+    }
+    val moving = threadToMove
+    if (moving != null) {
+        MoveToProjectDialog(
+            projects = state.projects,
+            currentProjectId = moving.projectId,
+            onMove = { projectId ->
+                threadToMove = null
+                onMoveThread(moving.id, projectId)
+            },
+            onDismiss = { threadToMove = null },
+        )
+    }
+    if (projectDialogOpen) {
+        val editing = projectToEdit
+        ProjectDialog(
+            project = editing,
+            modelOptions = state.projectModelOptions,
+            onSave = { draft ->
+                projectDialogOpen = false
+                projectToEdit = null
+                onSaveProject(editing?.id, draft)
+            },
+            onDismiss = {
+                projectDialogOpen = false
+                projectToEdit = null
+            },
+        )
+    }
+    val deletingProject = projectToDelete
+    if (deletingProject != null) {
+        DeleteProjectDialog(
+            name = deletingProject.name,
+            onConfirm = {
+                projectToDelete = null
+                onDeleteProject(deletingProject.id)
+            },
+            onDismiss = { projectToDelete = null },
         )
     }
 }
@@ -190,6 +280,9 @@ private fun ThreadRowView(
     onThreadClick: (String) -> Unit,
     onRename: (String) -> Unit,
     onDeleteRequest: () -> Unit,
+    showProjectName: Boolean,
+    /** Null hides Move to project, when there is no project yet. */
+    onMoveRequest: (() -> Unit)?,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val colors = JonakiTheme.colors
@@ -244,7 +337,17 @@ private fun ThreadRowView(
                 .heightIn(min = 72.dp)
                 .padding(start = 4.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
         ) {
-            GlowDot(dotColor, dotStyle)
+            if (thread.incognito && thread.runState !is ThreadRunState.Running) {
+                // The lock stands where the dot is, so the row keeps its shape (D-PRJ-2).
+                Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = stringResource(R.string.threads_incognito),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 6.dp).size(16.dp),
+                )
+            } else {
+                GlowDot(dotColor, dotStyle)
+            }
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 // The title wraps so the whole name shows; only the preview line is cut short.
@@ -252,8 +355,14 @@ private fun ThreadRowView(
                     thread.title,
                     style = MaterialTheme.typography.titleMedium,
                 )
+                val projectName = thread.projectName
+                val previewLine = if (showProjectName && projectName != null) {
+                    stringResource(R.string.threads_project_preview, projectName, thread.lastLine)
+                } else {
+                    thread.lastLine
+                }
                 Text(
-                    thread.lastLine,
+                    previewLine,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -289,6 +398,16 @@ private fun ThreadRowView(
                     onRename(thread.id)
                 },
             )
+            if (onMoveRequest != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.threads_move)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onMoveRequest()
+                    },
+                )
+            }
             DropdownMenuItem(
                 text = { Text(deleteLabel, color = JonakiTheme.colors.deny) },
                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = JonakiTheme.colors.deny) },

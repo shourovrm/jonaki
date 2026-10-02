@@ -66,4 +66,6 @@
     <string name="chat_edit">Edit</string>
     <string name="chat_editing">Editing message</string>
     <string name="chat_edit_cancel">Cancel edit</string>
+    <string name="chat_incognito_banner">Incognito: no memory. Deleted a day after the last message.</string>
+    <string name="chat_incognito_keep">Keep</string>
 </resources>

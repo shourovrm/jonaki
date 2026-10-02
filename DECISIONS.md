@@ -591,3 +591,40 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-PRJ-1 · 2026-10-03 · Projects group threads — proposed
+A project has a name, optional instructions and an optional model for new
+threads; nothing else is shared. Table `projects` and nullable
+`threads.projectId` (Room version 7, one AutoMigration with D-PRJ-2), with
+no foreign key: deleting a project first clears `projectId` on its threads,
+so threads are never deleted with it. The thread list shows chips under the
+search field (All, each project by name, "+ Project"); a selected project
+shows a header with its name, model and ⋮ (Edit project, Delete project).
+In All, a thread's last line starts with its project name. A thread joins a
+project through its long-press menu (Move to project) or by starting it
+while the project is selected; it then starts with the project's model and
+can switch later. Instructions go into the system prompt after the tool
+list and before skills and memory, read once per run, so the prompt cache
+breaks only when they are edited or the thread moves (D-005). Why: user
+request (2026-10-02); smallest design that organises the list. Rejected
+for now: shared project memory and shared files (both need new scopes in
+the memory tool and the file tools). Mockups:
+docs/mockups/projects-and-incognito.html. Outcome: pending.
+
+## D-PRJ-2 · 2026-10-03 · Incognito chat — proposed
+The lock in the thread list's bar starts an incognito chat
+(`threads.incognito`, default 0, Room version 7). It neither reads nor
+writes memory: no memory tool, no Memory section in its prompt (so no
+global facts either), no background extraction, and no Memory item in ⋮.
+It never joins a project when started. The list marks it with a lock in
+place of the dot; the chat shows a banner "Incognito: no memory. Deleted a
+day after the last message." with Keep. It is deleted with its folder 24
+hours after its last non-background message (or its creation), checked at
+app start and whenever the thread list shows, never while a run is going;
+no WorkManager. Keep makes it a regular thread and marks its messages so
+far as read by extraction, so only later messages reach memory. Why: user
+request (2026-10-02); the user wrote those messages expecting privacy.
+Rejected: offering past messages to extraction on Keep (breaks that
+expectation); a periodic job (a check at start and list view is enough).
+Limit: a chat left open on screen past the day is deleted at the next list
+view or app start. Outcome: pending.
