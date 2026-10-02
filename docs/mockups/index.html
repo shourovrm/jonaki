@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki mockups — two directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,300..800&family=Noto+Sans+Bengali:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap" rel="stylesheet">
+<style>
+/* ---------- page around the phones (not part of the app design) ---------- */
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 32px 80px;
+  font-family: "Roboto Flex", "Noto Sans Bengali", system-ui, sans-serif;
+  background: #e4e6e5; color: #1a1d1c;
+}
+body.page-dark { background: #161817; color: #e3e6e4; }
+.page-head { max-width: 1240px; margin: 0 auto 28px; display: flex; gap: 24px; align-items: end; justify-content: space-between; flex-wrap: wrap; }
+.page-head h1 { font-size: 28px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+.page-head p { margin: 0; max-width: 70ch; line-height: 1.5; opacity: .8; }
+.theme-switch { display: flex; border: 1px solid currentColor; border-radius: 999px; overflow: hidden; }
+.theme-switch button { font: inherit; font-size: 14px; padding: 10px 18px; background: none; color: inherit; border: 0; cursor: pointer; }
+.theme-switch button[aria-pressed="true"] { background: currentColor; }
+.theme-switch button[aria-pressed="true"] span { filter: invert(1); color: inherit; }
+.direction { max-width: 1240px; margin: 0 auto 64px; }
+.direction-head { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 40px; margin-bottom: 22px; }
+.direction-head h2 { grid-column: 1 / -1; font-size: 24px; margin: 0; font-weight: 650; }
+.direction-head dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14px; line-height: 1.45; }
+.direction-head dt { font-weight: 600; opacity: .7; }
+.direction-head dd { margin: 0; }
+.phones { display: flex; gap: 28px; flex-wrap: wrap; }
+.phone-wrap figcaption { font-size: 13px; opacity: .7; margin-top: 10px; text-align: center; }
+
+/* ---------- phone frame ---------- */
+.phone {
+  width: 360px; height: 780px; border-radius: 34px; overflow: hidden; position: relative;
+  box-shadow: 0 0 0 9px #0d0f0e, 0 18px 40px -12px rgba(0,0,0,.45);
+  display: flex; flex-direction: column;
+  background: var(--surface); color: var(--on-surface);
+  font-family: var(--font-body);
+}
+.statusbar { height: 32px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 500; color: var(--on-surface); }
+.statusbar .icons { display: flex; gap: 4px; }
+.statusbar .material-symbols-rounded { font-size: 16px; }
+.gesturebar { height: 22px; flex: none; display: grid; place-items: center; }
+.gesturebar::after { content: ""; width: 108px; height: 4px; border-radius: 2px; background: var(--on-surface); opacity: .55; }
+.material-symbols-rounded { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; display: inline-block; -webkit-font-feature-settings: "liga"; font-feature-settings: "liga"; font-variation-settings: "FILL" 0, "wght" 400, "opsz" 24; }
+.icon-button { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: var(--on-surface-variant); flex: none; }
+.app-bar { height: 64px; flex: none; display: flex; align-items: center; padding: 0 4px 0 4px; gap: 4px; }
+.app-bar .title { flex: 1; min-width: 0; }
+.app-bar .title strong { display: block; font-size: 20px; font-weight: 560; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bar .title small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+.content { flex: 1; overflow: hidden; position: relative; }
+.bn { font-family: "Noto Sans Bengali", var(--font-body); }
+.mono { font-family: "Roboto Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* ---------- shared component structure ---------- */
+.thread-list { list-style: none; margin: 0; padding: 0; }
+.thread { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 20px; min-height: 72px; align-content: center; position: relative; }
+.thread .name { font-size: 16px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .last { grid-column: 1; font-size: 14px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .when { grid-row: 1; grid-column: 2; font-size: 12px; color: var(--on-surface-variant); text-align: right; }
+.thread .state { grid-row: 2; grid-column: 2; font-size: 12px; text-align: right; }
+.fab { position: absolute; right: 16px; bottom: 16px; height: 56px; padding: 0 20px 0 16px; border-radius: 16px; display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 560; background: var(--primary-container); color: var(--on-primary-container); box-shadow: 0 3px 8px -2px rgba(0,0,0,.3); }
+.search-field { margin: 4px 16px 8px; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; gap: 12px; padding: 0 16px; color: var(--on-surface-variant); font-size: 16px; }
+.section-label { font-size: 13px; font-weight: 600; color: var(--on-surface-variant); padding: 14px 20px 6px; letter-spacing: .02em; }
+
+.chat { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.bubble-user { align-self: flex-end; max-width: 84%; padding: 10px 14px; border-radius: 20px 20px 6px 20px; background: var(--primary-container); color: var(--on-primary-container); font-size: 15px; line-height: 1.45; }
+.answer { font-size: 15px; line-height: 1.55; }
+.answer p { margin: 0 0 8px; }
+.caret { display: inline-block; width: 8px; height: 16px; vertical-align: -2px; background: var(--live); border-radius: 2px; }
+.composer { flex: none; padding: 8px 12px 6px; display: flex; gap: 8px; align-items: center; }
+.composer .field { flex: 1; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; padding: 0 6px 0 4px; color: var(--on-surface-variant); font-size: 15px; gap: 2px; }
+.composer .field span.ph { flex: 1; }
+.stop-button { height: 52px; padding: 0 18px 0 14px; border-radius: 26px; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; background: var(--stop); color: var(--on-stop); }
+
+.steps { list-style: none; margin: 0; padding: 0; }
+.step .tool { font-weight: 600; }
+.step .detail { color: var(--on-surface-variant); }
+.step .query { color: var(--on-surface); }
+
+.approval { border-radius: 20px; padding: 14px 16px 12px; background: var(--surface-container-high); }
+.approval h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.approval p { margin: 0 0 12px; font-size: 14px; color: var(--on-surface-variant); line-height: 1.45; }
+.approval .path { font-family: "Roboto Mono", monospace; font-size: 13px; color: var(--on-surface); }
+.approval .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { height: 40px; padding: 0 16px; border-radius: 20px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 560; }
+.btn.filled { background: var(--primary); color: var(--on-primary); }
+.btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.text { color: var(--deny); margin-left: auto; }
+
+.settings-group { margin: 0 16px 14px; border-radius: 20px; background: var(--surface-container); overflow: hidden; }
+.setting { display: flex; gap: 14px; align-items: center; padding: 14px 16px; min-height: 64px; }
+.setting + .setting { border-top: 1px solid var(--outline-variant); }
+.setting .text { flex: 1; min-width: 0; }
+.setting .text strong { display: block; font-size: 15px; font-weight: 560; }
+.setting .text small { display: block; font-size: 13px; color: var(--on-surface-variant); line-height: 1.4; margin-top: 2px; }
+.switch { width: 52px; height: 32px; border-radius: 16px; position: relative; flex: none; background: var(--surface-container-highest); border: 2px solid var(--outline); }
+.switch::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; top: 6px; left: 6px; background: var(--outline); }
+.switch.on { background: var(--primary); border-color: var(--primary); }
+.switch.on::after { width: 24px; height: 24px; top: 2px; left: 22px; background: var(--on-primary); }
+.rank { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex: none; background: var(--secondary-container); color: var(--on-secondary-container); }
+.key-state { font-size: 12px; font-weight: 600; }
+
+/* =====================================================================
+   Direction A — Rail line
+   ===================================================================== */
+.dir-rail {
+  --font-body: "Roboto Flex", "Noto Sans Bengali", sans-serif;
+}
+.dir-rail[data-theme="light"] {
+  --surface: #f2f5f3; --surface-container: #e8edea; --surface-container-high: #e1e7e3; --surface-container-highest: #d7dfda;
+  --on-surface: #12201a; --on-surface-variant: #4a5a52; --outline: #74857c; --outline-variant: #c6d1cb;
+  --primary: #0b5e45; --on-primary: #ffffff; --primary-container: #c9ead9; --on-primary-container: #032a1d;
+  --secondary-container: #d6e4dc; --on-secondary-container: #1a3328;
+  --live: #d98a00; --done: #0b5e45; --stop: #b3261e; --on-stop: #fff; --deny: #b3261e; --track: #9fb3a8;
+}
+.dir-rail[data-theme="dark"] {
+  --surface: #0f1613; --surface-container: #18211d; --surface-container-high: #1f2a25; --surface-container-highest: #29352f;
+  --on-surface: #dfe8e3; --on-surface-variant: #9db0a6; --outline: #6f8279; --outline-variant: #2f3c35;
+  --primary: #6fd3a6; --on-primary: #00382a; --primary-container: #1c4d3b; --on-primary-container: #c9f1dd;
+  --secondary-container: #2a3b33; --on-secondary-container: #cfe3d8;
+  --live: #ffb938; --done: #6fd3a6; --stop: #ffb4ab; --on-stop: #690005; --deny: #ffb4ab; --track: #3d4f46;
+}
+.dir-rail .app-bar .title strong { font-stretch: 112%; font-weight: 640; letter-spacing: -0.005em; }
+/* thread list reads like a departures board: name, last line, then time and run state in fixed columns */
+.dir-rail .thread .light { display: none; }
+.dir-rail .thread + .thread::before { content: ""; position: absolute; top: 0; left: 20px; right: 0; border-top: 1px solid var(--outline-variant); }
+.dir-rail .thread .when { font-family: "Roboto Mono", monospace; font-variant-numeric: tabular-nums; }
+.dir-rail .thread .state { font-family: "Roboto Flex"; font-stretch: 80%; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; color: var(--on-surface-variant); }
+.dir-rail .thread .state.running { color: var(--live); }
+.dir-rail .thread .state.waiting { color: var(--deny); }
+/* the run as a route: one track, one station per tool step */
+.dir-rail .steps { position: relative; padding: 2px 0 2px 0; }
+.dir-rail .step { display: grid; grid-template-columns: 28px 1fr auto; column-gap: 8px; padding: 6px 0; position: relative; font-size: 13.5px; line-height: 1.35; }
+.dir-rail .step::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 2px; background: var(--track); }
+.dir-rail .step:first-child::before { top: 14px; }
+.dir-rail .step:last-child::before { bottom: calc(100% - 14px); }
+.dir-rail .step.done::before { background: var(--done); }
+.dir-rail .step .dot { grid-row: 1 / span 2; width: 12px; height: 12px; border-radius: 50%; margin: 3px 0 0 8px; position: relative; z-index: 1; background: var(--surface); border: 2px solid var(--track); }
+.dir-rail .step.done .dot { background: var(--done); border-color: var(--done); }
+.dir-rail .step.running .dot { border-color: var(--live); background: var(--surface); box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 25%, transparent); }
+.dir-rail .step.running .dot::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: var(--live); }
+.dir-rail .step.waiting .dot { border-color: var(--deny); }
+.dir-rail .step .tool { font-stretch: 80%; text-transform: uppercase; letter-spacing: .07em; font-size: 11.5px; font-weight: 700; }
+.dir-rail .step .time { font-family: "Roboto Mono", monospace; font-size: 12px; color: var(--on-surface-variant); text-align: right; }
+.dir-rail .step .detail { grid-column: 2 / span 2; }
+.dir-rail .step .query::before { content: "“"; } .dir-rail .step .query::after { content: "”"; }
+.dir-rail .run-head { display: flex; gap: 8px; font-stretch: 80%; text-transform: uppercase; letter-spacing: .07em; font-size: 11px; font-weight: 700; color: var(--on-surface-variant); padding: 0 0 4px; border-bottom: 1px solid var(--outline-variant); margin-bottom: 6px; }
+.dir-rail .run-head .live { color: var(--live); }
+.dir-rail .run-head .count { margin-left: auto; }
+.dir-rail .approval { border-radius: 12px; background: var(--surface); border: 1px solid var(--outline-variant); outline: 2px solid var(--live); outline-offset: -1px; }
+.dir-rail .approval h3 { font-stretch: 85%; text-transform: uppercase; letter-spacing: .06em; font-size: 12.5px; font-weight: 700; color: var(--on-surface); }
+.dir-rail .btn { border-radius: 10px; }
+.dir-rail .fab { border-radius: 14px; }
+.dir-rail .settings-group { border-radius: 12px; background: transparent; border: 1px solid var(--outline-variant); }
+.dir-rail .rank { border-radius: 6px; font-family: "Roboto Mono", monospace; }
+
+/* =====================================================================
+   Direction B — Firefly
+   ===================================================================== */
+.dir-firefly { --font-body: "Roboto Flex", "Noto Sans Bengali", sans-serif; }
+.dir-firefly[data-theme="dark"] {
+  --surface: #11140f; --surface-container: #1a1e17; --surface-container-high: #22271e; --surface-container-highest: #2c3227;
+  --on-surface: #e4e8dc; --on-surface-variant: #a9b19d; --outline: #7a8370; --outline-variant: #33392d;
+  --primary: #c9e86b; --on-primary: #263400; --primary-container: #3a4a12; --on-primary-container: #e6f7b0;
+  --secondary-container: #333b27; --on-secondary-container: #dde6c8;
+  --live: #d8f36a; --done: #8d9a7c; --stop: #3a4a12; --on-stop: #e6f7b0; --deny: #f2b8a9; --track: #33392d;
+  --glow: rgba(216, 243, 106, .55);
+}
+.dir-firefly[data-theme="light"] {
+  --surface: #f6f8f0; --surface-container: #edf1e4; --surface-container-high: #e6ebdb; --surface-container-highest: #dde3d0;
+  --on-surface: #1a1f12; --on-surface-variant: #50593f; --outline: #7a8468; --outline-variant: #cdd4bd;
+  --primary: #4b6300; --on-primary: #ffffff; --primary-container: #d4ee7c; --on-primary-container: #161f00;
+  --secondary-container: #dfe6c9; --on-secondary-container: #1c2410;
+  --live: #6a8a00; --done: #7a8468; --stop: #1a1f12; --on-stop: #e6f7b0; --deny: #a1361c; --track: #d6dcc6;
+  --glow: rgba(150, 190, 20, .35);
+}
+.dir-firefly .app-bar .title strong { font-weight: 620; }
+.dir-firefly .thread { grid-template-columns: 28px 1fr auto; padding-left: 12px; }
+.dir-firefly .thread .light { grid-row: 1 / span 2; width: 10px; height: 10px; border-radius: 50%; margin-left: 8px; align-self: center; background: var(--track); }
+.dir-firefly .thread .light.on { background: var(--live); box-shadow: 0 0 10px 3px var(--glow); }
+.dir-firefly .thread .light.waiting { background: var(--deny); }
+.dir-firefly .thread .last { grid-column: 2; }
+.dir-firefly .thread .when, .dir-firefly .thread .state { grid-column: 3; }
+.dir-firefly .thread .state { color: var(--on-surface-variant); }
+.dir-firefly .thread .state.running { color: var(--live); font-weight: 600; }
+.dir-firefly .thread .state.waiting { color: var(--deny); font-weight: 600; }
+.dir-firefly .thread.active { background: var(--surface-container); border-radius: 20px; margin: 0 8px; }
+/* the run as a quiet trail; only the step that is working gives off light */
+.dir-firefly .run { border-radius: 20px; background: var(--surface-container); padding: 12px 14px 10px; }
+.dir-firefly .run-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--on-surface-variant); margin-bottom: 8px; }
+.dir-firefly .run-head .live { color: var(--live); font-weight: 600; }
+.dir-firefly .run-head .count { margin-left: auto; font-family: "Roboto Mono", monospace; font-size: 12px; }
+.dir-firefly .step { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; padding: 5px 0; font-size: 13.5px; line-height: 1.4; }
+.dir-firefly .step .dot { grid-row: 1 / span 2; width: 8px; height: 8px; border-radius: 50%; margin: 6px 0 0 6px; background: var(--done); }
+.dir-firefly .step.running .dot { background: var(--live); box-shadow: 0 0 10px 4px var(--glow); }
+.dir-firefly .step.done .tool { color: var(--on-surface-variant); font-weight: 500; }
+.dir-firefly .step.running .tool { color: var(--on-surface); }
+.dir-firefly .step .time { display: none; }
+.dir-firefly .step .detail { grid-column: 2; }
+.dir-firefly .step .query { font-style: italic; }
+.dir-firefly .approval { background: var(--primary-container); color: var(--on-primary-container); border-radius: 24px; }
+.dir-firefly .approval p { color: var(--on-primary-container); opacity: .85; }
+.dir-firefly .approval .path { color: var(--on-primary-container); }
+.dir-firefly .approval .btn.tonal { background: color-mix(in srgb, var(--on-primary-container) 12%, transparent); color: var(--on-primary-container); }
+.dir-firefly .bubble-user { border-radius: 22px 22px 6px 22px; background: var(--surface-container-highest); color: var(--on-surface); }
+.dir-firefly .fab { border-radius: 20px; background: var(--primary); color: var(--on-primary); }
+.dir-firefly .search-field { background: var(--surface-container); }
+.dir-firefly .rank { background: var(--primary-container); color: var(--on-primary-container); }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <div>
+    <h1>Jonaki — two design directions</h1>
+    <p>Each direction shows the same three screens with the same content: the thread list, a thread with the agent running a search and asking for approval, and the search settings. Content is sample data. The switch changes every phone between the light and dark themes; the app itself follows the system theme and offers a manual toggle.</p>
+  </div>
+  <div class="theme-switch" role="group" aria-label="Theme">
+    <button data-set-theme="light" aria-pressed="false"><span>Light</span></button>
+    <button data-set-theme="dark" aria-pressed="true"><span>Dark</span></button>
+  </div>
+</header>
+
+<template id="screens">
+  <!-- Screen 1: thread list -->
+  <figure class="phone-wrap" style="margin:0">
+    <div class="phone">
+      <div class="statusbar"><span>21:47</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+      <div class="app-bar">
+        <span class="icon-button"><span class="material-symbols-rounded">menu</span></span>
+        <div class="title"><strong>Jonaki</strong></div>
+        <span class="icon-button"><span class="material-symbols-rounded">psychology</span></span>
+        <span class="icon-button"><span class="material-symbols-rounded">settings</span></span>
+      </div>
+      <div class="content">
+        <div class="search-field"><span class="material-symbols-rounded">search</span>Search threads</div>
+        <ul class="thread-list">
+          <li class="thread active"><span class="light on"></span><span class="name">Thesis — sample size</span><span class="when">now</span><span class="last">Reading pubmed.ncbi.nlm.nih.gov…</span><span class="state running">Running · 3/12</span></li>
+          <li class="thread"><span class="light waiting"></span><span class="name">Laptop under ৳90,000</span><span class="when">21:12</span><span class="last">Needs approval: save comparison.md</span><span class="state waiting">Waiting</span></li>
+          <li class="thread"><span class="light"></span><span class="name bn">সিলেট ভ্রমণ পরিকল্পনা</span><span class="when">19:30</span><span class="last bn">ট্রেনের সময়সূচি আর হোটেলের তালিকা তৈরি।</span><span class="state">Done</span></li>
+          <li class="thread"><span class="light"></span><span class="name">Kurzgesagt: fusion video</span><span class="when">Tue</span><span class="last">Summary: 6 key points, 19 min video</span><span class="state">Done</span></li>
+          <li class="thread"><span class="light"></span><span class="name">Mobile data plans</span><span class="when">Mon</span><span class="last">GP vs Robi vs Banglalink, 30-day packs</span><span class="state">Done</span></li>
+          <li class="thread"><span class="light"></span><span class="name">Kotlin coroutines notes</span><span class="when">28 Sep</span><span class="last">Edited work/flows.md, 2 changes</span><span class="state">Done</span></li>
+        </ul>
+        <div class="fab"><span class="material-symbols-rounded">edit_square</span>New thread</div>
+      </div>
+      <div class="gesturebar"></div>
+    </div>
+    <figcaption>Thread list</figcaption>
+  </figure>
+
+  <!-- Screen 2: thread with a live run and an approval -->
+  <figure class="phone-wrap" style="margin:0">
+    <div class="phone">
+      <div class="statusbar"><span>21:47</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+      <div class="app-bar">
+        <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+        <div class="title"><strong>Thesis — sample size</strong><small>DeepSeek V3 · web search on</small></div>
+        <span class="icon-button"><span class="material-symbols-rounded">folder_open</span></span>
+        <span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span>
+      </div>
+      <div class="content">
+        <div class="chat">
+          <div class="bubble-user">Find recent papers on sample size for hospital surveys, summarise the top three and save notes.</div>
+          <div class="run">
+            <div class="run-head"><span class="live">Working</span><span class="count">step 3 of 12 · 0:41</span></div>
+            <ol class="steps">
+              <li class="step done"><span class="dot"></span><span class="tool">web_search</span><span class="time">2.1 s</span><span class="detail">Tavily · <span class="query">minimum sample size clinical survey hospital 2024</span> · 5 results</span></li>
+              <li class="step done"><span class="dot"></span><span class="tool">web_fetch</span><span class="time">2.7 s</span><span class="detail">pmc.ncbi.nlm.nih.gov · 10,000 chars, rest saved to work/</span></li>
+              <li class="step running"><span class="dot"></span><span class="tool">web_fetch</span><span class="time">0:06</span><span class="detail">pubmed.ncbi.nlm.nih.gov/38211…</span></li>
+              <li class="step waiting"><span class="dot"></span><span class="tool">write_file</span><span class="time">—</span><span class="detail">waiting for your approval</span></li>
+            </ol>
+          </div>
+          <div class="approval">
+            <h3><span class="material-symbols-rounded" style="font-size:20px">edit_document</span>Allow write_file?</h3>
+            <p>Create <span class="path">work/sample-size-notes.md</span> (2.3 KB) in this thread's folder.</p>
+            <div class="actions"><span class="btn filled">Allow once</span><span class="btn tonal">Allow in thread</span><span class="btn text">Deny</span></div>
+          </div>
+          <div class="answer"><p>So far, the clearest guidance comes from a 2023 review in <em>BMC Medical Research Methodology</em>, which recommends at least 150 respondents for a<span class="caret"></span></p></div>
+        </div>
+      </div>
+      <div class="composer">
+        <div class="field"><span class="icon-button" style="width:44px;height:44px"><span class="material-symbols-rounded">add</span></span><span class="ph">Message</span></div>
+        <div class="stop-button"><span class="material-symbols-rounded" style="font-variation-settings:'FILL' 1">stop</span>Stop</div>
+      </div>
+      <div class="gesturebar"></div>
+    </div>
+    <figcaption>Thread: live steps, approval, streaming answer</figcaption>
+  </figure>
+
+  <!-- Screen 3: search settings -->
+  <figure class="phone-wrap" style="margin:0">
+    <div class="phone">
+      <div class="statusbar"><span>21:48</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+      <div class="app-bar">
+        <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+        <div class="title"><strong>Web search</strong></div>
+      </div>
+      <div class="content">
+        <div class="section-label">Order of search services</div>
+        <div class="settings-group">
+          <div class="setting"><span class="rank">1</span><div class="text"><strong>Tavily</strong><small>Key set · 1,000 free credits a month</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+          <div class="setting"><span class="rank">2</span><div class="text"><strong>Ollama web search</strong><small>Key set · used when Tavily is out of credits</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+          <div class="setting"><span class="rank">3</span><div class="text"><strong>Exa</strong><small>No key · skipped</small></div><span class="key-state" style="color:var(--primary)">Add key</span></div>
+        </div>
+        <div class="section-label">Privacy</div>
+        <div class="settings-group">
+          <div class="setting"><div class="text"><strong>Show every query</strong><small>Each search step shows the exact text sent to the service.</small></div><span class="switch on"></span></div>
+          <div class="setting"><div class="text"><strong>Topic words only</strong><small>The agent is told to leave names, personal details and file contents out of queries.</small></div><span class="switch on"></span></div>
+          <div class="setting"><div class="text"><strong>Off in new threads</strong><small>Turn web search on per thread when you need it.</small></div><span class="switch"></span></div>
+        </div>
+      </div>
+      <div class="gesturebar"></div>
+    </div>
+    <figcaption>Settings: search order and query privacy</figcaption>
+  </figure>
+</template>
+
+<section class="direction" data-direction="dir-rail">
+  <div class="direction-head">
+    <h2>A · Rail line</h2>
+    <dl>
+      <dt>Idea</dt><dd>An agent run is a journey on a railway timetable. Each tool step is a station on one track: filled when done, amber when the train is there, red when it waits for you.</dd>
+      <dt>Look</dt><dd>Cool green-grey ground, Bangladesh Railway green, signal amber for live work and signal red for Stop and Deny. Condensed capital labels and monospaced times, like a departures board.</dd>
+    </dl>
+    <dl>
+      <dt>Strength</dt><dd>Long research runs stay readable: you see where the agent is, how long each step took and what comes next.</dd>
+      <dt>Risk</dt><dd>It's denser and more technical than a typical chat app, so quick one-line asks feel more formal.</dd>
+    </dl>
+  </div>
+  <div class="phones"></div>
+</section>
+
+<section class="direction" data-direction="dir-firefly">
+  <div class="direction-head">
+    <h2>B · Firefly</h2>
+    <dl>
+      <dt>Idea</dt><dd>The name made literal but quiet: everything at rest is dim, and only the thing that is working gives off light. A working thread's dot glows in the list; inside a run, only the running step glows.</dd>
+      <dt>Look</dt><dd>Leaf-dark ground at night and pale paddy green by day, one firefly yellow-green for live work, soft rounded Material You shapes, approval as a filled card.</dd>
+    </dl>
+    <dl>
+      <dt>Strength</dt><dd>Calm and friendly for quick asks and night use; you can tell at a glance which threads are working.</dd>
+      <dt>Risk</dt><dd>It's closer to a familiar dark chat app, and the step list shows less detail (no per-step times).</dd>
+    </dl>
+  </div>
+  <div class="phones"></div>
+</section>
+
+<script>
+  const template = document.getElementById("screens");
+  for (const section of document.querySelectorAll(".direction")) {
+    const phones = section.querySelector(".phones");
+    phones.appendChild(template.content.cloneNode(true));
+    for (const phone of phones.querySelectorAll(".phone")) {
+      phone.classList.add(section.dataset.direction);
+    }
+  }
+  // Rail line keeps the run as a plain route on the page; Firefly wraps it in a container (same DOM, styled per direction).
+  function setTheme(theme) {
+    for (const phone of document.querySelectorAll(".phone")) phone.dataset.theme = theme;
+    document.body.classList.toggle("page-dark", theme === "dark");
+    for (const button of document.querySelectorAll("[data-set-theme]")) {
+      button.setAttribute("aria-pressed", String(button.dataset.setTheme === theme));
+    }
+  }
+  for (const button of document.querySelectorAll("[data-set-theme]")) {
+    button.addEventListener("click", () => setTheme(button.dataset.setTheme));
+  }
+  const requested = new URLSearchParams(location.search).get("theme");
+  setTheme(requested || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+</script>
+</body>
+</html>
