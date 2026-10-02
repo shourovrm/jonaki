@@ -731,9 +731,9 @@ New permissions, approved by the user on 2026-10-03: READ_MEDIA_IMAGES and
 READ_MEDIA_VISUAL_USER_SELECTED (Android 13 and later), READ_EXTERNAL_STORAGE
 with maxSdkVersion 32 (checked with aapt2 on the release APK). Jonaki asks
 the first time Photos is tapped, never at start. Android 14 "Select
-photos" opens the gallery with only those photos and a note "Jonaki can
-see only the photos you chose." with Select more (asks again, so Android
-offers its picker) and Allow all (Jonaki's page in system settings). Any
+photos" opens the gallery with only those photos and a note "Only photos
+you allowed" with Select more (asks again, so Android offers its picker)
+and Settings (Jonaki's page in system settings). Any
 answer that gives no access, a dismissed dialog included, counts as a
 refusal: Jonaki stores it (preferences `photo_access`), never asks again,
 and every Photos tap opens the system photo picker

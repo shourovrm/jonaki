@@ -61,6 +61,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -75,7 +76,7 @@ class GallerySource(
  * Jonaki's own photo picker (D-085): Recent, a grid of the newest images,
  * and Collections, the phone's albums. Images are picked across both tabs
  * with numbered marks; "Add N" hands them over in that order. [someAccess]
- * shows the Android 14 note with Select more and Allow all (D-086).
+ * shows the Android 14 note with Select more and Settings (D-086).
  * [reloadKey] changes when the access changed, so the lists load again.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +86,7 @@ fun GallerySheet(
     someAccess: Boolean,
     reloadKey: Int,
     onSelectMore: () -> Unit,
-    onAllowAll: () -> Unit,
+    onOpenSettings: () -> Unit,
     onAdd: (List<GalleryImage>) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -97,7 +98,7 @@ fun GallerySheet(
             someAccess = someAccess,
             reloadKey = reloadKey,
             onSelectMore = onSelectMore,
-            onAllowAll = onAllowAll,
+            onOpenSettings = onOpenSettings,
             onAdd = onAdd,
         )
     }
@@ -115,7 +116,7 @@ internal fun GalleryContent(
     someAccess: Boolean,
     reloadKey: Int,
     onSelectMore: () -> Unit,
-    onAllowAll: () -> Unit,
+    onOpenSettings: () -> Unit,
     onAdd: (List<GalleryImage>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -147,7 +148,7 @@ internal fun GalleryContent(
             )
         }
         if (someAccess) {
-            SomeAccessNote(onSelectMore = onSelectMore, onAllowAll = onAllowAll)
+            SomeAccessNote(onSelectMore = onSelectMore, onOpenSettings = onOpenSettings)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val album = openAlbum
@@ -199,7 +200,7 @@ internal fun GalleryContent(
 /** Android 14 "Select photos": only the chosen photos show, so say so and offer the two ways to more (D-086). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SomeAccessNote(onSelectMore: () -> Unit, onAllowAll: () -> Unit) {
+private fun SomeAccessNote(onSelectMore: () -> Unit, onOpenSettings: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.medium,
@@ -218,8 +219,8 @@ private fun SomeAccessNote(onSelectMore: () -> Unit, onAllowAll: () -> Unit) {
                 TextButton(onClick = onSelectMore) {
                     Text(stringResource(R.string.gallery_select_more))
                 }
-                TextButton(onClick = onAllowAll) {
-                    Text(stringResource(R.string.gallery_allow_all))
+                TextButton(onClick = onOpenSettings) {
+                    Text(stringResource(R.string.gallery_open_settings))
                 }
             }
         }
@@ -282,12 +283,19 @@ private fun PhotoCell(
     onToggle: () -> Unit,
 ) {
     val photoLabel = stringResource(R.string.gallery_photo)
+    // The toggle says only "checked"; the number tells a screen-reader user which pick it is.
+    val pickLabel = number?.let { pickNumber -> stringResource(R.string.gallery_selected_number, pickNumber) }
     Box(
         Modifier
             .aspectRatio(1f)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .toggleable(value = number != null, role = Role.Checkbox, onValueChange = { onToggle() })
-            .semantics { contentDescription = photoLabel },
+            .semantics {
+                contentDescription = photoLabel
+                if (pickLabel != null) {
+                    stateDescription = pickLabel
+                }
+            },
     ) {
         Thumbnail(image, thumbnails, Modifier.fillMaxSize())
         if (number != null) {

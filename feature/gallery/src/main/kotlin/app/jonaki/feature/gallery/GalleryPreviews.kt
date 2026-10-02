@@ -41,7 +41,7 @@ private fun GallerySomeAccessPreview() {
                 someAccess = true,
                 reloadKey = 0,
                 onSelectMore = {},
-                onAllowAll = {},
+                onOpenSettings = {},
                 onAdd = {},
             )
         }

@@ -82,7 +82,7 @@ fun rememberPhotosChoice(threadKey: String, application: JonakiApplication): () 
             someAccess = grant == PhotoGrant.SOME,
             reloadKey = reloadKey,
             onSelectMore = askPermission,
-            onAllowAll = { openAppSettings(context) },
+            onOpenSettings = { openAppSettings(context) },
             onAdd = { images ->
                 galleryOpen = false
                 application.incomingShares.attach(threadKey, images.map { image -> Uri.parse(image.uri) })
