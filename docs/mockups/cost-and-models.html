@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jonaki — cost and model switching</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,300..800&family=Noto+Sans+Bengali:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap" rel="stylesheet">
+<style>
+/* ---------- page around the phones (not part of the app design) ---------- */
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 32px 80px;
+  font-family: "Roboto Flex", "Noto Sans Bengali", system-ui, sans-serif;
+  background: #e4e6e5; color: #1a1d1c;
+}
+body.page-dark { background: #161817; color: #e3e6e4; }
+.page-head { max-width: 1240px; margin: 0 auto 28px; display: flex; gap: 24px; align-items: end; justify-content: space-between; flex-wrap: wrap; }
+.page-head h1 { font-size: 28px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+.page-head p { margin: 0; max-width: 70ch; line-height: 1.5; opacity: .8; }
+.theme-switch { display: flex; border: 1px solid currentColor; border-radius: 999px; overflow: hidden; }
+.theme-switch button { font: inherit; font-size: 14px; padding: 10px 18px; background: none; color: inherit; border: 0; cursor: pointer; }
+.theme-switch button[aria-pressed="true"] { background: currentColor; }
+.theme-switch button[aria-pressed="true"] span { filter: invert(1); color: inherit; }
+.direction { max-width: 1240px; margin: 0 auto 64px; }
+.direction-head { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 40px; margin-bottom: 22px; }
+.direction-head h2 { grid-column: 1 / -1; font-size: 24px; margin: 0; font-weight: 650; }
+.direction-head dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14px; line-height: 1.45; }
+.direction-head dt { font-weight: 600; opacity: .7; }
+.direction-head dd { margin: 0; }
+.phones { display: flex; gap: 28px; flex-wrap: wrap; }
+.phone-wrap figcaption { font-size: 13px; opacity: .7; margin-top: 10px; text-align: center; }
+
+/* ---------- phone frame ---------- */
+.phone {
+  width: 360px; height: 780px; border-radius: 34px; overflow: hidden; position: relative;
+  box-shadow: 0 0 0 9px #0d0f0e, 0 18px 40px -12px rgba(0,0,0,.45);
+  display: flex; flex-direction: column;
+  background: var(--surface); color: var(--on-surface);
+  font-family: var(--font-body);
+}
+.statusbar { height: 32px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 500; color: var(--on-surface); }
+.statusbar .icons { display: flex; gap: 4px; }
+.statusbar .material-symbols-rounded { font-size: 16px; }
+.gesturebar { height: 22px; flex: none; display: grid; place-items: center; }
+.gesturebar::after { content: ""; width: 108px; height: 4px; border-radius: 2px; background: var(--on-surface); opacity: .55; }
+.material-symbols-rounded { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; display: inline-block; -webkit-font-feature-settings: "liga"; font-feature-settings: "liga"; font-variation-settings: "FILL" 0, "wght" 400, "opsz" 24; }
+.icon-button { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: var(--on-surface-variant); flex: none; }
+.app-bar { height: 64px; flex: none; display: flex; align-items: center; padding: 0 4px 0 4px; gap: 4px; }
+.app-bar .title { flex: 1; min-width: 0; }
+.app-bar .title strong { display: block; font-size: 20px; font-weight: 560; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bar .title small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+.content { flex: 1; overflow: hidden; position: relative; }
+.bn { font-family: "Noto Sans Bengali", var(--font-body); }
+.mono { font-family: "Roboto Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* ---------- shared component structure ---------- */
+.thread-list { list-style: none; margin: 0; padding: 0; }
+.thread { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 20px; min-height: 72px; align-content: center; position: relative; }
+.thread .name { font-size: 16px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .last { grid-column: 1; font-size: 14px; color: var(--on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .when { grid-row: 1; grid-column: 2; font-size: 12px; color: var(--on-surface-variant); text-align: right; }
+.thread .state { grid-row: 2; grid-column: 2; font-size: 12px; text-align: right; }
+.fab { position: absolute; right: 16px; bottom: 16px; height: 56px; padding: 0 20px 0 16px; border-radius: 16px; display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 560; background: var(--primary-container); color: var(--on-primary-container); box-shadow: 0 3px 8px -2px rgba(0,0,0,.3); }
+.search-field { margin: 4px 16px 8px; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; gap: 12px; padding: 0 16px; color: var(--on-surface-variant); font-size: 16px; }
+.section-label { font-size: 13px; font-weight: 600; color: var(--on-surface-variant); padding: 14px 20px 6px; letter-spacing: .02em; }
+
+.chat { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.bubble-user { align-self: flex-end; max-width: 84%; padding: 10px 14px; border-radius: 20px 20px 6px 20px; background: var(--primary-container); color: var(--on-primary-container); font-size: 15px; line-height: 1.45; }
+.answer { font-size: 15px; line-height: 1.55; }
+.answer p { margin: 0 0 8px; }
+.caret { display: inline-block; width: 8px; height: 16px; vertical-align: -2px; background: var(--live); border-radius: 2px; }
+.composer { flex: none; padding: 8px 12px 6px; display: flex; gap: 8px; align-items: center; }
+.composer .field { flex: 1; height: 52px; border-radius: 26px; background: var(--surface-container-high); display: flex; align-items: center; padding: 0 6px 0 4px; color: var(--on-surface-variant); font-size: 15px; gap: 2px; }
+.composer .field span.ph { flex: 1; }
+.stop-button { height: 52px; padding: 0 18px 0 14px; border-radius: 26px; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; background: var(--stop); color: var(--on-stop); }
+
+.steps { list-style: none; margin: 0; padding: 0; }
+.step .tool { font-weight: 600; }
+.step .detail { color: var(--on-surface-variant); }
+.step .query { color: var(--on-surface); }
+
+.approval { border-radius: 20px; padding: 14px 16px 12px; background: var(--surface-container-high); }
+.approval h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.approval p { margin: 0 0 12px; font-size: 14px; color: var(--on-surface-variant); line-height: 1.45; }
+.approval .path { font-family: "Roboto Mono", monospace; font-size: 13px; color: var(--on-surface); }
+.approval .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { height: 40px; padding: 0 16px; border-radius: 20px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 560; }
+.btn.filled { background: var(--primary); color: var(--on-primary); }
+.btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.text { color: var(--deny); margin-left: auto; }
+
+.settings-group { margin: 0 16px 14px; border-radius: 20px; background: var(--surface-container); overflow: hidden; }
+.setting { display: flex; gap: 14px; align-items: center; padding: 14px 16px; min-height: 64px; }
+.setting + .setting { border-top: 1px solid var(--outline-variant); }
+.setting .text { flex: 1; min-width: 0; }
+.setting .text strong { display: block; font-size: 15px; font-weight: 560; }
+.setting .text small { display: block; font-size: 13px; color: var(--on-surface-variant); line-height: 1.4; margin-top: 2px; }
+.switch { width: 52px; height: 32px; border-radius: 16px; position: relative; flex: none; background: var(--surface-container-highest); border: 2px solid var(--outline); }
+.switch::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; top: 6px; left: 6px; background: var(--outline); }
+.switch.on { background: var(--primary); border-color: var(--primary); }
+.switch.on::after { width: 24px; height: 24px; top: 2px; left: 22px; background: var(--on-primary); }
+.rank { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex: none; background: var(--secondary-container); color: var(--on-secondary-container); }
+.key-state { font-size: 12px; font-weight: 600; }
+
+/* =====================================================================
+   Direction B — Firefly
+   ===================================================================== */
+.dir-firefly { --font-body: "Roboto Flex", "Noto Sans Bengali", sans-serif; }
+.dir-firefly[data-theme="dark"] {
+  --surface: #11140f; --surface-container: #1a1e17; --surface-container-high: #22271e; --surface-container-highest: #2c3227;
+  --on-surface: #e4e8dc; --on-surface-variant: #a9b19d; --outline: #7a8370; --outline-variant: #33392d;
+  --primary: #c9e86b; --on-primary: #263400; --primary-container: #3a4a12; --on-primary-container: #e6f7b0;
+  --secondary-container: #333b27; --on-secondary-container: #dde6c8;
+  --live: #d8f36a; --done: #8d9a7c; --stop: #3a4a12; --on-stop: #e6f7b0; --deny: #f2b8a9; --track: #33392d;
+  --glow: rgba(216, 243, 106, .55);
+}
+.dir-firefly[data-theme="light"] {
+  --surface: #f6f8f0; --surface-container: #edf1e4; --surface-container-high: #e6ebdb; --surface-container-highest: #dde3d0;
+  --on-surface: #1a1f12; --on-surface-variant: #50593f; --outline: #7a8468; --outline-variant: #cdd4bd;
+  --primary: #4b6300; --on-primary: #ffffff; --primary-container: #d4ee7c; --on-primary-container: #161f00;
+  --secondary-container: #dfe6c9; --on-secondary-container: #1c2410;
+  --live: #6a8a00; --done: #7a8468; --stop: #1a1f12; --on-stop: #e6f7b0; --deny: #a1361c; --track: #d6dcc6;
+  --glow: rgba(150, 190, 20, .35);
+}
+.dir-firefly .app-bar .title strong { font-weight: 620; }
+.dir-firefly .thread { grid-template-columns: 28px 1fr auto; padding-left: 12px; }
+.dir-firefly .thread .light { grid-row: 1 / span 2; width: 10px; height: 10px; border-radius: 50%; margin-left: 8px; align-self: center; background: var(--track); }
+.dir-firefly .thread .light.on { background: var(--live); box-shadow: 0 0 10px 3px var(--glow); }
+.dir-firefly .thread .light.waiting { background: var(--deny); }
+.dir-firefly .thread .last { grid-column: 2; }
+.dir-firefly .thread .when, .dir-firefly .thread .state { grid-column: 3; }
+.dir-firefly .thread .state { color: var(--on-surface-variant); }
+.dir-firefly .thread .state.running { color: var(--live); font-weight: 600; }
+.dir-firefly .thread .state.waiting { color: var(--deny); font-weight: 600; }
+.dir-firefly .thread.active { background: var(--surface-container); border-radius: 20px; margin: 0 8px; }
+/* the run as a quiet trail; only the step that is working gives off light */
+.dir-firefly .run { border-radius: 20px; background: var(--surface-container); padding: 12px 14px 10px; }
+.dir-firefly .run-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--on-surface-variant); margin-bottom: 8px; }
+.dir-firefly .run-head .live { color: var(--live); font-weight: 600; }
+.dir-firefly .run-head .count { margin-left: auto; font-family: "Roboto Mono", monospace; font-size: 12px; }
+.dir-firefly .step { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; padding: 5px 0; font-size: 13.5px; line-height: 1.4; }
+.dir-firefly .step .dot { grid-row: 1 / span 2; width: 8px; height: 8px; border-radius: 50%; margin: 6px 0 0 6px; background: var(--done); }
+.dir-firefly .step.running .dot { background: var(--live); box-shadow: 0 0 10px 4px var(--glow); }
+.dir-firefly .step.done .tool { color: var(--on-surface-variant); font-weight: 500; }
+.dir-firefly .step.running .tool { color: var(--on-surface); }
+.dir-firefly .step .time { display: none; }
+.dir-firefly .step .detail { grid-column: 2; }
+.dir-firefly .step .query { font-style: italic; }
+.dir-firefly .approval { background: var(--primary-container); color: var(--on-primary-container); border-radius: 24px; }
+.dir-firefly .approval p { color: var(--on-primary-container); opacity: .85; }
+.dir-firefly .approval .path { color: var(--on-primary-container); }
+.dir-firefly .approval .btn.tonal { background: color-mix(in srgb, var(--on-primary-container) 12%, transparent); color: var(--on-primary-container); }
+.dir-firefly .bubble-user { border-radius: 22px 22px 6px 22px; background: var(--surface-container-highest); color: var(--on-surface); }
+.dir-firefly .fab { border-radius: 20px; background: var(--primary); color: var(--on-primary); }
+.dir-firefly .search-field { background: var(--surface-container); }
+.dir-firefly .rank { background: var(--primary-container); color: var(--on-primary-container); }
+
+/* additions for cost and model switching */
+.cost { color: var(--on-surface); font-weight: 600; }
+.run-line { display: flex; gap: 10px; align-items: center; border-radius: 16px; background: var(--surface-container); padding: 10px 14px; font-size: 13.5px; color: var(--on-surface-variant); }
+.run-line .material-symbols-rounded { margin-left: auto; font-size: 20px; }
+.model-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px 0 10px; margin-left: 6px; border-radius: 17px; background: var(--surface-container-highest); color: var(--on-surface); font-size: 13px; font-weight: 560; white-space: nowrap; }
+.model-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px 2px var(--glow); }
+.composer .field .ph { padding-left: 10px; }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.42); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 20px 34px; border-radius: 28px 28px 0 0; background: var(--surface-container); z-index: 2; }
+.sheet .handle { width: 32px; height: 4px; border-radius: 2px; background: var(--outline); margin: 6px auto 14px; opacity: .6; }
+.sheet-title { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+.model-row { display: flex; gap: 14px; align-items: center; min-height: 60px; }
+.model-row .text strong { display: block; font-size: 15px; font-weight: 560; }
+.model-row .text small { display: block; font-size: 13px; color: var(--on-surface-variant); font-family: "Roboto Mono", monospace; }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--outline); flex: none; position: relative; }
+.radio.on { border-color: var(--primary); }
+.radio.on::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--primary); }
+.sheet-foot { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--on-surface-variant); margin-top: 12px; line-height: 1.4; }
+.sheet-foot .link { color: var(--primary); font-weight: 600; white-space: nowrap; }
+.month-total { position: absolute; left: 20px; bottom: 30px; display: flex; gap: 10px; font-size: 13px; color: var(--on-surface-variant); }
+.dir-firefly .thread .state { font-family: "Roboto Mono", monospace; font-size: 12px; }
+.cost-chip { height: 32px; padding: 0 12px; border-radius: 16px; display: grid; place-items: center; font-size: 13px; background: var(--secondary-container); color: var(--on-secondary-container); flex: none; }
+.tappable { color: var(--on-surface) !important; text-decoration: underline dotted; text-underline-offset: 3px; }
+.menu { position: absolute; left: 52px; top: 0; width: 240px; z-index: 3; padding: 8px 0; border-radius: 16px; background: var(--surface-container-high); box-shadow: 0 6px 18px -4px rgba(0,0,0,.45); }
+.menu-item { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: center; padding: 8px 14px; min-height: 52px; }
+.menu-item strong { display: block; font-size: 14.5px; font-weight: 560; }
+.menu-item small { display: block; font-size: 12px; color: var(--on-surface-variant); font-family: "Roboto Mono", monospace; }
+.menu-item .material-symbols-rounded { font-size: 20px; color: var(--on-surface-variant); }
+.menu-item.selected .material-symbols-rounded { color: var(--primary); }
+.menu-sep { height: 1px; background: var(--outline-variant); margin: 6px 0; }
+.chat.dim { opacity: .5; }
+.send-button { width: 52px; height: 52px; border-radius: 26px; display: grid; place-items: center; background: var(--surface-container-highest); color: var(--on-surface-variant); flex: none; }
+.usage-total { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; color: var(--on-surface-variant); font-size: 14px; }
+.usage-total .big { font-size: 32px; font-weight: 600; color: var(--on-surface); }
+.usage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.usage-grid div { border-radius: 14px; background: var(--surface-container-high); padding: 10px 12px; }
+.usage-grid small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+.usage-grid strong { font-size: 15px; font-weight: 600; }
+.usage-row { display: grid; grid-template-columns: 1fr auto 72px; gap: 10px; padding: 10px 0; border-top: 1px solid var(--outline-variant); font-size: 14px; }
+.usage-row span:last-child { text-align: right; }
+.usage-row.muted { color: var(--on-surface-variant); }
+.add-row { margin: -2px 16px 10px; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--primary); font-weight: 600; font-size: 15px; }
+
+.status-strip { flex: none; display: flex; gap: 4px; align-items: center; padding: 6px 10px; font-size: 12px; color: var(--on-surface-variant); overflow: hidden; }
+.status-strip.top { border-bottom: 1px solid var(--outline-variant); }
+.status-strip.bottom { padding-bottom: 0; }
+.status-strip .stat { display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 7px; border-radius: 14px; background: var(--surface-container); white-space: nowrap; }
+.status-strip .stat:first-child { color: var(--on-surface); font-weight: 560; }
+.status-strip .material-symbols-rounded { font-size: 16px; }
+.status-strip .dot, .legend .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px 2px var(--glow); }
+.ring { width: 16px; height: 16px; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke: var(--outline-variant); stroke-width: 3; }
+.ring circle.fill { stroke: var(--primary); }
+.legend { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-container-highest); color: var(--on-surface); flex: none; }
+.legend .ring { width: 20px; height: 20px; }
+.seg { display: inline-flex; border: 1px solid var(--outline); border-radius: 16px; overflow: hidden; font-size: 13px; }
+.seg span { padding: 6px 12px; }
+.seg span.on { background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <div>
+    <h1>Jonaki — cost and model switching</h1>
+    <p>Three ways to show what a thread costs and to switch between your chosen models inside a thread. Both use the Firefly look and the step track. Prices and costs are sample numbers. Your favourite models (here called "scoped models", as in pi) are picked once in Settings.</p>
+  </div>
+  <div class="theme-switch" role="group" aria-label="Theme">
+    <button data-set-theme="light" aria-pressed="false"><span>Light</span></button>
+    <button data-set-theme="dark" aria-pressed="true"><span>Dark</span></button>
+  </div>
+</header>
+
+<section class="direction">
+  <div class="direction-head">
+    <h2>A · Inline</h2>
+    <dl>
+      <dt>Cost</dt><dd>The thread's running total sits in the subtitle under the title. Each run's line adds its own cost next to steps and time. The thread list shows the total under the time.</dd>
+      <dt>Models</dt><dd>A model chip at the left of the message field. Tapping it opens a sheet with your scoped models and their prices; the choice holds for this thread from the next message.</dd>
+    </dl>
+    <dl>
+      <dt>Strength</dt><dd>Cost and model are visible where you type, so you see them before you send. One tap to switch.</dd>
+      <dt>Risk</dt><dd>The composer gets busier, and a long model name has to be shortened in the chip.</dd>
+    </dl>
+  </div>
+  <div class="phones">
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:47</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Laptop under ৳90,000</strong><small>GLM 5.3 Flash · web search on · <b class="cost">$0.0134</b></small></div>
+          <span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span>
+        </div>
+        <div class="content">
+          <div class="chat">
+            <div class="bubble-user">Compare the three best laptops under ৳90,000 for programming.</div>
+            <div class="run-line"><span>4 steps</span><span class="mono">12.4 s</span><span class="mono cost">$0.0041</span><span class="material-symbols-rounded">expand_more</span></div>
+            <div class="answer"><p>For programming under ৳90,000, the best picks right now are the <b>Lenovo IdeaPad Slim 5</b> (Ryzen 7, 16 GB), the <b>ASUS Vivobook 16</b> and the <b>HP Victus 15</b>. The IdeaPad has the best keyboard and battery…</p></div>
+            <div class="bubble-user">Which one has the best Linux support?</div>
+            <div class="answer"><p>The IdeaPad Slim 5. Its AMD graphics and Wi-Fi work out of the box on Ubuntu and Fedora<span class="caret"></span></p></div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="field">
+            <span class="model-chip"><span class="dot"></span>GLM 5.3 Flash<span class="material-symbols-rounded" style="font-size:18px">expand_more</span></span>
+            <span class="ph">Message</span>
+          </div>
+          <div class="stop-button"><span class="material-symbols-rounded" style="font-variation-settings:'FILL' 1">stop</span>Stop</div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Thread: total in the subtitle, cost per run, model chip</figcaption>
+    </figure>
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:48</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Laptop under ৳90,000</strong><small>GLM 5.3 Flash · web search on · <b class="cost">$0.0134</b></small></div>
+          <span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span>
+        </div>
+        <div class="content"><div class="scrim"></div></div>
+        <div class="sheet">
+          <div class="handle"></div>
+          <div class="sheet-title">Model for this thread</div>
+          <div class="model-row selected"><span class="radio on"></span><div class="text"><strong>GLM 5.3 Flash</strong><small>OpenRouter · $0.10 / $0.40</small></div></div>
+          <div class="model-row"><span class="radio"></span><div class="text"><strong>DeepSeek V4</strong><small>DeepSeek · $0.27 / $1.10</small></div></div>
+          <div class="model-row"><span class="radio"></span><div class="text"><strong>Claude Sonnet 5.5</strong><small>OpenRouter · $3.00 / $15.00</small></div></div>
+          <div class="model-row"><span class="radio"></span><div class="text"><strong>Gemini 3.8 Flash</strong><small>Gemini · $0.30 / $2.50</small></div></div>
+          <div class="sheet-foot"><span>Prices per million tokens, in / out</span><span class="link">Edit list</span></div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Model chip tapped: scoped models with prices</figcaption>
+    </figure>
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:48</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">menu</span></span>
+          <div class="title"><strong>Jonaki</strong></div>
+          <span class="icon-button"><span class="material-symbols-rounded">settings</span></span>
+        </div>
+        <div class="content">
+          <div class="search-field"><span class="material-symbols-rounded">search</span>Search threads</div>
+          <ul class="thread-list">
+            <li class="thread active"><span class="light on"></span><span class="name">Laptop under ৳90,000</span><span class="when">now</span><span class="last">The IdeaPad Slim 5. Its AMD graphics…</span><span class="state running">$0.0134</span></li>
+            <li class="thread"><span class="light"></span><span class="name">Thesis — sample size</span><span class="when">21:12</span><span class="last">Saved to work/sample-size-notes.md</span><span class="state">$0.0410</span></li>
+            <li class="thread"><span class="light"></span><span class="name bn">সিলেট ভ্রমণ পরিকল্পনা</span><span class="when">19:30</span><span class="last bn">ট্রেনের সময়সূচি আর হোটেলের তালিকা।</span><span class="state">$0.0087</span></li>
+            <li class="thread"><span class="light"></span><span class="name">Kurzgesagt: fusion video</span><span class="when">Tue</span><span class="last">6 key points, 19 min video</span><span class="state">$0.0311</span></li>
+            <li class="thread"><span class="light"></span><span class="name">Mobile data plans</span><span class="when">Mon</span><span class="last">GP vs Robi vs Banglalink</span><span class="state">$0.0022</span></li>
+          </ul>
+          <div class="month-total"><span>This month</span><span class="mono">$0.21</span></div>
+          <div class="fab"><span class="material-symbols-rounded">edit_square</span>New thread</div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Thread list: cost under the time, month total</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="direction">
+  <div class="direction-head">
+    <h2>B · On demand</h2>
+    <dl>
+      <dt>Cost</dt><dd>A small cost chip in the app bar. Tapping it opens the thread's usage: total, tokens in, out and cached, and a line per model used.</dd>
+      <dt>Models</dt><dd>Tapping the subtitle under the title opens a menu of your scoped models. The composer stays as it is now.</dd>
+    </dl>
+    <dl>
+      <dt>Strength</dt><dd>The chat stays clean, and the usage sheet explains where the money went, including cache savings.</dd>
+      <dt>Risk</dt><dd>Switching models is less discoverable: the subtitle doesn't look like a button.</dd>
+    </dl>
+  </div>
+  <div class="phones">
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:47</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Laptop under ৳90,000</strong><small class="tappable">GLM 5.3 Flash<span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px">arrow_drop_down</span></small></div>
+          <span class="cost-chip mono">$0.013</span>
+          <span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span>
+        </div>
+        <div class="content">
+          <div class="menu">
+            <div class="menu-item selected"><span class="material-symbols-rounded">check</span><div><strong>GLM 5.3 Flash</strong><small>$0.10 / $0.40</small></div></div>
+            <div class="menu-item"><span></span><div><strong>DeepSeek V4</strong><small>$0.27 / $1.10</small></div></div>
+            <div class="menu-item"><span></span><div><strong>Claude Sonnet 5.5</strong><small>$3.00 / $15.00</small></div></div>
+            <div class="menu-item"><span></span><div><strong>Gemini 3.8 Flash</strong><small>$0.30 / $2.50</small></div></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item"><span class="material-symbols-rounded">tune</span><div><strong>Edit list</strong></div></div>
+          </div>
+          <div class="chat dim">
+            <div class="bubble-user">Compare the three best laptops under ৳90,000 for programming.</div>
+            <div class="answer"><p>For programming under ৳90,000, the best picks right now are the <b>Lenovo IdeaPad Slim 5</b>, the <b>ASUS Vivobook 16</b> and the <b>HP Victus 15</b>…</p></div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="field"><span class="icon-button" style="width:44px;height:44px"><span class="material-symbols-rounded">add</span></span><span class="ph">Message</span></div>
+          <div class="send-button"><span class="material-symbols-rounded">arrow_upward</span></div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Subtitle tapped: model menu; cost chip in the app bar</figcaption>
+    </figure>
+
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:48</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Laptop under ৳90,000</strong><small class="tappable">GLM 5.3 Flash</small></div>
+          <span class="cost-chip mono">$0.013</span>
+          <span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span>
+        </div>
+        <div class="content"><div class="scrim"></div></div>
+        <div class="sheet">
+          <div class="handle"></div>
+          <div class="sheet-title">Usage in this thread</div>
+          <div class="usage-total"><span class="big mono">$0.0134</span><span>≈ ৳1.64</span></div>
+          <div class="usage-grid">
+            <div><small>Input</small><strong class="mono">48,210</strong></div>
+            <div><small>Cached</small><strong class="mono">31,900</strong></div>
+            <div><small>Output</small><strong class="mono">3,480</strong></div>
+          </div>
+          <div class="usage-row"><span>GLM 5.3 Flash</span><span class="mono">6 turns</span><span class="mono">$0.0062</span></div>
+          <div class="usage-row"><span>Claude Sonnet 5.5</span><span class="mono">1 turn</span><span class="mono">$0.0072</span></div>
+          <div class="usage-row muted"><span>Tavily search</span><span class="mono">3 credits</span><span class="mono">free</span></div>
+          <div class="sheet-foot"><span>OpenRouter reports cost; others are priced from token counts.</span></div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Cost chip tapped: usage sheet</figcaption>
+    </figure>
+  </div>
+</section>
+
+
+<section class="direction">
+  <div class="direction-head">
+    <h2>C · Status strip</h2>
+    <dl>
+      <dt>What</dt><dd>One thin row of icons with numbers: the model (tap to switch), the context window size, how much of it is used, and the cost so far in this thread. It sits either under the title or just above the message field.</dd>
+      <dt>Help</dt><dd>Settings has a "Status icons" page that names each icon in one line, with switches for showing the strip and where.</dd>
+    </dl>
+    <dl>
+      <dt>Strength</dt><dd>Everything that changes while you chat is in one place and always visible, like a code editor's status bar. Model switching and cost need no extra screen.</dd>
+      <dt>Risk</dt><dd>Icons need learning once. At the bottom it moves with the keyboard; at the top it costs one row of chat.</dd>
+    </dl>
+  </div>
+  <div class="phones">
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:47</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Laptop under ৳90,000</strong><small>web search on</small></div>
+          <span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span>
+        </div>
+        <div class="status-strip top">
+            <span class="stat" title="Model"><span class="dot"></span>GLM 5.3 Flash<span class="material-symbols-rounded" style="font-size:16px">expand_more</span></span>
+            <span class="stat" title="Context window"><span class="material-symbols-rounded">memory</span><span class="mono">200K</span></span>
+            <span class="stat" title="Context used"><svg class="ring" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle class="fill" cx="10" cy="10" r="7.5" stroke-dasharray="11.3 47.1"/></svg><span class="mono">24%</span></span>
+            <span class="stat" title="Cost in this thread"><span class="material-symbols-rounded">payments</span><span class="mono">$0.013</span></span>
+          </div>
+        <div class="content">
+          <div class="chat">
+            <div class="bubble-user">Compare the three best laptops under ৳90,000 for programming.</div>
+            <div class="run-line"><span>4 steps</span><span class="mono">12.4 s</span><span class="mono">$0.0041</span><span class="material-symbols-rounded">expand_more</span></div>
+            <div class="answer"><p>For programming under ৳90,000, the best picks right now are the <b>Lenovo IdeaPad Slim 5</b> (Ryzen 7, 16 GB), the <b>ASUS Vivobook 16</b> and the <b>HP Victus 15</b>. The IdeaPad has the best keyboard and battery…</p></div>
+            <div class="bubble-user">Which one has the best Linux support?</div>
+            <div class="answer"><p>The IdeaPad Slim 5. Its AMD graphics and Wi-Fi work out of the box on Ubuntu and Fedora<span class="caret"></span></p></div>
+          </div>
+        </div>
+        
+        <div class="composer">
+          <div class="field"><span class="icon-button" style="width:44px;height:44px"><span class="material-symbols-rounded">add</span></span><span class="ph">Message</span></div>
+          <div class="stop-button"><span class="material-symbols-rounded" style="font-variation-settings:'FILL' 1">stop</span>Stop</div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Strip under the title</figcaption>
+    </figure>
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:47</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Laptop under ৳90,000</strong><small>web search on</small></div>
+          <span class="icon-button"><span class="material-symbols-rounded">more_vert</span></span>
+        </div>
+        
+        <div class="content">
+          <div class="chat">
+            <div class="bubble-user">Compare the three best laptops under ৳90,000 for programming.</div>
+            <div class="run-line"><span>4 steps</span><span class="mono">12.4 s</span><span class="mono">$0.0041</span><span class="material-symbols-rounded">expand_more</span></div>
+            <div class="answer"><p>For programming under ৳90,000, the best picks right now are the <b>Lenovo IdeaPad Slim 5</b> (Ryzen 7, 16 GB), the <b>ASUS Vivobook 16</b> and the <b>HP Victus 15</b>. The IdeaPad has the best keyboard and battery…</p></div>
+            <div class="bubble-user">Which one has the best Linux support?</div>
+            <div class="answer"><p>The IdeaPad Slim 5. Its AMD graphics and Wi-Fi work out of the box on Ubuntu and Fedora<span class="caret"></span></p></div>
+          </div>
+        </div>
+        <div class="status-strip bottom">
+            <span class="stat" title="Model"><span class="dot"></span>GLM 5.3 Flash<span class="material-symbols-rounded" style="font-size:16px">expand_more</span></span>
+            <span class="stat" title="Context window"><span class="material-symbols-rounded">memory</span><span class="mono">200K</span></span>
+            <span class="stat" title="Context used"><svg class="ring" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle class="fill" cx="10" cy="10" r="7.5" stroke-dasharray="11.3 47.1"/></svg><span class="mono">24%</span></span>
+            <span class="stat" title="Cost in this thread"><span class="material-symbols-rounded">payments</span><span class="mono">$0.013</span></span>
+          </div>
+        <div class="composer">
+          <div class="field"><span class="icon-button" style="width:44px;height:44px"><span class="material-symbols-rounded">add</span></span><span class="ph">Message</span></div>
+          <div class="stop-button"><span class="material-symbols-rounded" style="font-variation-settings:'FILL' 1">stop</span>Stop</div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Strip above the message field</figcaption>
+    </figure>
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:49</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Status icons</strong></div>
+        </div>
+        <div class="content">
+          <div class="settings-group" style="margin-top:8px">
+            <div class="setting"><span class="legend"><span class="dot"></span></span><div class="text"><strong>Model</strong><small>The model this thread uses. Tap to switch.</small></div></div>
+            <div class="setting"><span class="legend"><span class="material-symbols-rounded">memory</span></span><div class="text"><strong>Context window</strong><small>How much text the model can hold at once, in tokens.</small></div></div>
+            <div class="setting"><span class="legend"><svg class="ring" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle class="fill" cx="10" cy="10" r="7.5" stroke-dasharray="11.3 47.1"/></svg></span><div class="text"><strong>Context used</strong><small>How full it is. Long threads are summarised near 80%.</small></div></div>
+            <div class="setting"><span class="legend"><span class="material-symbols-rounded">payments</span></span><div class="text"><strong>Cost</strong><small>Spent in this thread, in US dollars.</small></div></div>
+          </div>
+          <div class="section-label">Show</div>
+          <div class="settings-group">
+            <div class="setting"><div class="text"><strong>Status strip</strong></div><span class="switch on"></span></div>
+            <div class="setting"><div class="text"><strong>Position</strong></div><span class="seg"><span class="on">Bottom</span><span>Top</span></span></div>
+          </div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Settings → Status icons</figcaption>
+    </figure>
+  </div>
+</section>
+<section class="direction">
+  <div class="direction-head">
+    <h2>All · Scoped models in Settings</h2>
+    <dl>
+      <dt>What</dt><dd>One list of the models you want to switch between. Add from any provider you have a key for; OpenRouter models come with their prices. The first one is the default for new threads.</dd>
+    </dl>
+    <dl>
+      <dt>Note</dt><dd>Prices come from OpenRouter's model list; for DeepSeek and Gemini they are a small built-in table that you can edit.</dd>
+    </dl>
+  </div>
+  <div class="phones">
+    <figure class="phone-wrap" style="margin:0">
+      <div class="phone dir-firefly">
+        <div class="statusbar"><span>21:49</span><span class="icons"><span class="material-symbols-rounded">signal_cellular_alt</span><span class="material-symbols-rounded">wifi</span><span class="material-symbols-rounded">battery_5_bar</span></span></div>
+        <div class="app-bar">
+          <span class="icon-button"><span class="material-symbols-rounded">arrow_back</span></span>
+          <div class="title"><strong>Models</strong></div>
+        </div>
+        <div class="content">
+          <div class="section-label">Scoped models</div>
+          <div class="settings-group">
+            <div class="setting"><span class="rank">1</span><div class="text"><strong>GLM 5.3 Flash</strong><small>OpenRouter · default for new threads</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+            <div class="setting"><span class="rank">2</span><div class="text"><strong>DeepSeek V4</strong><small>DeepSeek</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+            <div class="setting"><span class="rank">3</span><div class="text"><strong>Claude Sonnet 5.5</strong><small>OpenRouter</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+            <div class="setting"><span class="rank">4</span><div class="text"><strong>Gemini 3.8 Flash</strong><small>Gemini</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">drag_indicator</span></div>
+          </div>
+          <div class="add-row"><span class="material-symbols-rounded">add</span>Add model</div>
+          <div class="section-label">Cost</div>
+          <div class="settings-group">
+            <div class="setting"><div class="text"><strong>Show in taka</strong><small>Rate 122.5, updated today</small></div><span class="switch"></span></div>
+            <div class="setting"><div class="text"><strong>Monthly limit</strong><small>Ask before sending above $5.00</small></div><span class="material-symbols-rounded" style="color:var(--on-surface-variant)">chevron_right</span></div>
+          </div>
+        </div>
+        <div class="gesturebar"></div>
+      </div>
+      <figcaption>Settings → Models</figcaption>
+    </figure>
+  </div>
+</section>
+
+<script>
+  function setTheme(theme) {
+    for (const phone of document.querySelectorAll(".phone")) phone.dataset.theme = theme;
+    document.body.classList.toggle("page-dark", theme === "dark");
+    for (const button of document.querySelectorAll("[data-set-theme]")) button.setAttribute("aria-pressed", String(button.dataset.setTheme === theme));
+  }
+  for (const button of document.querySelectorAll("[data-set-theme]")) button.addEventListener("click", () => setTheme(button.dataset.setTheme));
+  setTheme(new URLSearchParams(location.search).get("theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+</script>
+</body>
+</html>
