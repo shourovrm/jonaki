@@ -162,6 +162,8 @@ data class StepUi(
     /** The exact text a web_search step sent to the search service (D-011 amendment). */
     val query: String? = null,
     val durationMillis: Long? = null,
+    /** When the step started; steps that ran side by side overlap (D-080). */
+    val startedAtMillis: Long? = null,
 )
 
 enum class StepUiStatus {
@@ -206,4 +208,34 @@ fun formatStepDuration(durationMillis: Long): String {
     return String.format(Locale.ENGLISH, "%d:%02d", totalSeconds / 60, totalSeconds % 60)
 }
 
-fun totalDurationMillis(steps: List<StepUi>): Long = steps.sumOf { step -> step.durationMillis ?: 0L }
+/** Time the steps took together: steps that ran side by side count once (D-080). */
+fun totalDurationMillis(steps: List<StepUi>): Long {
+    val withoutStart = steps.filter { step -> step.startedAtMillis == null }.sumOf { step -> step.durationMillis ?: 0L }
+    val intervals = steps.mapNotNull { step ->
+        val start = step.startedAtMillis
+        val duration = step.durationMillis
+        if (start == null || duration == null) null else start to start + duration
+    }
+    return withoutStart + coveredMillis(intervals)
+}
+
+/** Length of the union of (start, end) intervals: the usual sort-and-merge. */
+private fun coveredMillis(intervals: List<Pair<Long, Long>>): Long {
+    var covered = 0L
+    var mergedStart = 0L
+    var mergedEnd: Long? = null
+    for ((start, end) in intervals.sortedBy { (start, _) -> start }) {
+        val currentEnd = mergedEnd
+        if (currentEnd == null || start > currentEnd) {
+            if (currentEnd != null) {
+                covered += currentEnd - mergedStart
+            }
+            mergedStart = start
+            mergedEnd = end
+        } else {
+            mergedEnd = maxOf(currentEnd, end)
+        }
+    }
+    val lastEnd = mergedEnd ?: return covered
+    return covered + lastEnd - mergedStart
+}

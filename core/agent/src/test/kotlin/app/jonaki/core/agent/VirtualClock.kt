@@ -6,10 +6,10 @@ import kotlinx.coroutines.CompletableDeferred
 /**
  * A clock that moves only when a test calls [advanceBy]. Used in place of
  * kotlinx-coroutines-test, which the project does not depend on: approval
- * waits go through [ApprovalTimer], and this timer releases a wait once the
- * virtual time passes its deadline.
+ * waits and the spacing of web searches go through [WaitTimer], and this
+ * timer releases a wait once the virtual time passes its deadline.
  */
-class VirtualClock : ApprovalTimer {
+class VirtualClock : WaitTimer {
     private class Waiter(val deadline: Duration, val released: CompletableDeferred<Unit>)
 
     var now: Duration = Duration.ZERO

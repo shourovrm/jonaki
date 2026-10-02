@@ -12,6 +12,8 @@ import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 data class AgentSettings(
@@ -29,7 +31,8 @@ data class AgentSettings(
  * calls, send the results back, and repeat until it answers in text. Every
  * step goes to the [recorder] as it happens. Cancelling the calling coroutine
  * is the Stop button: the partial answer is recorded, then the cancellation
- * continues to the caller.
+ * continues to the caller. Read-only calls of one turn run side by side
+ * through a [ToolCallScheduler] (D-080).
  */
 class AgentLoop(
     private val provider: ChatProvider,
@@ -40,7 +43,14 @@ class AgentLoop(
     private val settings: AgentSettings,
     /** Adds images from the thread folder before each request; null sends text only (D-049). */
     private val imageMessages: ImageMessages? = null,
+    /** Spaces web searches that run side by side; tests pass a virtual clock. */
+    waitTimer: WaitTimer = WaitTimer.REAL,
 ) {
+    private val scheduler = ToolCallScheduler(waitTimer)
+
+    // Calls running side by side record at the same time; the recorder saves one event at a time.
+    private val recorderLock = Mutex()
+
     private val toolsByName: Map<String, Tool> = tools.associateBy { tool -> tool.name }
 
     // Sorted like the system prompt, so the request bytes stay stable for the prompt cache.
@@ -64,7 +74,7 @@ class AgentLoop(
             }
             val answered = turn as TurnResult.Answered
             conversation += answered.message
-            recorder.record(AgentEvent.AssistantMessage(answered.message, answered.usage))
+            record(AgentEvent.AssistantMessage(answered.message, answered.usage))
 
             if (budgetUsedUp) {
                 // Tool calls are ignored here: the model was offered no tools for this turn.
@@ -75,14 +85,12 @@ class AgentLoop(
             }
 
             toolTurnsUsed += 1
-            for (toolCall in answered.message.toolCalls) {
-                conversation += runToolCall(toolCall)
-            }
+            conversation += runToolCalls(answered.message.toolCalls)
         }
     }
 
     private suspend fun finish(outcome: RunOutcome): RunOutcome {
-        recorder.record(AgentEvent.RunFinished(outcome))
+        record(AgentEvent.RunFinished(outcome))
         return outcome
     }
 
@@ -102,9 +110,9 @@ class AgentLoop(
                 request = request,
                 onTextDelta = { delta ->
                     streamedText.append(delta)
-                    recorder.record(AgentEvent.TextDelta(delta))
+                    record(AgentEvent.TextDelta(delta))
                 },
-                onReasoningDelta = { delta -> recorder.record(AgentEvent.ReasoningDelta(delta)) },
+                onReasoningDelta = { delta -> record(AgentEvent.ReasoningDelta(delta)) },
             )
         } catch (cancellation: CancellationException) {
             recordStop(streamedText.toString())
@@ -116,23 +124,39 @@ class AgentLoop(
         // The coroutine is already cancelled; NonCancellable lets the last saves finish.
         withContext(NonCancellable) {
             if (partialText.isNotEmpty()) {
-                recorder.record(AgentEvent.AssistantMessage(Message(Role.ASSISTANT, partialText), usage = null))
+                record(AgentEvent.AssistantMessage(Message(Role.ASSISTANT, partialText), usage = null))
             }
-            recorder.record(AgentEvent.RunFinished(RunOutcome.Stopped(partialText)))
+            record(AgentEvent.RunFinished(RunOutcome.Stopped(partialText)))
         }
     }
 
-    private suspend fun runToolCall(toolCall: ToolCall): Message {
-        recorder.record(AgentEvent.ToolStarted(toolCall))
-        val output = try {
-            outputFor(toolCall)
+    private suspend fun record(event: AgentEvent) {
+        recorderLock.withLock { recorder.record(event) }
+    }
+
+    /** Stop cancels every running call of the turn; the run's stop is recorded once. */
+    private suspend fun runToolCalls(toolCalls: List<ToolCall>): List<Message> {
+        val finishedCalls = try {
+            scheduler.runAll(
+                toolCalls = toolCalls,
+                runsAlongsideOthers = { toolCall -> ToolCallScheduler.readsOnly(toolsByName[toolCall.toolName], toolCall) },
+                run = ::runToolCall,
+                inCallOrder = { toolCall, finished -> record(AgentEvent.ToolFinished(toolCall, finished.output, finished.message)) },
+            )
         } catch (cancellation: CancellationException) {
             recordStop(partialText = "")
             throw cancellation
         }
+        return finishedCalls.map { finished -> finished.message }
+    }
+
+    private class FinishedCall(val output: ToolOutput, val message: Message)
+
+    private suspend fun runToolCall(toolCall: ToolCall): FinishedCall {
+        record(AgentEvent.ToolStarted(toolCall))
+        val output = outputFor(toolCall)
         val message = Message(role = Role.TOOL, text = output.text, toolCallId = toolCall.id)
-        recorder.record(AgentEvent.ToolFinished(toolCall, output, message))
-        return message
+        return FinishedCall(output, message)
     }
 
     private suspend fun outputFor(toolCall: ToolCall): ToolOutput {

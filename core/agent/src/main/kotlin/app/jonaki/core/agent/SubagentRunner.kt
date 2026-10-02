@@ -40,7 +40,7 @@ class SubagentRunner(
     private val skillSection: String,
     private val now: () -> ZonedDateTime,
     private val limits: SubagentLimits = SubagentLimits(),
-    private val timer: ApprovalTimer = ApprovalTimer.REAL,
+    private val timer: WaitTimer = WaitTimer.REAL,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SubagentLauncher {
     private val givableTools: List<Tool> = threadTools.filter { tool -> tool.name !in AgentTypes.NEVER_GIVEN }
@@ -134,6 +134,7 @@ class SubagentRunner(
             recorder = recorder,
             limits = limits,
             progress = progress,
+            timer = timer,
         )
     }
 
