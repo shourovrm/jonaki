@@ -702,3 +702,43 @@ whole task, its steps as a track and its answer. Its approval cards read
 for task, Deny. Several cards can wait at once. Strings reviewed by an
 Opus subagent (6 of 36 changed). Artifacts a subagent
 shows get "Open" cards like the thread agent's. Outcome: pending.
+
+## D-085 · 2026-10-03 · One + button and an in-app photo gallery — proposed
+The composer's paper clip and camera button (D-042, D-053) become one "+"
+at the bottom left, as in ChatGPT. It opens a sheet with three tiles:
+Camera (as D-053), Photos, Files (the system document picker, as D-042).
+Photos opens Jonaki's gallery sheet in the new module `feature/gallery`:
+Recent, a grid of the newest images (MediaStore, newest added first, pages
+of 120 loaded as the grid scrolls), and Collections, the MediaStore
+buckets with their newest image as cover and a count on a line of its own;
+an album opens in the same grid with a back arrow. Taps pick several
+images across both tabs with numbered marks; "Add N" copies them through
+IncomingShares into chips, so the 25 MB cap and naming of D-046 and the
+send path of D-049 are unchanged. Thumbnails: ContentResolver.loadThumbnail
+on Android 10 and later, a power-of-two decode (ImageScale.sampleSize)
+turned by MediaStore's orientation on 8 and 9, four loads at a time on the
+IO dispatcher, an LruCache of at most 32 MB. The MediaStore queries sit
+behind the `PhotoLibrary` interface (`MediaStorePhotoLibrary` in the app).
+No image library. Release APK 6,018,647 → 6,056,863 bytes (measured
+2026-10-03). Why: user request of 2026-10-03. Rejected: Coil (a new
+dependency); a separate Photos button (the composer had two buttons
+already). Limits: the selection is lost on rotation; previews at 360 dp
+and font scale 1.3 exist in GalleryPreviews.kt but were not rendered (no
+emulator). Outcome: pending.
+
+## D-086 · 2026-10-03 · Photo permission, asked once, with the system picker as fallback — proposed
+New permissions, approved by the user on 2026-10-03: READ_MEDIA_IMAGES and
+READ_MEDIA_VISUAL_USER_SELECTED (Android 13 and later), READ_EXTERNAL_STORAGE
+with maxSdkVersion 32 (checked with aapt2 on the release APK). Jonaki asks
+the first time Photos is tapped, never at start. Android 14 "Select
+photos" opens the gallery with only those photos and a note "Jonaki can
+see only the photos you chose." with Select more (asks again, so Android
+offers its picker) and Allow all (Jonaki's page in system settings). Any
+answer that gives no access, a dismissed dialog included, counts as a
+refusal: Jonaki stores it (preferences `photo_access`), never asks again,
+and every Photos tap opens the system photo picker
+(PickMultipleVisualMedia, images only), which needs no permission, until
+access is granted in system settings; the grant is read again on every
+tap and on return to the app. Why: user request of 2026-10-03; Android's
+guidance for partial access. Rejected: asking again after a refusal
+(Android blocks the dialog after two refusals anyway). Outcome: pending.

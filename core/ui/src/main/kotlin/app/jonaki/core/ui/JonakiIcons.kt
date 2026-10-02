@@ -119,7 +119,7 @@ object JonakiIcons {
         )
     }
 
-    /** Material "attach_file" (a paper clip): the composer's attach button. */
+    /** Material "attach_file" (a paper clip): Files in the composer's + sheet. */
     val AttachFile: ImageVector by lazy {
         icon(
             "AttachFile",
@@ -138,13 +138,22 @@ object JonakiIcons {
         )
     }
 
-    /** Material "photo_camera": the composer's camera button. */
+    /** Material "photo_camera": Camera in the composer's + sheet. */
     val PhotoCamera: ImageVector by lazy {
         icon(
             "PhotoCamera",
             "M12,12m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0" +
                 "M9,2L7.17,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2H9z" +
                 "M12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5 5,2.24 5,5 -2.24,5 -5,5z",
+        )
+    }
+
+    /** Material "photo_library": Photos in the composer's + sheet. */
+    val PhotoLibrary: ImageVector by lazy {
+        icon(
+            "PhotoLibrary",
+            "M22,16V4c0,-1.1 -0.9,-2 -2,-2H8c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2z" +
+                "m-11,-4l2.03,2.71L16,11l4,5H8l3,-4zM2,6v14c0,1.1 0.9,2 2,2h14v-2H4V6H2z",
         )
     }
 

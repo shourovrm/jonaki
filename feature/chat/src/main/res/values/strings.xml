@@ -11,7 +11,9 @@
     <string name="chat_message_hint">Message</string>
     <string name="chat_send">Send</string>
     <string name="chat_attach">Attach</string>
-    <string name="chat_take_photo">Take photo</string>
+    <string name="chat_add_camera">Camera</string>
+    <string name="chat_add_photos">Photos</string>
+    <string name="chat_add_files">Files</string>
     <string name="chat_attachment_remove">Remove %1$s</string>
     <string name="chat_stop">Stop</string>
     <string name="chat_run_working">Working</string>

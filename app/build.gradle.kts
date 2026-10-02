@@ -58,6 +58,7 @@ dependencies {
     implementation(project(":tools:artifact"))
     implementation(project(":feature:memory"))
     implementation(project(":feature:skills"))
+    implementation(project(":feature:gallery"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))

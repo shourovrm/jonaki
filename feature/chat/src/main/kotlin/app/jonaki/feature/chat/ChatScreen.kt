@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -26,6 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -43,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -62,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,10 +104,12 @@ fun ChatScreen(
     onOpenArtifact: (path: String) -> Unit = {},
     /** A message to show first instead of the end, when opened from a memory fact's source. */
     focusMessageId: String? = null,
-    /** The paper clip: the app opens the system file picker. */
+    /** Files in the + sheet: the app opens the system file picker. */
     onAttach: () -> Unit = {},
-    /** The camera button: the app opens the system camera app. */
+    /** Camera in the + sheet: the app opens the system camera app. */
     onTakePhoto: () -> Unit = {},
+    /** Photos in the + sheet: the app opens its gallery, or the system photo picker without access (D-086). */
+    onPickPhotos: () -> Unit = {},
     /** The close mark on an attachment chip. */
     onRemoveAttachment: (attachmentId: String) -> Unit = {},
     /** Edit under a sent prompt: the app puts its text in the field and marks it as editing. */
@@ -157,6 +163,7 @@ fun ChatScreen(
                     onStop = onStop,
                     onAttach = onAttach,
                     onTakePhoto = onTakePhoto,
+                    onPickPhotos = onPickPhotos,
                 )
             }
         },
@@ -553,24 +560,20 @@ private fun Composer(
     onStop: () -> Unit,
     onAttach: () -> Unit,
     onTakePhoto: () -> Unit,
+    onPickPhotos: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Local to the composer, like the sheet it opens: nothing outside needs to know it is open.
+    var addSheetOpen by rememberSaveable { mutableStateOf(false) }
     Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier) {
         Row(
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
         ) {
-            IconButton(onClick = onAttach, modifier = Modifier.size(52.dp)) {
+            IconButton(onClick = { addSheetOpen = true }, modifier = Modifier.size(52.dp)) {
                 Icon(
-                    JonakiIcons.AttachFile,
+                    Icons.Filled.Add,
                     contentDescription = stringResource(R.string.chat_attach),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onTakePhoto, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    JonakiIcons.PhotoCamera,
-                    contentDescription = stringResource(R.string.chat_take_photo),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -604,6 +607,72 @@ private fun Composer(
                     Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
                 }
             }
+        }
+    }
+    if (addSheetOpen) {
+        // Each choice closes the sheet first, so the picker or gallery it opens is not stacked under it.
+        AddSheet(
+            onCamera = {
+                addSheetOpen = false
+                onTakePhoto()
+            },
+            onPhotos = {
+                addSheetOpen = false
+                onPickPhotos()
+            },
+            onFiles = {
+                addSheetOpen = false
+                onAttach()
+            },
+            onDismiss = { addSheetOpen = false },
+        )
+    }
+}
+
+/** The + button's choices, like ChatGPT's: Camera, Photos and Files side by side (D-085). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddSheet(
+    onCamera: () -> Unit,
+    onPhotos: () -> Unit,
+    onFiles: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+        ) {
+            AddChoice(JonakiIcons.PhotoCamera, stringResource(R.string.chat_add_camera), onCamera, Modifier.weight(1f))
+            AddChoice(JonakiIcons.PhotoLibrary, stringResource(R.string.chat_add_photos), onPhotos, Modifier.weight(1f))
+            AddChoice(JonakiIcons.AttachFile, stringResource(R.string.chat_add_files), onFiles, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun AddChoice(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

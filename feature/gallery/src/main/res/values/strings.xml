@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gallery_recent">Recent</string>
+    <string name="gallery_collections">Collections</string>
+    <string name="gallery_add">Add</string>
+    <string name="gallery_add_count">Add %1$d</string>
+    <string name="gallery_no_photos">No photos</string>
+    <plurals name="gallery_album_count">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
+    <string name="gallery_album_no_name">No name</string>
+    <string name="gallery_back">Back</string>
+    <string name="gallery_photo">Photo</string>
+    <string name="gallery_some_access">Jonaki can see only the photos you chose.</string>
+    <string name="gallery_select_more">Select more</string>
+    <string name="gallery_allow_all">Allow all</string>
+</resources>

@@ -5,6 +5,9 @@ import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.files.AndroidFileDestinations
 import app.jonaki.files.AttachmentDrafts
+import app.jonaki.files.MediaStorePhotoLibrary
+import app.jonaki.files.MediaThumbnails
+import app.jonaki.feature.gallery.GallerySource
 import app.jonaki.files.IncomingShares
 import app.jonaki.files.LinkedFolder
 import app.jonaki.files.VisibleActivity
@@ -81,6 +84,11 @@ class JonakiApplication : Application() {
     /** Files and text shared from other apps, and files from the attach button. */
     lateinit var incomingShares: IncomingShares
         private set
+
+    /** The phone's photos for the composer's gallery sheet, with one thumbnail cache for the app's life (D-085). */
+    val gallerySource: GallerySource by lazy {
+        GallerySource(MediaStorePhotoLibrary(contentResolver), MediaThumbnails(contentResolver))
+    }
 
     override fun onCreate() {
         super.onCreate()

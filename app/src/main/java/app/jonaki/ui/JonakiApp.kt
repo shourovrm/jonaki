@@ -400,6 +400,7 @@ private fun ChatRoute(
             photo.delete()
         }
     }
+    val pickPhotos = rememberPhotosChoice(threadId, application)
     LaunchedEffect(threadId, sharedTexts[threadId]) {
         val sharedText = application.incomingShares.takeText(threadId) ?: return@LaunchedEffect
         draft = if (draft.isBlank()) sharedText else draft.trimEnd() + "\n\n" + sharedText
@@ -542,6 +543,7 @@ private fun ChatRoute(
         onOpenArtifact = onOpenArtifact,
         focusMessageId = focusMessageId,
         onAttach = { filePicker.launch(arrayOf("*/*")) },
+        onPickPhotos = pickPhotos,
         onTakePhoto = {
             val photo = CameraPhotos.newFile(application)
             pendingPhotoPath = photo.path
