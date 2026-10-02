@@ -7,8 +7,12 @@ import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.MemoryTool
+import app.jonaki.tools.phone.Phone
+import app.jonaki.tools.phone.PhoneTool
 import app.jonaki.tools.readdocument.ReadDocumentTool
 import app.jonaki.tools.readfile.ReadFileTool
+import app.jonaki.tools.schedule.ScheduleTool
+import app.jonaki.tools.schedule.TaskScheduler
 import app.jonaki.tools.searchfiles.SearchFilesTool
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.ShareFileTool
@@ -33,6 +37,10 @@ data class ToolServices(
     val fileDestinations: FileDestinations? = null,
     /** From the model catalog; view_image is offered only to models that take images (D-050). */
     val modelAcceptsImages: Boolean = false,
+    /** The app's calendar, alarms, clipboard and launcher; null leaves the phone tool out (D-020). */
+    val phone: Phone? = null,
+    /** The thread's scheduled tasks on WorkManager; null leaves the schedule tool out. */
+    val taskScheduler: TaskScheduler? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -64,6 +72,12 @@ object ToolRegistry {
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)
+        }
+        if (services.phone != null) {
+            tools += PhoneTool(services.phone)
+        }
+        if (services.taskScheduler != null) {
+            tools += ScheduleTool(services.taskScheduler)
         }
         return tools
     }

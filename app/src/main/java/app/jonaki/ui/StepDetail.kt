@@ -19,9 +19,32 @@ data class StepDetail(
                 "web_fetch", "youtube_summarize" -> StepDetail(query = null, target = arguments.text("url")?.let(::withoutScheme))
                 "find_files", "search_files" -> StepDetail(query = null, target = arguments.text("pattern") ?: arguments.text("path"))
                 "share_file" -> StepDetail(query = null, target = shareFileTarget(arguments.text("action"), arguments.text("path")))
+                "phone" -> StepDetail(query = null, target = phoneTarget(arguments))
+                "schedule" -> StepDetail(query = null, target = scheduleTarget(arguments))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
+
+        /** The approval card names what the phone action does and to what (plan M9). */
+        private fun phoneTarget(arguments: JsonObject): String? = when (arguments.text("action")) {
+            "calendar_list" -> "Read calendar"
+            "calendar_add" -> labelled("Add to calendar", arguments.text("title"))
+            "reminder" -> labelled("Reminder", arguments.text("text"))
+            "notify" -> labelled("Notify", arguments.text("title") ?: arguments.text("text"))
+            "clipboard_read" -> "Read clipboard"
+            "clipboard_write" -> "Copy to clipboard"
+            "open_app" -> labelled("Open app", arguments.text("app"))
+            else -> null
+        }
+
+        private fun scheduleTarget(arguments: JsonObject): String? = when (arguments.text("action")) {
+            "create" -> labelled("Schedule", arguments.text("title") ?: arguments.text("prompt"))
+            "cancel" -> labelled("Cancel task", arguments.text("id"))
+            "list" -> "List tasks"
+            else -> null
+        }
+
+        private fun labelled(label: String, subject: String?): String = if (subject == null) label else "$label: $subject"
 
         /** The approval card must say where the file goes, not only which file (D-044). */
         private fun shareFileTarget(action: String?, path: String?): String? {

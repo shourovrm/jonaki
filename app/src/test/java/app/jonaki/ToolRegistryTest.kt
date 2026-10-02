@@ -8,11 +8,22 @@ import app.jonaki.tools.memory.FactScope
 import app.jonaki.tools.memory.ForgetResult
 import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.RememberResult
+import app.jonaki.tools.phone.CalendarEvent
+import app.jonaki.tools.phone.LaunchableApp
+import app.jonaki.tools.phone.NewCalendarEvent
+import app.jonaki.tools.phone.Phone
+import app.jonaki.tools.phone.PhoneAnswer
+import app.jonaki.tools.phone.ReminderTiming
+import app.jonaki.tools.schedule.ScheduledTask
+import app.jonaki.tools.schedule.TaskCreated
+import app.jonaki.tools.schedule.TaskRequest
+import app.jonaki.tools.schedule.TaskScheduler
 import app.jonaki.tools.sharefile.DestinationResult
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.LinkedListing
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import java.io.File
+import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -48,6 +59,34 @@ class ToolRegistryTest {
         override suspend fun copyFromLinkedFolder(path: String, target: File) = unused
     }
 
+    private val phone = object : Phone {
+        private val unused = PhoneAnswer.Failed("not used in this test")
+
+        override suspend fun calendarEvents(from: ZonedDateTime, to: ZonedDateTime): PhoneAnswer<List<CalendarEvent>> = unused
+
+        override suspend fun addCalendarEvent(event: NewCalendarEvent): PhoneAnswer<String> = unused
+
+        override suspend fun setReminder(text: String, at: ZonedDateTime): PhoneAnswer<ReminderTiming> = unused
+
+        override suspend fun notify(title: String, text: String): PhoneAnswer<Unit> = unused
+
+        override suspend fun readClipboard(): PhoneAnswer<String> = unused
+
+        override suspend fun writeClipboard(text: String): PhoneAnswer<Unit> = unused
+
+        override suspend fun launchableApps(): PhoneAnswer<List<LaunchableApp>> = unused
+
+        override suspend fun openApp(packageName: String): PhoneAnswer<Unit> = unused
+    }
+
+    private val taskScheduler = object : TaskScheduler {
+        override suspend fun create(request: TaskRequest): TaskCreated = error("not used in this test")
+
+        override suspend fun list(): List<ScheduledTask> = emptyList()
+
+        override suspend fun cancel(taskId: String): Boolean = false
+    }
+
     private val everything = ToolServices(
         searchBackends = listOf(searchBackend),
         videoSummarizer = { VideoAnswer.Success("summary", inputTokens = null) },
@@ -55,6 +94,8 @@ class ToolRegistryTest {
         memoryStore = memoryStore,
         fileDestinations = fileDestinations,
         modelAcceptsImages = true,
+        phone = phone,
+        taskScheduler = taskScheduler,
     )
 
     private fun namesFor(services: ToolServices) = ToolRegistry.tools(services).map { tool -> tool.name }
@@ -71,7 +112,7 @@ class ToolRegistryTest {
             setOf(
                 "read_file", "write_file", "edit_file", "find_files", "search_files",
                 "web_search", "web_fetch", "youtube_summarize", "memory", "artifact", "share_file",
-                "read_document", "view_image",
+                "read_document", "view_image", "phone", "schedule",
             ),
             namesFor(everything).toSet(),
         )
@@ -108,6 +149,13 @@ class ToolRegistryTest {
     fun shareFileNeedsTheAppsFileDestinations() {
         val names = namesFor(everything.copy(fileDestinations = null)).toSet()
         assertEquals(false, "share_file" in names)
+    }
+
+    @Test
+    fun phoneAndScheduleNeedTheAppsServices() {
+        val names = namesFor(everything.copy(phone = null, taskScheduler = null)).toSet()
+        assertEquals(false, "phone" in names)
+        assertEquals(false, "schedule" in names)
     }
 
     @Test

@@ -47,6 +47,8 @@ import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
 import app.jonaki.files.ModelImageLoader
 import app.jonaki.skills.ThreadSkills
+import app.jonaki.tools.phone.Phone
+import app.jonaki.tools.schedule.TaskScheduler
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
@@ -81,6 +83,10 @@ class AgentRunner(
     private val threadCompactor: ThreadCompactor,
     private val skillLibrary: SkillLibrary,
     private val fileDestinations: FileDestinations,
+    /** Calendar, reminders, notifications, clipboard and apps for the phone tool (D-020). */
+    private val phone: Phone? = null,
+    /** The schedule tool's tasks, seen from one thread (plan M9). */
+    private val taskSchedulerFor: ((threadId: String) -> TaskScheduler)? = null,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -132,6 +138,15 @@ class AgentRunner(
         startRun(threadId) {
             saveUserMessage(threadId, text.trim())
         }
+    }
+
+    /** Like [send], for a scheduled task: false when the thread is busy, so the caller can wait and try again. */
+    fun sendIfIdle(threadId: String, text: String): Boolean {
+        if (threadId in running.value || text.isBlank()) {
+            return false
+        }
+        send(threadId, text)
+        return true
     }
 
     /**
@@ -337,6 +352,8 @@ class AgentRunner(
                 memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
                 fileDestinations = fileDestinations,
                 modelAcceptsImages = modelAcceptsImages,
+                phone = phone,
+                taskScheduler = taskSchedulerFor?.invoke(threadId),
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
