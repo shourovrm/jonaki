@@ -12,6 +12,7 @@ jsoup = "1.18.3"
 readability4j = "1.0.8"
 room = "2.7.2"
 sqlite-bundled = "2.5.2"
+pdfbox-android = "2.0.27.0"
 
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
@@ -31,3 +32,4 @@ room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite-bundled" }
 sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite-bundled" }
+pdfbox-android = { module = "com.tom-roush:pdfbox-android", version.ref = "pdfbox-android" }
