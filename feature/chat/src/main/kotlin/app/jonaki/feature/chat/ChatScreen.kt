@@ -122,6 +122,8 @@ fun ChatScreen(
     onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
     /** The ring pill: the app works out [ChatUiState.context] for the sheet; null leaves the pill without a tap. */
     onOpenContext: (() -> Unit)? = null,
+    /** A button on the Python install card (plan M8 step 4). */
+    onPythonCard: (card: ChatItem.PythonInstall, action: PythonCardAction) -> Unit = { _, _ -> },
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
@@ -186,6 +188,8 @@ fun ChatScreen(
                     onOpenArtifact = onOpenArtifact,
                     // Editing while the agent works would change the history under the run.
                     onEditMessage = if (state.isRunning) null else onEditMessage,
+                    onPythonCard = onPythonCard,
+                    canTryAgain = !state.isRunning,
                 )
             }
         }
@@ -345,6 +349,8 @@ private fun MessageList(
     focusMessageId: String?,
     onOpenArtifact: (path: String) -> Unit,
     onEditMessage: ((messageId: String, text: String) -> Unit)?,
+    onPythonCard: (ChatItem.PythonInstall, PythonCardAction) -> Unit,
+    canTryAgain: Boolean,
 ) {
     val listState = rememberLazyListState()
     // Follow the stream only while the user is at the bottom; scrolling up to
@@ -403,6 +409,7 @@ private fun MessageList(
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
+                is ChatItem.PythonInstall -> PythonInstallCard(item, canTryAgain, onPythonCard)
             }
         }
     }

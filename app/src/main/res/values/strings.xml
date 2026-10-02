@@ -12,4 +12,5 @@
     <string name="files_link_failed">Can\'t link that folder</string>
     <string name="files_no_camera">No camera app</string>
     <string name="routing_fallback_note">No private provider for this model; used the cheapest.</string>
+    <string name="python_try_again_message">Installed. Try again.</string>
 </resources>

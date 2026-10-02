@@ -940,6 +940,27 @@ and their dependencies no other installed package needs
 (`PyodideFolder.removePackages`). Code tests: PythonSetupTest (14),
 PyodideInstallerTest (3 new). Outcome: pending.
 
+## D-094 · 2026-10-03 · Just-in-time Python install card from the saved step — proposed
+When the last turn's run_code step failed with run_code's NotInstalled or
+MissingPackages text, the chat shows a card after the turn: "Needs Python
+(13.5 MB). Install?" or "Needs pandas (7.9 MB). Install?", with Install
+and Not now; Install shows progress and Cancel, then "Python installed"
+with Try again, which sends "Installed. Try again." (the user can also
+just ask again). The card is read from the step's saved result through
+`InstallNeeds.of` in tools/run-code, the same object that writes the
+error's first sentence, so the model still gets plain text, the result
+row is the only record (no Room change, no runner state) and the card
+survives a restart. Packages within the data add-on install the whole
+add-on with its measured size; others install by name with no size
+shown. Only the last turn gets a card, so it goes once the user writes
+again; Not now hides it until the chat is opened again. The tool's text
+now names "Settings > Python" and the chat's Install button. Code:
+`InstallNeeds`, `PythonCards`, `ChatItems.pythonCardFor`,
+`PythonInstallCard`; tests RunCodeToolTest, PythonCardsTest,
+ChatItemsTest. Rejected: a structured field on ToolOutput (changes
+core/tool-api for one tool); a runner StateFlow (lost on restart).
+Outcome: pending.
+
 ## D-095 · 2026-10-03 · Download sizes in decimal megabytes — proposed
 Python's sizes show as decimal megabytes with one decimal (13,532,188
 bytes is "13.5 MB", the add-on "7.9 MB"), as the user wrote them and as

@@ -4,6 +4,9 @@ import app.jonaki.core.model.Role
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.StepEntity
+import app.jonaki.core.storage.StepStatus
+import app.jonaki.tools.runcode.InstallNeed
+import app.jonaki.tools.runcode.InstallNeeds
 import app.jonaki.core.storage.SubagentEntity
 import app.jonaki.feature.chat.SubagentUiStatus
 import app.jonaki.run.PendingApproval
@@ -38,6 +41,12 @@ object ChatItems {
         fallbackNote: String = "",
         /** The thread's subagents (M7); each shows as a card under the run that started it. */
         subagents: List<SubagentEntity> = emptyList(),
+        /**
+         * Makes the install card when the last turn's run_code found Python or
+         * its packages missing (plan M8 step 4); null shows no card, for
+         * example after Not now.
+         */
+        pythonCard: (toolCallId: String, need: InstallNeed) -> ChatItem? = { _, _ -> null },
     ): List<ChatItem> {
         // Background usage rows only carry a cost; they would add it to a run's cost line.
         val visibleRows = rows.filter { row -> row.role != HistoryMapper.BACKGROUND_ROLE }
@@ -50,6 +59,7 @@ object ChatItems {
             val isLastTurn = index == turns.lastIndex
             items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentsByParent, subagentSteps)
             if (isLastTurn) {
+                items += pythonCardFor(turn, stepsById, pythonCard)
                 items += pendingApprovals.map(::approvalCard)
             }
         }
@@ -61,6 +71,29 @@ object ChatItems {
         val runStartedAt = visibleRows.lastOrNull { row -> row.role == Role.USER.name }?.createdAtMillis ?: 0
         return withRetry + ChatItem.Working(WORKING_ID, activityOf(withRetry), runStartedAt)
     }
+
+    /**
+     * The turn's latest run_code call that failed for a missing Python or
+     * missing packages. Only the last turn gets a card, so old turns stay
+     * quiet once the user has moved on.
+     */
+    private fun pythonCardFor(
+        turn: List<MessageEntity>,
+        stepsById: Map<String, StepEntity>,
+        pythonCard: (String, InstallNeed) -> ChatItem?,
+    ): List<ChatItem> {
+        val step = turn
+            .filter { row -> row.role == Role.ASSISTANT.name }
+            .flatMap { row -> HistoryMapper.toolCallsFromJson(row.toolCallsJson) }
+            .mapNotNull { call -> stepsById[call.id] }
+            .filter { candidate -> candidate.toolName == RUN_CODE_TOOL && candidate.status == StepStatus.FAILED.name }
+            .lastOrNull { candidate -> InstallNeeds.of(candidate.resultText.orEmpty()) != null }
+            ?: return emptyList()
+        val need = InstallNeeds.of(step.resultText.orEmpty()) ?: return emptyList()
+        return listOfNotNull(pythonCard(step.toolCallId, need))
+    }
+
+    private const val RUN_CODE_TOOL = "run_code"
 
     /** A subagent's request_tool card names the tool it wants and says why; other cards say what the call will do. */
     private fun approvalCard(pending: PendingApproval): ChatItem.Approval {

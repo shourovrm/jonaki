@@ -288,4 +288,58 @@ class ChatItemsTest {
 
         assertEquals(WorkingActivity.Tool("delegate"), working.activity)
     }
+
+    private val pythonMissing = "Error: Python is not installed. Tell the user that Python is a 13.5 MB download."
+
+    private fun pythonTurn(userId: String, callId: String, resultText: String): Pair<List<MessageEntity>, StepEntity> {
+        val call = ToolCall(callId, "run_code", """{"language":"python","code":"print(1)"}""")
+        val rows = listOf(
+            row(userId, "USER", "run it"),
+            row("a-$callId", "ASSISTANT", "", calls = listOf(call)),
+            row("r-$callId", "TOOL", resultText, callId = callId),
+            row("b-$callId", "ASSISTANT", "Python is not installed."),
+        )
+        return rows to step(callId, "run_code", "FAILED").copy(resultText = resultText)
+    }
+
+    private val noteCard: (String, app.jonaki.tools.runcode.InstallNeed) -> ChatItem? = { callId, need ->
+        ChatItem.Note("python-$callId", need.packageNames.joinToString(","))
+    }
+
+    @Test
+    fun aMissingPythonShowsTheCardAfterTheTurn() {
+        val (rows, pythonStep) = pythonTurn("u1", "c1", pythonMissing)
+
+        val items = ChatItems.build(rows, listOf(pythonStep), isRunning = false, pythonCard = noteCard)
+
+        assertEquals(listOf("u1", "run-u1", "b-c1", "python-c1"), items.map { it.id })
+    }
+
+    @Test
+    fun missingPackagesAreNamedOnTheCard() {
+        val (rows, pythonStep) = pythonTurn("u1", "c1", "Error: the Python packages pandas, numpy are not installed. The chat shows...")
+
+        val items = ChatItems.build(rows, listOf(pythonStep), isRunning = false, pythonCard = noteCard)
+
+        assertEquals("pandas,numpy", (items.last() as ChatItem.Note).text)
+    }
+
+    @Test
+    fun onlyTheLastTurnGetsACard() {
+        val (firstRows, firstStep) = pythonTurn("u1", "c1", pythonMissing)
+        val laterRows = listOf(row("u2", "USER", "thanks"), row("a3", "ASSISTANT", "You're welcome."))
+
+        val items = ChatItems.build(firstRows + laterRows, listOf(firstStep), isRunning = false, pythonCard = noteCard)
+
+        assertTrue(items.none { item -> item.id.startsWith("python-") })
+    }
+
+    @Test
+    fun otherRunCodeErrorsGetNoCard() {
+        val (rows, pythonStep) = pythonTurn("u1", "c1", "Python stopped with an error.\nError:\nNameError")
+
+        val items = ChatItems.build(rows, listOf(pythonStep), isRunning = false, pythonCard = noteCard)
+
+        assertTrue(items.none { item -> item.id.startsWith("python-") })
+    }
 }

@@ -173,6 +173,35 @@ sealed interface ChatItem {
 
     /** The pulsing line at the end of the chat while the agent works (D-055). */
     data class Working(override val id: String, val activity: WorkingActivity, val sinceMillis: Long) : ChatItem
+
+    /** run_code needed Python, or Python packages, that are not installed (plan M8 step 4). */
+    data class PythonInstall(
+        override val id: String,
+        /** Empty when Python itself is missing. */
+        val packageNames: List<String>,
+        /** Null when the size is not known before the download. */
+        val downloadBytes: Long?,
+        val state: PythonInstallState,
+    ) : ChatItem
+}
+
+/** Where the install card's download stands. */
+sealed interface PythonInstallState {
+    data object Offered : PythonInstallState
+
+    data class Downloading(val doneBytes: Long, val totalBytes: Long?) : PythonInstallState
+
+    /** Installed now; the user can try again or ask again. */
+    data object Installed : PythonInstallState
+
+    data class Failed(val message: String) : PythonInstallState
+}
+
+enum class PythonCardAction {
+    INSTALL,
+    NOT_NOW,
+    CANCEL,
+    TRY_AGAIN,
 }
 
 /** What the working line says the agent is doing. */

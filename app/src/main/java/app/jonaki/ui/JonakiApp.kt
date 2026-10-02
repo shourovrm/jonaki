@@ -443,6 +443,12 @@ private fun ChatRoute(
 
     val isRunning = threadId in running
     val pending = approvals[threadId].orEmpty()
+    val tryAgainText = stringResource(R.string.python_try_again_message)
+    val pythonCards = rememberPythonCardHooks(application, threadId) {
+        if (!isNew) {
+            runner.send(threadId, tryAgainText)
+        }
+    }
     val webSearchEnabled = thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
     val modelKey = (if (isNew) modelForNewThread else null) ?: runner.modelKeyFor(thread)
     val modelInfo = modelKey?.let(catalog::find)
@@ -469,6 +475,7 @@ private fun ChatRoute(
             pendingApprovals = pending,
             fallbackNote = stringResource(R.string.routing_fallback_note),
             subagents = subagents,
+            pythonCard = pythonCards.cardFor,
         ),
         isRunning = isRunning,
         draft = draft,
@@ -590,6 +597,7 @@ private fun ChatRoute(
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
+        onPythonCard = pythonCards.onAction,
     )
     val currentThread = thread
     if (renaming && currentThread != null) {
