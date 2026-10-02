@@ -180,6 +180,6 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
     private fun typeNames(): String = launcher.agentTypes.joinToString(", ") { type -> type.name }
 
     companion object {
-        const val MAX_TASKS = 4
+        const val MAX_TASKS = SubagentLauncher.MAX_PARALLEL
     }
 }

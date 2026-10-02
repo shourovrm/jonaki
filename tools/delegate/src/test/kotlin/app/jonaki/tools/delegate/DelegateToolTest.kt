@@ -47,13 +47,23 @@ class DelegateToolTest {
     }
 
     @Test
-    fun moreThanFourTasksAreRefused() = runBlocking {
+    fun moreThanThreeTasksAreRefused() = runBlocking {
         val task = """{"agent":"scout","task":"x"}"""
-        val output = tool.run(arguments("""{"tasks":[$task,$task,$task,$task,$task]}"""), context)
+        val output = tool.run(arguments("""{"tasks":[$task,$task,$task,$task]}"""), context)
 
         assertTrue(output.isError)
-        assertTrue(output.text.contains("at most 4"))
+        assertTrue(output.text.contains("at most 3"))
         assertTrue(launcher.launched.isEmpty())
+        assertTrue(tool.parameterSchema.toString().contains("\"maxItems\":3"))
+    }
+
+    @Test
+    fun threeTasksRun() = runBlocking {
+        val task = """{"agent":"scout","task":"x"}"""
+        val output = tool.run(arguments("""{"tasks":[$task,$task,$task]}"""), context)
+
+        assertFalse(output.isError)
+        assertEquals(3, launcher.launched.single().size)
     }
 
     @Test

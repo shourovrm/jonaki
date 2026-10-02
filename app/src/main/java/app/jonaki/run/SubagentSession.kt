@@ -88,6 +88,11 @@ class SubagentSession(
             }
         }
 
+    override suspend fun askCostAdded(subagentId: String, costUsd: Double) = writeLock.withLock {
+        val previous = database.subagentDao().find(subagentId)?.costUsd ?: 0.0
+        database.subagentDao().setCost(subagentId, previous + costUsd)
+    }
+
     override suspend fun textWritten(subagentId: String, text: String) = writeLock.withLock {
         database.subagentDao().setLatestText(subagentId, text.trim().take(LATEST_TEXT_LENGTH))
     }

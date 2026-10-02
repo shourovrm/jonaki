@@ -18,6 +18,8 @@ import app.jonaki.core.agent.ParentAnswer
 import app.jonaki.core.agent.ParentAsker
 import app.jonaki.core.agent.ParentQuestion
 import app.jonaki.core.agent.SubagentRunner
+import app.jonaki.core.agent.ToolDefinitions
+import app.jonaki.core.providerapi.ToolDefinition
 import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
@@ -390,8 +392,14 @@ class AgentRunner(
         val memorySection = memorySectionFor(threadId)
         val skillSection = skillSectionFor(thread)
         val imageCache = ThreadFolders.imageCache(context, threadId)
-        // Built before the system prompt it answers with; the asker reads it only when a question comes.
-        var systemPrompt = ""
+        val threadImageMessages = ImageMessages(ModelImageLoader(threadFolder, imageCache), modelAcceptsImages)
+        val thinkingLevel = ThinkingLevels.effective(
+            threadLevel = thread.thinkingLevel,
+            modelLevel = snapshot.thinkingLevels[modelKey],
+            isSupported = ThinkingSupport.isSupported(modelKey, catalog.find(modelKey)),
+        )
+        // The subagents are built before the request they ask through; the asker reads it only when a question comes.
+        var parentRequest = ParentRequest(systemPrompt = "", tools = emptyList(), thinkingLevel, threadImageMessages)
         val subagents = SubagentRunner(
             // As a vision model sees them: each subagent keeps view_image only if its own model takes images.
             threadTools = ToolRegistry.tools(toolServices.copy(modelAcceptsImages = true)),
@@ -408,14 +416,15 @@ class AgentRunner(
                 backgroundModel.saveUsage(threadId, usageModelKey, usage, cost)
             },
             parentAsker = ParentAsker { question, agentLabel, delegateToolCallId ->
-                answerParentQuestion(threadId, modelKey, systemPrompt, question, agentLabel, delegateToolCallId)
+                answerParentQuestion(threadId, modelKey, parentRequest, question, agentLabel, delegateToolCallId)
             },
             memorySection = memorySection,
             skillSection = skillSection,
             now = ZonedDateTime::now,
         )
         val tools = threadTools + ToolRegistry.delegateTool(subagents)
-        systemPrompt = promptBuilder.systemPrompt(activeTools = tools, memorySection = memorySection, skillSection = skillSection)
+        val systemPrompt = promptBuilder.systemPrompt(activeTools = tools, memorySection = memorySection, skillSection = skillSection)
+        parentRequest = parentRequest.copy(systemPrompt = systemPrompt, tools = ToolDefinitions.of(tools))
         val loop = AgentLoop(
             provider = provider,
             tools = tools,
@@ -424,14 +433,10 @@ class AgentRunner(
             recorder = session,
             settings = AgentSettings(
                 model = ModelKey.modelOf(modelKey),
-                thinkingLevel = ThinkingLevels.effective(
-                    threadLevel = thread.thinkingLevel,
-                    modelLevel = snapshot.thinkingLevels[modelKey],
-                    isSupported = ThinkingSupport.isSupported(modelKey, catalog.find(modelKey)),
-                ),
+                thinkingLevel = thinkingLevel,
                 systemPrompt = systemPrompt,
             ),
-            imageMessages = ImageMessages(ModelImageLoader(threadFolder, imageCache), modelAcceptsImages),
+            imageMessages = threadImageMessages,
         )
         val summary = database.compactionDao().latestForThread(threadId)
         val history = CompactionPlan.historyAfter(
@@ -446,15 +451,25 @@ class AgentRunner(
         }
     }
 
+    /** What the thread's own requests in this run send besides messages; ask_parent repeats it (D-063). */
+    private data class ParentRequest(
+        val systemPrompt: String,
+        val tools: List<ToolDefinition>,
+        val thinkingLevel: ThinkingLevel?,
+        val imageMessages: ImageMessages,
+    )
+
     /**
      * A subagent's ask_parent (D-063): one call on the thread's model with
-     * the thread's conversation up to the delegate call, without tools. Its
-     * cost counts to the thread like a background call.
+     * the thread's conversation up to the delegate call, and the same system
+     * prompt, tool list (not callable), thinking level and images as the
+     * thread's requests, so the provider can serve the prefix from its
+     * prompt cache. Its cost counts to the thread and to the asking subagent.
      */
     private suspend fun answerParentQuestion(
         threadId: String,
         modelKey: String,
-        systemPrompt: String,
+        parentRequest: ParentRequest,
         question: String,
         agentLabel: String,
         delegateToolCallId: String,
@@ -466,9 +481,18 @@ class AgentRunner(
             upToPosition = summary?.upToPosition,
         )
         val conversation = ParentQuestion.conversation(history, delegateToolCallId, agentLabel, question)
-        return when (val answer = backgroundModel.completeOn(threadId, modelKey, systemPrompt, conversation, PARENT_ANSWER_TOKENS)) {
-            is BackgroundAnswer.Success -> ParentAnswer.Answered(answer.text.trim())
-            is BackgroundAnswer.Failed -> ParentAnswer.Failed(answer.message)
+        val answer = backgroundModel.completeOn(
+            threadId = threadId,
+            modelKey = modelKey,
+            systemPrompt = parentRequest.systemPrompt,
+            messages = parentRequest.imageMessages.prepare(conversation),
+            maxOutputTokens = PARENT_ANSWER_TOKENS,
+            tools = parentRequest.tools,
+            thinkingLevel = parentRequest.thinkingLevel,
+        )
+        return when (answer) {
+            is BackgroundAnswer.Success -> ParentAnswer.Answered(answer.text.trim(), answer.costUsd)
+            is BackgroundAnswer.Failed -> ParentAnswer.Failed(answer.message, answer.costUsd)
         }
     }
 

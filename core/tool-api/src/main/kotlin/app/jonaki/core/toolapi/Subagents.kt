@@ -20,6 +20,11 @@ interface SubagentLauncher {
      * order. [context] is the delegate call's own context.
      */
     suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport>
+
+    companion object {
+        /** Subagents of one delegate call; the user set 3 on 2026-10-03 (D-060). */
+        const val MAX_PARALLEL = 3
+    }
 }
 
 data class SubagentTypeInfo(

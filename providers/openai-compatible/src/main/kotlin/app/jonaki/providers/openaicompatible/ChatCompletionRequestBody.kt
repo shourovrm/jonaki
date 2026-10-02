@@ -54,6 +54,9 @@ object ChatCompletionRequestBody {
                     }
                 }
             }
+            if (!request.toolsCallable) {
+                put("tool_choice", "none")
+            }
         }
     }
 

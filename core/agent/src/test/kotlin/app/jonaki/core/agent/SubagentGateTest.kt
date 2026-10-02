@@ -125,4 +125,29 @@ class SubagentGateTest {
         approver.answer(ApprovalDecision.ALLOW_ONCE)
         assertTrue(answer.await())
     }
+
+    @Test
+    fun aGrantedToolThatLeavesTheAppStillAsksForEveryCall() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_FOR_TASK)
+        val gate = gate(approver, mode = ApprovalMode.AUTO)
+
+        assertEquals(GateAnswer.ALLOWED, gate.grant(sharer, call("s1/c1", "request_tool"), reason = "save"))
+        assertEquals(GateAnswer.ALLOWED, gate.check(sharer, call("s1/c2", "share_file", "path" to "work/a.md")))
+        // The user saw the request, then the call with its arguments.
+        assertEquals(listOf("s1/c1", "s1/c2"), approver.requests.map { it.toolCall.id })
+    }
+
+    @Test
+    fun anAnswerThatArrivesAsTheTimerEndsWins() = runBlocking {
+        val approver = WaitingApprover()
+        val gate = gate(approver)
+
+        val answer = async { gate.check(writer, call("s1/c1", "write_file")) }
+        settle()
+        // Both happen before the gate's coroutine runs again; the timer is released first.
+        clock.advanceBy(3.minutes)
+        approver.answer(ApprovalDecision.ALLOW_ONCE)
+
+        assertEquals(GateAnswer.ALLOWED, answer.await())
+    }
 }

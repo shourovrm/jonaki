@@ -20,7 +20,11 @@ class SubagentModel(
     val thinkingLevel: ThinkingLevel?,
     /** From the model catalog; view_image is offered only to models that take images (D-050). */
     val acceptsImages: Boolean,
-    /** False when the catalog has no price: then only the step limit applies. */
+    /**
+     * True when the catalog has a price or the service reports each call's
+     * cost; the prompt then names the cost limit. The limit itself applies
+     * to whatever costs the calls actually have.
+     */
     val hasKnownPrice: Boolean,
     /** Cost in USD of one call; null when unknown. */
     val priceOf: (Usage) -> Double?,
@@ -102,6 +106,12 @@ interface SubagentRecorder {
 
     suspend fun modelCallFinished(subagentId: String, modelKey: String, usage: Usage, costUsd: Double?)
 
+    /**
+     * The cost of an ask_parent answer, already saved as a usage row of the
+     * thread; it adds to the subagent's own total.
+     */
+    suspend fun askCostAdded(subagentId: String, costUsd: Double)
+
     /** Prose the subagent wrote in a turn, for the latest line on its folded card. */
     suspend fun textWritten(subagentId: String, text: String)
 
@@ -109,10 +119,13 @@ interface SubagentRecorder {
     suspend fun subagentFinished(subagentId: String, outcome: SubagentOutcome, answerText: String)
 }
 
+/** [costUsd] is the call's cost, counted against the asking subagent's budget; null when unknown. */
 sealed interface ParentAnswer {
-    data class Answered(val text: String) : ParentAnswer
+    val costUsd: Double?
 
-    data class Failed(val message: String) : ParentAnswer
+    data class Answered(val text: String, override val costUsd: Double? = null) : ParentAnswer
+
+    data class Failed(val message: String, override val costUsd: Double? = null) : ParentAnswer
 }
 
 /**

@@ -303,7 +303,8 @@ class SubagentRunnerTest {
         )
 
         assertEquals(listOf("researcher 1", "scout 2"), reports.map { it.label })
-        val notes = java.io.File(threadFolder, "work/delegations/delegate-1/notes.md").readText()
+        val folder = java.io.File(threadFolder, "work/delegations").listFiles()!!.single()
+        val notes = java.io.File(folder, "notes.md").readText()
         assertTrue(notes.contains("**researcher 1**: Review site: https://example.com"))
         assertTrue(first.requests.first().tools.any { it.name == "notes" })
         assertEquals(listOf("delegate-1", "delegate-1"), recorder.starts.map { it.parentToolCallId })
@@ -343,6 +344,112 @@ class SubagentRunnerTest {
             hasKnownPrice = false, priceOf = { null }, imageMessages = null,
         )
     }
+
+    @Test
+    fun aLongCallIdStillGivesAShortFolder() = runBlocking {
+        // Gemini 3 carries its whole thought signature in the call id.
+        val longContext = ToolContext(threadFolder, OkHttpClient()).forCall("call_1~" + "A".repeat(600))
+        val first = ScriptedProvider(usageTurn(call("c1", "notes", "action" to "post", "text" to "x")), textTurn("a"))
+        val second = ScriptedProvider(textTurn("b".repeat(20_000)))
+
+        val reports = runner(mapOf("researcher" to first, "scout" to second)).launch(
+            listOf(SubagentTask("researcher", "A"), SubagentTask("scout", "B")),
+            longContext,
+        )
+
+        val folders = java.io.File(threadFolder, "work/delegations").listFiles()!!.map { it.name }
+        assertEquals(1, folders.size)
+        assertTrue(folders.single().length <= 16)
+        assertTrue(reports[1].text.contains("work/delegations/${folders.single()}/scout-2.md"))
+        assertEquals("call_1~" + "A".repeat(600), recorder.starts.first().parentToolCallId)
+    }
+
+    @Test
+    fun aBlankCallIdIsTreatedAsNone() = runBlocking {
+        val provider = ScriptedProvider(textTurn("c".repeat(20_000)))
+        val reports = runner(mapOf("scout" to provider)).launch(
+            listOf(SubagentTask("scout", "Find")),
+            ToolContext(threadFolder, OkHttpClient()).forCall(""),
+        )
+
+        assertFalse(reports.single().text.contains("work/delegations//"))
+    }
+
+    @Test
+    fun aLongAnswerIsCutWhenItCannotBeSaved() = runBlocking {
+        java.io.File(threadFolder, "work").mkdirs()
+        // A file where the folder should be, so saving the answer fails.
+        java.io.File(threadFolder, "work/delegations").writeText("in the way")
+        val provider = ScriptedProvider(textTurn("d".repeat(20_000)))
+
+        val text = runner(mapOf("scout" to provider)).launch(listOf(SubagentTask("scout", "Find")), context).single().text
+
+        assertTrue(text.length < 17_000)
+        assertTrue(text.contains("cut at 16 KB"))
+        assertEquals(SubagentStop.COMPLETED, recorder.outcomes.single().stop)
+    }
+
+    @Test
+    fun aCrashingSubagentFailsAloneAndIsRecorded() = runBlocking {
+        val crashing = object : ChatProvider {
+            override val id = "crashing"
+            override fun stream(request: app.jonaki.core.providerapi.ChatRequest): Flow<StreamEvent> = kotlinx.coroutines.flow.flow {
+                throw IllegalStateException("socket closed")
+            }
+        }
+        val healthy = ScriptedProvider(textTurn("Fine."))
+
+        val reports = runner(mapOf("researcher" to crashing, "scout" to healthy)).launch(
+            listOf(SubagentTask("researcher", "A"), SubagentTask("scout", "B")),
+            context,
+        )
+
+        assertTrue(reports[0].text.contains("socket closed"))
+        assertTrue(reports[1].text.startsWith("Fine."))
+        assertEquals(setOf(SubagentStop.FAILED, SubagentStop.COMPLETED), recorder.outcomes.map { it.stop }.toSet())
+    }
+
+    @Test
+    fun anAskCountsAgainstTheSubagentsCostCap() = runBlocking {
+        val provider = ScriptedProvider(
+            usageTurn(call("c1", "ask_parent", "question" to "Which?")),
+            usageTurn(call("c2", "web_search", "query" to "a")),
+        )
+        val asker = ParentAsker { _, _, _ -> ParentAnswer.Answered("This one.", costUsd = 0.08) }
+
+        runner(mapOf("researcher" to provider), pricePerCall = 0.01, asker = asker)
+            .launch(listOf(SubagentTask("researcher", "Search")), context)
+
+        assertEquals(SubagentStop.COST_LIMIT, recorder.outcomes.single().stop)
+        assertEquals(0.10, recorder.outcomes.single().costUsd!!, 0.0001)
+        assertEquals(listOf(0.08), recorder.askCosts)
+        assertTrue(webSearch.receivedArguments.isEmpty())
+    }
+
+    @Test
+    fun eachTurnMayBeRetriedOnce() = runBlocking {
+        val overloaded = flowOf<StreamEvent>(StreamEvent.Failed("503", retryable = true))
+        val provider = ScriptedProvider(
+            overloaded,
+            usageTurn(call("c1", "web_search", "query" to "a")),
+            overloaded,
+            textTurn("Done."),
+        )
+
+        runner(mapOf("researcher" to provider), limits = SubagentLimits(retryDelay = 1.milliseconds))
+            .launch(listOf(SubagentTask("researcher", "Search")), context)
+
+        assertEquals(SubagentStop.COMPLETED, recorder.outcomes.single().stop)
+    }
+
+    @Test
+    fun noMoreThanThreeSubagentsStart() = runBlocking {
+        val provider = ScriptedProvider(textTurn("a"))
+        val reports = runner(mapOf("scout" to provider)).launch(List(4) { SubagentTask("scout", "Find") }, context)
+
+        assertTrue(reports.all { it.text.contains("at most 3") })
+        assertTrue(recorder.starts.isEmpty())
+    }
 }
 
 class RecordingSubagents : SubagentRecorder {
@@ -366,6 +473,12 @@ class RecordingSubagents : SubagentRecorder {
     }
 
     override suspend fun textWritten(subagentId: String, text: String) = Unit
+
+    val askCosts = mutableListOf<Double>()
+
+    override suspend fun askCostAdded(subagentId: String, costUsd: Double) {
+        synchronized(this) { askCosts += costUsd }
+    }
 
     override suspend fun subagentFinished(subagentId: String, outcome: SubagentOutcome, answerText: String) {
         synchronized(this) { outcomes += outcome }

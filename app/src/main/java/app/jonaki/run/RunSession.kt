@@ -15,6 +15,7 @@ import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.StepEntity
 import app.jonaki.core.storage.StepStatus
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
 
 /**
@@ -51,7 +52,8 @@ class RunSession(
     private var streamingPosition: Long = 0
     private val streamingText = StringBuilder()
     private val streamingReasoning = StringBuilder()
-    private val deniedToolCallIds = mutableSetOf<String>()
+    // Only the thread agent's denials; a subagent's steps get their status from SubagentSession.
+    private val deniedToolCallIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val stepsOfThisRun = mutableSetOf<String>()
 
     override suspend fun record(event: AgentEvent) {
@@ -76,7 +78,9 @@ class RunSession(
             onApprovalWithdrawn(pending)
         }
         if (decision == ApprovalDecision.DENY) {
-            deniedToolCallIds += request.toolCall.id
+            if (request.subagent == null) {
+                deniedToolCallIds += request.toolCall.id
+            }
             setStepStatus(request.toolCall.id, StepStatus.DENIED)
         } else {
             // The step's time counts from approval, not from the wait for the user.

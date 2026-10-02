@@ -6,9 +6,11 @@ import app.jonaki.core.model.Role
 /**
  * The conversation for a subagent's ask_parent (D-015, D-063): the thread's
  * history up to the turn that called delegate, then the question. That turn
- * is left out because its calls have no results yet, which providers refuse;
- * everything before it is the prefix the thread's last request sent, so the
- * provider's prompt cache serves most of it.
+ * is left out because its calls have no results yet, which providers refuse.
+ * The history before it is what the request that produced the delegate
+ * call sent; the app sends it with the same system prompt, tool list (not
+ * callable) and thinking level, so the provider's prompt cache can serve
+ * that prefix. Whether it does is up to the provider.
  */
 object ParentQuestion {
     fun conversation(history: List<Message>, delegateToolCallId: String, agentLabel: String, question: String): List<Message> {

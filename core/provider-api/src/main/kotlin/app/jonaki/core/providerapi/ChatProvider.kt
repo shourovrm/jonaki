@@ -29,6 +29,12 @@ data class ChatRequest(
     val maxOutputTokens: Int? = null,
     /** How hard the model should think; null leaves the model's own default (D-057). */
     val thinkingLevel: ThinkingLevel? = null,
+    /**
+     * False sends [tools] but forbids calling them ("tool_choice": "none"),
+     * so a request that must answer in text keeps the same prompt-cache
+     * prefix as the tool-using requests before it (a subagent's ask_parent).
+     */
+    val toolsCallable: Boolean = true,
 )
 
 /** The thinking setting the user picks per model or per thread (D-057). */
