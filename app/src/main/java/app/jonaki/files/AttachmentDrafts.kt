@@ -9,6 +9,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 
 /** A copy of a picked or shared file, waiting in the app's cache for the next message. */
 data class StagedFile(
@@ -24,6 +32,10 @@ data class StagedFile(
  * permission to read it can end with the activity; it moves into the
  * thread's inbox/ when the message is sent. A new thread that has no
  * folder yet keeps its files under the key the chat screen uses for it.
+ *
+ * Android may stop the app while chips wait, so the list is saved in
+ * [MANIFEST_NAME] inside the staging folder after every change and read
+ * back by [restore] at start.
  */
 class AttachmentDrafts(private val stagingRoot: File) {
     private val waiting = MutableStateFlow<Map<String, List<StagedFile>>>(emptyMap())
@@ -59,12 +71,24 @@ class AttachmentDrafts(private val stagingRoot: File) {
             return
         }
         waiting.update { current -> current + (threadKey to current[threadKey].orEmpty() + files) }
+        saveManifest()
     }
 
     fun remove(threadKey: String, stagedId: String) {
         val removed = waiting.value[threadKey].orEmpty().firstOrNull { it.id == stagedId } ?: return
         waiting.update { current -> withoutFile(current, threadKey, stagedId) }
+        saveManifest()
         removed.file.parentFile?.deleteRecursively()
+    }
+
+    /** Deletes every file waiting for [threadKey]. Call off the main thread. */
+    fun discardAll(threadKey: String) {
+        val files = waiting.value[threadKey].orEmpty()
+        waiting.update { current -> current - threadKey }
+        saveManifest()
+        for (staged in files) {
+            staged.file.parentFile?.deleteRecursively()
+        }
     }
 
     /**
@@ -75,6 +99,7 @@ class AttachmentDrafts(private val stagingRoot: File) {
     fun moveIntoInbox(threadKey: String, threadFolder: File): List<String> {
         val files = waiting.value[threadKey].orEmpty()
         waiting.update { current -> current - threadKey }
+        saveManifest()
         val inbox = File(threadFolder, INBOX)
         inbox.mkdirs()
         val paths = mutableListOf<String>()
@@ -87,9 +112,79 @@ class AttachmentDrafts(private val stagingRoot: File) {
         return paths
     }
 
-    /** Waiting files do not survive the process, so their staged copies are left over. */
-    fun deleteLeftovers() {
-        stagingRoot.deleteRecursively()
+    /**
+     * Brings back the chips saved before the process ended. A chip whose
+     * staged copy is gone is dropped. Returns the staged folders no chip
+     * names (a share whose thread was never picked, a copy cut off midway);
+     * the caller deletes them off the main thread. Call once at start,
+     * before anything is staged, so a fresh copy is never taken for a
+     * leftover.
+     */
+    fun restore(): List<File> {
+        val saved = readManifest()
+        val restored = mutableMapOf<String, List<StagedFile>>()
+        for ((threadKey, files) in saved) {
+            val present = files.filter { staged -> staged.file.isFile }
+            if (present.isNotEmpty()) {
+                restored[threadKey] = present
+            }
+        }
+        waiting.value = restored
+        saveManifest()
+        val namedFolders = restored.values.flatten().map { staged -> staged.file.parentFile }.toSet()
+        val folders = stagingRoot.listFiles { file -> file.isDirectory }.orEmpty()
+        return folders.filter { folder -> folder !in namedFolders }.sortedBy { folder -> folder.name }
+    }
+
+    /** Writes the waiting chips through a temporary file, so a crash mid-write keeps the previous list. */
+    @Synchronized
+    private fun saveManifest() {
+        stagingRoot.mkdirs()
+        val manifest = buildJsonObject {
+            for ((threadKey, files) in waiting.value) {
+                put(
+                    threadKey,
+                    buildJsonArray {
+                        for (staged in files) {
+                            add(buildJsonObject {
+                                put(ID_KEY, JsonPrimitive(staged.id))
+                                put(NAME_KEY, JsonPrimitive(staged.name))
+                            })
+                        }
+                    },
+                )
+            }
+        }
+        val partial = File(stagingRoot, "$MANIFEST_NAME.partial")
+        partial.writeText(manifest.toString())
+        if (!partial.renameTo(File(stagingRoot, MANIFEST_NAME))) {
+            partial.delete()
+        }
+    }
+
+    private fun readManifest(): Map<String, List<StagedFile>> {
+        val file = File(stagingRoot, MANIFEST_NAME)
+        if (!file.isFile) {
+            return emptyMap()
+        }
+        val root = runCatching { Json.parseToJsonElement(file.readText()) as? JsonObject }.getOrNull() ?: return emptyMap()
+        val result = mutableMapOf<String, List<StagedFile>>()
+        for ((threadKey, entries) in root) {
+            val files = (entries as? JsonArray).orEmpty().mapNotNull(::stagedFileOf)
+            result[threadKey] = files
+        }
+        return result
+    }
+
+    private fun stagedFileOf(entry: JsonElement): StagedFile? {
+        val fields = entry as? JsonObject ?: return null
+        val id = (fields[ID_KEY] as? JsonPrimitive)?.contentOrNull ?: return null
+        val name = (fields[NAME_KEY] as? JsonPrimitive)?.contentOrNull ?: return null
+        // A saved id or name that tries to leave the staging folder is not trusted.
+        if (id != File(id).name || name != IncomingFiles.safeName(name)) {
+            return null
+        }
+        return StagedFile(id, name, File(File(stagingRoot, id), name))
     }
 
     /** Within the app's own storage a rename works; across file systems it falls back to a copy. */
@@ -112,6 +207,9 @@ class AttachmentDrafts(private val stagingRoot: File) {
 
     companion object {
         private const val INBOX = "inbox"
+        private const val MANIFEST_NAME = "waiting.json"
+        private const val ID_KEY = "id"
+        private const val NAME_KEY = "name"
 
         /** The sent message names the files' paths, so the model knows where they are. */
         fun messageWith(text: String, inboxPaths: List<String>): String = AttachmentLine.appendTo(text, inboxPaths)

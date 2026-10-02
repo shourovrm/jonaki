@@ -97,7 +97,10 @@ class JonakiApplication : Application() {
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
         linkedFolder = LinkedFolder(this)
-        attachmentDrafts = AttachmentDrafts(File(cacheDir, "incoming"))
+        // In files/, not the cache, because Android may clear the cache while chips wait (D-GAP-1).
+        attachmentDrafts = AttachmentDrafts(File(filesDir, "waiting-attachments"))
+        // Read before anything is staged, so a share arriving now is not taken for a leftover.
+        val leftoverAttachments = attachmentDrafts.restore()
         incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
         skillImporter = SkillImporter(skillLibrary, SkillDownloader(httpClient))
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
@@ -135,7 +138,9 @@ class JonakiApplication : Application() {
             restoreNamesCutByOldVersion()
         }
         applicationScope.launch(Dispatchers.IO) {
-            attachmentDrafts.deleteLeftovers()
+            leftoverAttachments.forEach { folder -> folder.deleteRecursively() }
+            // Versions up to 0.7.0 staged in the cache and lost the chips at every start.
+            File(cacheDir, "incoming").deleteRecursively()
         }
         applicationScope.launch(Dispatchers.IO) {
             // Installs new built-in skills and updates unedited ones after an app update (D-038).

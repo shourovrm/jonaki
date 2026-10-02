@@ -591,3 +591,15 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-GAP-1 · 2026-10-03 · Attachment chips survive a process restart — proposed
+The staged copies move from `cache/incoming/` to `files/waiting-attachments/`
+(Android may clear the cache), and the chips waiting per thread key are
+saved after every change in `waiting-attachments/waiting.json` (thread key
+to a list of id and name; written through a temporary file). At start the
+app reads it before anything is staged, drops chips whose copy is gone and
+deletes staged folders no chip names (a share whose thread was never
+picked). Deleting a thread deletes its chips. This lifts D-042's limit.
+Why: STATUS known gap. Rejected: a Room table (a migration for a few
+lines of state); a file in the thread folder (a new thread has none until
+its first message). Outcome: pending.

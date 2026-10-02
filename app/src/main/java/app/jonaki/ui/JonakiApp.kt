@@ -311,7 +311,13 @@ private fun ThreadsRoute(
         onNewThread = onNewThread,
         onOpenSettings = onOpenSettings,
         onRename = { threadId -> threadToRename = threadId },
-        onDelete = { threadId -> scope.launch { application.runner.deleteThread(threadId) } },
+        onDelete = { threadId ->
+            scope.launch {
+                application.runner.deleteThread(threadId)
+                // Saved chips would otherwise wait forever for a thread that is gone.
+                withContext(Dispatchers.IO) { application.attachmentDrafts.discardAll(threadId) }
+            }
+        },
     )
     val renaming = threadToRename?.let { id -> summaries.firstOrNull { it.thread.id == id } }
     if (renaming != null) {
