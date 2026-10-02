@@ -5,12 +5,13 @@ import java.io.File
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EchoToolTest {
-    private val context = ToolContext(threadFolder = File("build/test-thread"))
+    private val context = ToolContext(threadFolder = File("build/test-thread"), httpClient = OkHttpClient())
 
     @Test
     fun returnsTheTextUnchanged() = runBlocking {

@@ -3,6 +3,7 @@ package app.jonaki.core.toolapi
 import java.io.File
 import kotlin.time.Duration
 import kotlinx.serialization.json.JsonObject
+import okhttp3.OkHttpClient
 
 /**
  * One capability the model can call. Each tool lives in its own module under
@@ -42,10 +43,17 @@ enum class Capability {
     PYTHON,
 }
 
-/** What a tool may use while it runs. M2 adds the HTTP client and truncation helper. */
+/**
+ * What a tool may use while it runs, and nothing else. Cancellation reaches a
+ * tool through its coroutine; HTTP calls made with [await] stop with it.
+ */
 class ToolContext(
     val threadFolder: File,
-)
+    val httpClient: OkHttpClient,
+) {
+    val paths: ThreadPaths = ThreadPaths(threadFolder)
+    val outputLimiter: OutputLimiter = OutputLimiter(threadFolder)
+}
 
 /** Plain text for the model. An error says what failed and what to try next. */
 data class ToolOutput(
