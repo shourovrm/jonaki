@@ -26,6 +26,8 @@ enum class SecretName {
     /** One Ollama account key serves both Ollama Cloud chat and Ollama web search. */
     OLLAMA,
     EXA,
+    MINIMAX,
+    QWEN,
 }
 
 /**

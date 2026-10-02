@@ -647,3 +647,51 @@ JSON in app preferences; header values are encrypted with the API keys'
 Keystore key (`SecretStore` run-time secrets) and never shown again; the
 value field then says "Saved" and empty keeps it. A value with no header
 name is sent as Authorization. Outcome: pending.
+
+## D-MCP-5 · 2026-10-03 · Model lists from each service's GET /models — proposed
+A preset with `listsModels` (OpenAI, MiniMax, Qwen, Xiaomi MiMo, Ollama Cloud,
+Ollama on the network) is asked for `<base URL>/models` with the saved key
+each time its Add models screen opens; listing is free. The OpenAI-format
+ids join the built-in rows, which keep their prices; an id without a row is
+offered without a price, like a typed id. Ids with embed, tts, whisper,
+transcribe, dall-e, image, moderation, realtime, audio, search, davinci or
+babbage are left out. The answer is cached as `cache/models-<service>.json`;
+a failure keeps the last list. Ollama Cloud lists without a key. Z.ai
+documents no model list, so GLM keeps the built-in rows. MiMo's list is
+undocumented: GET /v1/models answers 401 without a key where an unknown path
+answers 404 (curl, 2026-10-03); the same check holds for Qwen. Tested with
+MockWebServer only (no keys for these services). Outcome: pending.
+
+## D-MCP-6 · 2026-10-03 · Presets and prices for GLM, MiMo, OpenAI, MiniMax and Qwen — proposed
+New services MiniMax (`https://api.minimax.io/v1`, default MiniMax-M3) and
+Qwen (Alibaba Model Studio, Singapore, OpenAI-compatible mode,
+`https://dashscope-intl.aliyuncs.com/compatible-mode/v1`, default
+qwen3.8-flash) are cards with their own keys. Built-in rows now carry each
+service's own pay-as-you-go price per million tokens (input, output,
+cache read), read on 2026-10-03:
+GLM 5.3 Flash 0.15/0.50/0.03, 5.3 FlashX 0.37/1.25/0.075, 5.3 and 5.2
+1.40/4.40/0.26, 4.7 Flash free (docs.z.ai/guides/overview/pricing; context
+from docs.z.ai/guides/llm/glm-5.3 and guides/vlm/glm-5.3-flash). MiMo V2.6
+Flash 0.14/0.28/0.0028, Pro 0.435/0.87/0.0036, Pro UltraSpeed 4.35/8.70/0.036
+(mimo.mi.com/docs/en-US/price/pay-as-you-go). OpenAI GPT-6 Luna
+0.10/0.50/0.01, GPT-6 Sol 2/10/0.20, GPT-6.1 Sol 2/10/0.10, GPT-6 Astra
+10/50/1, GPT-5.6 Luna 0.20/1.20/0.02, GPT-5 Mini, GPT-5.4 Nano and GPT-5.5
+as before (developers.openai.com/api/docs/pricing, Standard tier). MiniMax
+M3 0.30/1.20/0.06 up to 512K input tokens, M2.7 0.30/1.20/0.06, M2.7
+Highspeed 0.60/2.40/0.06 (platform.minimax.io/docs/guides/pricing-paygo;
+base URL from platform.minimax.io/docs/api-reference/text-openai-api, list
+from .../models/openai/list-models). Qwen3.8 Max 2/6, Qwen3.7 Plus 0.40/1.60,
+Qwen3.8 Flash 0.15/0.47, Qwen3.7 Flash 0.03/0.13 for requests up to 32K
+tokens, cache reads at 20 % of input
+(alibabacloud.com/help/en/model-studio/model-pricing and .../context-cache).
+Ollama: docs.ollama.com/api/openai-compatibility; Ollama Cloud is a
+subscription without token prices. Context windows and image input not on
+the services' pages come from OpenRouter's list of 2026-10-03. Balances: none
+of these services offers a balance a normal API key can read (Z.ai and
+MiniMax document none; MiMo's console balance needs a login session; OpenAI
+and Alibaba need admin or AccessKey credentials), so their cards show no
+balance line, as D-032 already says for GLM and MiMo. Limits: one price per
+model, so MiniMax M3 above 512K and Qwen3.7 Flash above 32K tokens are
+priced too low (Qwen3.7 Flash costs 0.10/0.40 from 32K to 256K); Qwen
+serves the Singapore region only. Thinking levels stay off for MiniMax and
+Qwen. Outcome: pending.

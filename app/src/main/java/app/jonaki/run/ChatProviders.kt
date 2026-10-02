@@ -43,6 +43,10 @@ object ChatProviders {
         return presetFor(service).defaultModel
     }
 
+    /** Null for Gemini, which has its own provider module. */
+    fun presetOrNull(service: ChatService): ProviderPreset? =
+        ProviderPresets.all.firstOrNull { preset -> preset.key == service.key }
+
     private fun presetFor(service: ChatService): ProviderPreset =
         ProviderPresets.all.first { preset -> preset.key == service.key }
 }
