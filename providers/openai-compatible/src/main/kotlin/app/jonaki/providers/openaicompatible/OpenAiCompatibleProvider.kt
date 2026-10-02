@@ -66,7 +66,7 @@ class OpenAiCompatibleProvider(
     }.flowOn(Dispatchers.IO)
 
     private fun httpRequestFor(request: ChatRequest): Request {
-        val body = ChatCompletionRequestBody.build(request).toString()
+        val body = ChatCompletionRequestBody.build(request, askForCost = preset.reportsCost).toString()
         val builder = Request.Builder()
             .url(baseUrl.trimEnd('/') + "/chat/completions")
             .post(body.toRequestBody(jsonMediaType))
