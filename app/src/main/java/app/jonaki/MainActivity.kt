@@ -1,5 +1,6 @@
 package app.jonaki
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,12 +13,28 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        val jonaki = application as JonakiApplication
+        jonaki.visibleActivity.attach(this)
+        // A recreated activity has already handled the share that started it.
+        if (savedInstanceState == null) {
+            jonaki.incomingShares.receive(intent)
+        }
         setContent {
             JonakiApp(
                 application = application as JonakiApplication,
                 onDarkThemeChange = ::useSystemBarIconsFor,
             )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        (application as JonakiApplication).incomingShares.receive(intent)
+    }
+
+    override fun onDestroy() {
+        (application as JonakiApplication).visibleActivity.detach(this)
+        super.onDestroy()
     }
 
     /**

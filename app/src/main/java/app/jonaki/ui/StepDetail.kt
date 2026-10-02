@@ -18,8 +18,29 @@ data class StepDetail(
                 "web_search" -> StepDetail(query = arguments.text("query"), target = arguments.text("site"))
                 "web_fetch", "youtube_summarize" -> StepDetail(query = null, target = arguments.text("url")?.let(::withoutScheme))
                 "find_files", "search_files" -> StepDetail(query = null, target = arguments.text("pattern") ?: arguments.text("path"))
+                "share_file" -> StepDetail(query = null, target = shareFileTarget(arguments.text("action"), arguments.text("path")))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
+        }
+
+        /** The approval card must say where the file goes, not only which file (D-044). */
+        private fun shareFileTarget(action: String?, path: String?): String? {
+            val where = when (action) {
+                "downloads" -> "To Downloads"
+                "save_as" -> "Save as"
+                "share" -> "Share"
+                "linked_folder" -> "To linked folder"
+                "list_linked" -> "List linked folder"
+                "import_linked" -> "From linked folder"
+                else -> null
+            }
+            if (where == null) {
+                return path
+            }
+            if (path == null) {
+                return where
+            }
+            return "$where: $path"
         }
 
         private fun parse(argumentsJson: String): JsonObject? =

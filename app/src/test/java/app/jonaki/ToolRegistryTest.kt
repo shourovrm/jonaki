@@ -8,7 +8,11 @@ import app.jonaki.tools.memory.FactScope
 import app.jonaki.tools.memory.ForgetResult
 import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.RememberResult
+import app.jonaki.tools.sharefile.DestinationResult
+import app.jonaki.tools.sharefile.FileDestinations
+import app.jonaki.tools.sharefile.LinkedListing
 import app.jonaki.tools.youtubesummarize.VideoAnswer
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -28,11 +32,28 @@ class ToolRegistryTest {
         override suspend fun recall(query: String, limit: Int) = emptyList<Fact>()
     }
 
+    private val fileDestinations = object : FileDestinations {
+        private val unused = DestinationResult.Failed("not used in this test")
+
+        override suspend fun saveToDownloads(file: File) = unused
+
+        override suspend fun saveAs(file: File) = unused
+
+        override suspend fun share(file: File) = unused
+
+        override suspend fun copyToLinkedFolder(file: File) = unused
+
+        override suspend fun listLinkedFolder(folderPath: String) = LinkedListing.Failed(unused)
+
+        override suspend fun copyFromLinkedFolder(path: String, target: File) = unused
+    }
+
     private val everything = ToolServices(
         searchBackends = listOf(searchBackend),
         videoSummarizer = { VideoAnswer.Success("summary", inputTokens = null) },
         webAccessEnabled = true,
         memoryStore = memoryStore,
+        fileDestinations = fileDestinations,
     )
 
     private fun namesFor(services: ToolServices) = ToolRegistry.tools(services).map { tool -> tool.name }
@@ -48,7 +69,7 @@ class ToolRegistryTest {
         assertEquals(
             setOf(
                 "read_file", "write_file", "edit_file", "find_files", "search_files",
-                "web_search", "web_fetch", "youtube_summarize", "memory",
+                "web_search", "web_fetch", "youtube_summarize", "memory", "share_file",
             ),
             namesFor(everything).toSet(),
         )
@@ -79,5 +100,11 @@ class ToolRegistryTest {
     fun memoryNeedsAStore() {
         val names = namesFor(everything.copy(memoryStore = null)).toSet()
         assertEquals(false, "memory" in names)
+    }
+
+    @Test
+    fun shareFileNeedsTheAppsFileDestinations() {
+        val names = namesFor(everything.copy(fileDestinations = null)).toSet()
+        assertEquals(false, "share_file" in names)
     }
 }

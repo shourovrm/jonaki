@@ -24,6 +24,7 @@ dependencies {
     implementation(project(":tools:web-fetch"))
     implementation(project(":tools:youtube-summarize"))
     implementation(project(":tools:memory"))
+    implementation(project(":tools:share-file"))
     implementation(project(":core:provider-api"))
     implementation(project(":core:search-api"))
     implementation(project(":core:storage"))

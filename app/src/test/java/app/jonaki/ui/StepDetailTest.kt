@@ -35,4 +35,12 @@ class StepDetailTest {
         assertEquals(null, detail.query)
         assertEquals(null, detail.target)
     }
+
+    @Test
+    fun shareFileSaysWhereTheFileGoes() {
+        assertEquals("To Downloads: artifacts/report.pdf", StepDetail.of("share_file", """{"action":"downloads","path":"artifacts/report.pdf"}""").target)
+        assertEquals("Share: work/a.csv", StepDetail.of("share_file", """{"action":"share","path":"work/a.csv"}""").target)
+        assertEquals("From linked folder: Invoices/may.pdf", StepDetail.of("share_file", """{"action":"import_linked","path":"Invoices/may.pdf"}""").target)
+        assertEquals("List linked folder", StepDetail.of("share_file", """{"action":"list_linked"}""").target)
+    }
 }
