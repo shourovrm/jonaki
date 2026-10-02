@@ -138,6 +138,7 @@ adjectives, and never present an estimate as a measurement.
 - `STATUS.md`: present state only.
 - `DECISIONS.md`: numbered decision log that grows as needed; entries are
   short so that reading the file costs few tokens.
+- `secrets.properties`: local API keys for spikes and tests (gitignored).
 - `docs/plans/`: implementation plans with a progress checklist each.
 - `docs/planning-chat-2026-10-02.md`: the planning conversation that produced
   the design (read-only history).

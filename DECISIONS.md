@@ -33,7 +33,7 @@ always stream, live steps, Stop button; tool time limits, step budgets;
 loop in a foreground service, every step saved; stable system prompt;
 summaries only between messages, originals kept.
 
-## D-006 · 2026-10-02 · Stack — proposed
+## D-006 · 2026-10-02 · Stack — accepted
 Kotlin, Compose, coroutines, Room, OkHttp with SSE, kotlinx.serialization,
 Keystore for keys, WorkManager. Android only, minSdk 26. Rejected: React
 Native, Flutter (heavier); Kotlin Multiplatform (unneeded platforms).
@@ -47,17 +47,17 @@ file. Rejected: one tools module with packages (not cleanly removable).
 Thread owns messages, memory, folder (inbox/, work/, artifacts/), overrides.
 User can add, edit, delete, pin, promote memories.
 
-## D-009 · 2026-10-02 · Memory storage — proposed
+## D-009 · 2026-10-02 · Memory storage — accepted
 SQLite facts table with full-text index (FTS5 trigram if spike S-1 passes,
 else FTS4). Explicit memory tool plus background extraction (add, update,
 delete) on a cheap model. Inject global and thread memory up to ~1,500
 tokens each; rest via recall. Rejected: embeddings in v1; JSON in settings.
 
-## D-010 · 2026-10-02 · Providers — proposed
+## D-010 · 2026-10-02 · Providers — accepted
 One OpenAI-compatible module with presets, one native Gemini module.
 Rejected: a module per service (same wire format).
 
-## D-011 · 2026-10-02 · Web search — proposed
+## D-011 · 2026-10-02 · Web search — accepted
 Tavily default, then Ollama, then Exa on quota errors; web_fetch with jsoup
 and Readability4J, capped. YouTube search = web_search on youtube.com.
 Rejected: DuckDuckGo scraping (Kai 9000 hangs), Brave (card required).
@@ -87,12 +87,12 @@ the main model (costly), direct agent chat (loops, deadlocks).
 
 ## D-016 · 2026-10-02 · Jev routing — superseded by D-022
 
-## D-017 · 2026-10-02 · Files: copy in, work, export — proposed
+## D-017 · 2026-10-02 · Files: copy in, work, export — accepted
 Share sheet, attach picker, one linked folder → inbox/; export to
 Downloads/Jonaki, save as, share, linked folder, with approval.
 Rejected: all-files access.
 
-## D-018 · 2026-10-02 · HTML artifacts — proposed
+## D-018 · 2026-10-02 · HTML artifacts — accepted
 Self-contained HTML in artifacts/, WebView with network and file access off,
 versions, PDF via print. Offline report and slide skills with a bundled
 chart library. Rejected: generated native UI (Kai 9000; no export).
@@ -100,11 +100,11 @@ chart library. Rejected: generated native UI (Kai 9000; no export).
 ## D-019 · 2026-10-02 · Distribution: GitHub release APK only — accepted
 Release APK only, never debug. Google Play requirements deferred.
 
-## D-020 · 2026-10-02 · Phone tool scope — proposed
+## D-020 · 2026-10-02 · Phone tool scope — accepted
 v1: calendar, reminder, notify, clipboard, open app. Later: notification
 reading. Never: SMS, call log, AccessibilityService control.
 
-## D-021 · 2026-10-02 · Build setup reused from the user's apps — proposed
+## D-021 · 2026-10-02 · Build setup reused from the user's apps — accepted
 System Gradle 9.7.1, AGP 8.7.3, Kotlin 2.1.0, KSP 2.1.0-1.0.29, Compose BOM
 2024.11.00, Room 2.6.1, Java 17, arm64-v8a, release signing as in
 BD-calendar. Why: all already in ~/.gradle (865 MB), no new toolchain
