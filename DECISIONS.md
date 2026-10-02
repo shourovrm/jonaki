@@ -613,3 +613,13 @@ in the app) for BackHandler. Why: STATUS known gap; the smallest fix.
 Rejected: keeping a draft per skill (a stored second copy that can drift
 from the file). Not shared: the memory and rename dialogs hold a line or
 two and close only on Cancel or a tap outside. Outcome: pending.
+
+## D-GAP-3 · 2026-10-03 · Chat divider where the summary ends — proposed
+After compaction the chat shows a thin line, "Earlier messages summarised",
+before the first turn the newest summary does not cover; a tap opens the
+stored summary as Markdown under the line, a second tap folds it. Every
+original message stays visible above it (D-033). No divider when the
+summary covers no shown turn or all of them. The chat reads the summary
+through a new Flow query on `compactions` (no schema change). Why: lifts
+D-033's limit. Rejected: hiding the summarised messages (D-005 keeps them
+in view). Outcome: pending.

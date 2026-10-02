@@ -225,6 +225,10 @@ interface CompactionDao {
     /** The summary that covers the most messages of the thread; null before the first compaction. */
     @Query("SELECT * FROM compactions WHERE threadId = :threadId ORDER BY upToPosition DESC LIMIT 1")
     suspend fun latestForThread(threadId: String): CompactionEntity?
+
+    /** The same summary as [latestForThread], for the chat's divider. */
+    @Query("SELECT * FROM compactions WHERE threadId = :threadId ORDER BY upToPosition DESC LIMIT 1")
+    fun observeLatestForThread(threadId: String): Flow<CompactionEntity?>
 }
 
 data class ThreadSummary(

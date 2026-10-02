@@ -117,6 +117,9 @@ sealed interface ChatItem {
 
     /** The pulsing line at the end of the chat while the agent works (D-055). */
     data class Working(override val id: String, val activity: WorkingActivity, val sinceMillis: Long) : ChatItem
+
+    /** Where the summarised part of the thread ends; a tap shows the summary (D-033). */
+    data class SummaryDivider(override val id: String, val summaryMarkdown: String) : ChatItem
 }
 
 /** What the working line says the agent is doing. */

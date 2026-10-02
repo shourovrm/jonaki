@@ -2,6 +2,7 @@ package app.jonaki.ui
 
 import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
+import app.jonaki.core.storage.CompactionEntity
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.StepEntity
@@ -33,14 +34,20 @@ object ChatItems {
         pendingApproval: ToolCall?,
         /** Shown after an answer whose OpenRouter call fell back to the cheapest provider (D-030). */
         fallbackNote: String = "",
+        /** The thread's newest summary; a divider marks where the part it covers ends. */
+        compaction: CompactionEntity? = null,
     ): List<ChatItem> {
         // Background usage rows only carry a cost; they would add it to a run's cost line.
         val visibleRows = rows.filter { row -> row.role != HistoryMapper.BACKGROUND_ROLE }
         val turns = splitIntoTurns(visibleRows)
         val stepsById = steps.associateBy { step -> step.toolCallId }
         val items = mutableListOf<ChatItem>()
+        val firstKeptTurn = compaction?.let { summary -> firstTurnAfter(turns, summary.upToPosition) }
         for ((index, turn) in turns.withIndex()) {
             val isLastTurn = index == turns.lastIndex
+            if (compaction != null && index == firstKeptTurn) {
+                items += ChatItem.SummaryDivider("summary-${compaction.id}", compaction.summaryText)
+            }
             items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote)
             if (isLastTurn && pendingApproval != null) {
                 val detail = StepDetail.of(pendingApproval.toolName, pendingApproval.argumentsJson)
@@ -66,6 +73,18 @@ object ChatItems {
         }
         val isWriting = items.any { item -> item is ChatItem.AssistantMessage && item.isStreaming }
         return if (isWriting) WorkingActivity.Writing else WorkingActivity.Thinking
+    }
+
+    /**
+     * The index of the first turn the summary does not cover, or null when it
+     * covers all of them or none: a divider at the top or bottom marks nothing.
+     */
+    private fun firstTurnAfter(turns: List<List<MessageEntity>>, upToPosition: Long): Int? {
+        val index = turns.indexOfFirst { turn -> turn.first().position > upToPosition }
+        if (index <= 0) {
+            return null
+        }
+        return index
     }
 
     private fun splitIntoTurns(rows: List<MessageEntity>): List<List<MessageEntity>> {

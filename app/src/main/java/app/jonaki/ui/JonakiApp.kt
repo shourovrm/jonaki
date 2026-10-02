@@ -371,6 +371,9 @@ private fun ChatRoute(
     val lastInputTokens by remember(threadId) {
         if (isNew) flowOf(null) else database.messageDao().observeLastInputTokens(threadId)
     }.collectAsState(initial = null)
+    val compaction by remember(threadId) {
+        if (isNew) flowOf(null) else database.compactionDao().observeLatestForThread(threadId)
+    }.collectAsState(initial = null)
     val modelUsage by remember(threadId) {
         if (isNew) flowOf(emptyList()) else database.messageDao().observeModelUsage(threadId)
     }.collectAsState(initial = emptyList())
@@ -443,6 +446,7 @@ private fun ChatRoute(
             isRunning = isRunning,
             pendingApproval = pending?.toolCall,
             fallbackNote = stringResource(R.string.routing_fallback_note),
+            compaction = compaction,
         ),
         isRunning = isRunning,
         draft = draft,

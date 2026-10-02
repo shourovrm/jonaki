@@ -324,6 +324,7 @@ private fun MessageList(
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
+                is ChatItem.SummaryDivider -> SummaryDividerRow(item)
             }
         }
     }
