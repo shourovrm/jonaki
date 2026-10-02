@@ -82,6 +82,10 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
             Group {
                 NavigationRow(stringResource(R.string.settings_memory_open), onClick = actions.onOpenMemory)
             }
+            SectionLabel(stringResource(R.string.settings_section_skills))
+            Group {
+                NavigationRow(stringResource(R.string.settings_skills_open), onClick = actions.onOpenSkills)
+            }
             SectionLabel(stringResource(R.string.settings_section_appearance))
             ThemeChooser(state.themeMode, actions.onThemeModeChange)
             Group {

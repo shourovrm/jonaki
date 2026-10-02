@@ -12,7 +12,9 @@ import app.jonaki.run.ThreadTitles
 import app.jonaki.core.model.Role
 import app.jonaki.core.skills.BuiltInSkill
 import app.jonaki.core.skills.SkillLibrary
+import app.jonaki.core.skills.SkillDownloader
 import app.jonaki.skills.AssetSkills
+import app.jonaki.skills.SkillImporter
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.SecretStore
@@ -51,6 +53,10 @@ class JonakiApplication : Application() {
     lateinit var skillLibrary: SkillLibrary
         private set
 
+    /** Adds skills from links and picked files (D-041). */
+    lateinit var skillImporter: SkillImporter
+        private set
+
     /** Account balances for the settings cards (D-031); call refreshAll() when Settings opens. */
     lateinit var balances: AccountBalances
         private set
@@ -67,6 +73,7 @@ class JonakiApplication : Application() {
             // Streaming replies can pause while a model thinks; the agent loop's own limits apply on top.
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
+        skillImporter = SkillImporter(skillLibrary, SkillDownloader(httpClient))
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
         backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog)
         val memoryExtractor = MemoryExtractor(
@@ -76,7 +83,18 @@ class JonakiApplication : Application() {
             clock = System::currentTimeMillis,
         )
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
-        runner = AgentRunner(this, database, settings, secrets, httpClient, catalog, applicationScope, memoryExtractor, threadCompactor, skillLibrary)
+        runner = AgentRunner(
+            this,
+            database,
+            settings,
+            secrets,
+            httpClient,
+            catalog,
+            applicationScope,
+            memoryExtractor,
+            threadCompactor,
+            skillLibrary,
+        )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.

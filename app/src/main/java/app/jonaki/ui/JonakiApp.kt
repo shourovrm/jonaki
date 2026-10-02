@@ -73,6 +73,11 @@ private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
 private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
+private const val ROUTE_SKILLS = "skills"
+private const val ROUTE_SKILLS_THREAD_PREFIX = "skills:"
+
+/** "skill:<name>@<thread id>", the thread id empty when the list was opened from Settings. */
+private const val ROUTE_SKILL_EDIT_PREFIX = "skill:"
 
 /** Separates a thread id from the message to show first: "chat:<thread>@<message>". */
 private const val FOCUS_SEPARATOR = '@'
@@ -97,7 +102,27 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onOpenMemory = { route = ROUTE_MEMORY },
+                    onOpenSkills = { route = ROUTE_SKILLS },
                 )
+            }
+            route == ROUTE_SKILLS || route.startsWith(ROUTE_SKILLS_THREAD_PREFIX) -> {
+                val skillsThreadId = if (route == ROUTE_SKILLS) null else route.removePrefix(ROUTE_SKILLS_THREAD_PREFIX)
+                val backRoute = if (skillsThreadId == null) ROUTE_SETTINGS else ROUTE_CHAT_PREFIX + skillsThreadId
+                BackHandler { route = backRoute }
+                SkillsRoute(
+                    application = application,
+                    threadId = skillsThreadId,
+                    onBack = { route = backRoute },
+                    onOpenSkill = { name -> route = ROUTE_SKILL_EDIT_PREFIX + name + FOCUS_SEPARATOR + skillsThreadId.orEmpty() },
+                )
+            }
+            route.startsWith(ROUTE_SKILL_EDIT_PREFIX) -> {
+                val target = route.removePrefix(ROUTE_SKILL_EDIT_PREFIX)
+                val skillName = target.substringBefore(FOCUS_SEPARATOR)
+                val listThreadId = target.substringAfter(FOCUS_SEPARATOR, "")
+                val backRoute = if (listThreadId.isEmpty()) ROUTE_SKILLS else ROUTE_SKILLS_THREAD_PREFIX + listThreadId
+                BackHandler { route = backRoute }
+                SkillEditorRoute(application = application, name = skillName, onBack = { route = backRoute })
             }
             route == ROUTE_MEMORY || route.startsWith(ROUTE_MEMORY_THREAD_PREFIX) -> {
                 val memoryThreadId = if (route == ROUTE_MEMORY) null else route.removePrefix(ROUTE_MEMORY_THREAD_PREFIX)
@@ -138,6 +163,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onThreadCreated = { threadId -> route = ROUTE_CHAT_PREFIX + threadId },
                     onEditModels = { route = ROUTE_SETTINGS },
                     onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
+                    onOpenSkills = { route = ROUTE_SKILLS_THREAD_PREFIX + chatThreadId },
                 )
             }
             else -> ThreadsRoute(
@@ -230,6 +256,7 @@ private fun ChatRoute(
     onThreadCreated: (String) -> Unit,
     onEditModels: () -> Unit,
     onOpenMemory: () -> Unit,
+    onOpenSkills: () -> Unit,
 ) {
     val database = application.database
     val runner = application.runner
@@ -342,6 +369,7 @@ private fun ChatRoute(
         onEditModels = onEditModels,
         onRename = { renaming = true },
         onOpenMemory = onOpenMemory,
+        onOpenSkills = onOpenSkills,
         focusMessageId = focusMessageId,
     )
     val currentThread = thread
@@ -396,6 +424,7 @@ private fun SettingsRoute(
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
     onOpenMemory: () -> Unit,
+    onOpenSkills: () -> Unit,
 ) {
     val settings = application.settings
     val secrets = application.secrets
@@ -456,6 +485,7 @@ private fun SettingsRoute(
         onThemeModeChange = { mode -> settings.update { current -> current.copy(theme = themeChoiceOf(mode)) } },
         onOpenStatusIcons = onOpenStatusIcons,
         onOpenMemory = onOpenMemory,
+        onOpenSkills = onOpenSkills,
         onAddService = { serviceKey ->
             val service = ChatService.byKey(serviceKey)
             if (service != null) {

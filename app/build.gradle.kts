@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":feature:chat"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:memory"))
+    implementation(project(":feature:skills"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))
