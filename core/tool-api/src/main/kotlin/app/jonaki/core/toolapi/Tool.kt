@@ -25,6 +25,13 @@ interface Tool {
 
     val sideEffect: SideEffect
 
+    /**
+     * The cost of one call. A tool whose actions differ overrides this, so
+     * that reading the calendar runs at once while adding to it asks
+     * (D-M9-1, proposed); [sideEffect] stays the tool's highest cost.
+     */
+    fun sideEffectOf(arguments: JsonObject): SideEffect = sideEffect
+
     val requiredCapabilities: Set<Capability>
 
     val timeLimit: Duration
