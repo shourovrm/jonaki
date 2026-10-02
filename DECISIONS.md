@@ -182,3 +182,15 @@ any failure, not only quota errors (Tavily 429/432/433, Ollama and Exa
 web_fetch. Why: found while building M2 and M3 (workers A and B).
 Outcome (device test, 2026-10-02): search, fetch, approval, Stop, killed app
 and YouTube (Gemini 503 then retry) all behaved as described.
+
+## D-027 · 2026-10-02 · Cost display and scoped models — accepted
+A status strip above the message field: model (tap to switch among scoped
+models), context window size, percent of context used, cost of this thread
+in USD. Settings has a Status icons help page and a Models page (scoped
+models in order; the first is the default for new threads). Extras: cost on
+each finished run's line, thread totals and the month's total in the thread
+list, a usage sheet (tokens in, cached, out; a line per model). Cost comes
+from OpenRouter's usage report, else from token counts times a price table.
+Mockups: docs/mockups/cost-and-models.html (option C, bottom). Rejected:
+cost in the subtitle with a model chip in the composer (A), cost chip with
+a menu from the subtitle (B), taka display and monthly limit (not now).
