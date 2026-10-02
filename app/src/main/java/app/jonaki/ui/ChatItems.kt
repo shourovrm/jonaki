@@ -15,6 +15,9 @@ import app.jonaki.feature.chat.StepUiStatus
  * assistant's text (D-024: Rail line steps inside the Firefly look).
  */
 object ChatItems {
+    /** Id of the caret row shown while the model is thinking and nothing else moves. */
+    const val WAITING_ID = "waiting"
+
     /** The "[date, time zone]" line saved in front of each user message for the model. */
     private val timeLine = Regex("""^\[[^\]\n]*]\n""")
 
@@ -35,7 +38,17 @@ object ChatItems {
                 items += ChatItem.Approval(pendingApproval.id, pendingApproval.toolName, detail.target.orEmpty())
             }
         }
-        return markRetryableError(items, rows, isRunning)
+        val withRetry = markRetryableError(items, rows, isRunning)
+        if (isRunning && pendingApproval == null && !somethingIsMoving(withRetry)) {
+            return withRetry + ChatItem.AssistantMessage(WAITING_ID, "", isStreaming = true)
+        }
+        return withRetry
+    }
+
+    private fun somethingIsMoving(items: List<ChatItem>): Boolean = items.any { item ->
+        val isStreamingText = item is ChatItem.AssistantMessage && item.isStreaming
+        val hasRunningStep = item is ChatItem.Run && item.steps.any { step -> step.status == StepUiStatus.RUNNING }
+        isStreamingText || hasRunningStep
     }
 
     private fun splitIntoTurns(rows: List<MessageEntity>): List<List<MessageEntity>> {

@@ -94,4 +94,30 @@ class ChatItemsTest {
         assertEquals(listOf(false, true), errors.map { it.canRetry })
         assertEquals(listOf(false, false), whileRunning.map { it.canRetry })
     }
+
+    @Test
+    fun aRunWithNothingVisibleYetShowsTheLiveCaret() {
+        val items = ChatItems.build(listOf(row("u1", "USER", "hi")), emptyList(), isRunning = true, pendingApproval = null)
+
+        assertEquals(ChatItem.AssistantMessage(ChatItems.WAITING_ID, "", isStreaming = true), items.last())
+    }
+
+    @Test
+    fun noCaretWhileAStepIsRunningOrTextIsStreaming() {
+        val running = ChatItems.build(
+            listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(searchCall))),
+            listOf(step("c1", "web_search", "RUNNING")),
+            isRunning = true,
+            pendingApproval = null,
+        )
+        val streaming = ChatItems.build(
+            listOf(row("u2", "USER", "hi"), row("a2", "ASSISTANT", "He", complete = false)),
+            emptyList(),
+            isRunning = true,
+            pendingApproval = null,
+        )
+
+        assertEquals(false, running.any { it.id == ChatItems.WAITING_ID })
+        assertEquals(false, streaming.any { it.id == ChatItems.WAITING_ID })
+    }
 }

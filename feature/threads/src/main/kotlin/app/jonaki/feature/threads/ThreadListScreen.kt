@@ -37,6 +37,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -78,10 +80,13 @@ fun ThreadListScreen(
             )
         },
         floatingActionButton = {
+            val newThreadLabel = stringResource(R.string.threads_new)
             ExtendedFloatingActionButton(
                 onClick = onNewThread,
+                // The button's text slot is not exposed to accessibility in this Compose version.
+                modifier = Modifier.semantics { contentDescription = newThreadLabel },
                 icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                text = { Text(stringResource(R.string.threads_new)) },
+                text = { Text(newThreadLabel) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             )

@@ -151,17 +151,25 @@ private fun MessageList(
     val listState = rememberLazyListState()
     // Follow the stream only while the user is at the bottom; scrolling up to
     // read earlier steps must not be undone by the next chunk.
-    val atBottom by remember {
+    // This is read after the new items are laid out, so "at the bottom" allows
+    // for the few rows one update adds (a run block replacing the caret plus an
+    // approval card).
+    val nearBottom by remember {
         derivedStateOf {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= listState.layoutInfo.totalItemsCount - 1
+            lastVisible >= listState.layoutInfo.totalItemsCount - ROWS_ONE_UPDATE_CAN_ADD
         }
     }
+    var openedAtBottom by remember { mutableStateOf(false) }
     val lastItem = items.lastOrNull()
     val contentSignature = items.size to contentLength(lastItem)
     LaunchedEffect(contentSignature) {
-        if (atBottom && items.isNotEmpty()) {
+        if (items.isEmpty()) {
+            return@LaunchedEffect
+        }
+        if (!openedAtBottom || nearBottom) {
             listState.scrollToItem(items.lastIndex, scrollOffset = Int.MAX_VALUE)
+            openedAtBottom = true
         }
     }
     LazyColumn(
@@ -181,6 +189,8 @@ private fun MessageList(
         }
     }
 }
+
+private const val ROWS_ONE_UPDATE_CAN_ADD = 3
 
 private fun contentLength(item: ChatItem?): Int = when (item) {
     is ChatItem.AssistantMessage -> item.markdown.length

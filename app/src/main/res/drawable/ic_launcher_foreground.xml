@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Logo A (D-025): a lowercase j whose dot is the firefly, lit with a soft halo. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#33D8F36A"
-        android:pathData="M54,64m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0" />
-    <path android:fillColor="#A9B19D"
-        android:pathData="M52,44 C40,30 30,34 32,44 C34,52 44,52 52,48 Z" />
-    <path android:fillColor="#A9B19D"
-        android:pathData="M56,44 C68,30 78,34 76,44 C74,52 64,52 56,48 Z" />
-    <path android:fillColor="#E4E8DC"
-        android:pathData="M54,36m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+    <path android:pathData="M58,34m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="58" android:centerY="34" android:gradientRadius="20">
+                <item android:offset="0" android:color="#8CD8F36A" />
+                <item android:offset="0.45" android:color="#2ED8F36A" />
+                <item android:offset="1" android:color="#00D8F36A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M58,50 V70 C58,80 52,84 44,84 C40,84 37,83 35,81"
+        android:strokeColor="#E4E8DC" android:strokeWidth="9" android:strokeLineCap="round" />
     <path android:fillColor="#D8F36A"
-        android:pathData="M54,62m-9,0a9,13 0,1 1,18 0a9,13 0,1 1,-18 0" />
+        android:pathData="M58,34m-7.5,0a7.5,7.5 0,1 1,15 0a7.5,7.5 0,1 1,-15 0" />
 </vector>

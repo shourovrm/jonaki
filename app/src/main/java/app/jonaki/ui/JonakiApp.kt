@@ -18,6 +18,7 @@ import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.ThreadSummary
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
+import app.jonaki.core.ui.resolvesToDark
 import app.jonaki.feature.chat.ApprovalChoice
 import app.jonaki.feature.chat.ChatScreen
 import app.jonaki.feature.chat.ChatUiState
@@ -49,9 +50,12 @@ private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val NEW_THREAD = "new"
 
 @Composable
-fun JonakiApp(application: JonakiApplication) {
+fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Unit) {
     val settingsSnapshot by application.settings.snapshot.collectAsState()
-    JonakiTheme(themeMode = themeModeOf(settingsSnapshot.theme)) {
+    val themeMode = themeModeOf(settingsSnapshot.theme)
+    val isDark = resolvesToDark(themeMode)
+    LaunchedEffect(isDark) { onDarkThemeChange(isDark) }
+    JonakiTheme(themeMode = themeMode) {
         var route by rememberSaveable { mutableStateOf(ROUTE_THREADS) }
         when {
             route == ROUTE_SETTINGS -> {
@@ -122,13 +126,8 @@ private fun ThreadsRoute(
     )
 }
 
-private val userTimeLine = Regex("""^\[[^\]\n]*]\n""")
-
-private fun lastLineOf(summary: ThreadSummary): String {
-    val text = summary.lastText.orEmpty()
-    val withoutTimeLine = if (summary.lastRole == Role.USER.name) text.replaceFirst(userTimeLine, "") else text
-    return withoutTimeLine.lineSequence().firstOrNull { line -> line.isNotBlank() }?.trim().orEmpty()
-}
+private fun lastLineOf(summary: ThreadSummary): String =
+    PreviewText.of(summary.lastText.orEmpty(), isUserMessage = summary.lastRole == Role.USER.name)
 
 @Composable
 private fun ChatRoute(

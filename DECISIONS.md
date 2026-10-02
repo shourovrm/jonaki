@@ -163,3 +163,9 @@ step track: one station per tool step (done, running, waiting), with
 per-step times. Theme follows the system, with a manual toggle. English UI
 only. Mockups: docs/mockups/index.html. Rejected: pure Rail line (too
 formal for quick asks), pure Firefly (step list lacks detail).
+
+## D-025 · 2026-10-02 · Logo: the lit j — accepted
+A lowercase j whose dot is the firefly, lit with a soft halo, on the
+leaf-dark ground; one-colour version for themed icons and notifications.
+Options: docs/mockups/logo.html. Rejected: literal firefly (wings vanish at
+48 px), step track (not tied to the name), light trail (faint when small).

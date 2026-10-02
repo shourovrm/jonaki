@@ -56,7 +56,11 @@ class RunSession(
             deniedToolCallIds += request.toolCall.id
             setStepStatus(request.toolCall.id, StepStatus.DENIED)
         } else {
-            setStepStatus(request.toolCall.id, StepStatus.RUNNING)
+            // The step's time counts from approval, not from the wait for the user.
+            val step = database.stepDao().find(request.toolCall.id)
+            if (step != null) {
+                database.stepDao().upsert(step.copy(status = StepStatus.RUNNING.name, startedAtMillis = clock()))
+            }
         }
         return decision
     }
