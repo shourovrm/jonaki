@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_section_chat">Chat model</string>
+    <string name="settings_provider">Provider</string>
+    <string name="settings_model">Model</string>
+    <string name="settings_api_key">API key</string>
+    <string name="settings_section_youtube">YouTube summaries</string>
+    <string name="settings_gemini_key">Gemini API key</string>
+    <string name="settings_section_search">Web search</string>
+    <string name="settings_search_order">Tried in this order</string>
+    <string name="settings_move_up">Move %1$s up</string>
+    <string name="settings_move_down">Move %1$s down</string>
+    <string name="settings_search_off_new">Off in new threads</string>
+    <string name="settings_section_appearance">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_key_set">Set</string>
+    <string name="settings_key_not_set">Not set</string>
+    <string name="settings_key_hint">Paste key</string>
+    <string name="settings_key_replace_hint">Paste new key</string>
+    <string name="settings_key_save">Save</string>
+    <string name="settings_key_remove">Remove</string>
+    <string name="settings_key_show">Show key</string>
+    <string name="settings_key_hide">Hide key</string>
+</resources>
