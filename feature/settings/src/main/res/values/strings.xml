@@ -2,7 +2,7 @@
 <resources>
     <string name="settings_title">Settings</string>
     <string name="settings_back">Back</string>
-    <string name="settings_section_chat">Chat model</string>
+    <string name="settings_section_chat">Chat models</string>
     <string name="settings_model">Model</string>
     <string name="settings_api_key">API key</string>
     <string name="settings_section_youtube">YouTube summaries</string>
@@ -34,4 +34,44 @@
     <string name="settings_icon_cost">Cost</string>
     <string name="settings_icon_cost_help">Spent in this thread, in US dollars. Tap for details.</string>
     <string name="settings_show_status_strip">Show status strip</string>
+    <string name="settings_key_change">Change key</string>
+    <string name="settings_key_delete">Delete key</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_add_service">Add service</string>
+    <string name="settings_remove_service">Remove service</string>
+    <plurals name="settings_model_count">
+        <item quantity="one">%1$d model</item>
+        <item quantity="other">%1$d models</item>
+    </plurals>
+    <string name="settings_routing">Routing</string>
+    <string name="settings_routing_private_short">Private</string>
+    <string name="settings_routing_auto_short">Auto</string>
+    <string name="settings_routing_private">Private, then cheapest</string>
+    <string name="settings_routing_cheapest">Cheapest</string>
+    <string name="settings_routing_automatic">Automatic</string>
+    <string name="settings_routing_same_as">Same as %1$s</string>
+    <string name="settings_price_in">in %1$s</string>
+    <string name="settings_price_out">out %1$s</string>
+    <string name="settings_price_cache">cache %1$s</string>
+    <string name="settings_add_model">Add model</string>
+    <string name="settings_set_default">Set as default</string>
+    <string name="settings_model_is_default">Default model</string>
+    <string name="settings_make_default">Make %1$s the default</string>
+    <string name="settings_model_options">Options for %1$s</string>
+    <string name="settings_remove_model">Remove</string>
+    <string name="settings_close">Close</string>
+    <string name="settings_done">Done</string>
+    <string name="settings_add_models_title">Add %1$s models</string>
+    <string name="settings_search_models">Search models</string>
+    <string name="settings_clear_search">Clear search</string>
+    <string name="settings_per_million">per 1M</string>
+    <string name="settings_price_head_in">in</string>
+    <string name="settings_price_head_out">out</string>
+    <string name="settings_price_head_cache">cache</string>
+    <string name="settings_price_free">free</string>
+    <string name="settings_add_by_id">Add by id</string>
+    <plurals name="settings_selected_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
 </resources>
