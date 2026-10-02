@@ -8,7 +8,8 @@ Active plan:  docs/plans/2026-10-02-v1-plan.md, resume from M7 step 1.
 Decisions:    D-001 to D-015, D-017 to D-032, D-048 accepted; D-016 superseded. Proposed: D-033 to D-047,
               D-049 to D-057.
 Build:        `gradle testReleaseUnitTest assembleRelease` passes, 559 JVM tests; APK ~5.9 MB. Room v6.
-Device check: pending for 0.4.0 and 0.5.0 (skills, files, viewer, D-029 long-text checks).
+Device check: 0.7.0 on A059: picker attach of PDF, DOCX, PNG; read_document and view_image answered
+              correctly. Pending: camera, share sheet from other apps, skills, viewer, D-029 checks.
 Known gaps:   Attachment chips are lost if the process dies. Share-screen thread names wrap to two
               lines. Skill editor drops unsaved edits. Chat does not mark where a summary begins.
               Every past image is re-sent on each request. sqlite-bundled-jvm (tests) awaits approval.
