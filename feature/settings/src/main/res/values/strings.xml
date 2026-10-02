@@ -24,4 +24,14 @@
     <string name="settings_key_remove">Remove</string>
     <string name="settings_key_show">Show key</string>
     <string name="settings_key_hide">Hide key</string>
+    <string name="settings_status_icons">Status icons</string>
+    <string name="settings_icon_model">Model</string>
+    <string name="settings_icon_model_help">The model this thread uses. Tap to switch.</string>
+    <string name="settings_icon_window">Context window</string>
+    <string name="settings_icon_window_help">How much text the model can hold at once, in tokens.</string>
+    <string name="settings_icon_used">Context used</string>
+    <string name="settings_icon_used_help">How full it is.</string>
+    <string name="settings_icon_cost">Cost</string>
+    <string name="settings_icon_cost_help">Spent in this thread, in US dollars. Tap for details.</string>
+    <string name="settings_show_status_strip">Show status strip</string>
 </resources>

@@ -25,4 +25,23 @@
     <string name="chat_approval_thread">Allow in thread</string>
     <string name="chat_approval_deny">Deny</string>
     <string name="chat_retry">Retry</string>
+    <string name="chat_status_model">Model: %1$s. Change</string>
+    <string name="chat_status_context_window">Context window: %1$s tokens</string>
+    <string name="chat_status_context_used">Context used: %1$d%%</string>
+    <string name="chat_status_cost">Cost: %1$s</string>
+    <string name="chat_model_sheet_title">Model for this thread</string>
+    <string name="chat_model_sheet_prices">Prices per million tokens</string>
+    <string name="chat_price_in">in %1$s</string>
+    <string name="chat_price_out">out %1$s</string>
+    <string name="chat_price_cache">cache %1$s</string>
+    <string name="chat_model_sheet_edit">Edit list</string>
+    <string name="chat_usage_sheet_title">Usage in this thread</string>
+    <string name="chat_usage_input">Input</string>
+    <string name="chat_usage_cached">Cached</string>
+    <string name="chat_usage_output">Output</string>
+    <plurals name="chat_usage_turns">
+        <item quantity="one">%1$d turn</item>
+        <item quantity="other">%1$d turns</item>
+    </plurals>
+    <string name="chat_usage_footnote">OpenRouter reports cost; others are priced from token counts.</string>
 </resources>

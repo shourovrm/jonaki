@@ -29,6 +29,31 @@ object ChatSample {
         ),
     )
 
+    private val scopedModels = listOf(
+        ModelChoiceUi("openrouter:z-ai/glm-5.3-flash", "GLM 5.3 Flash", "OpenRouter", 0.10, 0.40, 0.025),
+        // A 40-character id: checks that long names ellipsize instead of running off the screen.
+        ModelChoiceUi("deepseek:deepseek/deepseek-v4-flash", "deepseek/deepseek-v4-flash-0925-preview-x", "DeepSeek", 0.27, 1.10),
+        ModelChoiceUi("openrouter:anthropic/claude-sonnet-5.5", "Claude Sonnet 5.5", "OpenRouter", 3.00, 15.00, 0.30),
+        ModelChoiceUi("gemini:gemini-3.8-flash", "Gemini 3.8 Flash", "Gemini"),
+    )
+
+    /** The running sample with the status strip, model choices and usage filled in (D-027 mockup). */
+    val withUsage: ChatUiState = running.copy(
+        status = ChatStatusUi(modelName = "GLM 5.3 Flash", contextWindowTokens = 200_000, contextUsedTokens = 48_210, costUsd = 0.0134),
+        modelChoices = scopedModels,
+        selectedModelKey = scopedModels.first().key,
+        usage = UsageUi(
+            totalCostUsd = 0.0134,
+            inputTokens = 48_210,
+            cachedTokens = 31_900,
+            outputTokens = 3_480,
+            perModel = listOf(
+                ModelUsageUi("GLM 5.3 Flash", turns = 6, costUsd = 0.0062),
+                ModelUsageUi("Claude Sonnet 5.5", turns = 1, costUsd = 0.0072),
+            ),
+        ),
+    )
+
     val finished: ChatUiState = running.copy(
         isRunning = false,
         items = listOf(
@@ -36,6 +61,7 @@ object ChatSample {
             ChatItem.Run(
                 id = "r1",
                 isActive = false,
+                costUsd = 0.0041,
                 steps = listOf(
                     StepUi("s1", "web_search", StepUiStatus.DONE, "Tavily · 3 results", query = "Kurzgesagt fusion video", durationMillis = 2_200),
                     StepUi("s2", "youtube_summarize", StepUiStatus.DONE, "19 min video", durationMillis = 14_400),

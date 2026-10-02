@@ -52,6 +52,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,20 +77,36 @@ fun ChatScreen(
     onRetry: (errorId: String) -> Unit,
     onWebSearchChange: (enabled: Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    /** A scoped model was picked in the model sheet; it applies from the next message. */
+    onModelSelect: (modelKey: String) -> Unit = {},
+    /** "Edit list" in the model sheet: open the models in Settings. */
+    onEditModels: () -> Unit = {},
 ) {
+    // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
+    var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
         topBar = { ChatTopBar(state, onBack, onWebSearchChange) },
         bottomBar = {
-            Composer(
-                draft = state.draft,
-                isRunning = state.isRunning,
-                onDraftChange = onDraftChange,
-                onSend = onSend,
-                onStop = onStop,
-                modifier = Modifier.navigationBarsPadding().imePadding(),
-            )
+            Column(Modifier.navigationBarsPadding().imePadding()) {
+                val status = state.status
+                if (status != null) {
+                    StatusStrip(
+                        status = status,
+                        isRunning = state.isRunning,
+                        onModelClick = { openSheet = ChatSheet.MODEL },
+                        onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
+                    )
+                }
+                Composer(
+                    draft = state.draft,
+                    isRunning = state.isRunning,
+                    onDraftChange = onDraftChange,
+                    onSend = onSend,
+                    onStop = onStop,
+                )
+            }
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
@@ -98,6 +115,29 @@ fun ChatScreen(
             }
         }
     }
+    val usage = state.usage
+    when {
+        openSheet == ChatSheet.MODEL -> ModelSheet(
+            choices = state.modelChoices,
+            selectedKey = state.selectedModelKey,
+            onSelect = { modelKey ->
+                openSheet = ChatSheet.NONE
+                onModelSelect(modelKey)
+            },
+            onEditModels = {
+                openSheet = ChatSheet.NONE
+                onEditModels()
+            },
+            onDismiss = { openSheet = ChatSheet.NONE },
+        )
+        openSheet == ChatSheet.USAGE && usage != null -> UsageSheet(usage, onDismiss = { openSheet = ChatSheet.NONE })
+    }
+}
+
+private enum class ChatSheet {
+    NONE,
+    MODEL,
+    USAGE,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

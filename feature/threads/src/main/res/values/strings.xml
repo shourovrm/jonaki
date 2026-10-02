@@ -11,4 +11,5 @@
     <string name="threads_state_failed">Failed</string>
     <string name="threads_empty_title">No threads yet</string>
     <string name="threads_no_matches">No matches</string>
+    <string name="threads_month_cost">This month %1$s</string>
 </resources>
