@@ -145,7 +145,7 @@ reports 2.3x fewer wrong skill loads. Rejected: Jev for model routing and
 jev-router as main model (user ruling). Risk: English-first; spike S-5
 tests Bangla.
 
-## D-023 · 2026-10-02 · Room 2.7.2 with the bundled SQLite driver — proposed
+## D-023 · 2026-10-02 · Room 2.7.2 with the bundled SQLite driver — accepted
 Use Room 2.7.2 with androidx.sqlite:sqlite-bundled 2.5.2 instead of Room
 2.6.1 (changes a D-021 version). Why: S-1 shows the bundled SQLite 3.46.0
 has FTS5 trigram for Bangla; Room 2.6.1 can only use Android's own SQLite,
@@ -154,3 +154,12 @@ downloads, about 1.9 MB of native code in the APK (0.8 MB compressed).
 Room 2.7.2 with Kotlin 2.1.0 and KSP 2.1.0-1.0.29 is checked when M1 builds
 core/storage. Rejected: Room 2.6.1 with FTS4 (no trigram; Bangla matching
 depends on word splitting). Outcome: pending.
+
+## D-024 · 2026-10-02 · Visual design: Firefly look with Rail line steps — accepted
+Material 3 structure. Firefly colours and shapes: leaf-dark night theme,
+pale paddy-green day theme, one firefly yellow-green for live work only,
+rounded shapes, a glowing dot on working threads. Inside a run, Rail line's
+step track: one station per tool step (done, running, waiting), with
+per-step times. Theme follows the system, with a manual toggle. English UI
+only. Mockups: docs/mockups/index.html. Rejected: pure Rail line (too
+formal for quick asks), pure Firefly (step list lacks detail).
