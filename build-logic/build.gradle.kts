@@ -20,6 +20,14 @@ gradlePlugin {
             id = "jonaki.android.application"
             implementationClass = "app.jonaki.buildlogic.AndroidApplicationConventionPlugin"
         }
+        register("androidLibrary") {
+            id = "jonaki.android.library"
+            implementationClass = "app.jonaki.buildlogic.AndroidLibraryConventionPlugin"
+        }
+        register("androidCompose") {
+            id = "jonaki.android.compose"
+            implementationClass = "app.jonaki.buildlogic.AndroidComposeConventionPlugin"
+        }
         register("jvmLibrary") {
             id = "jonaki.jvm.library"
             implementationClass = "app.jonaki.buildlogic.JvmLibraryConventionPlugin"
