@@ -591,3 +591,45 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-STY-1 · 2026-10-03 · Custom instructions, global and per thread — proposed
+The user writes general instructions in Settings (Answers, "Custom
+instructions") and a thread's own instructions in the chat's ⋮ menu ("Style
+and persona"). Both go into one "User instructions" section of the system
+prompt, after the tool list and before Skills and Memory, in the order
+answer style, general, persona, this thread; the header tells the model
+that the later part wins. So the thread text extends the general text and
+overrides it where they disagree. Each text takes at most 8,000 characters
+(about 2,000 tokens). The runner reads them once per run, so the prompt
+changes only when the user edits them: the next request misses the prompt
+cache once (D-005). With nothing set the section is empty and the prompt is
+byte-identical to 0.7.0. Stored as settings.custom_instructions and
+threads.instructions (Room version 7). Rejected: thread text replacing the
+general text (the user would copy shared rules into every thread).
+Mockups: docs/mockups/style-and-personas.html. Outcome: pending.
+
+## D-STY-2 · 2026-10-03 · Answer style in the system prompt — proposed
+Concise, Normal and Detailed. Settings holds the default (Normal); the
+chat's "Style and persona" sheet adds Default, which follows Settings, as
+the thinking level does (D-057). Normal adds no line; Concise and Detailed
+add one line at the start of the User instructions section. The style is in
+the system prompt, not in the latest message: it changes only when the user
+changes it, so it costs one cache miss per change, while a line in every
+message would be stored in the history for good, add tokens to every turn
+and leave stale styles in older messages. Stored as settings.answer_style
+and threads.answerStyle (null follows Settings). Rejected: more presets
+(no clear use yet; the instructions cover the rest). Outcome: pending.
+
+## D-STY-3 · 2026-10-03 · Personas as saved, named instructions — proposed
+A persona is a name (at most 60 characters) and instructions; its voice is
+part of the instructions. Settings lists personas under Personas, with
+"Add persona"; each opens an editor with Save and Delete (asks first). A
+thread uses at most one persona, picked in the "Style and persona" sheet,
+also before the first message. The persona's part comes after the general
+instructions and before the thread's, so it adds to the user's general
+rules and the thread text can still adjust it; the base prompt, tools and
+rules stay. Deleting a persona sets the threads that used it to none.
+Stored in a new personas table and threads.personaId (Room version 7, one
+AutoMigration 6 to 7). Rejected: a persona replacing the general
+instructions (language and unit rules would be lost); a default persona
+for new threads (not asked for). Outcome: pending.
