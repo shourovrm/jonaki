@@ -51,7 +51,12 @@ User can add, edit, delete, pin, promote memories.
 SQLite facts table with full-text index (FTS5 trigram if spike S-1 passes,
 else FTS4). Explicit memory tool plus background extraction (add, update,
 delete) on a cheap model. Inject global and thread memory up to ~1,500
-tokens each; rest via recall. Rejected: embeddings in v1; JSON in settings.
+tokens each; rest via recall. Rejected: embeddings in v1; JSON in settings. Outcome (S-1, 2026-10-02): passed.
+androidx.sqlite:sqlite-bundled 2.5.2 ships SQLite 3.46.0 with FTS5 trigram;
+6 JVM tests in spikes/fts5 find Bangla, English and mixed facts by a
+three-code-point fragment ("থিস", "dee", "ট্রে"). Limits: MATCH needs 3+
+characters (LIKE scans below that); "thesis" does not find "থিসিস". Needs
+Room 2.7 (D-023); arm64 native library adds 0.8 MB compressed.
 
 ## D-010 · 2026-10-02 · Providers — accepted
 One OpenAI-compatible module with presets, one native Gemini module.
@@ -128,3 +133,13 @@ than 1.5 s are ignored. Why: $0.042 per million input tokens; TypeSafe
 reports 2.3x fewer wrong skill loads. Rejected: Jev for model routing and
 jev-router as main model (user ruling). Risk: English-first; spike S-5
 tests Bangla.
+
+## D-023 · 2026-10-02 · Room 2.7.2 with the bundled SQLite driver — proposed
+Use Room 2.7.2 with androidx.sqlite:sqlite-bundled 2.5.2 instead of Room
+2.6.1 (changes a D-021 version). Why: S-1 shows the bundled SQLite 3.46.0
+has FTS5 trigram for Bangla; Room 2.6.1 can only use Android's own SQLite,
+which is 3.18 on Android 8 (trigram needs 3.34) and has no FTS5. Cost: new
+downloads, about 1.9 MB of native code in the APK (0.8 MB compressed).
+Room 2.7.2 with Kotlin 2.1.0 and KSP 2.1.0-1.0.29 is checked when M1 builds
+core/storage. Rejected: Room 2.6.1 with FTS4 (no trigram; Bangla matching
+depends on word splitting). Outcome: pending.
