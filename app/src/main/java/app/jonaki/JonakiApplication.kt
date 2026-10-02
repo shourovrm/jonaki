@@ -129,6 +129,10 @@ class JonakiApplication : Application() {
             database.stepDao().stopInterrupted()
         }
         applicationScope.launch {
+            // Incognito threads go a day after their last message; the thread list checks again (D-PRJ-2).
+            runner.deleteExpiredIncognitoThreads()
+        }
+        applicationScope.launch {
             catalog.refreshIfStale()
         }
         applicationScope.launch {
