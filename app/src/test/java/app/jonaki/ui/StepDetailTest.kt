@@ -43,4 +43,16 @@ class StepDetailTest {
         assertEquals("From linked folder: Invoices/may.pdf", StepDetail.of("share_file", """{"action":"import_linked","path":"Invoices/may.pdf"}""").target)
         assertEquals("List linked folder", StepDetail.of("share_file", """{"action":"list_linked"}""").target)
     }
+
+    @Test
+    fun runCodeShowsTheLanguageAndLineCount() {
+        val python = StepDetail.of("run_code", """{"language":"python","code":"import math\nprint(math.pi)\n"}""")
+        val oneLine = StepDetail.of("run_code", """{"language":"js","code":"6 * 7"}""")
+        val unknownLanguage = StepDetail.of("run_code", """{"language":"ruby","code":"puts 1\nputs 2"}""")
+
+        assertEquals("Python · 2 lines", python.target)
+        assertEquals("JavaScript · 1 line", oneLine.target)
+        assertEquals("2 lines", unknownLanguage.target)
+        assertEquals(null, StepDetail.of("run_code", """{"language":"python"}""").target)
+    }
 }

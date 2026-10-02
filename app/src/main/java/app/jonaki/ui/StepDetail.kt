@@ -1,5 +1,6 @@
 package app.jonaki.ui
 
+import app.jonaki.core.runtimeapi.CodeLanguage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -23,6 +24,7 @@ data class StepDetail(
                 "delegate" -> StepDetail(query = null, target = delegateTarget(arguments))
                 "request_tool" -> StepDetail(query = null, target = arguments.text("name"))
                 "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
+                "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
@@ -46,6 +48,18 @@ data class StepDetail(
             }
             return "$where: $path"
         }
+
+        /** "Python · 12 lines": the code itself is too long for one line, and its sheet shows it (D-090). */
+        private fun runCodeTarget(arguments: JsonObject): String? {
+            val code = arguments.text("code") ?: return null
+            val lineCount = programLineCount(code)
+            val lines = if (lineCount == 1) "1 line" else "$lineCount lines"
+            val language = arguments.text("language")?.let(CodeLanguage::fromArgument) ?: return lines
+            return "${language.displayName} · $lines"
+        }
+
+        /** Trailing line breaks are not lines of the program; the code sheet counts the same way. */
+        fun programLineCount(code: String): Int = code.trimEnd('\n', '\r').lines().size
 
         /** "researcher, scout" for parallel tasks, else the one agent type. */
         private fun delegateTarget(arguments: JsonObject): String? {
