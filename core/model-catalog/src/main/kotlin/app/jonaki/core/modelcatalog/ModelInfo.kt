@@ -16,6 +16,8 @@ data class ModelInfo(
     val cachedInputUsdPerMillion: Double? = null,
     /** True for built-in rows whose prices are copied estimates, not the service's own list. */
     val isEstimate: Boolean = false,
+    /** True only when the list says the model takes images; unknown counts as no (D-049). */
+    val acceptsImages: Boolean = false,
 ) {
     /** "service:modelId", the form stored in settings and on each thread. */
     val key: String
