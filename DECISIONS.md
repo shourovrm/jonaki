@@ -623,3 +623,20 @@ summary covers no shown turn or all of them. The chat reads the summary
 through a new Flow query on `compactions` (no schema change). Why: lifts
 D-033's limit. Rejected: hiding the summarised messages (D-005 keeps them
 in view). Outcome: pending.
+
+## D-GAP-4 · 2026-10-03 · Only the newest user turns carry their images — proposed
+Before each request ImageMessages counts the user turns (the step-budget
+notice not counted) and sends images, attached or from view_image, only
+for turns from `firstTurnWithImages` on: 0 up to five turns, then 3 at six
+turns, 6 at nine and so on, so the newest 3 to 5 turns keep their images.
+An older image becomes a note in its place: "[inbox/photo0.jpg is not
+repeated; call view_image with path=inbox/photo0.jpg to see it again.]"
+(with page=N for a PDF page); it is never loaded. The cut moves only every
+third turn and only forward, and a note's words depend only on the image's
+path, so between two moves every earlier message keeps its bytes and the
+prompt cache holds (D-005, D-049). Tested in ImageMessagesTest and in both
+wire formats in ImageRequestsTest. Why: STATUS known gap; each image costs
+about 1,000 to 1,600 tokens on every request. Rejected: a cut that moves
+every turn (breaks the cache at the cut on every new message); keeping
+only the current run's images (the model loses a photo the user is still
+asking about). Outcome: pending.
