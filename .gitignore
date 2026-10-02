@@ -24,3 +24,6 @@ secrets.properties
 # Tool and agent scratch files
 .playwright-mcp/
 *.log
+
+# Private planning notes
+docs/session-summary-2026-10-02.md
