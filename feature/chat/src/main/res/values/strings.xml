@@ -47,4 +47,5 @@
         <item quantity="other">%1$d turns</item>
     </plurals>
     <string name="chat_usage_footnote">OpenRouter reports cost; others are priced from token counts.</string>
+    <string name="chat_artifact_open">Open</string>
 </resources>

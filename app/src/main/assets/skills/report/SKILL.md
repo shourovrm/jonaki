@@ -11,7 +11,7 @@ A report is one HTML file in `artifacts/`, for example `artifacts/laptop-compari
 
 1. Settle the question. If the request leaves the scope open (which market, which year, which budget), ask one short question, or state the assumption in the report's first paragraph.
 2. Gather facts. Use `web_search`, then `web_fetch` on the two to five best pages. Read files the user shared in `inbox/` with `read_file`. Keep notes in `work/<topic>-notes.md` when the research takes more than three steps.
-3. Write the report with `write_file`, then tell the user its path in one sentence, followed by the three main findings in the chat.
+3. Write the report with `write_file`, call `artifact` with its path so the user can open it, then give the three main findings in the chat.
 
 ## Structure
 
@@ -35,7 +35,7 @@ A report is one HTML file in `artifacts/`, for example `artifacts/laptop-compari
 - All CSS in one `<style>` block. Body text 16 px, line height 1.55, maximum line length about 70 characters, page padding 16 px, so the report reads well on a phone.
 - Support light and dark: define colours as CSS variables and switch them with `@media (prefers-color-scheme: dark)`.
 - Tables scroll sideways inside a wrapper (`overflow-x: auto`) instead of breaking the page width.
-- Charts: draw simple bar or line charts as inline SVG with labelled axes and values written on the bars. No chart libraries until Jonaki bundles one.
+- Charts: load the bundled Chart.js 4 with `<script src="lib/chart.js"></script>` (it works only inside Jonaki's viewer) and draw into a `<canvas>` inside a box of fixed height, with `responsive: true, maintainAspectRatio: false`. Label both axes and give each dataset a label. For one or two simple bars, inline SVG is also fine.
 - Add `@media print` rules: white background, black text, no shadows, `break-inside: avoid` on tables and figures, so a PDF export looks clean.
 
 ## Checks before you finish

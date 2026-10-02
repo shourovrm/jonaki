@@ -2,6 +2,7 @@ package app.jonaki
 
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.toolapi.Tool
+import app.jonaki.tools.artifact.ArtifactTool
 import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.memory.MemoryStore
@@ -35,6 +36,7 @@ object ToolRegistry {
             EditFileTool(),
             FindFilesTool(),
             SearchFilesTool(),
+            ArtifactTool(),
         )
         if (services.webAccessEnabled && services.searchBackends.isNotEmpty()) {
             tools += WebSearchTool(services.searchBackends)

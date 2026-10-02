@@ -87,6 +87,8 @@ fun ChatScreen(
     onOpenMemory: () -> Unit = {},
     /** Skills in the overflow menu: the app opens this thread's skill switches. */
     onOpenSkills: () -> Unit = {},
+    /** An artifact card was tapped: the app opens the viewer for that path. */
+    onOpenArtifact: (path: String) -> Unit = {},
     /** A message to show first instead of the end, when opened from a memory fact's source. */
     focusMessageId: String? = null,
 ) {
@@ -119,7 +121,7 @@ fun ChatScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (state.items.isNotEmpty()) {
-                MessageList(state.items, onApprovalChoice, onRetry, focusMessageId)
+                MessageList(state.items, onApprovalChoice, onRetry, focusMessageId, onOpenArtifact)
             }
         }
     }
@@ -227,6 +229,7 @@ private fun MessageList(
     onApprovalChoice: (String, ApprovalChoice) -> Unit,
     onRetry: (String) -> Unit,
     focusMessageId: String?,
+    onOpenArtifact: (path: String) -> Unit,
 ) {
     val listState = rememberLazyListState()
     // Follow the stream only while the user is at the bottom; scrolling up to
@@ -273,6 +276,7 @@ private fun MessageList(
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)
+                is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
             }
         }
     }
@@ -351,6 +355,35 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                     Text(stringResource(R.string.chat_approval_deny))
                 }
             }
+        }
+    }
+}
+
+/** One tappable line per shown artifact: the file name, opened in the viewer. */
+@Composable
+private fun ArtifactRow(artifact: ChatItem.Artifact, onOpenArtifact: (String) -> Unit) {
+    Surface(
+        onClick = { onOpenArtifact(artifact.path) },
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Icon(JonakiIcons.Document, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
+            Text(
+                artifact.path.substringAfterLast('/'),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stringResource(R.string.chat_artifact_open),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

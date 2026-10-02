@@ -40,6 +40,8 @@ dependencies {
     implementation(project(":feature:threads"))
     implementation(project(":feature:chat"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:artifact"))
+    implementation(project(":tools:artifact"))
     implementation(project(":feature:memory"))
     implementation(project(":feature:skills"))
     implementation(libs.kotlinx.serialization.json)

@@ -380,3 +380,28 @@ OkHttp; any other link is fetched as a single SKILL.md. Limits: 100 files,
 fetched. A name that exists asks "Replace?". Why: plan M5 step 2.
 Limits: a branch name with "/" in a tree link is read as its first part
 and fails with 404; private repositories are not reachable. Outcome: pending.
+
+## D-047 · 2026-10-02 · Artifact tool and offline viewer — proposed
+The model writes an HTML file in artifacts/ with write_file or edit_file,
+then calls `artifact` with its path. The tool keeps a version when the file
+changed (artifacts/.versions/<name>/vN.html), warns the model about
+scripts, styles or images it would load from the web, and runs without an
+approval card (SideEffect.CHANGES_APP_DATA, as D-034), because it only copies
+inside the thread's own folder. The chat shows one "Open" card per shown
+file. The viewer is a WebView with JavaScript on (decks and charts need
+it), file and content access off and no JavaScript interface. Pages load
+from https://artifact.jonaki/; every request is answered by the app: files
+inside artifacts/ and the bundled Chart.js, everything else gets an empty
+403. Documents carry a Content-Security-Policy with connect-src 'none'.
+Tapped web links open in the browser. A version picker shows older copies;
+the print button opens Android's print dialog, which offers "Save as PDF".
+Why: plan M6 step 3, D-018. Limit: a shared HTML file that uses lib/chart.js
+shows no chart outside Jonaki. Outcome: pending.
+
+## D-048 · 2026-10-02 · Chart.js bundled for artifacts — proposed
+Chart.js 4.5.1 (MIT, chart.umd.min.js, 208 KB, about 71 KB compressed in
+the APK) ships in feature/artifact's assets; the file matches the npm
+package (sha512 integrity checked 2026-10-02). Pages load it as
+lib/chart.js. Why: plan M6 step 4; the user chose Chart.js over uPlot and
+over inline SVG only (2026-10-02), because models write working Chart.js
+code more often. Outcome: pending.

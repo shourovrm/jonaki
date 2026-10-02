@@ -171,4 +171,29 @@ class ChatItemsTest {
 
         assertEquals(ChatItem.Note("note-a1", "used cheapest"), items.last())
     }
+
+    @Test
+    fun aShownArtifactGetsOneCardAfterItsRun() {
+        val calls = listOf(
+            ToolCall("c1", "artifact", """{"path":"artifacts/report.html"}"""),
+            ToolCall("c2", "artifact", """{"path":"artifacts/report.html"}"""),
+            ToolCall("c3", "artifact", """{"path":"artifacts/missing.html"}"""),
+        )
+        val rows = listOf(
+            row("u", "USER", "make a report"),
+            row("a1", "ASSISTANT", "", calls = calls),
+            row("a2", "ASSISTANT", "Done."),
+        )
+        val steps = listOf(
+            step("c1", "artifact", "DONE", """{"path":"artifacts/report.html"}"""),
+            step("c2", "artifact", "DONE", """{"path":"artifacts/report.html"}""", started = 1),
+            step("c3", "artifact", "FAILED", """{"path":"artifacts/missing.html"}""", started = 2),
+        )
+
+        val items = ChatItems.build(rows, steps, isRunning = false, pendingApproval = null)
+
+        val cards = items.filterIsInstance<ChatItem.Artifact>()
+        assertEquals(listOf("artifacts/report.html"), cards.map { card -> card.path })
+        assertTrue(items.indexOf(cards.single()) > items.indexOfFirst { item -> item is ChatItem.Run })
+    }
 }

@@ -76,6 +76,9 @@ private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
 private const val ROUTE_SKILLS = "skills"
 private const val ROUTE_SKILLS_THREAD_PREFIX = "skills:"
 
+/** "artifact:<thread id>@<path relative to the thread folder>" (D-047). */
+private const val ROUTE_ARTIFACT_PREFIX = "artifact:"
+
 /** "skill:<name>@<thread id>", the thread id empty when the list was opened from Settings. */
 private const val ROUTE_SKILL_EDIT_PREFIX = "skill:"
 
@@ -135,6 +138,18 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenMessage = { threadId, messageId -> route = ROUTE_CHAT_PREFIX + threadId + FOCUS_SEPARATOR + messageId },
                 )
             }
+            route.startsWith(ROUTE_ARTIFACT_PREFIX) -> {
+                val target = route.removePrefix(ROUTE_ARTIFACT_PREFIX)
+                val artifactThreadId = target.substringBefore(FOCUS_SEPARATOR)
+                val backRoute = ROUTE_CHAT_PREFIX + artifactThreadId
+                BackHandler { route = backRoute }
+                ArtifactRoute(
+                    application = application,
+                    threadId = artifactThreadId,
+                    path = target.substringAfter(FOCUS_SEPARATOR),
+                    onBack = { route = backRoute },
+                )
+            }
             route == ROUTE_STATUS_ICONS -> {
                 BackHandler { route = ROUTE_SETTINGS }
                 StatusIconsScreen(
@@ -164,6 +179,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onEditModels = { route = ROUTE_SETTINGS },
                     onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
                     onOpenSkills = { route = ROUTE_SKILLS_THREAD_PREFIX + chatThreadId },
+                    onOpenArtifact = { path -> route = ROUTE_ARTIFACT_PREFIX + chatThreadId + FOCUS_SEPARATOR + path },
                 )
             }
             else -> ThreadsRoute(
@@ -257,6 +273,7 @@ private fun ChatRoute(
     onEditModels: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenArtifact: (path: String) -> Unit,
 ) {
     val database = application.database
     val runner = application.runner
@@ -370,6 +387,7 @@ private fun ChatRoute(
         onRename = { renaming = true },
         onOpenMemory = onOpenMemory,
         onOpenSkills = onOpenSkills,
+        onOpenArtifact = onOpenArtifact,
         focusMessageId = focusMessageId,
     )
     val currentThread = thread

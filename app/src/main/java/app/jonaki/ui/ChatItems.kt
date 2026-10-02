@@ -8,6 +8,10 @@ import app.jonaki.core.storage.StepEntity
 import app.jonaki.feature.chat.ChatItem
 import app.jonaki.feature.chat.StepUi
 import app.jonaki.feature.chat.StepUiStatus
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * Builds the chat list from saved rows. One user turn shows the user's
@@ -88,6 +92,7 @@ object ChatItems {
             val turnCost = if (isActiveTurn) null else costOf(turn)
             items += ChatItem.Run("run-$turnId", turnSteps.map(::stepUi), isActive = isActiveTurn, costUsd = turnCost)
         }
+        items += artifactsShown(turnSteps, turnId)
         for (row in turn) {
             when (row.role) {
                 Role.ASSISTANT.name -> if (row.text.isNotBlank()) {
@@ -101,6 +106,22 @@ object ChatItems {
         }
         return items
     }
+
+    /** One card per file the artifact tool showed in this turn, in the order first shown (D-047). */
+    private fun artifactsShown(turnSteps: List<StepEntity>, turnId: String): List<ChatItem> {
+        val paths = turnSteps
+            .filter { step -> step.toolName == ARTIFACT_TOOL && step.status == "DONE" }
+            .mapNotNull { step -> artifactPathOf(step.argumentsJson) }
+            .distinct()
+        return paths.map { path -> ChatItem.Artifact("artifact-$turnId-$path", path) }
+    }
+
+    private fun artifactPathOf(argumentsJson: String): String? {
+        val arguments = runCatching { Json.parseToJsonElement(argumentsJson) as? JsonObject }.getOrNull() ?: return null
+        return (arguments["path"] as? JsonPrimitive)?.contentOrNull?.trim()?.removePrefix("./")
+    }
+
+    private const val ARTIFACT_TOOL = "artifact"
 
     private fun costOf(turn: List<MessageEntity>): Double? {
         val costs = turn.mapNotNull { row -> row.costUsd }

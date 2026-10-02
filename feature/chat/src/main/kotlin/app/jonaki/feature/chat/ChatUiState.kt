@@ -92,6 +92,9 @@ sealed interface ChatItem {
 
     /** A quiet one-line remark about a turn, for example that routing fell back (D-030). */
     data class Note(override val id: String, val text: String) : ChatItem
+
+    /** An HTML file the model showed with the artifact tool; tapping it opens the viewer (D-047). */
+    data class Artifact(override val id: String, val path: String) : ChatItem
 }
 
 @Immutable

@@ -101,6 +101,24 @@ object JonakiIcons {
         )
     }
 
+    /** Material "print": print or save an artifact as PDF. */
+    val Print: ImageVector by lazy {
+        icon(
+            "Print",
+            "M19,8H5c-1.66,0 -3,1.34 -3,3v6h4v4h12v-4h4v-6c0,-1.66 -1.34,-3 -3,-3zM16,19H8v-5h8v5z" +
+                "M19,12c-0.55,0 -1,-0.45 -1,-1s0.45,-1 1,-1 1,0.45 1,1 -0.45,1 -1,1zM18,3H6v4h12V3z",
+        )
+    }
+
+    /** Material "description": an artifact file in the chat. */
+    val Document: ImageVector by lazy {
+        icon(
+            "Document",
+            "M14,2H6c-1.1,0 -1.99,0.9 -1.99,2L4,20c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6z" +
+                "M16,18H8v-2h8v2zM16,14H8v-2h8v2zM13,9V3.5L18.5,9H13z",
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
             .addPath(pathData = addPathNodes(pathData), fill = SolidColor(Color.Black))

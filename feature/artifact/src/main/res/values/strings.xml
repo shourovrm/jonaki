@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="artifact_back">Back</string>
+    <string name="artifact_print">Print or save as PDF</string>
+    <string name="artifact_current">Current</string>
+    <string name="artifact_version">Version %1$d</string>
+    <string name="artifact_versions">Versions</string>
+    <string name="artifact_missing">This file no longer exists.</string>
+</resources>

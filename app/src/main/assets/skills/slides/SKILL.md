@@ -11,14 +11,14 @@ A deck is one HTML file in `artifacts/`, for example `artifacts/solar-energy-sli
 
 1. Ask for, or assume and state, the audience, the length (default 8 to 12 slides) and the language.
 2. Gather content as for a report: `web_search`, `web_fetch`, files in `inbox/`. Draft the outline in `work/<topic>-outline.md` first when the deck has more than 8 slides, and show the outline to the user before writing the HTML if they asked to review it.
-3. Write the deck with `write_file` and tell the user its path and the slide count.
+3. Write the deck with `write_file`, call `artifact` with its path so the user can open it, and tell the user the slide count.
 
 ## Content rules
 
 - Slide 1: title, subtitle, presenter or date. Last slide: the key message or next steps, not "Thank you" alone.
 - One idea per slide. A headline that states the point ("Rooftop solar pays back in 6 years"), not a topic label ("Costs").
 - At most 5 bullets of at most 12 words each. Put detail in speaker notes, not on the slide.
-- Numbers as large type or a simple inline SVG chart; one chart per slide.
+- Numbers as large type or one chart per slide, drawn with the bundled Chart.js 4 (`<script src="lib/chart.js"></script>`, a `<canvas>` in a fixed-height box).
 - Sources on the last slide or in small type at the foot of the slide that uses them.
 
 ## Writing
@@ -39,5 +39,5 @@ A deck is one HTML file in `artifacts/`, for example `artifacts/solar-energy-sli
 ## Checks before you finish
 
 - Every slide fits its box at 360 px width without scrolling.
-- The script runs with no network and no external file.
+- The script runs with no network and no external file other than lib/chart.js.
 - Headlines read as a story when listed alone.

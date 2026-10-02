@@ -48,7 +48,7 @@ class ToolRegistryTest {
         assertEquals(
             setOf(
                 "read_file", "write_file", "edit_file", "find_files", "search_files",
-                "web_search", "web_fetch", "youtube_summarize", "memory",
+                "web_search", "web_fetch", "youtube_summarize", "memory", "artifact",
             ),
             namesFor(everything).toSet(),
         )
