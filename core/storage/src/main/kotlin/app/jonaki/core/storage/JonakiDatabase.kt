@@ -5,16 +5,29 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.AutoMigrationSpec
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.Dispatchers
 
 @Database(
-    entities = [ThreadEntity::class, MessageEntity::class, StepEntity::class],
-    version = 2,
+    entities = [
+        ThreadEntity::class,
+        MessageEntity::class,
+        StepEntity::class,
+        MemoryEntity::class,
+        CompactionEntity::class,
+    ],
+    version = 3,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    // Version 3 adds the memories and compactions tables and one nullable
+    // thread column; the memory search index is added by the spec (M4).
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3, spec = JonakiDatabase.AddMemorySearchIndex::class),
+    ],
 )
 abstract class JonakiDatabase : RoomDatabase() {
     abstract fun threadDao(): ThreadDao
@@ -22,6 +35,24 @@ abstract class JonakiDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
 
     abstract fun stepDao(): StepDao
+
+    abstract fun memoryDao(): MemoryDao
+
+    abstract fun compactionDao(): CompactionDao
+
+    /** Room cannot describe an FTS5 table, so the 2 to 3 migration creates it after Room's own steps. */
+    class AddMemorySearchIndex : AutoMigrationSpec {
+        override fun onPostMigrate(connection: SQLiteConnection) {
+            MemorySearchIndex.create(connection)
+        }
+    }
+
+    /** A fresh install gets the same FTS5 table that the migration adds to an upgraded one. */
+    private class CreateMemorySearchIndex : Callback() {
+        override fun onCreate(connection: SQLiteConnection) {
+            MemorySearchIndex.create(connection)
+        }
+    }
 
     companion object {
         /**
@@ -32,6 +63,7 @@ abstract class JonakiDatabase : RoomDatabase() {
             Room.databaseBuilder<JonakiDatabase>(context.applicationContext, "jonaki.db")
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
+                .addCallback(CreateMemorySearchIndex())
                 .build()
     }
 }

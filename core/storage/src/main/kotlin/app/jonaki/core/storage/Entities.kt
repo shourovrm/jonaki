@@ -17,6 +17,8 @@ data class ThreadEntity(
     val toolsAllowedForThread: String = "",
     /** The thread's model as "service:modelId" (D-027); null in threads made before version 2. */
     val modelKey: String? = null,
+    /** Highest message position that background memory extraction has read; null before the first run. */
+    val memoryExtractedUpToPosition: Long? = null,
 )
 
 /**
@@ -96,3 +98,85 @@ enum class StepStatus {
     DENIED,
     STOPPED,
 }
+
+/**
+ * One remembered fact (D-009). A global fact has no thread; a thread fact
+ * belongs to one thread and goes with it. The full-text index over [text]
+ * lives in a separate FTS5 table that triggers keep in step ([MemorySearchIndex]).
+ * The id is a small number so that the model can name a fact cheaply ("forget 12").
+ */
+@Entity(
+    tableName = "memories",
+    foreignKeys = [
+        ForeignKey(
+            entity = ThreadEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["threadId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("threadId")],
+)
+data class MemoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** [MemoryScope] name: "global" or "thread". */
+    val scope: String,
+    /** Null for a global fact. */
+    val threadId: String?,
+    val text: String,
+    /** Pinned facts go into the prompt first and background extraction leaves them alone. */
+    val pinned: Boolean = false,
+    /** The message the fact came from; null when the user typed it in the memory screen. */
+    val sourceMessageId: String? = null,
+    /** [MemoryOrigin] name: "tool", "extracted" or "user". */
+    val origin: String,
+    /** True for an extracted fact that waits for the user's approval (review mode); never sent to the model. */
+    val pendingReview: Boolean = false,
+    val createdAtMillis: Long,
+    val updatedAtMillis: Long,
+    /** When the fact last went into a prompt or a recall result; null until then. */
+    val lastUsedAtMillis: Long? = null,
+)
+
+object MemoryScope {
+    const val GLOBAL = "global"
+    const val THREAD = "thread"
+}
+
+object MemoryOrigin {
+    /** Saved by the model with the memory tool. */
+    const val TOOL = "tool"
+
+    /** Found by background extraction (D-009). */
+    const val EXTRACTED = "extracted"
+
+    /** Typed or edited by the user in the memory screen. */
+    const val USER = "user"
+}
+
+/**
+ * A summary of a thread's older messages (M4 step 6). The original messages
+ * stay in the database (D-005); the summary stands in for them in requests.
+ */
+@Entity(
+    tableName = "compactions",
+    foreignKeys = [
+        ForeignKey(
+            entity = ThreadEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["threadId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("threadId")],
+)
+data class CompactionEntity(
+    @PrimaryKey val id: String,
+    val threadId: String,
+    /** Messages with position <= this are covered by the summary. */
+    val upToPosition: Long,
+    val summaryText: String,
+    val createdAtMillis: Long,
+    val model: String?,
+    val costUsd: Double?,
+)

@@ -5,6 +5,8 @@ import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.SkipQueryVerification
+import androidx.room.Update
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -44,6 +46,9 @@ interface ThreadDao {
 
     @Query("UPDATE threads SET webSearchEnabled = :enabled WHERE id = :threadId")
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean)
+
+    @Query("UPDATE threads SET memoryExtractedUpToPosition = :position WHERE id = :threadId")
+    suspend fun setMemoryExtractedUpTo(threadId: String, position: Long)
 
     @Query("UPDATE threads SET toolsAllowedForThread = :toolNames WHERE id = :threadId")
     suspend fun setToolsAllowedForThread(threadId: String, toolNames: String)
@@ -124,6 +129,73 @@ interface StepDao {
     /** Steps left running when Android stopped the app. */
     @Query("UPDATE steps SET status = 'STOPPED' WHERE status IN ('RUNNING', 'WAITING_FOR_APPROVAL')")
     suspend fun stopInterrupted()
+}
+
+@Dao
+interface MemoryDao {
+    /** Global facts, pinned first, then newest; facts waiting for review included (the screen marks them). */
+    @Query("SELECT * FROM memories WHERE threadId IS NULL ORDER BY pinned DESC, updatedAtMillis DESC")
+    fun observeGlobal(): Flow<List<MemoryEntity>>
+
+    @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY pinned DESC, updatedAtMillis DESC")
+    fun observeThread(threadId: String): Flow<List<MemoryEntity>>
+
+    /** Extracted facts of every thread that wait for the user's approval (review mode). */
+    @Query("SELECT * FROM memories WHERE pendingReview = 1 ORDER BY createdAtMillis DESC")
+    fun observePendingReview(): Flow<List<MemoryEntity>>
+
+    /**
+     * Facts the model may see in one thread: global and the thread's own,
+     * without those waiting for review, in the order injection picks them.
+     */
+    @Query(
+        "SELECT * FROM memories WHERE pendingReview = 0 AND (threadId IS NULL OR threadId = :threadId) " +
+            "ORDER BY pinned DESC, lastUsedAtMillis DESC, id DESC",
+    )
+    suspend fun listVisibleFrom(threadId: String): List<MemoryEntity>
+
+    /** A thread's facts, including those waiting for review, for background extraction. */
+    @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY id")
+    suspend fun listThread(threadId: String): List<MemoryEntity>
+
+    @Query("SELECT * FROM memories WHERE threadId IS NULL ORDER BY id")
+    suspend fun listGlobal(): List<MemoryEntity>
+
+    @Query("SELECT * FROM memories WHERE id = :memoryId")
+    suspend fun find(memoryId: Long): MemoryEntity?
+
+    @Insert
+    suspend fun insert(memory: MemoryEntity): Long
+
+    @Update
+    suspend fun update(memory: MemoryEntity)
+
+    @Query("DELETE FROM memories WHERE id = :memoryId")
+    suspend fun delete(memoryId: Long)
+
+    @Query("UPDATE memories SET lastUsedAtMillis = :usedAtMillis WHERE id IN (:memoryIds)")
+    suspend fun markUsed(memoryIds: List<Long>, usedAtMillis: Long)
+
+    /** Full-text search with the FTS5 trigram index; [phrase] comes from [MemorySearchIndex.matchPhrase]. */
+    // Room checks queries against its own tables at build time and cannot see the FTS5 table.
+    @SkipQueryVerification
+    @Query(MemorySearchIndex.MATCH_SEARCH)
+    suspend fun searchByMatch(phrase: String, threadId: String, limit: Int): List<MemoryEntity>
+
+    /** For queries under three characters; [pattern] comes from [MemorySearchIndex.likePattern]. */
+    @Query(MemorySearchIndex.LIKE_SEARCH)
+    suspend fun searchByLike(pattern: String, threadId: String, limit: Int): List<MemoryEntity>
+}
+
+/** Summaries of older messages, written by compaction (M4 step 6). */
+@Dao
+interface CompactionDao {
+    @Insert
+    suspend fun insert(compaction: CompactionEntity)
+
+    /** The summary that covers the most messages of the thread; null before the first compaction. */
+    @Query("SELECT * FROM compactions WHERE threadId = :threadId ORDER BY upToPosition DESC LIMIT 1")
+    suspend fun latestForThread(threadId: String): CompactionEntity?
 }
 
 data class ThreadSummary(
