@@ -182,6 +182,7 @@ any failure, not only quota errors (Tavily 429/432/433, Ollama and Exa
 web_fetch. Why: found while building M2 and M3 (workers A and B).
 Outcome (device test, 2026-10-02): search, fetch, approval, Stop, killed app
 and YouTube (Gemini 503 then retry) all behaved as described.
+Amended by D-080: read-only calls of one turn now run side by side.
 
 ## D-027 · 2026-10-02 · Cost display and scoped models — accepted
 A status strip above the message field: model (tap to switch among scoped
@@ -675,7 +676,7 @@ for a stated reason. A card unanswered for 3 minutes is withdrawn and
 counts as skipped; an answer that lands as the time runs out still counts: the
 model is told to go on with the other parts or stop, and the result lists
 every skipped part. The thread's own agent waits without limit. Tested
-with a hand-made virtual clock (`ApprovalTimer`), because
+with a hand-made virtual clock (`WaitTimer`, first named `ApprovalTimer`), because
 kotlinx-coroutines-test would be a new dependency. Outcome: pending.
 
 ## D-063 · 2026-10-03 · ask_parent — proposed
@@ -721,6 +722,49 @@ whole task, its steps as a track and its answer. Its approval cards read
 for task, Deny. Several cards can wait at once. Strings reviewed by an
 Opus subagent (6 of 36 changed). Artifacts a subagent
 shows get "Open" cards like the thread agent's. Outcome: pending.
+
+## D-080 · 2026-10-03 · Parallel read-only tool calls — proposed
+Amends D-026 (user approved 2026-10-03): of the tool calls in one model
+turn, consecutive READ_ONLY calls run side by side, at most 4 at once. Any
+other call (CHANGES, CHANGES_THREAD_FOLDER, CHANGES_APP_DATA, an unknown
+tool, arguments that are not a JSON object, and delegate and request_tool,
+which are declared read-only but can show cards) runs alone in its place:
+earlier calls finish first, later ones wait, so approval cards still come
+one at a time. Example: read, read, write, read, read runs as two reads
+together, the write, then two reads together. web_search calls of one
+group start 0.5 s apart (user's request, for rate limits), so three start
+at 0, 0.5 and 1.0 s and overlap. Results go to the model, and their TOOL
+rows get positions, in call order; a finished call's result is saved once
+every earlier call has finished, so its step card can show Running a
+little longer. The step budget still counts model turns. Stop cancels
+every running call; started ones show Stopped. Subagents follow the same
+rule with their per-call step count, fixed before the calls start (this
+changes D-060's "each subagent's calls run one after another"). The run's
+folded line counts overlapping steps' time once. Code:
+`ToolCallScheduler` in core/agent; tests in `ParallelToolCallsTest`.
+Outcome: pending (not checked on a device).
+
+## D-081 · 2026-10-03 · Context sheet on the ring pill — proposed
+Tapping the context ring in the status strip opens a sheet like Claude
+Code's /context (user request, 2026-10-03): percent used, "N of M tokens",
+a bar, then one row per part with tokens and percent of the window: System
+prompt, Tool definitions (prompt lines, guidelines and schemas, with the
+tool count), Skills (count), Memory (fact count), Summary of older
+messages (with the messages it covers), Messages, Tool results, Images,
+Free; then "Older messages are summarised at 70 % (N tokens)", from
+`CompactionPlan.thresholdTokens`, the compactor's own check. The total is
+the input count the service reported for the latest request, which the
+ring already shows; the split is an estimate: each part is measured in
+characters (4 per token; 1,500 tokens per image, as images are shrunk to
+1,568 pixels) from the pieces the next request would send (the runner's
+tools, sections and history after compaction, without marking memory as
+used), then scaled to that total. Before the first request everything is
+estimated and the sheet says so. No token counter exists in the
+repository, so none was reused. Code: `ContextBreakdown` (core/agent, JVM
+tests), `AgentRunner.contextBreakdown`, `ContextSheet`. Limit: the parts
+describe the next request, the total the last one, so they differ by the
+last answer and any compaction since. Outcome: pending (not checked on a
+device).
 
 ## D-085 · 2026-10-03 · One + button and an in-app photo gallery — proposed
 The composer's paper clip and camera button (D-042, D-053) become one "+"

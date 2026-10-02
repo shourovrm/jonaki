@@ -31,6 +31,8 @@ data class ChatUiState(
     /** This thread's own approval mode; null follows [defaultApprovalMode] from Settings (D-058). */
     val threadApprovalMode: ApprovalModeChoice? = null,
     val defaultApprovalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
+    /** What the context sheet shows; null while it is being worked out (D-081). */
+    val context: ContextUi? = null,
 )
 
 /** A file waiting to go into the thread's inbox/ with the next message. */
@@ -52,6 +54,36 @@ data class ChatStatusUi(
     /** The thread runs in Bypass mode: no tool asks first, so the strip shows a marker (D-058). */
     val bypassApprovals: Boolean = false,
 )
+
+/** How the context window is used, like Claude Code's /context (D-081). */
+@Immutable
+data class ContextUi(
+    val windowTokens: Int,
+    /** The service's count for the latest request, or an estimate before the first one. */
+    val usedTokens: Int,
+    /** False before the first request: the total is then estimated too. */
+    val totalIsReported: Boolean,
+    /** Estimated parts that add up to [usedTokens]. */
+    val parts: List<ContextPartUi>,
+    val freeTokens: Int,
+    /** Older messages are summarised after a run whose last request reached this many tokens (D-033). */
+    val compactAtTokens: Int,
+)
+
+/** [count] is shown beside the label: tools, skills, facts, images, or messages a summary covers. */
+@Immutable
+data class ContextPartUi(val kind: ContextPartUiKind, val tokens: Int, val count: Int? = null)
+
+enum class ContextPartUiKind {
+    SYSTEM_PROMPT,
+    TOOLS,
+    SKILLS,
+    MEMORY,
+    SUMMARY,
+    MESSAGES,
+    TOOL_RESULTS,
+    IMAGES,
+}
 
 /** One scoped model in the model sheet. Prices are US dollars per million tokens, when known. */
 @Immutable
@@ -162,6 +194,8 @@ data class StepUi(
     /** The exact text a web_search step sent to the search service (D-011 amendment). */
     val query: String? = null,
     val durationMillis: Long? = null,
+    /** When the step started; steps that ran side by side overlap (D-080). */
+    val startedAtMillis: Long? = null,
 )
 
 enum class StepUiStatus {
@@ -206,4 +240,34 @@ fun formatStepDuration(durationMillis: Long): String {
     return String.format(Locale.ENGLISH, "%d:%02d", totalSeconds / 60, totalSeconds % 60)
 }
 
-fun totalDurationMillis(steps: List<StepUi>): Long = steps.sumOf { step -> step.durationMillis ?: 0L }
+/** Time the steps took together: steps that ran side by side count once (D-080). */
+fun totalDurationMillis(steps: List<StepUi>): Long {
+    val withoutStart = steps.filter { step -> step.startedAtMillis == null }.sumOf { step -> step.durationMillis ?: 0L }
+    val intervals = steps.mapNotNull { step ->
+        val start = step.startedAtMillis
+        val duration = step.durationMillis
+        if (start == null || duration == null) null else start to start + duration
+    }
+    return withoutStart + coveredMillis(intervals)
+}
+
+/** Length of the union of (start, end) intervals: the usual sort-and-merge. */
+private fun coveredMillis(intervals: List<Pair<Long, Long>>): Long {
+    var covered = 0L
+    var mergedStart = 0L
+    var mergedEnd: Long? = null
+    for ((start, end) in intervals.sortedBy { (start, _) -> start }) {
+        val currentEnd = mergedEnd
+        if (currentEnd == null || start > currentEnd) {
+            if (currentEnd != null) {
+                covered += currentEnd - mergedStart
+            }
+            mergedStart = start
+            mergedEnd = end
+        } else {
+            mergedEnd = maxOf(currentEnd, end)
+        }
+    }
+    val lastEnd = mergedEnd ?: return covered
+    return covered + lastEnd - mergedStart
+}

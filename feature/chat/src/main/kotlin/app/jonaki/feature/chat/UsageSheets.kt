@@ -210,7 +210,7 @@ private fun ModelUsageRow(model: ModelUsageUi) {
 }
 
 @Composable
-private fun SheetTitle(text: String) {
+internal fun SheetTitle(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.titleLarge,

@@ -189,16 +189,16 @@ class SubagentRunnerTest {
     fun theStepLimitStopsToolsAndAsksForAnAnswer() = runBlocking {
         val provider = ScriptedProvider(
             usageTurn(
-                call("c1", "web_search", "query" to "a"),
-                call("c2", "web_search", "query" to "b"),
-                call("c3", "web_search", "query" to "c"),
+                call("c1", "read_file", "path" to "a"),
+                call("c2", "read_file", "path" to "b"),
+                call("c3", "read_file", "path" to "c"),
             ),
             textTurn("Partial answer."),
         )
         val text = runner(mapOf("researcher" to provider), limits = SubagentLimits(maxToolSteps = 2))
             .launch(listOf(SubagentTask("researcher", "Search")), context).single().text
 
-        assertEquals(2, webSearch.receivedArguments.size)
+        assertEquals(2, readFile.receivedArguments.size)
         val secondRequest = provider.requests[1]
         assertTrue(secondRequest.tools.isEmpty())
         // The third call still gets a result, as every provider requires.

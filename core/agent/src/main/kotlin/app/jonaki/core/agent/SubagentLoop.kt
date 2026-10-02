@@ -42,9 +42,10 @@ internal class SubagentToolbox(startTools: List<Tool>, requestableTools: List<To
 /**
  * Runs one subagent's task to its answer (M7): like the thread's agent loop,
  * but within its step and cost budget, with the 3-minute approval rule
- * through its [SubagentGate], and with request_tool answered here. Tool
- * calls run one after another. Everything it does goes into [progress] as
- * it happens, so a subagent stopped from outside still has its partial work.
+ * through its [SubagentGate], and with request_tool answered here. Its
+ * read-only calls of one turn run side by side, like the thread agent's
+ * (D-080). Everything it does goes into [progress] as it happens, so a
+ * subagent stopped from outside still has its partial work.
  */
 internal class SubagentLoop(
     private val subagentId: String,
@@ -57,7 +58,10 @@ internal class SubagentLoop(
     private val recorder: SubagentRecorder,
     private val limits: SubagentLimits,
     private val progress: SubagentProgress,
+    timer: WaitTimer,
 ) {
+    private val scheduler = ToolCallScheduler(timer)
+
     suspend fun run(taskMessage: String): SubagentOutcome {
         val conversation = mutableListOf(Message(Role.USER, taskMessage))
         var stepLimitNoticeSent = false
@@ -94,9 +98,7 @@ internal class SubagentLoop(
             if (costCapReached()) {
                 return progress.stoppedEarly(SubagentStop.COST_LIMIT)
             }
-            for (toolCall in answered.message.toolCalls) {
-                conversation += runToolCall(toolCall)
-            }
+            conversation += runToolCalls(answered.message.toolCalls)
         }
     }
 
@@ -132,11 +134,23 @@ internal class SubagentLoop(
         return spent >= limits.costCapUsd - ROUNDING_TOLERANCE_USD
     }
 
-    private suspend fun runToolCall(toolCall: ToolCall): Message {
-        if (progress.toolSteps >= limits.maxToolSteps) {
-            // Calls beyond the budget in the same turn get a result, which every provider requires.
-            return Message(Role.TOOL, "Not run: the step limit of ${limits.maxToolSteps} is used up.", toolCallId = toolCall.id)
+    private suspend fun runToolCalls(toolCalls: List<ToolCall>): List<Message> {
+        // Decided before any call starts, so that calls running side by side cannot both take the last step.
+        val stepsLeft = (limits.maxToolSteps - progress.toolSteps).coerceAtLeast(0)
+        val results = scheduler.runAll(
+            toolCalls = toolCalls.take(stepsLeft),
+            runsAlongsideOthers = { toolCall -> ToolCallScheduler.readsOnly(toolbox.active(toolCall.toolName), toolCall) },
+            run = ::runToolCall,
+            inCallOrder = { _, _ -> },
+        )
+        // Calls beyond the budget in the same turn get a result, which every provider requires.
+        val notRun = toolCalls.drop(stepsLeft).map { toolCall ->
+            Message(Role.TOOL, "Not run: the step limit of ${limits.maxToolSteps} is used up.", toolCallId = toolCall.id)
         }
+        return results + notRun
+    }
+
+    private suspend fun runToolCall(toolCall: ToolCall): Message {
         // Saved under the subagent's id, because two subagents' providers may hand out the same call ids.
         val stepCall = toolCall.copy(id = "$subagentId/${toolCall.id}")
         progress.countToolStep()

@@ -9,17 +9,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.selects.select
-
-/** Waits for a time; the real one delays, tests pass a virtual clock. */
-fun interface ApprovalTimer {
-    suspend fun wait(duration: Duration)
-
-    companion object {
-        val REAL: ApprovalTimer = ApprovalTimer { duration -> delay(duration) }
-    }
-}
 
 enum class GateAnswer {
     ALLOWED,
@@ -39,7 +29,7 @@ enum class GateAnswer {
 class SubagentGate(
     private val broker: PermissionBroker,
     private val agentLabel: String,
-    private val timer: ApprovalTimer = ApprovalTimer.REAL,
+    private val timer: WaitTimer = WaitTimer.REAL,
     private val waitLimit: Duration = WAIT_LIMIT,
 ) {
     private val allowedForTask = mutableSetOf<String>()

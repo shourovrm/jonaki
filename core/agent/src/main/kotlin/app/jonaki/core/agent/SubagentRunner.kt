@@ -41,12 +41,12 @@ class SubagentRunner(
     private val skillSection: String,
     private val now: () -> ZonedDateTime,
     private val limits: SubagentLimits = SubagentLimits(),
-    private val timer: ApprovalTimer = ApprovalTimer.REAL,
+    private val timer: WaitTimer = WaitTimer.REAL,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SubagentLauncher {
     private val givableTools: List<Tool> = threadTools.filter { tool -> tool.name !in AgentTypes.NEVER_GIVEN }
 
-    override val agentTypes: List<SubagentTypeInfo> = AgentTypes.ALL.map { type -> SubagentTypeInfo(type.name, type.description) }
+    override val agentTypes: List<SubagentTypeInfo> = AGENT_TYPES
 
     override val models: List<SubagentModelInfo>
         get() = subagentModels.scoped
@@ -169,6 +169,7 @@ class SubagentRunner(
             recorder = recorder,
             limits = limits,
             progress = progress,
+            timer = timer,
         )
     }
 
@@ -183,6 +184,9 @@ class SubagentRunner(
     }
 
     companion object {
+        /** The built-in types as the delegate tool lists them. */
+        val AGENT_TYPES: List<SubagentTypeInfo> = AgentTypes.ALL.map { type -> SubagentTypeInfo(type.name, type.description) }
+
         /** Relative to the thread folder. */
         const val DELEGATIONS_FOLDER = "work/delegations"
 

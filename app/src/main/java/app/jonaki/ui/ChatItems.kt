@@ -205,6 +205,7 @@ object ChatItems {
             detail = detail.target.orEmpty(),
             query = detail.query,
             durationMillis = if (finished == null) null else finished - step.startedAtMillis,
+            startedAtMillis = step.startedAtMillis,
         )
     }
 

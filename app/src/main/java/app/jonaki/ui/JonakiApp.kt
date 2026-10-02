@@ -48,6 +48,7 @@ import app.jonaki.files.CameraPhotos
 import app.jonaki.files.RefusedFile
 import app.jonaki.feature.chat.ChatScreen
 import app.jonaki.feature.chat.ChatStatusUi
+import app.jonaki.feature.chat.ContextUi
 import app.jonaki.feature.chat.ChatUiState
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
@@ -410,6 +411,8 @@ private fun ChatRoute(
     // A new thread has no row to hold its thinking level until the first message creates it.
     var thinkingForNewThread by rememberSaveable(threadId) { mutableStateOf(ThinkingChoice.DEFAULT) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
+    // Worked out each time the ring pill is tapped, so the sheet matches the thread at that moment (D-081).
+    var contextUi by remember(threadId) { mutableStateOf<ContextUi?>(null) }
     val scope = rememberCoroutineScope()
 
     DisposableEffect(threadId) {
@@ -465,7 +468,9 @@ private fun ChatRoute(
         },
         threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
         defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
+        context = contextUi,
     )
+    val contextWindowTokens = modelInfo?.contextWindowTokens
     ChatScreen(
         state = state,
         onBack = onBack,
@@ -502,6 +507,17 @@ private fun ChatRoute(
             }
         },
         onStop = { runner.stop(threadId) },
+        onOpenContext = if (isNew || contextWindowTokens == null) {
+            null
+        } else {
+            {
+                contextUi = null
+                scope.launch {
+                    val breakdown = runner.contextBreakdown(threadId) ?: return@launch
+                    contextUi = ContextSheetState.of(breakdown, lastInputTokens, contextWindowTokens)
+                }
+            }
+        },
         onEditMessage = { messageId, text ->
             editingMessageId = messageId
             draft = text
