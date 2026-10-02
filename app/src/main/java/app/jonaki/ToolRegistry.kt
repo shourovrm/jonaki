@@ -4,6 +4,8 @@ import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.findfiles.FindFilesTool
+import app.jonaki.tools.memory.MemoryStore
+import app.jonaki.tools.memory.MemoryTool
 import app.jonaki.tools.readfile.ReadFileTool
 import app.jonaki.tools.searchfiles.SearchFilesTool
 import app.jonaki.tools.webfetch.WebFetchTool
@@ -20,6 +22,8 @@ data class ToolServices(
     val videoSummarizer: VideoSummarizer?,
     /** The per-thread switch from the D-011 amendment; off removes web_search and web_fetch. */
     val webAccessEnabled: Boolean,
+    /** The thread's view of the fact store (D-009); null leaves the memory tool out. */
+    val memoryStore: MemoryStore?,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -40,6 +44,9 @@ object ToolRegistry {
         }
         if (services.videoSummarizer != null) {
             tools += YouTubeSummarizeTool(services.videoSummarizer)
+        }
+        if (services.memoryStore != null) {
+            tools += MemoryTool(services.memoryStore)
         }
         return tools
     }

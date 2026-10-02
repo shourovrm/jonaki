@@ -241,3 +241,16 @@ applied to the next turn (usage sheet: 5 turns GLM, 1 turn DeepSeek);
 OpenRouter balance "$12.87 left" and Tavily "3 / 1,000 credits"; model
 search listed 464 OpenRouter models. Routing fallback is covered by JVM
 tests with a recorded 404, not yet seen on the phone.
+
+## D-034 · 2026-10-02 · Memory tool runs without approval — proposed
+The memory tool (remember, forget, recall) declares a new cost,
+`SideEffect.CHANGES_APP_DATA`: it changes only Jonaki's own records, which
+the user sees as a step and can edit or undo on the memory screen, so the
+permission broker runs it without an approval card. Guards instead of a
+card: a fact is at most 500 characters; forget refuses a pinned fact; a
+store serves one thread and cannot touch another thread's facts; the
+guideline forbids keys and passwords. Why: an approval card on every
+"remember" would interrupt most answers for facts the user just stated.
+Rejected: `CHANGES` with approval (nags), `READ_ONLY` (false declaration),
+approval only for forget (one tool has one cost; a forgotten fact shows its
+text in the step, so it can be added back). Outcome: pending.

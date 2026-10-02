@@ -104,6 +104,10 @@ interface MessageDao {
             "ORDER BY position DESC LIMIT 1",
     )
     fun observeLastInputTokens(threadId: String): Flow<Int?>
+
+    /** The thread's latest user message: the source of a fact the model remembers during a run. */
+    @Query("SELECT id FROM messages WHERE threadId = :threadId AND role = 'USER' ORDER BY position DESC LIMIT 1")
+    suspend fun latestUserMessageId(threadId: String): String?
 }
 
 data class ModelUsageRow(

@@ -12,6 +12,7 @@ import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.model.Role
+import app.jonaki.memory.RoomMemoryStore
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
@@ -227,6 +228,7 @@ class AgentRunner(
                 searchBackends = searchBackends(snapshot.searchOrder),
                 videoSummarizer = videoSummarizer(),
                 webAccessEnabled = thread.webSearchEnabled,
+                memoryStore = RoomMemoryStore(database, threadId, System::currentTimeMillis),
             ),
         )
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()

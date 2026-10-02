@@ -36,6 +36,14 @@ interface Tool {
 enum class SideEffect {
     READ_ONLY,
     CHANGES,
+
+    /**
+     * Changes only Jonaki's own records, which the user sees in the step
+     * track and can edit or undo in the app (memory facts). Runs without an
+     * approval card, so that remembering the user's facts does not interrupt
+     * every answer (D-034, proposed).
+     */
+    CHANGES_APP_DATA,
 }
 
 /** Optional parts of the app a tool needs before it can run. */
