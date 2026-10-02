@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki revamp: three directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  /* Page chrome around the phones: neutral so the three directions are judged on their own. */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0b0c0b;
+    color: #d9dcd5;
+    font-family: "Geist", "Noto Sans Bengali", system-ui, sans-serif;
+    padding: 40px 32px 80px;
+  }
+  .page-head { max-width: 1240px; margin: 0 auto 36px; }
+  .page-head h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-head p { margin-top: 8px; max-width: 70ch; color: #9aa094; line-height: 1.55; font-size: 14px; }
+  .direction { max-width: 1240px; margin: 0 auto 64px; }
+  .direction-head { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 20px; }
+  .direction-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .direction-head p { color: #9aa094; font-size: 14px; line-height: 1.55; max-width: 80ch; }
+  .phones { display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start; }
+  .notes { flex: 1 1 260px; max-width: 340px; font-size: 13.5px; line-height: 1.6; color: #b4b9ad; }
+  .notes h3 { font-size: 13px; font-weight: 600; color: #e4e7df; margin: 14px 0 6px; }
+  .notes h3:first-child { margin-top: 0; }
+  .notes ul { padding-left: 18px; }
+  .notes li { margin-bottom: 4px; }
+  .swatches { display: flex; gap: 6px; margin-top: 8px; }
+  .swatches span { width: 28px; height: 28px; border-radius: 8px; border: 1px solid #ffffff1a; }
+
+  /* ---------- Phone frame (shared) ---------- */
+  .phone {
+    width: 360px; height: 760px; border-radius: 34px; overflow: hidden;
+    position: relative; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font), "Noto Sans Bengali", system-ui, sans-serif;
+    box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080;
+  }
+  .statusbar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; color: var(--ink); }
+  .statusbar i { font-size: 13px; margin-left: 4px; }
+  .mono { font-family: var(--mono), monospace; font-feature-settings: "tnum"; }
+  .muted { color: var(--muted); }
+  .bn { font-family: "Noto Sans Bengali", var(--font), sans-serif; }
+
+  /* ---------- Thread list ---------- */
+  .list-top { padding: 14px 20px 6px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: baseline; gap: 2px; font-size: 24px; font-weight: 600; letter-spacing: -0.03em; }
+  .brand .j { position: relative; }
+  .brand .j::before {
+    /* The lit j: the firefly replaces the dot of the j (D-025). */
+    content: ""; position: absolute; right: 0px; top: 0px; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--glow); box-shadow: 0 0 10px 3px var(--glow-halo);
+  }
+  .brand .dotless { font-family: var(--font); }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; color: var(--ink); font-size: 21px; }
+  .search { margin: 8px 20px 4px; height: 44px; border-radius: var(--r-field); background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--muted); font-size: 14.5px; }
+  .chips { display: flex; gap: 8px; padding: 10px 20px 6px; overflow: hidden; }
+  .chip { height: 32px; padding: 0 13px; border-radius: 16px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line); color: var(--ink-2); }
+  .chip.on { background: var(--chip-on); color: var(--chip-on-ink); border-color: transparent; }
+  .group-label { padding: 16px 20px 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .thread { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 20px; align-items: baseline; }
+  .thread .name { font-size: 15.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
+  .thread .when { font-size: 12px; color: var(--muted); }
+  .thread .snippet { grid-column: 1 / -1; font-size: 13.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px 2px var(--glow-halo); flex: none; animation: breathe 2.4s ease-in-out infinite; }
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--tag); color: var(--ink-2); flex: none; }
+  .fab { position: absolute; right: 20px; bottom: 24px; height: 52px; padding: 0 20px 0 16px; border-radius: var(--r-fab); background: var(--accent); color: var(--on-accent); display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 10px 24px var(--shadow); }
+  .fab i { font-size: 20px; }
+
+  /* ---------- Chat ---------- */
+  .chat-top { height: 56px; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-bottom: 1px solid var(--line); }
+  .chat-top .title { flex: 1; font-size: 16.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 4px; }
+  .transcript { flex: 1; overflow: hidden; padding: 16px 18px 8px; display: flex; flex-direction: column; gap: 16px; }
+  .msg-user { align-self: flex-end; max-width: 86%; background: var(--user-bubble); color: var(--ink); padding: 11px 14px; border-radius: var(--r-bubble) var(--r-bubble) 6px var(--r-bubble); font-size: 14.5px; line-height: 1.5; }
+  .msg-agent { font-size: 14.5px; line-height: 1.6; color: var(--ink); }
+  .msg-agent b { font-weight: 600; }
+  .msg-agent ul { padding-left: 18px; margin-top: 6px; }
+
+  /* Run block: the Rail line step track (D-024), one station per tool step. */
+  .run { border-radius: var(--r-card); background: var(--run-bg); border: 1px solid var(--line); padding: 12px 14px 6px; }
+  .run-head { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .run-head .working { color: var(--ink-2); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .step { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; position: relative; padding-bottom: 12px; font-size: 13.5px; }
+  .step::before { content: ""; position: absolute; left: 8px; top: 16px; bottom: 0; width: 2px; background: var(--rail); }
+  .step:last-child::before { display: none; }
+  .station { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; margin-top: 1px; }
+  .station.done { background: var(--rail); color: var(--ink-2); }
+  .station.running { background: var(--glow); box-shadow: 0 0 10px 2px var(--glow-halo); color: #1d2600; }
+  .station.waiting { border: 2px solid var(--rail); }
+  .step .label { color: var(--ink); }
+  .step .detail { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+  .step .time { color: var(--muted); font-size: 12px; }
+
+  .strip { display: flex; gap: 6px; padding: 8px 14px 4px; align-items: center; }
+  .pill { height: 30px; border-radius: 15px; padding: 0 10px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; background: var(--pill); color: var(--ink-2); white-space: nowrap; }
+  .pill i { font-size: 15px; }
+  .pill.model { flex: 1; min-width: 0; }
+  .pill.model span { overflow: hidden; text-overflow: ellipsis; }
+  .pill.off { color: var(--muted); opacity: 0.75; }
+  .ring { width: 15px; height: 15px; border-radius: 50%; background: conic-gradient(var(--ink-2) 0 23%, var(--rail) 23% 100%); -webkit-mask: radial-gradient(circle, transparent 4.5px, #000 5px); mask: radial-gradient(circle, transparent 4.5px, #000 5px); }
+  .composer { display: flex; align-items: flex-end; gap: 8px; padding: 6px 12px 16px; }
+  .plus { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--line); display: grid; place-items: center; font-size: 21px; color: var(--ink-2); flex: none; }
+  .field { flex: 1; min-height: 44px; border-radius: 22px; background: var(--field); display: flex; align-items: center; padding: 0 16px; font-size: 14.5px; color: var(--muted); }
+  .send { width: 44px; height: 44px; border-radius: 22px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 19px; flex: none; }
+  .stop { background: var(--field); color: var(--ink); }
+
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+  /* ---------- Direction A: Lantern (keep the night, cut the noise) ---------- */
+  .lantern {
+    --font: "Geist"; --mono: "Geist Mono";
+    --bg: #10130e; --ink: #e6e9e0; --ink-2: #c3c9b9; --muted: #8b927f;
+    --line: #262b21; --field: #1a1e16; --pill: #1a1e16; --tag: #22281c;
+    --accent: #c9e86b; --on-accent: #1f2a00; --glow: #d4f06a; --glow-halo: #c9e86b55;
+    --chip-on: #e6e9e0; --chip-on-ink: #10130e;
+    --user-bubble: #20261a; --run-bg: transparent; --rail: #33392b; --shadow: #00000066;
+    --r-field: 22px; --r-fab: 18px; --r-bubble: 20px; --r-card: 16px;
+  }
+
+  /* ---------- Direction B: Paddy day (light first, ink on green-white) ---------- */
+  .paddy {
+    --font: "Outfit"; --mono: "JetBrains Mono";
+    --bg: #f3f6ef; --ink: #171b14; --ink-2: #3a4233; --muted: #6a7361;
+    --line: #dde3d5; --field: #e7ece1; --pill: #e7ece1; --tag: #e3ead9;
+    --accent: #3f5600; --on-accent: #f3f6ef; --glow: #a8d12e; --glow-halo: #a8d12e66;
+    --chip-on: #3f5600; --chip-on-ink: #f3f6ef;
+    --user-bubble: #e2e9d6; --run-bg: #ffffff; --rail: #d3dbc8; --shadow: #3f560033;
+    --r-field: 14px; --r-fab: 16px; --r-bubble: 18px; --r-card: 14px;
+  }
+  .paddy .phone { box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080; }
+  .paddy .station.running { color: #1d2600; }
+
+  /* ---------- Direction C: Field log (denser, numbers first) ---------- */
+  .fieldlog {
+    --font: "Geist"; --mono: "Geist Mono";
+    --bg: #0f1111; --ink: #e3e5e1; --ink-2: #bfc3bb; --muted: #858b82;
+    --line: #23272a; --field: #181b1c; --pill: #181b1c; --tag: #1f2325;
+    --accent: #c9e86b; --on-accent: #1f2a00; --glow: #d4f06a; --glow-halo: #c9e86b4d;
+    --chip-on: #c9e86b; --chip-on-ink: #1f2a00;
+    --user-bubble: #1b1f20; --run-bg: #131617; --rail: #2d3235; --shadow: #00000066;
+    --r-field: 10px; --r-fab: 12px; --r-bubble: 12px; --r-card: 10px;
+  }
+  .fieldlog .thread { padding: 9px 20px; border-bottom: 1px solid var(--line); }
+  .fieldlog .thread .meta { grid-column: 1 / -1; display: flex; gap: 12px; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .fieldlog .msg-user { border-radius: 12px; border: 1px solid var(--line); }
+  .fieldlog .step .time { font-family: var(--mono), monospace; }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Jonaki revamp: three directions</h1>
+  <p>The same two screens (thread list and a chat with a running agent) in three looks. A keeps today's night theme and removes clutter. B makes the day theme the main look. C is denser and puts numbers first. All three keep Material 3 structure, the lit j, the glow dot for live work and the step track from D-024. The planned changes are already in: title-only top bar, a globe pill for web search, and the "+" button in the composer.</p>
+</header>
+
+<!-- ======================= A ======================= -->
+<section class="direction lantern">
+  <div class="direction-head">
+    <h2>A. Lantern</h2>
+    <p>The leaf-dark night theme stays. The yellow-green appears only where something is live: the glow dot, the running station and the send button. Agent answers have no bubble, so long text reads like a page.</p>
+  </div>
+  <div class="phones">
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="list-top">
+        <div class="brand"><span class="j">ȷ</span><span>onaki</span></div>
+        <div style="display:flex"><div class="icon-btn"><i class="ph ph-sliders-horizontal"></i></div></div>
+      </div>
+      <div class="search"><i class="ph ph-magnifying-glass"></i>Search threads</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><i class="ph ph-folder-simple"></i>Home</div>
+        <div class="chip"><i class="ph ph-folder-simple"></i>Thesis</div>
+        <div class="chip"><i class="ph ph-eye-slash"></i>Incognito</div>
+      </div>
+      <div class="group-label">Today</div>
+      <div class="thread"><div class="name"><span class="live-dot"></span>Compare three e-readers</div><div class="when">working</div><div class="snippet">Searching kobo.com for Bangla font support</div></div>
+      <div class="thread"><div class="name bn">অক্টোবরের বাজেট রিপোর্ট</div><div class="when">10:12</div><div class="snippet">report.html saved, 3 charts</div></div>
+      <div class="thread"><div class="name">Lease agreement questions</div><div class="when">08:47</div><div class="snippet">Clause 14 sets a two-month notice period.</div></div>
+      <div class="group-label">Yesterday</div>
+      <div class="thread"><div class="name">Kurzgesagt on sleep, summary</div><div class="when">Fri</div><div class="snippet">Five points, with timestamps</div></div>
+      <div class="thread"><div class="name">Weekly plan for Dhaka trip</div><div class="when">Fri</div><div class="snippet">Reminder set for Sunday 07:30</div></div>
+      <div class="fab"><i class="ph ph-plus"></i>New thread</div>
+    </div>
+
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="chat-top">
+        <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+        <div class="title">Compare three e-readers</div>
+        <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+      </div>
+      <div class="transcript">
+        <div class="msg-user">Compare the Kindle Paperwhite, Kobo Clara BW and PocketBook Verse Pro for reading Bangla PDFs. Short report, please.</div>
+        <div class="run">
+          <div class="run-head"><span class="working"><span class="live-dot"></span>Working</span><span class="mono">0:41</span></div>
+          <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Web search<span class="detail">Kobo Clara BW Bangla font support</span></span><span class="time mono">1.8 s</span></div>
+          <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read page<span class="detail">help.kobo.com/hc/en-us/articles/360017</span></span><span class="time mono">2.4 s</span></div>
+          <div class="step"><span class="station running"></span><span class="label">3 researchers<span class="detail">One per reader, 2 of 3 done</span></span><span class="time mono">31 s</span></div>
+          <div class="step"><span class="station waiting"></span><span class="label">Write report.html</span><span class="time"></span></div>
+        </div>
+        <div class="msg-agent">The Kobo renders embedded Bangla fonts in PDFs correctly. The Kindle needs the PDF converted first. I'll put both results in the report.</div>
+      </div>
+      <div class="strip">
+        <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+        <div class="pill"><span class="ring"></span><span class="mono">23%</span></div>
+        <div class="pill"><span class="mono">$0.012</span></div>
+        <div class="pill"><i class="ph ph-globe-simple"></i></div>
+      </div>
+      <div class="composer">
+        <div class="plus"><i class="ph ph-plus"></i></div>
+        <div class="field">Message</div>
+        <div class="send stop"><i class="ph-fill ph-stop"></i></div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>What changes from today</h3>
+      <ul>
+        <li>The thread list has no cards, only rows with space between them. The glow dot marks the one live thread.</li>
+        <li>Project and incognito filters are chips under the search field.</li>
+        <li>Geist replaces Roboto Flex, and numbers use Geist Mono. Bundling both fonts adds about 150 KB to the APK.</li>
+        <li>The run block is a plain bordered panel. The running station is the only lit element.</li>
+        <li>While a run is going, the send button turns into Stop.</li>
+      </ul>
+      <h3>Palette</h3>
+      <div class="swatches"><span style="background:#10130e"></span><span style="background:#1a1e16"></span><span style="background:#e6e9e0"></span><span style="background:#8b927f"></span><span style="background:#c9e86b"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= B ======================= -->
+<section class="direction paddy">
+  <div class="direction-head">
+    <h2>B. Paddy day</h2>
+    <p>The day theme becomes the main look: green-white ground, ink text and one deep paddy green for actions. The firefly yellow-green appears only on live work, as in A. Run blocks sit on white panels, so a long run reads as one unit.</p>
+  </div>
+  <div class="phones">
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="list-top">
+        <div class="brand"><span class="j">ȷ</span><span>onaki</span></div>
+        <div style="display:flex"><div class="icon-btn"><i class="ph ph-gear-six"></i></div></div>
+      </div>
+      <div class="search"><i class="ph ph-magnifying-glass"></i>Search threads</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip">Home</div>
+        <div class="chip">Thesis</div>
+        <div class="chip"><i class="ph ph-eye-slash"></i>Incognito</div>
+      </div>
+      <div class="group-label">Today</div>
+      <div class="thread"><div class="name"><span class="live-dot"></span>Compare three e-readers</div><div class="when">working</div><div class="snippet">Searching kobo.com for Bangla font support</div></div>
+      <div class="thread"><div class="name bn">অক্টোবরের বাজেট রিপোর্ট</div><div class="when">10:12</div><div class="snippet">report.html saved, 3 charts</div></div>
+      <div class="thread"><div class="name">Lease agreement questions <span class="tag">Home</span></div><div class="when">08:47</div><div class="snippet">Clause 14 sets a two-month notice period.</div></div>
+      <div class="group-label">Yesterday</div>
+      <div class="thread"><div class="name">Kurzgesagt on sleep, summary</div><div class="when">Fri</div><div class="snippet">Five points, with timestamps</div></div>
+      <div class="thread"><div class="name">Weekly plan for Dhaka trip</div><div class="when">Fri</div><div class="snippet">Reminder set for Sunday 07:30</div></div>
+      <div class="fab"><i class="ph ph-plus"></i>New thread</div>
+    </div>
+
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="chat-top">
+        <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+        <div class="title">Compare three e-readers</div>
+        <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+      </div>
+      <div class="transcript">
+        <div class="msg-user">Compare the Kindle Paperwhite, Kobo Clara BW and PocketBook Verse Pro for reading Bangla PDFs. Short report, please.</div>
+        <div class="run">
+          <div class="run-head"><span class="working"><span class="live-dot"></span>Working</span><span class="mono">0:41</span></div>
+          <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Web search<span class="detail">Kobo Clara BW Bangla font support</span></span><span class="time mono">1.8 s</span></div>
+          <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read page<span class="detail">help.kobo.com/hc/en-us/articles/360017</span></span><span class="time mono">2.4 s</span></div>
+          <div class="step"><span class="station running"></span><span class="label">3 researchers<span class="detail">One per reader, 2 of 3 done</span></span><span class="time mono">31 s</span></div>
+          <div class="step"><span class="station waiting"></span><span class="label">Write report.html</span><span class="time"></span></div>
+        </div>
+        <div class="msg-agent">The Kobo renders embedded Bangla fonts in PDFs correctly. The Kindle needs the PDF converted first. I'll put both results in the report.</div>
+      </div>
+      <div class="strip">
+        <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+        <div class="pill"><span class="ring"></span><span class="mono">23%</span></div>
+        <div class="pill"><span class="mono">$0.012</span></div>
+        <div class="pill off"><i class="ph ph-globe-simple-x"></i></div>
+      </div>
+      <div class="composer">
+        <div class="plus"><i class="ph ph-plus"></i></div>
+        <div class="field">Message</div>
+        <div class="send stop"><i class="ph-fill ph-stop"></i></div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>What changes from today</h3>
+      <ul>
+        <li>Light is the default and dark stays as the toggle. This reverses D-024's priority between the two themes, not its colours.</li>
+        <li>Outfit is a rounder sans that matches the rounded Firefly shapes. Numbers use JetBrains Mono.</li>
+        <li>Project tags appear on rows only in the "All" view.</li>
+        <li>The globe pill is shown off here (crossed and dimmed) for comparison with A.</li>
+        <li>Field and card corners are tighter (14 px) than in A (22 px).</li>
+      </ul>
+      <h3>Palette</h3>
+      <div class="swatches"><span style="background:#f3f6ef"></span><span style="background:#e7ece1"></span><span style="background:#171b14"></span><span style="background:#6a7361"></span><span style="background:#3f5600"></span><span style="background:#a8d12e"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= C ======================= -->
+<section class="direction fieldlog">
+  <div class="direction-head">
+    <h2>C. Field log</h2>
+    <p>For heavy use: more threads per screen, and each row shows model, cost and step count. The ground is a cooler near-black. Corners are tighter and hairlines separate the rows. The step track shows a cost per step.</p>
+  </div>
+  <div class="phones">
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="list-top">
+        <div class="brand"><span class="j">ȷ</span><span>onaki</span></div>
+        <div style="display:flex"><div class="icon-btn"><i class="ph ph-magnifying-glass"></i></div><div class="icon-btn"><i class="ph ph-gear-six"></i></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip on">All 24</div>
+        <div class="chip">Home 6</div>
+        <div class="chip">Thesis 11</div>
+        <div class="chip"><i class="ph ph-eye-slash"></i>1</div>
+      </div>
+      <div class="thread"><div class="name"><span class="live-dot"></span>Compare three e-readers</div><div class="when mono">0:41</div><div class="meta mono"><span>DeepSeek V3.2</span><span>$0.012</span><span>3 steps</span></div></div>
+      <div class="thread"><div class="name bn">অক্টোবরের বাজেট রিপোর্ট</div><div class="when mono">10:12</div><div class="meta mono"><span>Gemini 3.8 Flash</span><span>$0.004</span><span>9 steps</span></div></div>
+      <div class="thread"><div class="name">Lease agreement questions</div><div class="when mono">08:47</div><div class="meta mono"><span>MiMo Pro</span><span>$0.021</span><span>2 steps</span></div></div>
+      <div class="thread"><div class="name">Kurzgesagt on sleep, summary</div><div class="when mono">Fri</div><div class="meta mono"><span>Gemini 3.8 Flash</span><span>$0.002</span><span>1 step</span></div></div>
+      <div class="thread"><div class="name">Weekly plan for Dhaka trip</div><div class="when mono">Fri</div><div class="meta mono"><span>GLM 4.6</span><span>$0.003</span><span>4 steps</span></div></div>
+      <div class="thread"><div class="name">Fix the Python CSV script</div><div class="when mono">Thu</div><div class="meta mono"><span>DeepSeek V3.2</span><span>$0.009</span><span>7 steps</span></div></div>
+      <div class="thread"><div class="name">Rice prices in Rajshahi</div><div class="when mono">Wed</div><div class="meta mono"><span>Qwen 3 Max</span><span>$0.006</span><span>5 steps</span></div></div>
+      <div class="fab"><i class="ph ph-plus"></i>New</div>
+    </div>
+
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="chat-top">
+        <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+        <div class="title">Compare three e-readers</div>
+        <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+      </div>
+      <div class="transcript">
+        <div class="msg-user">Compare the Kindle Paperwhite, Kobo Clara BW and PocketBook Verse Pro for reading Bangla PDFs. Short report, please.</div>
+        <div class="run">
+          <div class="run-head"><span class="working"><span class="live-dot"></span>Working</span><span class="mono">0:41 &nbsp;$0.012</span></div>
+          <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">web_search<span class="detail">Kobo Clara BW Bangla font support</span></span><span class="time">1.8 s</span></div>
+          <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">web_fetch<span class="detail">help.kobo.com/hc/en-us/articles/360017</span></span><span class="time">2.4 s</span></div>
+          <div class="step"><span class="station running"></span><span class="label">delegate × 3<span class="detail">researcher, 2 of 3 done, $0.007</span></span><span class="time">31 s</span></div>
+          <div class="step"><span class="station waiting"></span><span class="label">write_file<span class="detail">report.html</span></span><span class="time"></span></div>
+        </div>
+        <div class="msg-agent">The Kobo renders embedded Bangla fonts in PDFs correctly. The Kindle needs the PDF converted first. I'll put both results in the report.</div>
+      </div>
+      <div class="strip">
+        <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+        <div class="pill"><span class="ring"></span><span class="mono">23%</span></div>
+        <div class="pill"><i class="ph ph-globe-simple"></i></div>
+      </div>
+      <div class="composer">
+        <div class="plus"><i class="ph ph-plus"></i></div>
+        <div class="field">Message</div>
+        <div class="send stop"><i class="ph-fill ph-stop"></i></div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>What changes from today</h3>
+      <ul>
+        <li>The thread list shows about 7 threads per screen instead of 5. Each row shows the last model, the thread's cost and its step count.</li>
+        <li>Steps show tool names as they are (web_search, delegate), like a log.</li>
+        <li>The cost moves from the status strip into the run header, which leaves room for the globe pill.</li>
+        <li>Search is an icon button in the top bar, not a field.</li>
+        <li>Corners are 10 px and rows are separated by hairlines, no cards.</li>
+      </ul>
+      <h3>Palette</h3>
+      <div class="swatches"><span style="background:#0f1111"></span><span style="background:#181b1c"></span><span style="background:#e3e5e1"></span><span style="background:#858b82"></span><span style="background:#c9e86b"></span></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
