@@ -91,6 +91,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
             Group {
                 LinkedFolderRow(state.linkedFolderName, actions)
             }
+            ScheduledSection(state.scheduledItems, actions.onCancelScheduled)
             SectionLabel(stringResource(R.string.settings_section_appearance))
             ThemeChooser(state.themeMode, actions.onThemeModeChange)
             Group {

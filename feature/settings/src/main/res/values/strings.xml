@@ -32,6 +32,8 @@
     <string name="settings_link_folder">Link folder</string>
     <string name="settings_linked_folder">Linked folder</string>
     <string name="settings_unlink_folder">Unlink</string>
+    <string name="settings_section_scheduled">Scheduled</string>
+    <string name="settings_scheduled_none">Nothing scheduled</string>
     <string name="settings_icon_model">Model</string>
     <string name="settings_icon_model_help">The model this thread uses. Tap to switch.</string>
     <string name="settings_icon_window">Context window</string>

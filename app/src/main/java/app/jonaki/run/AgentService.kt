@@ -76,7 +76,12 @@ class AgentService : Service() {
         private const val NOTIFICATION_ID = 1
 
         fun start(context: Context) {
-            context.startForegroundServiceCompat(Intent(context, AgentService::class.java))
+            try {
+                context.startForegroundServiceCompat(Intent(context, AgentService::class.java))
+            } catch (notAllowed: IllegalStateException) {
+                // Android 12 and later refuse a foreground service started from the background, as a
+                // scheduled task's worker is; that worker keeps the process alive for the run (D-M9-5).
+            }
         }
     }
 }

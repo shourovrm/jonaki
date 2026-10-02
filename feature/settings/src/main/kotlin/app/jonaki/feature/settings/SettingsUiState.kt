@@ -24,6 +24,8 @@ data class SettingsUiState(
     val showStatusStrip: Boolean = true,
     /** The folder linked for share_file and imports (D-043); null while none is linked. */
     val linkedFolderName: String? = null,
+    /** Reminders and scheduled tasks, soonest first (plan M9). */
+    val scheduledItems: List<ScheduledItemUi> = emptyList(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -135,6 +137,8 @@ class SettingsActions(
     /** Opens Android's folder picker; the app keeps the picked folder. */
     val onLinkFolder: () -> Unit = {},
     val onUnlinkFolder: () -> Unit = {},
+    /** Cancels a reminder or a scheduled task by its [ScheduledItemUi.id]. */
+    val onCancelScheduled: (id: String) -> Unit = {},
     val onAddService: (serviceKey: String) -> Unit = {},
     /** Removes the service, its key and its models. */
     val onRemoveService: (serviceKey: String) -> Unit = {},

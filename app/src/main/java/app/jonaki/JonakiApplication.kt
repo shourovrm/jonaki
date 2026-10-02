@@ -9,6 +9,13 @@ import app.jonaki.files.IncomingShares
 import app.jonaki.files.LinkedFolder
 import app.jonaki.files.VisibleActivity
 import app.jonaki.memory.MemoryExtractor
+import app.jonaki.phone.AndroidPhone
+import app.jonaki.phone.ReminderBook
+import app.jonaki.phone.Reminders
+import app.jonaki.phone.RuntimePermissions
+import app.jonaki.schedule.ScheduleBook
+import app.jonaki.schedule.ScheduledTasks
+import app.jonaki.schedule.ThreadTaskScheduler
 import app.jonaki.run.AgentRunner
 import app.jonaki.run.BackgroundModel
 import app.jonaki.run.ChatProviders
@@ -82,6 +89,14 @@ class JonakiApplication : Application() {
     lateinit var incomingShares: IncomingShares
         private set
 
+    /** Reminders the phone tool set, kept in a file until they fire (D-M9-2). */
+    lateinit var reminders: Reminders
+        private set
+
+    /** Tasks the schedule tool made, on WorkManager (D-M9-3). */
+    lateinit var scheduledTasks: ScheduledTasks
+        private set
+
     override fun onCreate() {
         super.onCreate()
         // read_document's PDF reading needs PdfBox's font and glyph tables from the assets (D-051).
@@ -108,6 +123,9 @@ class JonakiApplication : Application() {
             reviewMode = { settings.snapshot.value.reviewExtractedMemories },
             clock = System::currentTimeMillis,
         )
+        reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json")))
+        scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
+        val permissions = RuntimePermissions(this, visibleActivity)
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
         runner = AgentRunner(
             this,
@@ -121,6 +139,8 @@ class JonakiApplication : Application() {
             threadCompactor,
             skillLibrary,
             AndroidFileDestinations(this, visibleActivity, linkedFolder),
+            AndroidPhone(this, permissions, visibleActivity, reminders),
+            taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, permissions) },
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         applicationScope.launch {

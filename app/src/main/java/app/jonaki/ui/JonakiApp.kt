@@ -627,6 +627,8 @@ private fun SettingsRoute(
         leftAndMonth = { left, month -> application.getString(R.string.balance_left_and_month, left, month) },
     )
     val linkedFolder by application.linkedFolder.current.collectAsState()
+    val reminders by application.reminders.book.reminders.collectAsState()
+    val scheduledTasks by application.scheduledTasks.book.tasks.collectAsState()
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
         if (treeUri != null) {
             linkFolder(application, treeUri)
@@ -657,6 +659,7 @@ private fun SettingsRoute(
         themeMode = themeModeOf(snapshot.theme),
         showStatusStrip = snapshot.showStatusStrip,
         linkedFolderName = linkedFolder?.name,
+        scheduledItems = ScheduledItems.of(application, reminders, scheduledTasks),
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -675,6 +678,7 @@ private fun SettingsRoute(
         onOpenSkills = onOpenSkills,
         onLinkFolder = { folderPicker.launch(null) },
         onUnlinkFolder = { application.linkedFolder.unlink() },
+        onCancelScheduled = { itemId -> cancelScheduled(application, itemId) },
         onAddService = { serviceKey ->
             val service = ChatService.byKey(serviceKey)
             if (service != null) {
@@ -706,6 +710,18 @@ private fun SettingsRoute(
         },
     )
     SettingsScreen(state = state, actions = actions)
+}
+
+/** Cancels the reminder or scheduled task that a Settings row names. */
+private fun cancelScheduled(application: JonakiApplication, itemId: String) {
+    val reminderId = ScheduledItems.reminderId(itemId)
+    if (reminderId != null) {
+        application.reminders.cancel(reminderId)
+    }
+    val taskId = ScheduledItems.taskId(itemId)
+    if (taskId != null) {
+        application.scheduledTasks.cancel(taskId)
+    }
 }
 
 /** Some folder pickers give a folder whose access cannot be kept; then nothing is linked. */

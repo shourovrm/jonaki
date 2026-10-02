@@ -35,6 +35,10 @@ dependencies {
     implementation(project(":tools:share-file"))
     implementation(project(":tools:view-image"))
     implementation(project(":tools:read-document"))
+    implementation(project(":tools:phone"))
+    implementation(project(":tools:schedule"))
+    // Scheduled tasks (plan M9).
+    implementation(libs.work.runtime)
     // Only for PDFBoxResourceLoader.init at start; read_document does the reading (D-051).
     implementation(libs.pdfbox.android)
     implementation(project(":core:provider-api"))

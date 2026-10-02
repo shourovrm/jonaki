@@ -129,6 +129,9 @@ class VisibleActivity {
             }
         }
 
+    /** Whether a Jonaki window is on screen, for actions Android allows only then (reading the clipboard). */
+    suspend fun isOnScreen(): Boolean = withContext(Dispatchers.Main) { activityOnScreen() != null }
+
     /** The newest activity that is at least started, which is the one the user sees. */
     private fun activityOnScreen(): ComponentActivity? =
         activities.lastOrNull { activity -> activity.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) }

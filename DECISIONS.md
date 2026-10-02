@@ -591,3 +591,74 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 (includeThoughts) so reasoning shows (D-054). Stored as
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
+
+## D-M9-1 · 2026-10-03 · Cost per call for tools with mixed actions — proposed
+`Tool.sideEffectOf(arguments)` returns the cost of one call and defaults to
+`sideEffect`; the permission broker asks only when that cost is CHANGES.
+phone: calendar_list and clipboard_read run at once; calendar_add,
+reminder, notify, clipboard_write and open_app ask. schedule: list runs at
+once; create and cancel ask. "Allow in thread" still covers the whole
+tool. The approval card names the action ("Add to calendar: Dentist",
+"Open app: Maps", "Schedule: News"). For M8's approval modes: phone and
+schedule ask even in Auto. Why: plan M9 wants read-only actions without
+approval, and D-014 keeps one tool per feature. share_file keeps its one
+cost (D-044). Rejected: separate read tools (more tools, against D-014).
+Outcome: pending.
+
+## D-M9-2 · 2026-10-03 · Reminders: an alarm plus a file — proposed
+phone reminder saves id, text and time in files/reminders.json and sets
+an AlarmManager `setExactAndAllowWhileIdle` alarm. Without "Alarms &
+reminders" (SCHEDULE_EXACT_ALARM, off by default for new installs on
+Android 14) it uses `setAndAllowWhileIdle`, and the tool result says the
+reminder may come some minutes late. The alarm posts a "Reminder"
+notification on the Reminders channel and removes the entry. A receiver
+sets every alarm again on BOOT_COMPLETED, MY_PACKAGE_REPLACED and the
+exact-alarm permission change; a reminder missed while the phone was off
+fires at once. Permissions are asked on first use: notifications on the
+first reminder, notify or schedule create; calendar on the first calendar
+action. A refusal is an error that names Android settings. Reading the
+clipboard, opening an app and every permission dialog need Jonaki on
+screen; otherwise the error says to open Jonaki. open_app sees only
+launcher apps through a manifest `<queries>` entry. Why: plan M9 step 1.
+Rejected: a Room table (a schema version that would collide with the
+M7 and M8 branches, for a few rows); USE_EXACT_ALARM (not approved, meant
+for alarm-clock apps). Outcome: pending.
+
+## D-M9-3 · 2026-10-03 · Scheduled tasks in a file, runs on WorkManager — proposed
+files/scheduled-tasks.json holds each task's id (8 hex characters),
+thread, title, prompt, repeat (none, daily or weekly), anchor (local
+date and time) and next run. Each run is one WorkManager
+OneTimeWorkRequest tagged with the id, delayed to the planned time, and
+waiting for a network. At most 20 tasks. Cancel removes the entry and the
+tagged work. A task whose thread was deleted is removed at its next run.
+Settings > Scheduled lists reminders and tasks, soonest first, each with
+Cancel. WorkManager 2.10.5 adds WAKE_LOCK and ACCESS_NETWORK_STATE to the
+manifest. Why: plan M9 step 2 and 3. Rejected: a Room table (as in
+D-M9-2); PeriodicWorkRequest (it drifts and cannot keep a clock time).
+Outcome: pending.
+
+## D-M9-4 · 2026-10-03 · A task keeps its clock time; each run plans the next — proposed
+A daily task at 08:00 stays at 08:00 local time across daylight-saving
+changes and time zones; weekly keeps the anchor's weekday. Each worker
+first plans the next run, counted from the later of its planned time and
+now, then runs the prompt. So a worker that starts a second early does not
+run twice, runs missed while the phone was off do not catch up, and a
+worker that WorkManager starts again after the process died finds a later
+planned time and does nothing. Why: WorkManager timing is inexact; a
+chain of delays would drift. Tested in NextRunTest and ScheduleBookTest.
+Outcome: pending.
+
+## D-M9-5 · 2026-10-03 · A scheduled run is a message in its thread — proposed
+The worker waits while the thread is busy, then sends `Scheduled task
+"<title>": <prompt>` through AgentRunner, so the run uses the thread's
+model, tools, approvals and history like a typed message. When the run
+ends it posts the last answer or error (at most 2,000 characters) as a
+notification titled with the task's title; an approval request first
+posts "Waiting for your approval". After 9 minutes (WorkManager stops a
+worker at 10) the run stops and the notification says "Stopped after 9
+minutes". Android 12 and later refuse to start the agent's foreground
+service from a worker; AgentService.start now ignores that refusal and
+the running worker keeps the process alive. Why: plan M9 step 2, one code
+path for runs. Rejected: a separate background loop (a second code path);
+setForeground on the worker (more manifest work for the same limit).
+Outcome: pending.
