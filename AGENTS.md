@@ -108,6 +108,17 @@ module.
 - Distribution: GitHub release APK (D-019). Google Play requirements are out
   of scope for now.
 
+## Interface text
+App strings (labels, buttons, empty states, errors, settings descriptions)
+are short and plain, as a human developer would write them: name the action
+or the state, no explanations the user did not ask for, no marketing tone.
+Example: "Allow once", not "Allow Jonaki to perform this action one time".
+The prose rules in "Writing" do not apply to app strings. Before strings
+for a screen are committed, a separate Opus subagent reviews them
+adversarially (it argues for cutting words and challenges every sentence
+that explains); the final strings are agreed between the two. Spawn it only
+when a screen's text is being written.
+
 ## Verification
 Claim nothing you have not run. "Done" means the module builds, its tests
 pass and, for anything visible, it was checked on an emulator or device.
