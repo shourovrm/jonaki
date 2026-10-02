@@ -73,7 +73,11 @@ class ReadFileTool : Tool {
             )
         }
         if (looksBinary(file)) {
-            return@withContext ToolOutput.error("$path is a binary file", "read_file reads text files only.")
+            return@withContext ToolOutput.error(
+                "$path is a binary file",
+                "read_file reads text files only. Use read_document for PDF, Word, Excel and PowerPoint files, " +
+                    "and view_image, where offered, for images.",
+            )
         }
 
         val offset = (arguments.intArgument("offset") ?: 1).coerceAtLeast(1)

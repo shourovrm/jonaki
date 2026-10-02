@@ -54,6 +54,7 @@ class ToolRegistryTest {
         webAccessEnabled = true,
         memoryStore = memoryStore,
         fileDestinations = fileDestinations,
+        modelAcceptsImages = true,
     )
 
     private fun namesFor(services: ToolServices) = ToolRegistry.tools(services).map { tool -> tool.name }
@@ -70,6 +71,7 @@ class ToolRegistryTest {
             setOf(
                 "read_file", "write_file", "edit_file", "find_files", "search_files",
                 "web_search", "web_fetch", "youtube_summarize", "memory", "artifact", "share_file",
+                "read_document", "view_image",
             ),
             namesFor(everything).toSet(),
         )
@@ -106,5 +108,12 @@ class ToolRegistryTest {
     fun shareFileNeedsTheAppsFileDestinations() {
         val names = namesFor(everything.copy(fileDestinations = null)).toSet()
         assertEquals(false, "share_file" in names)
+    }
+
+    @Test
+    fun viewImageNeedsAModelThatTakesImages() {
+        val names = namesFor(everything.copy(modelAcceptsImages = false)).toSet()
+        assertEquals(false, "view_image" in names)
+        assertEquals(true, "read_document" in names)
     }
 }

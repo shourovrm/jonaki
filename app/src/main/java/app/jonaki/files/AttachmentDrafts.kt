@@ -1,5 +1,6 @@
 package app.jonaki.files
 
+import app.jonaki.core.agent.AttachmentLine
 import app.jonaki.core.toolapi.IncomingFiles
 import java.io.File
 import java.io.IOException
@@ -113,15 +114,6 @@ class AttachmentDrafts(private val stagingRoot: File) {
         private const val INBOX = "inbox"
 
         /** The sent message names the files' paths, so the model knows where they are. */
-        fun messageWith(text: String, inboxPaths: List<String>): String {
-            if (inboxPaths.isEmpty()) {
-                return text
-            }
-            val line = "Attached: " + inboxPaths.joinToString(", ")
-            if (text.isBlank()) {
-                return line
-            }
-            return text.trimEnd() + "\n\n" + line
-        }
+        fun messageWith(text: String, inboxPaths: List<String>): String = AttachmentLine.appendTo(text, inboxPaths)
     }
 }
