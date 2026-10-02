@@ -233,3 +233,11 @@ usage; works with a normal key, checked 2026-10-02), fallback /api/v1/key
 limit_remaining; DeepSeek /user/balance; Tavily /usage (plan credits used of
 the limit this cycle). Gemini and Ollama have no balance API and show
 nothing. Why: user request.
+
+Outcome of D-027, D-028, D-030, D-031 (device test, 2026-10-02, v0.2.0):
+upgrade from 0.1.0 kept all threads and settings; strip showed 1M context,
+2% used and $0.0014 after one message; switching to DeepSeek V4.1 Flash
+applied to the next turn (usage sheet: 5 turns GLM, 1 turn DeepSeek);
+OpenRouter balance "$12.87 left" and Tavily "3 / 1,000 credits"; model
+search listed 464 OpenRouter models. Routing fallback is covered by JVM
+tests with a recorded 404, not yet seen on the phone.
