@@ -17,8 +17,9 @@ import kotlinx.coroutines.Dispatchers
         StepEntity::class,
         MemoryEntity::class,
         CompactionEntity::class,
+        ProjectEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
@@ -33,6 +34,10 @@ import kotlinx.coroutines.Dispatchers
         AutoMigration(from = 4, to = 5),
         // Version 6 adds the nullable threads.thinkingLevel column (D-057).
         AutoMigration(from = 5, to = 6),
+        // Projects and incognito chat: version 7 adds the projects table, the
+        // nullable threads.projectId and threads.incognito (default 0)
+        // (D-PRJ-1, D-PRJ-2). One migration, so it can be renumbered at merge.
+        AutoMigration(from = 6, to = 7),
     ],
 )
 abstract class JonakiDatabase : RoomDatabase() {
@@ -45,6 +50,8 @@ abstract class JonakiDatabase : RoomDatabase() {
     abstract fun memoryDao(): MemoryDao
 
     abstract fun compactionDao(): CompactionDao
+
+    abstract fun projectDao(): ProjectDao
 
     /** Room cannot describe an FTS5 table, so the 2 to 3 migration creates it after Room's own steps. */
     class AddMemorySearchIndex : AutoMigrationSpec {
