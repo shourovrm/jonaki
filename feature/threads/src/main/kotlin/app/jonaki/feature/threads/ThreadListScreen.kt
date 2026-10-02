@@ -188,11 +188,10 @@ private fun ThreadRowView(thread: ThreadRow, timeLabel: ThreadTimeLabel, onThrea
         GlowDot(dotColor, dotStyle)
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
+            // The title wraps so the whole name shows; only the preview line is cut short.
             Text(
                 thread.title,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 thread.lastLine,
