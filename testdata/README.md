@@ -28,3 +28,9 @@ Tavily quota errors could not be triggered on a fresh account. Its
 documentation lists 429 (rate limit, with a `Retry-After` header), 432 (plan
 limit exceeded) and 433 (pay-as-you-go limit exceeded), each with the body
 shape `{"detail": {"error": "..."}}`.
+
+## openrouter/ (M3b, D-027)
+
+| File | Request | Result |
+|---|---|---|
+| `models-trimmed.json` | `GET openrouter.ai/api/v1/models` (no key), 2026-10-02; 5 of 464 models kept | Prices are USD per token as text; `openrouter/auto-beta` has price `-1` (varies); `deepseek/deepseek-chat` has no cached-input price |
