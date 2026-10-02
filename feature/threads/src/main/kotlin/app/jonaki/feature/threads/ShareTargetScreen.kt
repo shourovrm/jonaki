@@ -107,13 +107,13 @@ private fun TargetRow(text: String, isNew: Boolean, onClick: () -> Unit) {
             .heightIn(min = 56.dp)
             .padding(horizontal = 20.dp, vertical = 10.dp),
     ) {
-        // Two lines tell similar thread names apart; longer names end in "…" (D-029).
+        // In a list a name keeps one line and ends in "…" (D-029).
         Text(
             text,
             style = MaterialTheme.typography.titleMedium,
             color = if (isNew) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (isNew) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
