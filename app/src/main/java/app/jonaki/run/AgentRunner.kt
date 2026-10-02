@@ -8,6 +8,8 @@ import app.jonaki.ToolServices
 import app.jonaki.core.agent.AgentLoop
 import app.jonaki.core.agent.AgentSettings
 import app.jonaki.core.agent.ApprovalDecision
+import app.jonaki.core.agent.MemorySection
+import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
@@ -241,7 +243,7 @@ class AgentRunner(
             recorder = session,
             settings = AgentSettings(
                 model = ModelKey.modelOf(modelKey),
-                systemPrompt = promptBuilder.systemPrompt(tools),
+                systemPrompt = promptBuilder.systemPrompt(tools, memorySectionFor(threadId)),
             ),
         )
         val history = HistoryMapper.toHistory(database.messageDao().listThread(threadId))
@@ -250,6 +252,30 @@ class AgentRunner(
         } finally {
             database.threadDao().setToolsAllowedForThread(threadId, permissionBroker.toolsAllowedForThread.joinToString(","))
         }
+    }
+
+    /**
+     * Global and thread facts for the system prompt, built once per run so
+     * the prompt stays the same for every request of the run (D-005). Facts
+     * the memory tool saves during the run reach the next run.
+     */
+    private suspend fun memorySectionFor(threadId: String): String {
+        val memoryDao = database.memoryDao()
+        val facts = memoryDao.listVisibleFrom(threadId).map { memory ->
+            PromptFact(
+                id = memory.id,
+                text = memory.text,
+                isGlobal = memory.threadId == null,
+                pinned = memory.pinned,
+                lastUsedAtMillis = memory.lastUsedAtMillis,
+            )
+        }
+        val section = MemorySection.build(facts)
+        if (section.includedIds.isNotEmpty()) {
+            // Safe for the cache: the section is chosen by use time but written in id order (D-035).
+            memoryDao.markUsed(section.includedIds, System.currentTimeMillis())
+        }
+        return section.text
     }
 
     private suspend fun saveError(threadId: String, message: String) {

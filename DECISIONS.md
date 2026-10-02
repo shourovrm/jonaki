@@ -254,3 +254,18 @@ guideline forbids keys and passwords. Why: an approval card on every
 Rejected: `CHANGES` with approval (nags), `READ_ONLY` (false declaration),
 approval only for forget (one tool has one cost; a forgotten fact shows its
 text in the step, so it can be added back). Outcome: pending.
+
+## D-035 · 2026-10-02 · Memory in the system prompt, cache-stable — proposed
+The system prompt ends with a Memory section: global facts, then the
+thread's facts, each within 6,000 characters (about 1,500 tokens at 4
+characters per token), one line "- [id] text" per fact. Facts waiting for
+review are left out. Which facts get in: pinned first, then latest
+lastUsedAt, then highest id. The lines are then written in id order, never
+in use order. The runner builds the section once per run and then sets
+lastUsedAt of the included facts to now; they were already the most
+recent, so the next run picks the same set and writes the same bytes, and
+the prompt cache (D-005) breaks only when a fact is added, edited, removed,
+pinned, or a recall pulls an older fact in. Facts the memory tool saves
+during a run reach the next run. The section goes last so the base text
+and tool list stay a cached prefix. Rejected: sorting lines by last use
+(new bytes on every run). Outcome: pending.

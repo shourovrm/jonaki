@@ -13,7 +13,19 @@ import java.util.Locale
  */
 class PromptBuilder(private val basePrompt: String) {
 
-    fun systemPrompt(activeTools: List<Tool>): String {
+    /**
+     * [memorySection] comes from [MemorySection.build]; it goes last, so that
+     * a changed fact leaves the base text and the tool list as a cached prefix.
+     */
+    fun systemPrompt(activeTools: List<Tool>, memorySection: String = ""): String {
+        val withTools = basePromptWithTools(activeTools)
+        if (memorySection.isBlank()) {
+            return withTools
+        }
+        return withTools + "\n\n" + memorySection.trim()
+    }
+
+    private fun basePromptWithTools(activeTools: List<Tool>): String {
         // Sorted so that the order tools were registered in cannot change the bytes.
         val sortedTools = activeTools.sortedBy { tool -> tool.name }
         val prompt = StringBuilder(basePrompt.trimEnd())
