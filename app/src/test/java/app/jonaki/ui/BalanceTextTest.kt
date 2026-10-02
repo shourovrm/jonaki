@@ -11,7 +11,6 @@ class BalanceTextTest {
         creditsOfLimit = { used, limit -> "$used / $limit credits this month" },
         creditsUsed = { used -> "$used credits used" },
         leftAndMonth = { left, month -> "$left left · $month this month" },
-        monthOnly = { month -> "$month this month" },
     )
 
     @Test
@@ -39,48 +38,35 @@ class BalanceTextTest {
 
     @Test
     fun cardShowsWhatIsLeftAndTheServicesOwnMonth() {
-        val line = BalanceText.cardLine(Balance.Money(12.873, "USD", spentThisMonth = 0.0773), appCountedMonthUsd = 5.0, words)!!
+        val line = BalanceText.cardLine(Balance.Money(12.873, "USD", spentThisMonth = 0.0773), words)!!
 
         assertEquals("$12.87 left · $0.08 this month", line.text)
         assertEquals(false, line.isLow)
-        assertEquals(false, line.monthCountedByApp)
     }
 
     @Test
-    fun cardFallsBackToTheMonthJonakiCounted() {
-        val line = BalanceText.cardLine(Balance.Money(110.0, "USD"), appCountedMonthUsd = 3.2, words)!!
-
-        assertEquals("$110 left · $3.20 this month", line.text)
-        assertEquals(true, line.monthCountedByApp)
+    fun aServiceWithoutItsOwnMonthShowsOnlyWhatIsLeft() {
+        assertEquals("$4.73 left", BalanceText.cardLine(Balance.Money(4.73, "USD"), words)!!.text)
     }
 
     @Test
-    fun cardWithoutBalanceShowsOnlyTheMonth() {
-        assertEquals("$0.21 this month", BalanceText.cardLine(null, appCountedMonthUsd = 0.21, words)!!.text)
-        assertEquals("$0.21 this month", BalanceText.cardLine(Balance.Failed("timeout"), appCountedMonthUsd = 0.21, words)!!.text)
-    }
-
-    @Test
-    fun cardWithNothingKnownShowsNoLine() {
-        assertNull(BalanceText.cardLine(null, appCountedMonthUsd = null, words))
-        assertNull(BalanceText.cardLine(Balance.Unavailable, appCountedMonthUsd = 0.0, words))
-    }
-
-    @Test
-    fun cardBalanceWithoutAnyMonthShowsOnlyWhatIsLeft() {
-        assertEquals("$4.73 left", BalanceText.cardLine(Balance.Money(4.73, "USD"), appCountedMonthUsd = null, words)!!.text)
+    fun aServiceWithoutABalanceShowsNoLine() {
+        assertNull(BalanceText.cardLine(null, words))
+        assertNull(BalanceText.cardLine(Balance.Unavailable, words))
+        assertNull(BalanceText.cardLine(Balance.Failed("timeout"), words))
+        assertNull(BalanceText.cardLine(Balance.Credits(3, 1000), words))
     }
 
     @Test
     fun largeBalancesDropTheCentsAndTinySpendIsNotZero() {
-        val line = BalanceText.cardLine(Balance.Money(1234.56, "USD", spentThisMonth = 0.004), appCountedMonthUsd = null, words)!!
+        val line = BalanceText.cardLine(Balance.Money(1234.56, "USD", spentThisMonth = 0.004), words)!!
 
         assertEquals("$1,234 left · <$0.01 this month", line.text)
     }
 
     @Test
     fun underOneDollarIsLow() {
-        val line = BalanceText.cardLine(Balance.Money(0.42, "USD", spentThisMonth = 11.4), appCountedMonthUsd = null, words)!!
+        val line = BalanceText.cardLine(Balance.Money(0.42, "USD", spentThisMonth = 11.4), words)!!
 
         assertEquals("$0.42 left · $11.40 this month", line.text)
         assertEquals(true, line.isLow)

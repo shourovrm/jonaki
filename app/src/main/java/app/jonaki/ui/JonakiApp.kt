@@ -542,7 +542,6 @@ private fun SettingsRoute(
         creditsOfLimit = { used, limit -> application.getString(R.string.balance_credits_of_limit, used, limit) },
         creditsUsed = { used -> application.getString(R.string.balance_credits_used, used) },
         leftAndMonth = { left, month -> application.getString(R.string.balance_left_and_month, left, month) },
-        monthOnly = { month -> application.getString(R.string.balance_month_only, month) },
     )
     val linkedFolder by application.linkedFolder.current.collectAsState()
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
@@ -550,13 +549,10 @@ private fun SettingsRoute(
             linkFolder(application, treeUri)
         }
     }
-    val serviceCosts by remember { application.database.messageDao().observeServiceCostSince(startOfThisMonthMillis()) }
-        .collectAsState(initial = emptyList())
-    val appCountedMonth = serviceCosts.associate { row -> row.service to row.costUsd }
     fun accountFor(service: ChatService): AccountLineUi? {
         val balance = service.secret?.let { secret -> balances[secret] }
-        val line = BalanceText.cardLine(balance, appCountedMonth[service.key], balanceWords) ?: return null
-        return AccountLineUi(line.text, line.isLow, line.monthCountedByApp)
+        val line = BalanceText.cardLine(balance, balanceWords) ?: return null
+        return AccountLineUi(line.text, line.isLow)
     }
     fun slotFor(secret: SecretName) = KeySlot(
         id = secret.name,

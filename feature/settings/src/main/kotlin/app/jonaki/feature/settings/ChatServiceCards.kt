@@ -156,14 +156,6 @@ private fun CardBody(card: ChatServiceCardUi, actions: SettingsActions) {
     if (slot != null) {
         KeyField(stringResource(R.string.settings_api_key), slot, actions)
     }
-    if (card.account?.countedByJonaki == true) {
-        Text(
-            stringResource(R.string.settings_spend_counted_by_app),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
     val routing = card.routing
     if (routing != null) {
         Text(

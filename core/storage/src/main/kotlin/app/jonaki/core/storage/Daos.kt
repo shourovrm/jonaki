@@ -90,17 +90,6 @@ interface MessageDao {
     @Query("SELECT SUM(costUsd) FROM messages WHERE createdAtMillis >= :sinceMillis")
     fun observeCostSince(sinceMillis: Long): Flow<Double?>
 
-    /**
-     * Cost per chat service since [sinceMillis], for services that report no
-     * monthly spend of their own (D-032). The service is the part of the
-     * "service:modelId" key before the colon.
-     */
-    @Query(
-        "SELECT substr(model, 1, instr(model, ':') - 1) AS service, SUM(costUsd) AS costUsd FROM messages " +
-            "WHERE createdAtMillis >= :sinceMillis AND model IS NOT NULL AND costUsd IS NOT NULL GROUP BY service",
-    )
-    fun observeServiceCostSince(sinceMillis: Long): Flow<List<ServiceCostRow>>
-
     /** One row per model used in a thread, in the order the models were first used (usage sheet). */
     @Query(
         "SELECT model, COUNT(*) AS turns, SUM(inputTokens) AS inputTokens, " +
@@ -128,11 +117,6 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE id IN (:messageIds)")
     suspend fun findAll(messageIds: List<String>): List<MessageEntity>
 }
-
-data class ServiceCostRow(
-    val service: String,
-    val costUsd: Double,
-)
 
 data class ModelUsageRow(
     val model: String,

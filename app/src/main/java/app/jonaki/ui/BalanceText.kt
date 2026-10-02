@@ -12,7 +12,6 @@ object BalanceText {
         val creditsOfLimit: (used: String, limit: String) -> String,
         val creditsUsed: (used: String) -> String,
         val leftAndMonth: (left: String, month: String) -> String,
-        val monthOnly: (month: String) -> String,
     )
 
     /** The line on a closed chat service card. */
@@ -20,8 +19,6 @@ object BalanceText {
         val text: String,
         /** Under one dollar left: the card draws the amount in the error colour. */
         val isLow: Boolean,
-        /** The month comes from Jonaki's own call records, which miss other apps' spending. */
-        val monthCountedByApp: Boolean,
     )
 
     private const val LOW_BALANCE_USD = 1.0
@@ -41,27 +38,17 @@ object BalanceText {
     }
 
     /**
-     * What is left and this month's spend. The service's own monthly figure
-     * wins over [appCountedMonthUsd], which only counts calls made in Jonaki.
+     * What is left and, when the service reports it, this month's spend. A
+     * service that reports no balance gets no line (D-032).
      */
-    fun cardLine(balance: Balance?, appCountedMonthUsd: Double?, words: Words): CardLine? {
-        val appMonth = appCountedMonthUsd?.takeIf { spent -> spent > 0.0 }
+    fun cardLine(balance: Balance?, words: Words): CardLine? {
         if (balance !is Balance.Money) {
-            if (appMonth == null) {
-                return null
-            }
-            return CardLine(words.monthOnly(spend(appMonth)), isLow = false, monthCountedByApp = true)
+            return null
         }
         val left = money(balance)
         val isLow = balance.amount < LOW_BALANCE_USD
-        val serviceMonth = balance.spentThisMonth
-        if (serviceMonth != null) {
-            return CardLine(words.leftAndMonth(left, spend(serviceMonth)), isLow, monthCountedByApp = false)
-        }
-        if (appMonth != null) {
-            return CardLine(words.leftAndMonth(left, spend(appMonth)), isLow, monthCountedByApp = true)
-        }
-        return CardLine(words.moneyLeft(left), isLow, monthCountedByApp = false)
+        val serviceMonth = balance.spentThisMonth ?: return CardLine(words.moneyLeft(left), isLow)
+        return CardLine(words.leftAndMonth(left, spend(serviceMonth)), isLow)
     }
 
     private fun money(balance: Balance.Money): String = when (balance.currency.uppercase()) {

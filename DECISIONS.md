@@ -242,7 +242,7 @@ OpenRouter balance "$12.87 left" and Tavily "3 / 1,000 credits"; model
 search listed 464 OpenRouter models. Routing fallback is covered by JVM
 tests with a recorded 404, not yet seen on the phone.
 
-## D-032 · 2026-10-02 · Balance and month spend on the closed service card — proposed
+## D-032 · 2026-10-02 · Balance and month spend on the closed service card — accepted
 A closed chat service card in Settings shows one line, all in USD: "$12.87
 left · $0.08 this month". The month comes from the service when it reports
 one (OpenRouter GET /key usage_monthly, for this key), else from Jonaki's
@@ -256,6 +256,10 @@ read out as "Low balance". A failed refresh keeps the last good value.
 Mockup: docs/mockups/service-card-balance.html. Copy agreed with an Opus
 reviewer. Why: user request. Limit: deleting a thread deletes its usage
 rows, so Jonaki's own count drops with it.
+
+Amendment (user, 2026-10-03): a card shows only what the service itself
+reports. Jonaki's own count of the month is dropped, so DeepSeek shows
+"$x left" only, and Gemini, Ollama, GLM and MiMo show no line.
 
 ## D-033 · 2026-10-02 · Compaction of long threads — proposed
 When a run ends and its last request filled 70 % of the model's context
@@ -467,7 +471,7 @@ A page that leaves the app through share_file (Downloads, save as, share,
 linked folder) gets a copy with Chart.js inside, so its charts work in any
 browser. Why: plan M6 step 3, D-018. Outcome: pending.
 
-## D-048 · 2026-10-02 · Chart.js bundled for artifacts — proposed
+## D-048 · 2026-10-02 · Chart.js bundled for artifacts — accepted
 Chart.js 4.5.1 (MIT, chart.umd.min.js, 208 KB, about 71 KB compressed in
 the APK) ships in feature/artifact's assets; the file matches the npm
 package (sha512 integrity checked 2026-10-02). Pages load it as
