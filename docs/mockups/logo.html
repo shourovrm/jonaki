@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jonaki — logo and icon options</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,300..800&family=Noto+Sans+Bengali:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 40px 36px 80px; font-family: "Roboto Flex", system-ui, sans-serif; background: #e9ece3; color: #1a1f12; }
+  h1 { font-size: 26px; margin: 0 0 6px; font-weight: 650; }
+  .lead { margin: 0 0 32px; max-width: 72ch; line-height: 1.5; color: #50593f; }
+  .option { display: grid; grid-template-columns: 280px 1fr; gap: 32px; padding: 28px 0; border-top: 1px solid #cdd4bd; max-width: 1240px; }
+  .option h2 { font-size: 22px; margin: 0 0 8px; }
+  .option p { margin: 0 0 8px; line-height: 1.5; font-size: 14px; color: #50593f; }
+  .row { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; color: #50593f; }
+  .mask-circle { border-radius: 50%; overflow: hidden; }
+  .mask-squircle { border-radius: 30%; overflow: hidden; }
+  .home { padding: 18px; border-radius: 20px; display: flex; gap: 18px; align-items: center; }
+  .home.dark { background: linear-gradient(160deg, #24301f, #10140e); }
+  .home.light { background: linear-gradient(160deg, #dfe8cf, #b9c7a4); }
+  .home .label { font-size: 12px; text-align: center; margin-top: 6px; }
+  .home.dark .label { color: #e4e8dc; } .home.light .label { color: #1a1f12; }
+  .wordmark { display: flex; align-items: center; gap: 14px; padding: 16px 22px; border-radius: 18px; }
+  .wordmark.dark { background: #11140f; color: #e4e8dc; } .wordmark.light { background: #f6f8f0; color: #1a1f12; }
+  .wordmark .name { font-size: 30px; font-weight: 640; letter-spacing: -0.01em; line-height: 1; }
+  .wordmark .bn { font-family: "Noto Sans Bengali", sans-serif; font-size: 15px; opacity: .7; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Jonaki — logo and app icon</h1>
+<p class="lead">Four options. Each row shows the launcher icon in a circle and a squircle mask (phones use different shapes), at full size and at the 48 px size it has on a home screen, on a dark and a light wallpaper, the one-colour version Android 13+ uses for themed icons, and the logo with the name.</p>
+
+<!-- Symbols: each defined once, drawn on a 108-unit adaptive-icon canvas (safe zone 66 units in the centre). -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#d8f36a" stop-opacity=".55"/>
+      <stop offset=".45" stop-color="#d8f36a" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#d8f36a" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- A: the j whose dot is a firefly -->
+    <symbol id="a-color" viewBox="0 0 108 108">
+      <rect width="108" height="108" fill="#11140f"/>
+      <circle cx="58" cy="34" r="20" fill="url(#halo)"/>
+      <path d="M58 50 V70 C58 80 52 84 44 84 C40 84 37 83 35 81" fill="none" stroke="#e4e8dc" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="58" cy="34" r="7.5" fill="#d8f36a"/>
+    </symbol>
+    <symbol id="a-mono" viewBox="0 0 108 108">
+      <path d="M58 50 V70 C58 80 52 84 44 84 C40 84 37 83 35 81" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="58" cy="34" r="7.5" fill="currentColor"/>
+    </symbol>
+
+    <!-- B: one firefly, lit -->
+    <symbol id="b-color" viewBox="0 0 108 108">
+      <rect width="108" height="108" fill="#11140f"/>
+      <circle cx="54" cy="62" r="26" fill="url(#halo)"/>
+      <path d="M51 46 C42 33 32 36 34 45 C36 52 45 52 51 49 Z" fill="#a9b19d"/>
+      <path d="M57 46 C66 33 76 36 74 45 C72 52 63 52 57 49 Z" fill="#a9b19d"/>
+      <circle cx="54" cy="40" r="4.5" fill="#e4e8dc"/>
+      <ellipse cx="54" cy="62" rx="8.5" ry="12.5" fill="#d8f36a"/>
+    </symbol>
+    <symbol id="b-mono" viewBox="0 0 108 108">
+      <path d="M51 46 C42 33 32 36 34 45 C36 52 45 52 51 49 Z" fill="currentColor" opacity=".6"/>
+      <path d="M57 46 C66 33 76 36 74 45 C72 52 63 52 57 49 Z" fill="currentColor" opacity=".6"/>
+      <circle cx="54" cy="40" r="4.5" fill="currentColor"/>
+      <ellipse cx="54" cy="62" rx="8.5" ry="12.5" fill="currentColor"/>
+    </symbol>
+
+    <!-- C: a track of steps, the working one lit -->
+    <symbol id="c-color" viewBox="0 0 108 108">
+      <rect width="108" height="108" fill="#11140f"/>
+      <path d="M40 30 V74" stroke="#4b5540" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="40" cy="30" r="7" fill="#8d9a7c"/>
+      <circle cx="40" cy="52" r="7" fill="#8d9a7c"/>
+      <circle cx="58" cy="74" r="22" fill="url(#halo)"/>
+      <path d="M40 74 H58" stroke="#4b5540" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="58" cy="74" r="9" fill="#d8f36a"/>
+      <path d="M52 30 H72 M52 52 H66" stroke="#e4e8dc" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+    </symbol>
+    <symbol id="c-mono" viewBox="0 0 108 108">
+      <path d="M40 30 V74 H58" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+      <circle cx="40" cy="30" r="7" fill="currentColor" opacity=".7"/>
+      <circle cx="40" cy="52" r="7" fill="currentColor" opacity=".7"/>
+      <circle cx="58" cy="74" r="9" fill="currentColor"/>
+      <path d="M52 30 H72 M52 52 H66" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- D: a light trail written as a loop, ending in the firefly -->
+    <symbol id="d-color" viewBox="0 0 108 108">
+      <rect width="108" height="108" fill="#11140f"/>
+      <path d="M30 70 C30 50 48 44 56 52 C64 60 52 74 44 66 C36 58 52 36 72 40" fill="none" stroke="#d8f36a" stroke-opacity=".35" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="74" cy="40" r="18" fill="url(#halo)"/>
+      <circle cx="74" cy="40" r="7.5" fill="#d8f36a"/>
+    </symbol>
+    <symbol id="d-mono" viewBox="0 0 108 108">
+      <path d="M30 70 C30 50 48 44 56 52 C64 60 52 74 44 66 C36 58 52 36 72 40" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="74" cy="40" r="7.5" fill="currentColor"/>
+    </symbol>
+  </defs>
+</svg>
+
+<template id="row">
+  <div class="row">
+    <div class="cell"><svg class="mask-circle" width="132" height="132"><use data-color/></svg>circle</div>
+    <div class="cell"><svg class="mask-squircle" width="132" height="132"><use data-color/></svg>squircle</div>
+    <div class="home dark">
+      <div><svg class="mask-circle" width="48" height="48"><use data-color/></svg><div class="label">Jonaki</div></div>
+      <div><svg class="mask-circle" width="48" height="48" style="background:#e4e8dc;color:#2c3a14"><use data-mono/></svg><div class="label">themed</div></div>
+    </div>
+    <div class="home light">
+      <div><svg class="mask-squircle" width="48" height="48"><use data-color/></svg><div class="label">Jonaki</div></div>
+      <div><svg class="mask-squircle" width="48" height="48" style="background:#d4ee7c;color:#161f00"><use data-mono/></svg><div class="label">themed</div></div>
+    </div>
+    <div class="wordmark dark"><svg width="44" height="44" class="mask-squircle"><use data-color/></svg><div><div class="name">Jonaki</div><div class="bn">জোনাকি</div></div></div>
+    <div class="wordmark light"><svg width="44" height="44" class="mask-squircle"><use data-color/></svg><div><div class="name">Jonaki</div><div class="bn">জোনাকি</div></div></div>
+  </div>
+</template>
+
+<section class="option" data-id="a">
+  <div><h2>A · The lit j</h2><p>A lowercase j whose dot is the firefly. The name's first letter and the app's one rule, only working things glow, in a single mark.</p><p>Reads well at 48 px. It's the most ownable of the four.</p></div>
+  <div class="slot"></div>
+</section>
+<section class="option" data-id="b">
+  <div><h2>B · Firefly</h2><p>The insect itself: two wings, a head and the glowing abdomen with its halo. This is the icon in the current build.</p><p>Friendly and literal; the wings get small at 48 px.</p></div>
+  <div class="slot"></div>
+</section>
+<section class="option" data-id="c">
+  <div><h2>C · Step track</h2><p>The Rail line track from the chat screen: two finished stations and the working one lit. It says "an agent that shows its steps".</p><p>Closest to what the app does; less tied to the name.</p></div>
+  <div class="slot"></div>
+</section>
+<section class="option" data-id="d">
+  <div><h2>D · Light trail</h2><p>The looping trail a firefly leaves in a long-exposure photo, ending in its light.</p><p>Most atmospheric; the thin trail is faint at small sizes.</p></div>
+  <div class="slot"></div>
+</section>
+
+<script>
+  const template = document.getElementById("row");
+  for (const section of document.querySelectorAll(".option")) {
+    const id = section.dataset.id;
+    const row = template.content.cloneNode(true);
+    for (const use of row.querySelectorAll("use[data-color]")) use.setAttribute("href", `#${id}-color`);
+    for (const use of row.querySelectorAll("use[data-mono]")) use.setAttribute("href", `#${id}-mono`);
+    section.querySelector(".slot").appendChild(row);
+  }
+</script>
+</body>
+</html>
