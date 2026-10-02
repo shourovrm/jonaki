@@ -42,7 +42,7 @@ class PermissionBroker(
         get() = allowedTools.toSet()
 
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
-        val needsApproval = tool.sideEffect == SideEffect.CHANGES
+        val needsApproval = tool.sideEffect == SideEffect.CHANGES || tool.sideEffect == SideEffect.CHANGES_THREAD_FOLDER
         if (!needsApproval) {
             return true
         }

@@ -25,7 +25,7 @@ class WriteFileToolTest {
 
     @Test
     fun needsApproval() {
-        assertEquals(SideEffect.CHANGES, tool.sideEffect)
+        assertEquals(SideEffect.CHANGES_THREAD_FOLDER, tool.sideEffect)
     }
 
     @Test

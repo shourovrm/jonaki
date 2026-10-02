@@ -35,7 +35,16 @@ interface Tool {
 /** Whether a tool only reads, or changes something and so needs approval. */
 enum class SideEffect {
     READ_ONLY,
+
+    /** Changes something outside Jonaki: Downloads, the linked folder, the phone, a server. */
     CHANGES,
+
+    /**
+     * Changes only files inside the thread's own folder. Needs approval like
+     * [CHANGES] in the Ask mode; the Auto mode runs it without asking,
+     * because nothing leaves the app.
+     */
+    CHANGES_THREAD_FOLDER,
 
     /**
      * Changes only Jonaki's own records, which the user sees in the step

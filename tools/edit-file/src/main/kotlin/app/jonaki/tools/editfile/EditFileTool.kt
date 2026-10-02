@@ -54,7 +54,7 @@ class EditFileTool : Tool {
             add(JsonPrimitive("edits"))
         }
     }
-    override val sideEffect: SideEffect = SideEffect.CHANGES
+    override val sideEffect: SideEffect = SideEffect.CHANGES_THREAD_FOLDER
     override val requiredCapabilities: Set<Capability> = emptySet()
     override val timeLimit: Duration = 10.seconds
 
