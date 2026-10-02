@@ -225,3 +225,11 @@ the request is retried once with Cheapest and the step says so. Source:
 openrouter.ai/docs/features/provider-routing. Mockups:
 docs/mockups/routing.html (option A). Rejected: a chip per model (B), a
 model sheet (C).
+
+## D-031 · 2026-10-02 · Account balances on service cards — accepted
+Settings shows each service's remaining balance where the service offers an
+API, refreshed when Settings opens: OpenRouter /api/v1/credits (credits minus
+usage; works with a normal key, checked 2026-10-02), fallback /api/v1/key
+limit_remaining; DeepSeek /user/balance; Tavily /usage (plan credits used of
+the limit this cycle). Gemini and Ollama have no balance API and show
+nothing. Why: user request.
