@@ -62,6 +62,15 @@ interface ThreadDao {
 
     @Query("DELETE FROM threads WHERE id = :threadId")
     suspend fun delete(threadId: String)
+
+    @Query("UPDATE threads SET answerStyle = :answerStyle WHERE id = :threadId")
+    suspend fun setAnswerStyle(threadId: String, answerStyle: String?)
+
+    @Query("UPDATE threads SET personaId = :personaId WHERE id = :threadId")
+    suspend fun setPersona(threadId: String, personaId: String?)
+
+    @Query("UPDATE threads SET instructions = :instructions WHERE id = :threadId")
+    suspend fun setInstructions(threadId: String, instructions: String)
 }
 
 @Dao

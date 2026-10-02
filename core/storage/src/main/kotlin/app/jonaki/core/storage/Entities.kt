@@ -28,6 +28,13 @@ data class ThreadEntity(
     val disabledSkills: String = "",
     /** This thread's thinking level as a ThinkingLevel name; null follows the model's setting (D-057). */
     val thinkingLevel: String? = null,
+    /** This thread's answer style as an AnswerStyle name; null follows Settings (D-STY-2). */
+    val answerStyle: String? = null,
+    /** The persona this thread uses, an id in personas; null for none (D-STY-3). */
+    val personaId: String? = null,
+    /** The user's own instructions for this thread, added after the general ones (D-STY-1). */
+    @ColumnInfo(defaultValue = "")
+    val instructions: String = "",
 )
 
 /**
