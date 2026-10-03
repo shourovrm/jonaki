@@ -68,7 +68,9 @@ import app.jonaki.feature.settings.RoutingUi
 import app.jonaki.feature.settings.SearchServiceRow
 import app.jonaki.feature.settings.ServiceModelUi
 import app.jonaki.feature.settings.SettingsActions
-import app.jonaki.feature.settings.SettingsScreen
+import app.jonaki.feature.settings.SettingsHomeScreen
+import app.jonaki.feature.settings.SettingsPage
+import app.jonaki.feature.settings.SettingsPageScreen
 import app.jonaki.feature.settings.SettingsUiState
 import app.jonaki.feature.settings.StatusIconsScreen
 import app.jonaki.feature.settings.moveInOrder
@@ -88,10 +90,12 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.ThemeChoice
+import app.jonaki.settings.ToolGroup
 import app.jonaki.settings.ToolPicker
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -102,6 +106,9 @@ import kotlinx.coroutines.withContext
 /** Routes are plain strings so they survive process death through rememberSaveable. */
 private const val ROUTE_THREADS = "threads"
 private const val ROUTE_SETTINGS = "settings"
+
+/** "settings:<page key>", one Settings sub-page (D-128). */
+private const val ROUTE_SETTINGS_PAGE_PREFIX = "settings:"
 private const val ROUTE_STATUS_ICONS = "status-icons"
 private const val ROUTE_TOOLS = "tools"
 private const val ROUTE_PYTHON = "python"
@@ -144,6 +151,14 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
         // The subagent page and the chat's place stay while a file viewer opened from them is in front (D-126).
         var openSubagentId by rememberSaveable { mutableStateOf<String?>(null) }
         val chatListStates = remember { mutableMapOf<String, LazyListState>() }
+        // The first Settings page keeps its place and its search while a sub-page is open (D-128).
+        var settingsVisit by rememberSaveable { mutableIntStateOf(0) }
+        val settingsScroll = rememberSaveable(settingsVisit, saver = ScrollState.Saver) { ScrollState(0) }
+        var settingsQuery by rememberSaveable(settingsVisit) { mutableStateOf("") }
+        val leaveSettings = {
+            settingsVisit += 1
+            route = ROUTE_THREADS
+        }
         RefusedFilesMessage(application)
         val pendingShare by application.incomingShares.pending.collectAsState()
         val share = pendingShare
@@ -165,11 +180,25 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             return@JonakiTheme
         }
         when {
-            route == ROUTE_SETTINGS -> {
-                BackHandler { route = ROUTE_THREADS }
+            route == ROUTE_SETTINGS || route.startsWith(ROUTE_SETTINGS_PAGE_PREFIX) -> {
+                val settingsPage = SettingsPage.byKey(route.removePrefix(ROUTE_SETTINGS_PAGE_PREFIX))
+                // A sub-page goes back to the first page; the first page leaves Settings.
+                val goBack: () -> Unit = {
+                    if (settingsPage == null) {
+                        leaveSettings()
+                    } else {
+                        route = ROUTE_SETTINGS
+                    }
+                }
+                BackHandler(onBack = goBack)
                 SettingsRoute(
                     application = application,
-                    onBack = { route = ROUTE_THREADS },
+                    page = settingsPage,
+                    homeScroll = settingsScroll,
+                    searchQuery = settingsQuery,
+                    onSearchQueryChange = { query -> settingsQuery = query },
+                    onOpenPage = { page -> route = settingsPageRoute(page) },
+                    onBack = goBack,
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onOpenMemory = { route = ROUTE_MEMORY },
@@ -181,28 +210,32 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 )
             }
             route == ROUTE_CUSTOM_INSTRUCTIONS -> {
-                BackHandler { route = ROUTE_SETTINGS }
-                CustomInstructionsRoute(application, onBack = { route = ROUTE_SETTINGS })
+                val backRoute = settingsPageRoute(SettingsPage.ANSWERS)
+                BackHandler { route = backRoute }
+                CustomInstructionsRoute(application, onBack = { route = backRoute })
             }
             route.startsWith(ROUTE_PERSONA_PREFIX) -> {
-                BackHandler { route = ROUTE_SETTINGS }
+                val backRoute = settingsPageRoute(SettingsPage.ANSWERS)
+                BackHandler { route = backRoute }
                 PersonaEditorRoute(
                     application = application,
                     personaId = route.removePrefix(ROUTE_PERSONA_PREFIX).ifEmpty { null },
-                    onBack = { route = ROUTE_SETTINGS },
+                    onBack = { route = backRoute },
                 )
             }
             route == ROUTE_TOOLS -> {
-                BackHandler { route = ROUTE_SETTINGS }
-                ToolsRoute(application, onBack = { route = ROUTE_SETTINGS })
+                val backRoute = settingsPageRoute(SettingsPage.TOOLS)
+                BackHandler { route = backRoute }
+                ToolsRoute(application, onBack = { route = backRoute })
             }
             route == ROUTE_PYTHON -> {
-                BackHandler { route = ROUTE_SETTINGS }
-                PythonRoute(application, onBack = { route = ROUTE_SETTINGS })
+                val backRoute = settingsPageRoute(SettingsPage.TOOLS)
+                BackHandler { route = backRoute }
+                PythonRoute(application, onBack = { route = backRoute })
             }
             route == ROUTE_SKILLS || route.startsWith(ROUTE_SKILLS_THREAD_PREFIX) -> {
                 val skillsThreadId = if (route == ROUTE_SKILLS) null else route.removePrefix(ROUTE_SKILLS_THREAD_PREFIX)
-                val backRoute = if (skillsThreadId == null) ROUTE_SETTINGS else ROUTE_CHAT_PREFIX + skillsThreadId
+                val backRoute = if (skillsThreadId == null) settingsPageRoute(SettingsPage.MEMORY_SKILLS) else ROUTE_CHAT_PREFIX + skillsThreadId
                 BackHandler { route = backRoute }
                 SkillsRoute(
                     application = application,
@@ -221,7 +254,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             }
             route == ROUTE_MEMORY || route.startsWith(ROUTE_MEMORY_THREAD_PREFIX) -> {
                 val memoryThreadId = if (route == ROUTE_MEMORY) null else route.removePrefix(ROUTE_MEMORY_THREAD_PREFIX)
-                val backRoute = if (memoryThreadId == null) ROUTE_SETTINGS else ROUTE_CHAT_PREFIX + memoryThreadId
+                val backRoute = if (memoryThreadId == null) settingsPageRoute(SettingsPage.MEMORY_SKILLS) else ROUTE_CHAT_PREFIX + memoryThreadId
                 BackHandler { route = backRoute }
                 MemoryRoute(
                     application = application,
@@ -243,19 +276,21 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 )
             }
             route == ROUTE_STATUS_ICONS -> {
-                BackHandler { route = ROUTE_SETTINGS }
+                val backRoute = settingsPageRoute(SettingsPage.THEME)
+                BackHandler { route = backRoute }
                 StatusIconsScreen(
                     showStatusStrip = settingsSnapshot.showStatusStrip,
                     onShowStatusStripChange = { show -> application.settings.update { it.copy(showStatusStrip = show) } },
-                    onBack = { route = ROUTE_SETTINGS },
+                    onBack = { route = backRoute },
                 )
             }
             route.startsWith(ROUTE_ADD_MODELS_PREFIX) -> {
-                BackHandler { route = ROUTE_SETTINGS }
+                val backRoute = settingsPageRoute(SettingsPage.MODELS)
+                BackHandler { route = backRoute }
                 AddModelsRoute(
                     application = application,
                     serviceKey = route.removePrefix(ROUTE_ADD_MODELS_PREFIX),
-                    onFinished = { route = ROUTE_SETTINGS },
+                    onFinished = { route = backRoute },
                 )
             }
             route.startsWith(ROUTE_CHAT_PREFIX) -> {
@@ -276,7 +311,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenSubagent = { subagentId -> openSubagentId = subagentId },
                     listState = chatListStates.getOrPut(chatThreadId) { LazyListState() },
                     onThreadCreated = { threadId -> route = ROUTE_CHAT_PREFIX + threadId },
-                    onEditModels = { route = ROUTE_SETTINGS },
+                    onEditModels = { route = settingsPageRoute(SettingsPage.MODELS) },
                     onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
                     onOpenSkills = { route = ROUTE_SKILLS_THREAD_PREFIX + chatThreadId },
                     onOpenArtifact = { path -> route = ROUTE_ARTIFACT_PREFIX + chatThreadId + FOCUS_SEPARATOR + path },
@@ -295,6 +330,8 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
         }
     }
 }
+
+private fun settingsPageRoute(page: SettingsPage): String = ROUTE_SETTINGS_PAGE_PREFIX + page.key
 
 @Composable
 private fun ShareTargetRoute(application: JonakiApplication, fileNames: List<String>, onPicked: (threadKey: String) -> Unit) {
@@ -846,6 +883,12 @@ private fun usageOf(rows: List<ModelUsageRow>, catalog: ModelCatalog, totalCost:
 @Composable
 private fun SettingsRoute(
     application: JonakiApplication,
+    /** Null is the first page. */
+    page: SettingsPage?,
+    homeScroll: ScrollState,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onOpenPage: (SettingsPage) -> Unit,
     onBack: () -> Unit,
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
@@ -877,6 +920,12 @@ private fun SettingsRoute(
     val reminders by application.reminders.book.reminders.collectAsState()
     val scheduledTasks by application.scheduledTasks.book.tasks.collectAsState()
     val mcpServers by application.mcpServers.servers.collectAsState()
+    val globalFacts by remember { application.database.memoryDao().observeGlobal() }.collectAsState(initial = emptyList())
+    var skillCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        // The library is plain files with no change feed; Settings reads the count each time it opens.
+        skillCount = withContext(Dispatchers.IO) { application.skillLibrary.list().size }
+    }
     val context = LocalContext.current
     val permissionScope = rememberCoroutineScope()
     // Bumped on every resume, so statuses are right after a visit to system settings (D-124).
@@ -936,6 +985,10 @@ private fun SettingsRoute(
         },
         permissions = permissionRows,
         appVersion = appVersion,
+        toolGroupsOn = snapshot.enabledToolGroups.size,
+        toolGroupCount = ToolGroup.entries.size,
+        factCount = globalFacts.size,
+        skillCount = skillCount,
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -949,6 +1002,7 @@ private fun SettingsRoute(
         },
         onWebSearchOffInNewThreadsChange = { off -> settings.update { current -> current.copy(webSearchOffInNewThreads = off) } },
         onThemeModeChange = { mode -> settings.update { current -> current.copy(theme = themeChoiceOf(mode)) } },
+        onOpenPage = onOpenPage,
         onOpenStatusIcons = onOpenStatusIcons,
         onOpenMemory = onOpenMemory,
         onOpenSkills = onOpenSkills,
@@ -1014,7 +1068,17 @@ private fun SettingsRoute(
         },
         onOpenGitHub = { openGitHub(context) },
     )
-    SettingsScreen(state = state, actions = actions)
+    if (page == null) {
+        SettingsHomeScreen(
+            state = state,
+            actions = actions,
+            scrollState = homeScroll,
+            searchQuery = searchQuery,
+            onSearchQueryChange = onSearchQueryChange,
+        )
+    } else {
+        SettingsPageScreen(page = page, state = state, actions = actions)
+    }
 }
 
 /** Cancels the reminder or scheduled task that a Settings row names. */

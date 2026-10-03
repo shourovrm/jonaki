@@ -190,6 +190,29 @@ object JonakiIcons {
         icon("ChatBubble", "M20,2H4c-1.1,0 -2,0.9 -2,2v18l4,-4h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2zM20,16H6l-2,2V4h16v12z")
     }
 
+    /** Material "folder": Settings > Files and schedule (D-128). */
+    val Folder: ImageVector by lazy {
+        icon("Folder", "M10,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2h-8l-2,-2z")
+    }
+
+    /** Material "dark_mode" (a crescent moon): Settings > Theme (D-128). */
+    val DarkMode: ImageVector by lazy {
+        icon(
+            "DarkMode",
+            "M12,3c-4.97,0 -9,4.03 -9,9s4.03,9 9,9s9,-4.03 9,-9c0,-0.46 -0.04,-0.92 -0.1,-1.36c-0.98,1.37 -2.58,2.26 -4.4,2.26" +
+                "c-2.98,0 -5.4,-2.42 -5.4,-5.4c0,-1.81 0.89,-3.42 2.26,-4.4C12.92,3.04 12.46,3 12,3z",
+        )
+    }
+
+    /** Material "lightbulb": Settings > Memory and skills (D-128). */
+    val Lightbulb: ImageVector by lazy {
+        icon(
+            "Lightbulb",
+            "M9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1H9v1zM12,2C8.14,2 5,5.14 5,9c0,2.38 1.19,4.47 3,5.74V17" +
+                "c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1v-2.26c1.81,-1.27 3,-3.36 3,-5.74 0,-3.86 -3.14,-7 -7,-7z",
+        )
+    }
+
     /** Material "skip_next": a part a subagent skipped (D-126). */
     val SkipNext: ImageVector by lazy { icon("SkipNext", "M6,18l8.5,-6L6,6v12zM16,6v12h2V6h-2z") }
 

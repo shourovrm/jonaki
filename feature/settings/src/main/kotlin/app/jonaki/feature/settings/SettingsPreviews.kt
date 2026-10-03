@@ -18,5 +18,5 @@ private val noActions = SettingsActions(
 @Preview(name = "Settings, Bangla", locale = "bn", widthDp = 360, heightDp = 2400, fontScale = 1.3f)
 @Composable
 private fun SettingsBanglaPreview() {
-    JonakiTheme { SettingsScreen(SettingsSample.state, noActions) }
+    JonakiTheme { SettingsHomeScreen(SettingsSample.state, noActions) }
 }

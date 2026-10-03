@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -32,7 +33,7 @@ data class PermissionRowUi(
 /** Settings > Permissions: the four permissions the user controls, then the ones Android grants at install (D-124). */
 @Composable
 internal fun PermissionsSection(rows: List<PermissionRowUi>, onTap: (PermissionRow) -> Unit) {
-    SectionLabel(stringResource(R.string.settings_permissions_header))
+    Spacer(Modifier.height(8.dp))
     Group {
         rows.forEachIndexed { index, item ->
             if (index > 0) GroupDivider()
@@ -109,7 +110,7 @@ private fun statusColor(status: PermissionStatus): Color = when (status) {
 /** Settings > About: the version, the developer and the GitHub link. */
 @Composable
 internal fun AboutSection(appVersion: String, onOpenGitHub: () -> Unit) {
-    SectionLabel(stringResource(R.string.settings_about_header))
+    Spacer(Modifier.height(8.dp))
     Group {
         OneLineRow(stringResource(R.string.settings_about_version, appVersion))
         GroupDivider()

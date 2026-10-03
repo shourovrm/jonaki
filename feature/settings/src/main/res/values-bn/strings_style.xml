@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_section_answers">উত্তর</string>
     <string name="settings_custom_instructions">নিজের নির্দেশনা</string>
     <string name="settings_custom_instructions_none">নেই</string>
     <string name="settings_section_personas">পারসোনা</string>

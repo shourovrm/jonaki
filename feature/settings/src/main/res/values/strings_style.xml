@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Custom instructions, answer style and personas (D-107 to D-109). -->
-    <string name="settings_section_answers">Answers</string>
     <string name="settings_custom_instructions">Custom instructions</string>
     <string name="settings_custom_instructions_none">None</string>
     <string name="settings_section_personas">Personas</string>

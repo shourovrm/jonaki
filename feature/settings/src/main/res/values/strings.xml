@@ -11,7 +11,6 @@
     <string name="settings_move_up">Move %1$s up</string>
     <string name="settings_move_down">Move %1$s down</string>
     <string name="settings_search_off_new">Off in new threads</string>
-    <string name="settings_section_appearance">Theme</string>
     <string name="settings_theme_system">Phone</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>

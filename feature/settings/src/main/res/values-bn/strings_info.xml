@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_permissions_header">অনুমতি</string>
     <string name="settings_permissions_always_on_header">সবসময় চালু</string>
     <string name="settings_permissions_status_allowed">দেওয়া আছে</string>
     <string name="settings_permissions_status_not_asked">চাওয়া হয়নি</string>
@@ -27,7 +26,6 @@
     <string name="settings_permissions_boot_purpose">রিস্টার্টের পর রিমাইন্ডার আবার সেট</string>
     <string name="settings_permissions_keep_awake">জাগিয়ে রাখা</string>
     <string name="settings_permissions_keep_awake_purpose">নির্ধারিত কাজ শেষ করা</string>
-    <string name="settings_about_header">অ্যাপ সম্পর্কে</string>
     <string name="settings_about_version">ভার্সন %1$s</string>
     <string name="settings_about_developer">তৈরি করেছেন Riad Mashrub Shourov</string>
     <string name="settings_about_github">GitHub</string>

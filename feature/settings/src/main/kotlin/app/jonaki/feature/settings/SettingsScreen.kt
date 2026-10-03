@@ -41,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,14 +50,25 @@ import app.jonaki.core.ui.ThemeMode
 import androidx.compose.ui.text.style.TextOverflow
 import app.jonaki.core.ui.MonospaceFamily
 
+/**
+ * One Settings sub-page (D-128): today's sections, moved onto the page that
+ * the first page's row opens. [SettingsHomeScreen] is the first page.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: Modifier = Modifier) {
+fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: SettingsActions, modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        stringResource(page.title),
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = actions.onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
@@ -73,59 +85,104 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
-            SectionLabel(stringResource(R.string.settings_section_chat))
-            ChatServicesSection(state, actions)
-            SectionLabel(stringResource(R.string.settings_section_youtube))
-            Group {
-                KeyField(stringResource(R.string.settings_gemini_key), state.geminiKey, actions)
+            when (page) {
+                SettingsPage.MODELS -> ModelsPage(state, actions)
+                SettingsPage.WEB -> WebPage(state, actions)
+                SettingsPage.TOOLS -> ToolsPage(state, actions)
+                SettingsPage.ANSWERS -> AnswersAndPersonasSections(state, actions)
+                SettingsPage.MEMORY_SKILLS -> MemoryAndSkillsPage(state, actions)
+                SettingsPage.FILES_SCHEDULE -> FilesAndSchedulePage(state, actions)
+                SettingsPage.THEME -> ThemePage(state, actions)
+                SettingsPage.PERMISSIONS -> PermissionsSection(state.permissions, actions.onPermissionTap)
+                SettingsPage.ABOUT -> AboutSection(state.appVersion, actions.onOpenGitHub)
             }
-            SearchSection(state, actions)
-            SectionLabel(stringResource(R.string.settings_section_approvals))
-            Group {
-                ApprovalModeOptions(
-                    selected = state.approvalMode,
-                    onSelect = { choice -> if (choice != null) actions.onApprovalModeChange(choice) },
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
-            }
-            if (state.subagentModels.isNotEmpty()) {
-                SectionLabel(stringResource(R.string.settings_section_subagents))
-                Group {
-                    SubagentModelRows(state.subagentModels, state.subagentModelOptions, actions.onSubagentModelChange)
-                }
-            }
-            SectionLabel(stringResource(R.string.settings_section_tools))
-            Group {
-                NavigationRow(stringResource(R.string.settings_tools), onClick = actions.onOpenTools)
-                GroupDivider()
-                NavigationRow(stringResource(R.string.settings_python), onClick = actions.onOpenPython)
-            }
-            SectionLabel(stringResource(R.string.settings_section_memory))
-            Group {
-                NavigationRow(stringResource(R.string.settings_memory_open), onClick = actions.onOpenMemory)
-            }
-            SectionLabel(stringResource(R.string.settings_section_skills))
-            Group {
-                NavigationRow(stringResource(R.string.settings_skills_open), onClick = actions.onOpenSkills)
-            }
-            SectionLabel(stringResource(R.string.settings_section_mcp))
-            Group {
-                McpServerRows(state.mcpServers, actions)
-            }
-            AnswersAndPersonasSections(state, actions)
-            SectionLabel(stringResource(R.string.settings_section_files))
-            Group {
-                LinkedFolderRow(state.linkedFolderName, actions)
-            }
-            ScheduledSection(state.scheduledItems, actions.onCancelScheduled)
-            SectionLabel(stringResource(R.string.settings_section_appearance))
-            ThemeChooser(state.themeMode, actions.onThemeModeChange)
-            Group {
-                NavigationRow(stringResource(R.string.settings_status_icons), onClick = actions.onOpenStatusIcons)
-            }
-            PermissionsSection(state.permissions, actions.onPermissionTap)
-            AboutSection(state.appVersion, actions.onOpenGitHub)
         }
+    }
+}
+
+@Composable
+private fun ModelsPage(state: SettingsUiState, actions: SettingsActions) {
+    SectionLabel(stringResource(R.string.settings_section_chat))
+    ChatServicesSection(state, actions)
+    if (state.subagentModels.isNotEmpty()) {
+        SectionLabel(stringResource(R.string.settings_section_subagents))
+        Group {
+            SubagentModelRows(state.subagentModels, state.subagentModelOptions, actions.onSubagentModelChange)
+        }
+    }
+}
+
+@Composable
+private fun WebPage(state: SettingsUiState, actions: SettingsActions) {
+    SearchSection(state, actions)
+    SectionLabel(stringResource(R.string.settings_section_youtube))
+    Group {
+        KeyField(stringResource(R.string.settings_gemini_key), state.geminiKey, actions)
+    }
+}
+
+@Composable
+private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
+    SectionLabel(stringResource(R.string.settings_section_approvals))
+    Group {
+        ApprovalModeOptions(
+            selected = state.approvalMode,
+            onSelect = { choice -> if (choice != null) actions.onApprovalModeChange(choice) },
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+    }
+    SectionLabel(stringResource(R.string.settings_section_tools))
+    Group {
+        NavigationRow(
+            text = stringResource(R.string.settings_tools_all),
+            summary = pluralStringResource(R.plurals.settings_tools_all_summary, state.toolGroupCount, state.toolGroupCount),
+            onClick = actions.onOpenTools,
+        )
+        GroupDivider()
+        NavigationRow(stringResource(R.string.settings_python), onClick = actions.onOpenPython)
+    }
+    SectionLabel(stringResource(R.string.settings_section_mcp))
+    Group {
+        McpServerRows(state.mcpServers, actions)
+    }
+}
+
+@Composable
+private fun MemoryAndSkillsPage(state: SettingsUiState, actions: SettingsActions) {
+    SectionLabel(stringResource(R.string.settings_section_memory))
+    Group {
+        NavigationRow(
+            text = stringResource(R.string.settings_memory_open),
+            summary = pluralStringResource(R.plurals.settings_summary_facts, state.factCount, state.factCount),
+            onClick = actions.onOpenMemory,
+        )
+    }
+    SectionLabel(stringResource(R.string.settings_section_skills))
+    Group {
+        NavigationRow(
+            text = stringResource(R.string.settings_skills_open),
+            summary = pluralStringResource(R.plurals.settings_summary_skills, state.skillCount, state.skillCount),
+            onClick = actions.onOpenSkills,
+        )
+    }
+}
+
+@Composable
+private fun FilesAndSchedulePage(state: SettingsUiState, actions: SettingsActions) {
+    SectionLabel(stringResource(R.string.settings_section_files))
+    Group {
+        LinkedFolderRow(state.linkedFolderName, actions)
+    }
+    ScheduledSection(state.scheduledItems, actions.onCancelScheduled)
+}
+
+@Composable
+private fun ThemePage(state: SettingsUiState, actions: SettingsActions) {
+    Spacer(Modifier.size(16.dp))
+    ThemeChooser(state.themeMode, actions.onThemeModeChange)
+    Spacer(Modifier.size(12.dp))
+    Group {
+        NavigationRow(stringResource(R.string.settings_status_icons), onClick = actions.onOpenStatusIcons)
     }
 }
 
@@ -283,17 +340,29 @@ private fun LinkedFolderRow(folderName: String?, actions: SettingsActions) {
     }
 }
 
+/** A row that opens another page; [summary] is its current state on one line ending in "…" (D-029). */
 @Composable
-internal fun NavigationRow(text: String, onClick: () -> Unit) {
+internal fun NavigationRow(text: String, onClick: () -> Unit, summary: String? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .heightIn(min = 56.dp)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(text, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (summary != null) {
+                Text(
+                    summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,

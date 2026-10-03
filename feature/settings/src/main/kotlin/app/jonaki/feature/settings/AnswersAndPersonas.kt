@@ -33,10 +33,11 @@ data class PersonaRowUi(
     val name: String,
 )
 
-/** The Answers section (style and custom instructions) and the Personas section. */
+/** Settings > Answers: the answer style, the custom instructions and the personas (D-128). */
 @Composable
 internal fun AnswersAndPersonasSections(state: SettingsUiState, actions: SettingsActions) {
-    SectionLabel(stringResource(R.string.settings_section_answers))
+    // The page's title names the style row, so it needs no label of its own.
+    Spacer(Modifier.size(16.dp))
     AnswerStyleChoiceRow(
         choices = listOf(AnswerStyleChoice.CONCISE, AnswerStyleChoice.NORMAL, AnswerStyleChoice.DETAILED),
         selected = state.answerStyle,
