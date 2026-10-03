@@ -1,6 +1,7 @@
 package app.jonaki.run
 
-import androidx.room.withTransaction
+import androidx.room.immediateTransaction
+import androidx.room.useWriterConnection
 import app.jonaki.core.agent.AgentEvent
 import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.agent.ApprovalRequest
@@ -176,10 +177,14 @@ class RunSession(
             firstTextElapsedMillis = times?.firstTextElapsedMillis,
         )
         // The chat may already have marked the first draw; the transaction keeps that mark
-        // from being lost between reading it and replacing the row.
-        database.withTransaction {
-            val shownElapsedMillis = existingId?.let { id -> messageDao.findAll(listOf(id)).firstOrNull()?.firstShownElapsedMillis }
-            messageDao.upsert(row.copy(firstShownElapsedMillis = shownElapsedMillis))
+        // from being lost between reading it and replacing the row. The database runs on
+        // the bundled SQLite driver (D-023), which has no SupportSQLiteOpenHelper, so
+        // withTransaction would throw; the driver's own writer transaction works.
+        database.useWriterConnection { transactor ->
+            transactor.immediateTransaction {
+                val shownElapsedMillis = existingId?.let { id -> messageDao.findAll(listOf(id)).firstOrNull()?.firstShownElapsedMillis }
+                messageDao.upsert(row.copy(firstShownElapsedMillis = shownElapsedMillis))
+            }
         }
         streamingMessageId = null
         routingFellBack = false

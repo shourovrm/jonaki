@@ -1655,6 +1655,11 @@ was checked on a phone. Tests: RequestTimerTest (through AgentLoop with a
 scripted provider and a fake clock), RequestTimesMigrationTest,
 RequestLogRowsTest, ChatItemsTest. Outcome: pending the phone
 measurement.
+Phone check (A059, 2026-10-03): the first build crashed after every turn,
+because Room's withTransaction needs a SupportSQLiteOpenHelper and the app
+uses the bundled driver (D-023); fixed with useWriterConnection and
+immediateTransaction. After the fix, "App delay" read 15 to 53 ms on four
+local-model turns (target under 100 ms: met).
 
 ## D-133 · 2026-10-03 · Local models with llama.cpp, downloaded on demand — proposed
 Jonaki runs GGUF models on the phone with llama.cpp (pinned release, built
@@ -1736,6 +1741,13 @@ none); a change mid-download fails the hash and deletes the file. Tests:
 38 in core:local-models with recorded responses in testdata/huggingface/,
 LocalModelsRowsTest, summary and search tests. Not checked: anything on a
 phone; previews at 360 dp and 1.3 compiled, not rendered. Outcome: pending.
+Phone check (A059, 2026-10-03, Qwen3.5-0.8B Q4_0, downloaded in the app at
+about 2.5 MB/s, continuing in the background): the native library loads;
+the first turn read 2,162 prompt tokens in 14.8 s and wrote 157 tokens in
+11.1 s; a later turn restored a checkpoint and reused 2,229 of 2,285
+tokens, reading the rest in 0.7 s. Asked to set a reminder, the 0.8B model
+asked for the text instead of calling phone; tool use needs the 2B model or
+larger, not yet tested.
 
 ## D-134 · 2026-10-03 · Reddit skill reads threads from Arctic Shift — proposed
 The built-in reddit skill searches through Reddit's RSS feed and reads a
