@@ -4,23 +4,28 @@ import android.Manifest
 import android.os.Build
 import androidx.annotation.StringRes
 
-/** What Settings > Permissions shows for one live row (D-124). */
+/**
+ * What Settings > Permissions shows for one live row (D-124). The user sees
+ * three words (D-128): "Allowed", "Not allowed" (NOT_ALLOWED and OFF) and
+ * "Blocked"; Android 14's partial photo access keeps "Selected photos".
+ */
 enum class PermissionStatus {
     ALLOWED,
 
     /** Android 14's "Select photos": only the photos the user picked. */
     SELECTED_PHOTOS,
 
-    /** The user never refused, so Android's dialog can still be shown. */
-    NOT_ASKED,
-
-    /** The user refused once; Android still shows its dialog when Jonaki asks again. */
-    DENIED,
+    /** Not granted, and Android's dialog can still appear: never asked, closed with Back, or refused once. */
+    NOT_ALLOWED,
 
     /** Refused for good ("Don't ask again", or twice from Android 11); only system settings can change it. */
     BLOCKED,
 
-    /** A special access switch (Alarms & reminders) that is off in system settings. */
+    /**
+     * A switch that lives in system settings is off: Alarms & reminders, or
+     * notifications before Android 13. Shown as "Not allowed", but no dialog
+     * exists, so the row opens system settings.
+     */
     OFF,
 }
 
@@ -106,9 +111,9 @@ enum class AlwaysOnRow(
 object PermissionStatuses {
     fun runtime(granted: Boolean, refusedBefore: Boolean, showsRationale: Boolean): PermissionStatus = when {
         granted -> PermissionStatus.ALLOWED
-        showsRationale -> PermissionStatus.DENIED
+        showsRationale -> PermissionStatus.NOT_ALLOWED
         refusedBefore -> PermissionStatus.BLOCKED
-        else -> PermissionStatus.NOT_ASKED
+        else -> PermissionStatus.NOT_ALLOWED
     }
 
     /**
@@ -133,7 +138,7 @@ object PermissionStatuses {
         if (notificationsEnabled) {
             return PermissionStatus.ALLOWED
         }
-        return PermissionStatus.BLOCKED
+        return PermissionStatus.OFF
     }
 
     /** The calendar tools read and add events, so the row is allowed only with both. */
@@ -174,7 +179,7 @@ object PermissionStatuses {
     }
 
     fun buttonFor(status: PermissionStatus): PermissionButton = when (status) {
-        PermissionStatus.NOT_ASKED, PermissionStatus.DENIED -> PermissionButton.ALLOW
+        PermissionStatus.NOT_ALLOWED -> PermissionButton.ALLOW
         PermissionStatus.BLOCKED, PermissionStatus.OFF -> PermissionButton.OPEN_SETTINGS
         PermissionStatus.ALLOWED, PermissionStatus.SELECTED_PHOTOS -> PermissionButton.NONE
     }

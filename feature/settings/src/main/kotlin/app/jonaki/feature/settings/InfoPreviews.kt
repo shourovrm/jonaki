@@ -14,7 +14,7 @@ import app.jonaki.core.ui.ThemeMode
 
 private val sampleRows = listOf(
     PermissionRowUi(PermissionRow.NOTIFICATIONS, PermissionStatus.ALLOWED),
-    PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.NOT_ASKED),
+    PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.BLOCKED),
     PermissionRowUi(PermissionRow.PHOTOS, PermissionStatus.SELECTED_PHOTOS),
     PermissionRowUi(PermissionRow.ALARMS, PermissionStatus.OFF),
 )

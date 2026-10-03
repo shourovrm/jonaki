@@ -105,16 +105,31 @@ object SettingsSummaries {
         ThemeMode.DARK -> texts.string(R.string.settings_theme_dark)
     }
 
-    /** Denied and Off both need a trip to system settings, so both count as denied here. */
+    /**
+     * Rows without access, named when there is one and counted when there
+     * are more. Red only when one is blocked, as on the page itself: a
+     * "Not allowed" row is one tap from Android's dialog.
+     */
     private fun permissions(rows: List<PermissionRowUi>, texts: SettingsTexts): PageSummary {
-        val denied = rows.filter { item -> item.status == PermissionStatus.DENIED || item.status == PermissionStatus.OFF }
-        return when (denied.size) {
-            0 -> PageSummary(texts.string(R.string.settings_summary_all_allowed))
-            1 -> PageSummary(
-                texts.string(R.string.settings_summary_one_denied, texts.string(denied.single().row.title)),
-                needsAttention = true,
-            )
-            else -> PageSummary(texts.plural(R.plurals.settings_summary_denied, denied.size, denied.size), needsAttention = true)
+        val withoutAccess = rows.filter { item -> !hasAccess(item.status) }
+        val anyBlocked = withoutAccess.any { item -> item.status == PermissionStatus.BLOCKED }
+        if (withoutAccess.isEmpty()) {
+            return PageSummary(texts.string(R.string.settings_summary_all_allowed))
         }
+        if (withoutAccess.size > 1) {
+            val count = withoutAccess.size
+            return PageSummary(texts.plural(R.plurals.settings_summary_not_allowed, count, count), needsAttention = anyBlocked)
+        }
+        val only = withoutAccess.single()
+        val title = texts.string(only.row.title)
+        val text = if (only.status == PermissionStatus.BLOCKED) {
+            texts.string(R.string.settings_summary_one_blocked, title)
+        } else {
+            texts.string(R.string.settings_summary_one_not_allowed, title)
+        }
+        return PageSummary(text, needsAttention = anyBlocked)
     }
+
+    private fun hasAccess(status: PermissionStatus): Boolean =
+        status == PermissionStatus.ALLOWED || status == PermissionStatus.SELECTED_PHOTOS
 }

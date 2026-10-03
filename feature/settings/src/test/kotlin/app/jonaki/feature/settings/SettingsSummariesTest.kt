@@ -154,30 +154,53 @@ class SettingsSummariesTest {
     }
 
     @Test
-    fun permissionsNamesOneDeniedRowInTheErrorColour() {
+    fun permissionsNamesOneBlockedRowInTheErrorColour() {
         val state = emptyState.copy(
             permissions = listOf(
                 PermissionRowUi(PermissionRow.NOTIFICATIONS, PermissionStatus.ALLOWED),
-                PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.DENIED),
-                PermissionRowUi(PermissionRow.PHOTOS, PermissionStatus.NOT_ASKED),
+                PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.BLOCKED),
+                PermissionRowUi(PermissionRow.PHOTOS, PermissionStatus.SELECTED_PHOTOS),
             ),
         )
         val result = SettingsSummaries.of(SettingsPage.PERMISSIONS, state, texts)
-        assertEquals("Calendar denied", result.text)
+        assertEquals("Calendar blocked", result.text)
         assertTrue(result.needsAttention)
     }
 
     @Test
-    fun permissionsCountsSeveralDeniedRowsAndAlarmsOff() {
+    fun permissionsNamesOneNotAllowedRowWithoutTheErrorColour() {
         val state = emptyState.copy(
             permissions = listOf(
-                PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.DENIED),
+                PermissionRowUi(PermissionRow.NOTIFICATIONS, PermissionStatus.ALLOWED),
+                PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.NOT_ALLOWED),
+            ),
+        )
+        val result = SettingsSummaries.of(SettingsPage.PERMISSIONS, state, texts)
+        assertEquals("Calendar not allowed", result.text)
+        assertFalse(result.needsAttention)
+    }
+
+    @Test
+    fun alarmsOffAreNotAllowed() {
+        val state = emptyState.copy(permissions = listOf(PermissionRowUi(PermissionRow.ALARMS, PermissionStatus.OFF)))
+        assertEquals("Alarms & reminders not allowed", summary(SettingsPage.PERMISSIONS, state))
+    }
+
+    @Test
+    fun permissionsCountsSeveralRowsWithoutAccess() {
+        val state = emptyState.copy(
+            permissions = listOf(
+                PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.NOT_ALLOWED),
                 PermissionRowUi(PermissionRow.ALARMS, PermissionStatus.OFF),
             ),
         )
         val result = SettingsSummaries.of(SettingsPage.PERMISSIONS, state, texts)
-        assertEquals("2 denied", result.text)
-        assertTrue(result.needsAttention)
+        assertEquals("2 not allowed", result.text)
+        assertFalse(result.needsAttention)
+        val withBlocked = state.copy(permissions = state.permissions + PermissionRowUi(PermissionRow.PHOTOS, PermissionStatus.BLOCKED))
+        val blockedResult = SettingsSummaries.of(SettingsPage.PERMISSIONS, withBlocked, texts)
+        assertEquals("3 not allowed", blockedResult.text)
+        assertTrue(blockedResult.needsAttention)
     }
 
     @Test

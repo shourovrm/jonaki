@@ -94,17 +94,16 @@ private fun LivePermissionRow(item: PermissionRowUi, onTap: (PermissionRow) -> U
 private fun statusText(status: PermissionStatus): Int = when (status) {
     PermissionStatus.ALLOWED -> R.string.settings_permissions_status_allowed
     PermissionStatus.SELECTED_PHOTOS -> R.string.settings_permissions_status_selected_photos
-    PermissionStatus.NOT_ASKED -> R.string.settings_permissions_status_not_asked
-    PermissionStatus.DENIED, PermissionStatus.BLOCKED -> R.string.settings_permissions_status_denied
-    PermissionStatus.OFF -> R.string.settings_permissions_status_off
+    PermissionStatus.NOT_ALLOWED, PermissionStatus.OFF -> R.string.settings_permissions_status_not_allowed
+    PermissionStatus.BLOCKED -> R.string.settings_permissions_status_blocked
 }
 
 /** The same colours as a key's "Set" and a low balance elsewhere in Settings. */
 @Composable
 private fun statusColor(status: PermissionStatus): Color = when (status) {
     PermissionStatus.ALLOWED, PermissionStatus.SELECTED_PHOTOS -> MaterialTheme.colorScheme.primary
-    PermissionStatus.NOT_ASKED -> MaterialTheme.colorScheme.onSurfaceVariant
-    PermissionStatus.DENIED, PermissionStatus.BLOCKED, PermissionStatus.OFF -> MaterialTheme.colorScheme.error
+    PermissionStatus.NOT_ALLOWED, PermissionStatus.OFF -> MaterialTheme.colorScheme.onSurfaceVariant
+    PermissionStatus.BLOCKED -> MaterialTheme.colorScheme.error
 }
 
 /** Settings > About: the version, the developer and the GitHub link. */

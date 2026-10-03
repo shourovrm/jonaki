@@ -51,12 +51,13 @@
     </plurals>
     <string name="settings_summary_nothing_scheduled">কিছু নির্ধারিত নেই</string>
     <string name="settings_summary_theme_phone">ফোনের মতো</string>
-    <string name="settings_summary_one_denied">%1$s দেওয়া হয়নি</string>
-    <plurals name="settings_summary_denied">
-        <item quantity="one">%1$d টি দেওয়া হয়নি</item>
-        <item quantity="other">%1$d টি দেওয়া হয়নি</item>
+    <string name="settings_summary_one_blocked">%1$s আটকানো</string>
+    <string name="settings_summary_one_not_allowed">%1$s-এর অনুমতি নেই</string>
+    <plurals name="settings_summary_not_allowed">
+        <item quantity="one">%1$dটির অনুমতি নেই</item>
+        <item quantity="other">%1$dটির অনুমতি নেই</item>
     </plurals>
-    <string name="settings_summary_all_allowed">সব দেওয়া আছে</string>
+    <string name="settings_summary_all_allowed">সব অনুমতি আছে</string>
 
     <!-- Tools and approvals page. -->
     <string name="settings_tools_all">সব টুল</string>

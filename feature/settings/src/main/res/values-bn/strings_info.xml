@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_permissions_always_on_header">সবসময় চালু</string>
-    <string name="settings_permissions_status_allowed">দেওয়া আছে</string>
-    <string name="settings_permissions_status_not_asked">চাওয়া হয়নি</string>
-    <string name="settings_permissions_status_denied">দেওয়া হয়নি</string>
+    <string name="settings_permissions_status_allowed">অনুমতি আছে</string>
+    <string name="settings_permissions_status_not_allowed">অনুমতি নেই</string>
+    <string name="settings_permissions_status_blocked">আটকানো</string>
     <string name="settings_permissions_status_selected_photos">বাছাই করা ছবি</string>
-    <string name="settings_permissions_status_off">বন্ধ</string>
     <string name="settings_permissions_action_ask">অনুমতি দিন</string>
     <string name="settings_permissions_action_open_settings">সেটিংস খুলুন</string>
     <string name="settings_permissions_notifications">নোটিফিকেশন</string>

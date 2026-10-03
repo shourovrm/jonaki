@@ -51,10 +51,11 @@
     </plurals>
     <string name="settings_summary_nothing_scheduled">nothing scheduled</string>
     <string name="settings_summary_theme_phone">Follows the phone</string>
-    <string name="settings_summary_one_denied">%1$s denied</string>
-    <plurals name="settings_summary_denied">
-        <item quantity="one">%1$d denied</item>
-        <item quantity="other">%1$d denied</item>
+    <string name="settings_summary_one_blocked">%1$s blocked</string>
+    <string name="settings_summary_one_not_allowed">%1$s not allowed</string>
+    <plurals name="settings_summary_not_allowed">
+        <item quantity="one">%1$d not allowed</item>
+        <item quantity="other">%1$d not allowed</item>
     </plurals>
     <string name="settings_summary_all_allowed">All allowed</string>
 

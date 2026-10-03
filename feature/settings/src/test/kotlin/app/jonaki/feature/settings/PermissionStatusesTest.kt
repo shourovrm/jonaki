@@ -13,15 +13,18 @@ class PermissionStatusesTest {
     private val android14 = 34
 
     @Test
-    fun runtimePermissionNeverRefusedIsNotAsked() {
-        assertEquals(PermissionStatus.NOT_ASKED, PermissionStatuses.runtime(granted = false, refusedBefore = false, showsRationale = false))
+    fun runtimePermissionNeverRefusedIsNotAllowedWithAllow() {
+        // Never asked, or the dialog was closed with Back: Android shows it when Jonaki asks.
+        val status = PermissionStatuses.runtime(granted = false, refusedBefore = false, showsRationale = false)
+        assertEquals(PermissionStatus.NOT_ALLOWED, status)
+        assertEquals(PermissionButton.ALLOW, PermissionStatuses.buttonFor(status))
     }
 
     @Test
-    fun refusedOnceIsDeniedAndCanBeAskedAgain() {
+    fun refusedOnceIsNotAllowedAndCanBeAskedAgain() {
         // After one refusal Android shows its dialog again and says so through the rationale.
         val status = PermissionStatuses.runtime(granted = false, refusedBefore = true, showsRationale = true)
-        assertEquals(PermissionStatus.DENIED, status)
+        assertEquals(PermissionStatus.NOT_ALLOWED, status)
         assertEquals(PermissionButton.ALLOW, PermissionStatuses.buttonFor(status))
     }
 
@@ -37,7 +40,7 @@ class PermissionStatusesTest {
     fun rationaleWithoutARecordStillCountsAsARefusal() {
         // A refusal on a build before the record, or a permission taken back in system settings.
         val status = PermissionStatuses.runtime(granted = false, refusedBefore = false, showsRationale = true)
-        assertEquals(PermissionStatus.DENIED, status)
+        assertEquals(PermissionStatus.NOT_ALLOWED, status)
     }
 
     @Test
@@ -73,25 +76,26 @@ class PermissionStatusesTest {
         val notAsked = PermissionStatuses.notifications(android13, permissionGranted = false, notificationsEnabled = false, refusedBefore = false, showsRationale = false)
         val denied = PermissionStatuses.notifications(android13, permissionGranted = false, notificationsEnabled = false, refusedBefore = true, showsRationale = false)
         val allowed = PermissionStatuses.notifications(android14, permissionGranted = true, notificationsEnabled = true, refusedBefore = true, showsRationale = false)
-        assertEquals(PermissionStatus.NOT_ASKED, notAsked)
+        assertEquals(PermissionStatus.NOT_ALLOWED, notAsked)
         assertEquals(PermissionStatus.BLOCKED, denied)
         assertEquals(PermissionStatus.ALLOWED, allowed)
     }
 
     @Test
-    fun notificationsBefore13FollowTheAppSwitchAndAreNeverNotAsked() {
-        // Below Android 13 there is no dialog, so the app switch is the whole answer.
+    fun notificationsBefore13FollowTheAppSwitch() {
+        // Below Android 13 there is no dialog, so the app switch is the whole answer and lives in system settings.
         val on = PermissionStatuses.notifications(android12L, permissionGranted = false, notificationsEnabled = true, refusedBefore = false, showsRationale = false)
         val off = PermissionStatuses.notifications(android12L, permissionGranted = false, notificationsEnabled = false, refusedBefore = false, showsRationale = false)
         assertEquals(PermissionStatus.ALLOWED, on)
-        assertEquals(PermissionStatus.BLOCKED, off)
+        assertEquals(PermissionStatus.OFF, off)
+        assertEquals(PermissionButton.OPEN_SETTINGS, PermissionStatuses.buttonFor(off))
     }
 
     @Test
     fun calendarNeedsBothReadAndWrite() {
         assertEquals(PermissionStatus.ALLOWED, PermissionStatuses.calendar(readGranted = true, writeGranted = true, refusedBefore = true, showsRationale = false))
         assertEquals(PermissionStatus.BLOCKED, PermissionStatuses.calendar(readGranted = true, writeGranted = false, refusedBefore = true, showsRationale = false))
-        assertEquals(PermissionStatus.NOT_ASKED, PermissionStatuses.calendar(readGranted = false, writeGranted = false, refusedBefore = false, showsRationale = false))
+        assertEquals(PermissionStatus.NOT_ALLOWED, PermissionStatuses.calendar(readGranted = false, writeGranted = false, refusedBefore = false, showsRationale = false))
     }
 
     @Test
@@ -147,7 +151,7 @@ class PermissionStatusesTest {
             refusedBefore = false, showsRationale = false,
         )
         assertEquals(PermissionStatus.ALLOWED, allowed)
-        assertEquals(PermissionStatus.NOT_ASKED, notAsked)
+        assertEquals(PermissionStatus.NOT_ALLOWED, notAsked)
     }
 
     @Test
@@ -159,7 +163,7 @@ class PermissionStatusesTest {
             externalStorageGranted = true,
             refusedBefore = false, showsRationale = false,
         )
-        assertEquals(PermissionStatus.NOT_ASKED, status)
+        assertEquals(PermissionStatus.NOT_ALLOWED, status)
     }
 
     @Test
@@ -175,8 +179,7 @@ class PermissionStatusesTest {
 
     @Test
     fun aDialogAndroidStillShowsOffersAllowAndOtherwiseSettings() {
-        assertEquals(PermissionButton.ALLOW, PermissionStatuses.buttonFor(PermissionStatus.NOT_ASKED))
-        assertEquals(PermissionButton.ALLOW, PermissionStatuses.buttonFor(PermissionStatus.DENIED))
+        assertEquals(PermissionButton.ALLOW, PermissionStatuses.buttonFor(PermissionStatus.NOT_ALLOWED))
         assertEquals(PermissionButton.OPEN_SETTINGS, PermissionStatuses.buttonFor(PermissionStatus.BLOCKED))
         assertEquals(PermissionButton.OPEN_SETTINGS, PermissionStatuses.buttonFor(PermissionStatus.OFF))
         assertEquals(PermissionButton.NONE, PermissionStatuses.buttonFor(PermissionStatus.ALLOWED))

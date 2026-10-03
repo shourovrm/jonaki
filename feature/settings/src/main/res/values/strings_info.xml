@@ -3,10 +3,9 @@
     <!-- Settings > Permissions and About (D-124). Agreed in an adversarial review. -->
     <string name="settings_permissions_always_on_header">Always on</string>
     <string name="settings_permissions_status_allowed">Allowed</string>
-    <string name="settings_permissions_status_not_asked">Not asked</string>
-    <string name="settings_permissions_status_denied">Denied</string>
+    <string name="settings_permissions_status_not_allowed">Not allowed</string>
+    <string name="settings_permissions_status_blocked">Blocked</string>
     <string name="settings_permissions_status_selected_photos">Selected photos</string>
-    <string name="settings_permissions_status_off">Off</string>
     <string name="settings_permissions_action_ask">Allow</string>
     <string name="settings_permissions_action_open_settings">Open settings</string>
     <string name="settings_permissions_notifications">Notifications</string>
