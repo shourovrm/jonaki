@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki revamp A: colour themes</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0b0c0b; color: #d9dcd5; font-family: "Geist", "Noto Sans Bengali", system-ui, sans-serif; padding: 40px 32px 80px; }
+  .page-head { max-width: 1280px; margin: 0 auto 32px; }
+  .page-head h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-head p { margin-top: 8px; max-width: 78ch; color: #9aa094; line-height: 1.55; font-size: 14px; }
+  .palette { max-width: 1280px; margin: 0 auto 60px; }
+  .palette h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .palette > p { color: #9aa094; font-size: 14px; line-height: 1.55; max-width: 84ch; margin: 6px 0 18px; }
+  .row { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .cell { zoom: 0.78; }
+  .cell-label { font-size: 15px; color: #9aa094; margin: 0 0 10px 6px; }
+  .tokens { display: grid; grid-template-columns: 48px auto; justify-content: start; align-items: center; gap: 6px 12px; margin-top: 14px; font-size: 12.5px; color: #b4b9ad; }
+  .tokens .sw { display: flex; gap: 5px; }
+  .tokens .sw span { width: 22px; height: 22px; border-radius: 6px; border: 1px solid #ffffff1f; }
+  /* ---------- Phone frame (shared) ---------- */
+  .phone {
+    width: 360px; height: 760px; border-radius: 34px; overflow: hidden;
+    position: relative; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font), "Noto Sans Bengali", system-ui, sans-serif;
+    box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080;
+  }
+  .statusbar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; color: var(--ink); }
+  .statusbar i { font-size: 13px; margin-left: 4px; }
+  .mono { font-family: var(--mono), monospace; font-feature-settings: "tnum"; }
+  .muted { color: var(--muted); }
+  .bn { font-family: "Noto Sans Bengali", var(--font), sans-serif; }
+
+  /* ---------- Thread list ---------- */
+  .list-top { padding: 14px 20px 6px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: baseline; gap: 2px; font-size: 24px; font-weight: 600; letter-spacing: -0.03em; }
+  .brand .j { position: relative; }
+  .brand .j::before {
+    /* The lit j: the firefly replaces the dot of the j (D-025). */
+    content: ""; position: absolute; right: 0px; top: 0px; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--glow); box-shadow: 0 0 10px 3px var(--glow-halo);
+  }
+  .brand .dotless { font-family: var(--font); }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; color: var(--ink); font-size: 21px; }
+  .search { margin: 8px 20px 4px; height: 44px; border-radius: var(--r-field); background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--muted); font-size: 14.5px; }
+  .chips { display: flex; gap: 8px; padding: 10px 20px 6px; overflow: hidden; }
+  .chip { height: 32px; padding: 0 13px; border-radius: 16px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 1px solid var(--line); color: var(--ink-2); }
+  .chip.on { background: var(--chip-on); color: var(--chip-on-ink); border-color: transparent; }
+  .group-label { padding: 16px 20px 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .thread { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 20px; align-items: baseline; }
+  .thread .name { font-size: 15.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
+  .thread .when { font-size: 12px; color: var(--muted); }
+  .thread .snippet { grid-column: 1 / -1; font-size: 13.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px 2px var(--glow-halo); flex: none; animation: breathe 2.4s ease-in-out infinite; }
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--tag); color: var(--ink-2); flex: none; }
+  .fab { position: absolute; right: 20px; bottom: 24px; height: 52px; padding: 0 20px 0 16px; border-radius: var(--r-fab); background: var(--accent); color: var(--on-accent); display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 10px 24px var(--shadow); }
+  .fab i { font-size: 20px; }
+
+  /* ---------- Chat ---------- */
+  .chat-top { height: 56px; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-bottom: 1px solid var(--line); }
+  .chat-top .title { flex: 1; font-size: 16.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 4px; }
+  .transcript { flex: 1; overflow: hidden; padding: 16px 18px 8px; display: flex; flex-direction: column; gap: 16px; }
+  .msg-user { align-self: flex-end; max-width: 86%; background: var(--user-bubble); color: var(--ink); padding: 11px 14px; border-radius: var(--r-bubble) var(--r-bubble) 6px var(--r-bubble); font-size: 14.5px; line-height: 1.5; }
+  .msg-agent { font-size: 14.5px; line-height: 1.6; color: var(--ink); }
+  .msg-agent b { font-weight: 600; }
+  .msg-agent ul { padding-left: 18px; margin-top: 6px; }
+
+  /* Run block: the Rail line step track (D-024), one station per tool step. */
+  .run { border-radius: var(--r-card); background: var(--run-bg); border: 1px solid var(--line); padding: 12px 14px 6px; }
+  .run-head { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .run-head .working { color: var(--ink-2); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .step { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; position: relative; padding-bottom: 12px; font-size: 13.5px; }
+  .step::before { content: ""; position: absolute; left: 8px; top: 16px; bottom: 0; width: 2px; background: var(--rail); }
+  .step:last-child::before { display: none; }
+  .station { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; margin-top: 1px; }
+  .station.done { background: var(--rail); color: var(--ink-2); }
+  .station.running { background: var(--glow); box-shadow: 0 0 10px 2px var(--glow-halo); color: #1d2600; }
+  .station.waiting { border: 2px solid var(--rail); }
+  .step .label { color: var(--ink); }
+  .step .detail { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+  .step .time { color: var(--muted); font-size: 12px; }
+
+  .strip { display: flex; gap: 6px; padding: 8px 14px 4px; align-items: center; }
+  .pill { height: 30px; border-radius: 15px; padding: 0 10px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; background: var(--pill); color: var(--ink-2); white-space: nowrap; }
+  .pill i { font-size: 15px; }
+  .pill.model { flex: 1; min-width: 0; }
+  .pill.model span { overflow: hidden; text-overflow: ellipsis; }
+  .pill.off { color: var(--muted); opacity: 0.75; }
+  .ring { width: 15px; height: 15px; border-radius: 50%; background: conic-gradient(var(--ink-2) 0 23%, var(--rail) 23% 100%); -webkit-mask: radial-gradient(circle, transparent 4.5px, #000 5px); mask: radial-gradient(circle, transparent 4.5px, #000 5px); }
+  .composer { display: flex; align-items: flex-end; gap: 8px; padding: 6px 12px 16px; }
+  .plus { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--line); display: grid; place-items: center; font-size: 21px; color: var(--ink-2); flex: none; }
+  .field { flex: 1; min-height: 44px; border-radius: 22px; background: var(--field); display: flex; align-items: center; padding: 0 16px; font-size: 14.5px; color: var(--muted); }
+  .send { width: 44px; height: 44px; border-radius: 22px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 19px; flex: none; }
+  .stop { background: var(--field); color: var(--ink); }
+
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+  /* Layout and shape of direction A, shared by every palette. */
+  .phone { --font: "Geist"; --mono: "Geist Mono"; --r-field: 22px; --r-fab: 18px; --r-bubble: 20px; --r-card: 16px; }
+
+  /* 1. Leaf: today's colours, tuned. Actions and live work share the firefly hue. */
+  .leaf.dark  { --bg:#10130e; --ink:#e6e9e0; --ink-2:#c3c9b9; --muted:#8b927f; --line:#262b21; --field:#1a1e16; --pill:#1a1e16; --tag:#22281c; --accent:#c9e86b; --on-accent:#1f2a00; --glow:#d4f06a; --glow-halo:#c9e86b55; --chip-on:#e6e9e0; --chip-on-ink:#10130e; --user-bubble:#20261a; --run-bg:transparent; --rail:#33392b; --shadow:#00000066; }
+  .leaf.light { --bg:#f3f6ef; --ink:#171b14; --ink-2:#3a4233; --muted:#5f6857; --line:#dde3d5; --field:#e7ece1; --pill:#e7ece1; --tag:#e3ead9; --accent:#3f5600; --on-accent:#f3f6ef; --glow:#9cc520; --glow-halo:#9cc52066; --chip-on:#3f5600; --chip-on-ink:#f3f6ef; --user-bubble:#e2e9d6; --run-bg:#ffffff; --rail:#d3dbc8; --shadow:#3f560033; }
+
+  /* 2. Monsoon: blue-slate night sky, fireflies against it. In light mode actions turn ink, so the firefly stays the only colour. */
+  .monsoon.dark  { --bg:#0f1318; --ink:#e4e8ee; --ink-2:#c2c9d3; --muted:#8a93a1; --line:#232a33; --field:#181d24; --pill:#181d24; --tag:#1f2630; --accent:#d4f06a; --on-accent:#1f2a00; --glow:#d4f06a; --glow-halo:#d4f06a4d; --chip-on:#e4e8ee; --chip-on-ink:#0f1318; --user-bubble:#1c232c; --run-bg:transparent; --rail:#2c3440; --shadow:#00000070; }
+  .monsoon.light { --bg:#f2f4f7; --ink:#12161c; --ink-2:#343c48; --muted:#5b6472; --line:#d9dee6; --field:#e4e8ee; --pill:#e4e8ee; --tag:#dde3eb; --accent:#12161c; --on-accent:#f2f4f7; --glow:#8fbf12; --glow-halo:#8fbf1266; --chip-on:#12161c; --chip-on-ink:#f2f4f7; --user-bubble:#e1e7ef; --run-bg:#ffffff; --rail:#cfd6e0; --shadow:#12161c26; }
+
+  /* 3. Lantern amber: the firefly as warm lamplight. Neutral greys, no cream or brass. */
+  .amber.dark  { --bg:#131211; --ink:#ece8e2; --ink-2:#cbc5bc; --muted:#948d84; --line:#2a2724; --field:#1d1b19; --pill:#1d1b19; --tag:#26231f; --accent:#f0b542; --on-accent:#2a1c00; --glow:#ffc94d; --glow-halo:#ffc94d4d; --chip-on:#ece8e2; --chip-on-ink:#131211; --user-bubble:#24211d; --run-bg:transparent; --rail:#36322d; --shadow:#00000070; }
+  .amber.light { --bg:#f4f4f1; --ink:#191816; --ink-2:#3d3a35; --muted:#66625b; --line:#e0ded8; --field:#e9e8e3; --pill:#e9e8e3; --tag:#e5e3dc; --accent:#8a5300; --on-accent:#fff8ec; --glow:#e8a21a; --glow-halo:#e8a21a59; --chip-on:#8a5300; --chip-on-ink:#fff8ec; --user-bubble:#ecebe5; --run-bg:#ffffff; --rail:#dcd9d1; --shadow:#8a530026; }
+
+  /* 4. Graphite: true neutral greys with one bright green pop. */
+  .graphite.dark  { --bg:#111213; --ink:#e8e9ea; --ink-2:#c5c7ca; --muted:#8d9095; --line:#26282b; --field:#1b1c1e; --pill:#1b1c1e; --tag:#222427; --accent:#b9f24a; --on-accent:#1a2600; --glow:#b9f24a; --glow-halo:#b9f24a4d; --chip-on:#e8e9ea; --chip-on-ink:#111213; --user-bubble:#1f2124; --run-bg:transparent; --rail:#303236; --shadow:#00000070; }
+  .graphite.light { --bg:#f7f7f6; --ink:#141516; --ink-2:#36383b; --muted:#63666b; --line:#e2e2df; --field:#ececea; --pill:#ececea; --tag:#e6e6e3; --accent:#141516; --on-accent:#f7f7f6; --glow:#7fc010; --glow-halo:#7fc01066; --chip-on:#141516; --chip-on-ink:#f7f7f6; --user-bubble:#ececea; --run-bg:#ffffff; --rail:#dadad6; --shadow:#14151622; }
+
+  .light .station.running { color: #ffffff; }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>Direction A: four colour themes, dark and light</h1>
+  <p>Layout, type and shapes are the same as A. Only the colours change. In each theme the colour of live work (glow dot, running step) is fixed. Buttons use either the same hue or plain ink, so no theme has a second accent. Each row shows dark mode on the left and light mode on the right.</p>
+</header>
+
+<section class="palette" data-theme="leaf">
+  <h2>1. Leaf</h2>
+  <p>Today's leaf-dark and paddy-green colours, tuned for contrast. This is the safe choice: the app looks like itself, only calmer.</p>
+</section>
+<section class="palette" data-theme="monsoon">
+  <h2>2. Monsoon</h2>
+  <p>A blue-slate night sky with the firefly against it. The firefly yellow-green stands out more here than on green. In light mode buttons are ink-black, so the only colour on screen is live work.</p>
+</section>
+<section class="palette" data-theme="amber">
+  <h2>3. Lantern amber</h2>
+  <p>The firefly as warm lamplight on neutral charcoal and grey-white. This moves away from green entirely. It suits evening reading, but changes the brand colour of D-024 and the logo.</p>
+</section>
+<section class="palette" data-theme="graphite">
+  <h2>4. Graphite</h2>
+  <p>Neutral greys with no tint and one bright green. It is the most "tool-like" and the closest to the apps people already use. The brand lives only in the green.</p>
+</section>
+
+<template id="list">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="list-top"><div class="brand"><span class="j">ȷ</span><span>onaki</span></div><div class="icon-btn"><i class="ph ph-sliders-horizontal"></i></div></div>
+    <div class="search"><i class="ph ph-magnifying-glass"></i>Search threads</div>
+    <div class="chips"><div class="chip on">All</div><div class="chip"><i class="ph ph-folder-simple"></i>Home</div><div class="chip"><i class="ph ph-folder-simple"></i>Thesis</div><div class="chip"><i class="ph ph-eye-slash"></i>Incognito</div></div>
+    <div class="group-label">Today</div>
+    <div class="thread"><div class="name"><span class="live-dot"></span>Compare three e-readers</div><div class="when">working</div><div class="snippet">Searching kobo.com for Bangla font support</div></div>
+    <div class="thread"><div class="name bn">অক্টোবরের বাজেট রিপোর্ট</div><div class="when">10:12</div><div class="snippet">report.html saved, 3 charts</div></div>
+    <div class="thread"><div class="name">Lease agreement questions</div><div class="when">08:47</div><div class="snippet">Clause 14 sets a two-month notice period.</div></div>
+    <div class="group-label">Yesterday</div>
+    <div class="thread"><div class="name">Kurzgesagt on sleep, summary</div><div class="when">Fri</div><div class="snippet">Five points, with timestamps</div></div>
+    <div class="thread"><div class="name">Weekly plan for Dhaka trip</div><div class="when">Fri</div><div class="snippet">Reminder set for Sunday 07:30</div></div>
+    <div class="fab"><i class="ph ph-plus"></i>New thread</div>
+  </div>
+</template>
+
+<template id="chat">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Compare three e-readers</div><div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div></div>
+    <div class="transcript">
+      <div class="msg-user">Compare the Kindle Paperwhite, Kobo Clara BW and PocketBook Verse Pro for reading Bangla PDFs. Short report, please.</div>
+      <div class="run">
+        <div class="run-head"><span class="working"><span class="live-dot"></span>Working</span><span class="mono">0:41</span></div>
+        <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Web search<span class="detail">Kobo Clara BW Bangla font support</span></span><span class="time mono">1.8 s</span></div>
+        <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read page<span class="detail">help.kobo.com/hc/en-us/articles/360017</span></span><span class="time mono">2.4 s</span></div>
+        <div class="step"><span class="station running"></span><span class="label">3 researchers<span class="detail">One per reader, 2 of 3 done, $0.007</span></span><span class="time mono">31 s</span></div>
+        <div class="step"><span class="station waiting"></span><span class="label">Write report.html</span><span class="time"></span></div>
+      </div>
+      <div class="msg-agent">The Kobo renders embedded Bangla fonts in PDFs correctly. The Kindle needs the PDF converted first. I'll put both results in the report.</div>
+    </div>
+    <div class="strip"><div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div><div class="pill"><span class="ring"></span><span class="mono">23%</span></div><div class="pill"><span class="mono">$0.012</span></div><div class="pill"><i class="ph ph-globe-simple"></i></div></div>
+    <div class="composer"><div class="plus"><i class="ph ph-plus"></i></div><div class="field">Message</div><div class="send"><i class="ph-fill ph-paper-plane-right"></i></div></div>
+  </div>
+</template>
+
+<script>
+  // Every palette shows the same four screens, so the rows are built from two templates.
+  const tokenNames = ["--bg", "--field", "--ink", "--muted", "--accent", "--glow"];
+  for (const section of document.querySelectorAll(".palette")) {
+    const theme = section.dataset.theme;
+    const row = document.createElement("div");
+    row.className = "row";
+    for (const mode of ["dark", "light"]) {
+      for (const screen of ["list", "chat"]) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        const label = document.createElement("div");
+        label.className = "cell-label";
+        label.textContent = mode === "dark" ? "Dark" : "Light";
+        const phone = document.getElementById(screen).content.firstElementChild.cloneNode(true);
+        phone.classList.add(theme, mode);
+        cell.append(label, phone);
+        row.append(cell);
+      }
+    }
+    section.append(row);
+    // Swatches read the real values back from the phones, so they cannot drift from the CSS.
+    const tokens = document.createElement("div");
+    tokens.className = "tokens";
+    for (const mode of ["dark", "light"]) {
+      const phone = row.querySelector(`.phone.${mode}`);
+      const style = getComputedStyle(phone);
+      const name = document.createElement("span");
+      name.textContent = mode === "dark" ? "Dark" : "Light";
+      const swatches = document.createElement("span");
+      swatches.className = "sw";
+      for (const token of tokenNames) {
+        const swatch = document.createElement("span");
+        swatch.style.background = style.getPropertyValue(token);
+        swatch.title = `${token} ${style.getPropertyValue(token).trim()}`;
+        swatches.append(swatch);
+      }
+      tokens.append(name, swatches);
+    }
+    section.append(tokens);
+  }
+</script>
+</body>
+</html>
