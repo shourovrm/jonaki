@@ -11,9 +11,11 @@ import java.io.File
  * run_code. In: the files the model names, at their thread paths. Out: only
  * new or changed files under work/ and artifacts/, so that a program can
  * never alter the user's originals in inbox/ or anything else in the thread.
+ * Project files (D-135) can be read in: "/project/data.csv" reaches the
+ * program as "project/data.csv", and nothing is ever saved back to them.
  */
-class ThreadFileExchange(threadFolder: File) {
-    private val paths = ThreadPaths(threadFolder)
+class ThreadFileExchange(threadFolder: File, projectFolder: File? = null) {
+    private val paths = ThreadPaths(threadFolder, projectFolder)
 
     fun inputsFor(requestedPaths: List<String>): InputSelection {
         val chosen = linkedMapOf<String, File>()
@@ -24,7 +26,8 @@ class ThreadFileExchange(threadFolder: File) {
                 return InputSelection.Refused("$requestedPath does not exist")
             }
             for (file in filesAt(target)) {
-                chosen.putIfAbsent(paths.relativePath(file), file)
+                // A program's files are relative paths, so "/project/x" becomes "project/x".
+                chosen.putIfAbsent(paths.relativePath(file).removePrefix("/"), file)
             }
         }
         return checkedSizes(chosen)

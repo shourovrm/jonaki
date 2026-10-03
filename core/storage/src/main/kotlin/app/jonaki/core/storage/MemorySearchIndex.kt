@@ -31,19 +31,28 @@ object MemorySearchIndex {
     )
 
     /**
-     * Facts visible from one thread (its own and the global ones) whose text
+     * Facts one thread may see: its own, the global ones and its project's
+     * (D-135). A thread without a project binds a null :projectId, which
+     * equals nothing in SQL, so it sees no project facts.
+     */
+    const val VISIBLE_FROM_THREAD =
+        "threadId = :threadId OR (threadId IS NULL AND (projectId IS NULL OR projectId = :projectId))"
+
+    /**
+     * Facts visible from one thread (its own, its project's and the global ones) whose text
      * contains the query. The query is bound as a quoted FTS5 phrase, see [matchPhrase].
      */
     const val MATCH_SEARCH =
         "SELECT memories.* FROM memories JOIN $TABLE ON memories.id = $TABLE.rowid " +
             "WHERE $TABLE MATCH :phrase AND memories.pendingReview = 0 " +
-            "AND (memories.threadId IS NULL OR memories.threadId = :threadId) " +
+            "AND (memories.threadId = :threadId OR (memories.threadId IS NULL AND " +
+            "(memories.projectId IS NULL OR memories.projectId = :projectId))) " +
             "ORDER BY memories.pinned DESC, memories.updatedAtMillis DESC LIMIT :limit"
 
     /** The same search for one- and two-character queries, which trigrams cannot match. */
     const val LIKE_SEARCH =
         "SELECT * FROM memories WHERE text LIKE :pattern ESCAPE '\\' AND pendingReview = 0 " +
-            "AND (threadId IS NULL OR threadId = :threadId) " +
+            "AND ($VISIBLE_FROM_THREAD) " +
             "ORDER BY pinned DESC, updatedAtMillis DESC LIMIT :limit"
 
     fun create(connection: SQLiteConnection) {

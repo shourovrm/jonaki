@@ -29,4 +29,8 @@
     <string name="memory_from">From: %1$s</string>
     <string name="memory_in_thread">In %1$s</string>
     <string name="memory_pinned">Pinned</string>
+    <string name="memory_section_project">This project</string>
+    <string name="memory_empty_project">No facts yet</string>
+    <string name="memory_scope_project">This project</string>
+    <string name="memory_menu_move_to_project">Move to project</string>
 </resources>

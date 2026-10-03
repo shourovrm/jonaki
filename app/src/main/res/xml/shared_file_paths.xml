@@ -2,6 +2,8 @@
 <!-- share_file offers files of a thread folder to other apps through the share sheet (D-044). -->
 <paths>
     <files-path name="threads" path="threads/" />
+    <!-- Files the threads of a project share (D-135). -->
+    <files-path name="projects" path="projects/" />
     <!-- The system camera app writes the composer's photo here (D-053). -->
     <cache-path name="camera" path="camera/" />
 </paths>

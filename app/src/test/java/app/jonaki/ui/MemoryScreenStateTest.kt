@@ -1,6 +1,7 @@
 package app.jonaki.ui
 
 import app.jonaki.core.storage.MemoryEntity
+import app.jonaki.feature.memory.FactScopeUi
 import app.jonaki.core.storage.MemoryOrigin
 import app.jonaki.core.storage.MemoryScope
 import app.jonaki.core.storage.MessageEntity
@@ -45,7 +46,7 @@ class MemoryScreenStateTest {
         assertEquals("My thesis is due on 15 December.", state.threadFacts.single().sourcePreview)
         assertEquals(listOf(2L), state.waitingForReview.map { it.id })
         assertNull(state.waitingForReview.single().threadTitle)
-        assertEquals(true, state.globalFacts.single().isGlobal)
+        assertEquals(FactScopeUi.GLOBAL, state.globalFacts.single().scope)
     }
 
     @Test

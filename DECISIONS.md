@@ -1770,3 +1770,34 @@ endpoint's scores are from the time of archiving: at most 5 where the tree
 shows 196). No code, dependency or permission changes: one asset file,
 which reaches installed copies through D-038 unless the user edited the
 skill. Limit: it depends on a volunteer-run archive. Outcome: pending.
+
+## D-135 · 2026-10-03 · Project memory, project files and the project prompt — accepted
+User ruling 2026-10-03 ("build project memory and the suggested design of
+the project prompt; also add project specific files"). Facts have three
+scopes: global, project (new nullable memories.projectId, Room version 10)
+and thread. A thread sees global facts, its project's and its own
+(MemorySearchIndex.VISIBLE_FROM_THREAD); a thread without a project sees no
+project facts. The memory tool offers scope project only in a project
+thread, with one guideline naming the project. Background extraction in a
+project thread sees the project's facts and may add ("scope":"project"),
+update and delete extracted project facts; global facts stay read-only to
+it (D-036). The prompt's Memory section lists All threads, This project,
+This thread, with budgets of 6,000, 2,400 and 6,000 characters for cloud
+models and 1,200, 800 and 1,200 for local ones. Project files live in
+filesDir/projects/<id>/, outside every thread folder; every file tool
+reaches them as /project/... through ThreadPaths, run_code reads them as
+project/... and never writes them, and share_file can share them
+(FileProvider path added). The system prompt order is: base and tools;
+user instructions (style, general, project instructions, persona, thread);
+skills; the project part ("Project "X": this thread belongs to it…", then
+up to 20 file paths, no sizes); memory. The project's ⋮ menu gets Memory
+(project facts and global ones, add, move to all threads) and Files (add
+from the phone, open, delete); a thread fact can move to its project.
+Deleting a project deletes its files and, by a checked box, keeps its facts
+as global ones or deletes them. Strings reviewed by the main session only
+(user ruling: no subagents), not by a separate reviewer as AGENTS.md asks.
+Tests: ProjectPathsTest, ProjectFilesSectionTest, MemorySectionTest,
+ProjectMemoryExtractionTest, ProjectMemoryQueriesTest,
+ProjectMemoryMigrationTest, FactMenuTest, MemoryToolTest. Outcome: pending a
+phone check.
+

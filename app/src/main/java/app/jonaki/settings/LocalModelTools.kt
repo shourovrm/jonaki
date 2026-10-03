@@ -33,8 +33,23 @@ object LocalModelToolList {
     /** What the Local models page lists, defaults first. */
     val CHOOSABLE: List<String> = DEFAULT.toList() + OPTIONAL.toList()
 
-    /** The saved choice without names that may not be offered (or no longer exist). */
-    fun offered(saved: Set<String>): Set<String> = saved.filter { toolName -> toolName in CHOOSABLE }.toSet()
+    /**
+     * Offered only in a thread whose folder or project folder holds files
+     * (user ruling, 2026-10-03): most phone chats have none, and leaving the
+     * tool out saves its prompt tokens there.
+     */
+    val ONLY_WITH_FILES: Set<String> = setOf("read_document")
+
+    /**
+     * The saved choice without names that may not be offered (or no longer
+     * exist), and without [ONLY_WITH_FILES] when the thread has no files.
+     */
+    fun offered(saved: Set<String>, threadHasFiles: Boolean = true): Set<String> =
+        saved.filter { toolName ->
+            val isChoosable = toolName in CHOOSABLE
+            val needsFiles = toolName in ONLY_WITH_FILES
+            isChoosable && (threadHasFiles || !needsFiles)
+        }.toSet()
 
     /** [saved] with [toolName] switched on or off; a name outside [CHOOSABLE] changes nothing. */
     fun withTool(saved: Set<String>, toolName: String, enabled: Boolean): Set<String> {

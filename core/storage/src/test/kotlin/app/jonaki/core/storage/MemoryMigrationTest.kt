@@ -58,15 +58,29 @@ class MemoryMigrationTest {
         }
     }
 
+    /**
+     * The searches name memories.projectId, added in version 10 (D-135); this
+     * test checks the version 3 index, so it adds just that column and
+     * searches as a thread without a project.
+     */
+    private fun addProjectColumn(connection: SQLiteConnection) {
+        val columns = queryStrings(connection, "SELECT name FROM pragma_table_info('memories')")
+        if ("projectId" !in columns) {
+            connection.execSQL("ALTER TABLE memories ADD COLUMN projectId TEXT")
+        }
+    }
+
     private fun matchIds(connection: SQLiteConnection, query: String, threadId: String): List<String> {
+        addProjectColumn(connection)
         val sql = MemorySearchIndex.MATCH_SEARCH
-            .replace(":phrase", "?").replace(":threadId", "?").replace(":limit", "50")
+            .replace(":phrase", "?").replace(":threadId", "?").replace(":projectId", "NULL").replace(":limit", "50")
         return queryStrings(connection, "SELECT id FROM ($sql)", MemorySearchIndex.matchPhrase(query), threadId)
     }
 
     private fun likeIds(connection: SQLiteConnection, query: String, threadId: String): List<String> {
+        addProjectColumn(connection)
         val sql = MemorySearchIndex.LIKE_SEARCH
-            .replace(":pattern", "?").replace(":threadId", "?").replace(":limit", "50")
+            .replace(":pattern", "?").replace(":threadId", "?").replace(":projectId", "NULL").replace(":limit", "50")
         return queryStrings(connection, "SELECT id FROM ($sql)", MemorySearchIndex.likePattern(query), threadId)
     }
 

@@ -207,7 +207,12 @@ class SubagentRunner(
             model = model,
             systemPrompt = SubagentPrompt.systemPrompt(type, startTools, limits, model.hasKnownPrice, memorySection, skillSection),
             toolbox = SubagentToolbox(startTools, requestableTools = usableTools - threadToolsAtStart.toSet()),
-            toolContext = ToolContext(context.threadFolder, context.httpClient, context.skillLibraryFolder),
+            toolContext = ToolContext(
+                context.threadFolder,
+                context.httpClient,
+                context.skillLibraryFolder,
+                projectFolder = context.projectFolder,
+            ),
             gate = SubagentGate(broker, label, timer),
             recorder = recorder,
             limits = limits,

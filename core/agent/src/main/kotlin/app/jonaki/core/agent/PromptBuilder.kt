@@ -22,14 +22,23 @@ class PromptBuilder(private val basePrompt: String) {
      * edits it less often than skills and facts change (D-107). It holds the
      * project's instructions too (D-110), so that one "later part wins" order
      * covers style, general, project, persona and thread text (D-118).
+     * [projectFilesSection] comes from [ProjectFilesSection.build] and sits
+     * between the skills and the memory (D-135).
      */
     fun systemPrompt(
         activeTools: List<Tool>,
         memorySection: String = "",
         skillSection: String = "",
         instructionsSection: String = "",
+        projectFilesSection: String = "",
     ): String {
-        val parts = listOf(basePromptWithTools(activeTools), instructionsSection.trim(), skillSection.trim(), memorySection.trim())
+        val parts = listOf(
+            basePromptWithTools(activeTools),
+            instructionsSection.trim(),
+            skillSection.trim(),
+            projectFilesSection.trim(),
+            memorySection.trim(),
+        )
         return parts.filter { part -> part.isNotEmpty() }.joinToString("\n\n")
     }
 

@@ -92,6 +92,9 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE id = :projectId")
     suspend fun find(projectId: String): ProjectEntity?
 
+    @Query("SELECT * FROM projects WHERE id = :projectId")
+    fun observe(projectId: String): Flow<ProjectEntity?>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(project: ProjectEntity)
 
@@ -247,8 +250,12 @@ interface SubagentDao {
 @Dao
 interface MemoryDao {
     /** Global facts, pinned first, then newest; facts waiting for review included (the screen marks them). */
-    @Query("SELECT * FROM memories WHERE threadId IS NULL ORDER BY pinned DESC, updatedAtMillis DESC")
+    @Query("SELECT * FROM memories WHERE threadId IS NULL AND projectId IS NULL ORDER BY pinned DESC, updatedAtMillis DESC")
     fun observeGlobal(): Flow<List<MemoryEntity>>
+
+    /** One project's facts, pinned first, then newest (D-135). */
+    @Query("SELECT * FROM memories WHERE projectId = :projectId ORDER BY pinned DESC, updatedAtMillis DESC")
+    fun observeProject(projectId: String): Flow<List<MemoryEntity>>
 
     @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY pinned DESC, updatedAtMillis DESC")
     fun observeThread(threadId: String): Flow<List<MemoryEntity>>
@@ -258,21 +265,33 @@ interface MemoryDao {
     fun observePendingReview(): Flow<List<MemoryEntity>>
 
     /**
-     * Facts the model may see in one thread: global and the thread's own,
-     * without those waiting for review, in the order injection picks them.
+     * Facts the model may see in one thread: global, the thread's project's
+     * (none when [projectId] is null) and the thread's own, without those
+     * waiting for review, in the order injection picks them.
      */
     @Query(
-        "SELECT * FROM memories WHERE pendingReview = 0 AND (threadId IS NULL OR threadId = :threadId) " +
+        "SELECT * FROM memories WHERE pendingReview = 0 AND (" + MemorySearchIndex.VISIBLE_FROM_THREAD + ") " +
             "ORDER BY pinned DESC, lastUsedAtMillis DESC, id DESC",
     )
-    suspend fun listVisibleFrom(threadId: String): List<MemoryEntity>
+    suspend fun listVisibleFrom(threadId: String, projectId: String?): List<MemoryEntity>
 
     /** A thread's facts, including those waiting for review, for background extraction. */
     @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY id")
     suspend fun listThread(threadId: String): List<MemoryEntity>
 
-    @Query("SELECT * FROM memories WHERE threadId IS NULL ORDER BY id")
+    @Query("SELECT * FROM memories WHERE threadId IS NULL AND projectId IS NULL ORDER BY id")
     suspend fun listGlobal(): List<MemoryEntity>
+
+    /** A project's facts, including those waiting for review, for background extraction. */
+    @Query("SELECT * FROM memories WHERE projectId = :projectId ORDER BY id")
+    suspend fun listProject(projectId: String): List<MemoryEntity>
+
+    /** Keeps a deleted project's facts as global ones (D-135). */
+    @Query("UPDATE memories SET projectId = NULL, scope = 'global' WHERE projectId = :projectId")
+    suspend fun makeProjectFactsGlobal(projectId: String)
+
+    @Query("DELETE FROM memories WHERE projectId = :projectId")
+    suspend fun deleteProjectFacts(projectId: String)
 
     @Query("SELECT * FROM memories WHERE id = :memoryId")
     suspend fun find(memoryId: Long): MemoryEntity?
@@ -293,11 +312,11 @@ interface MemoryDao {
     // Room checks queries against its own tables at build time and cannot see the FTS5 table.
     @SkipQueryVerification
     @Query(MemorySearchIndex.MATCH_SEARCH)
-    suspend fun searchByMatch(phrase: String, threadId: String, limit: Int): List<MemoryEntity>
+    suspend fun searchByMatch(phrase: String, threadId: String, projectId: String?, limit: Int): List<MemoryEntity>
 
     /** For queries under three characters; [pattern] comes from [MemorySearchIndex.likePattern]. */
     @Query(MemorySearchIndex.LIKE_SEARCH)
-    suspend fun searchByLike(pattern: String, threadId: String, limit: Int): List<MemoryEntity>
+    suspend fun searchByLike(pattern: String, threadId: String, projectId: String?, limit: Int): List<MemoryEntity>
 }
 
 /** Summaries of older messages, written by compaction (M4 step 6). */

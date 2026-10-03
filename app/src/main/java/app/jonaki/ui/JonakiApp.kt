@@ -119,6 +119,8 @@ private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
 private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
+private const val ROUTE_MEMORY_PROJECT_PREFIX = "memory-project:"
+private const val ROUTE_PROJECT_FILES_PREFIX = "project-files:"
 private const val ROUTE_SKILLS = "skills"
 private const val ROUTE_SKILLS_THREAD_PREFIX = "skills:"
 private const val ROUTE_CUSTOM_INSTRUCTIONS = "custom-instructions"
@@ -270,6 +272,24 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenMessage = { threadId, messageId -> route = ROUTE_CHAT_PREFIX + threadId + FOCUS_SEPARATOR + messageId },
                 )
             }
+            route.startsWith(ROUTE_MEMORY_PROJECT_PREFIX) -> {
+                BackHandler { route = ROUTE_THREADS }
+                MemoryRoute(
+                    application = application,
+                    threadId = null,
+                    projectId = route.removePrefix(ROUTE_MEMORY_PROJECT_PREFIX),
+                    onBack = { route = ROUTE_THREADS },
+                    onOpenMessage = { threadId, messageId -> route = ROUTE_CHAT_PREFIX + threadId + FOCUS_SEPARATOR + messageId },
+                )
+            }
+            route.startsWith(ROUTE_PROJECT_FILES_PREFIX) -> {
+                BackHandler { route = ROUTE_THREADS }
+                ProjectFilesRoute(
+                    application = application,
+                    projectId = route.removePrefix(ROUTE_PROJECT_FILES_PREFIX),
+                    onBack = { route = ROUTE_THREADS },
+                )
+            }
             route.startsWith(ROUTE_ARTIFACT_PREFIX) -> {
                 val target = route.removePrefix(ROUTE_ARTIFACT_PREFIX)
                 val artifactThreadId = target.substringBefore(FOCUS_SEPARATOR)
@@ -333,6 +353,8 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 onNewIncognitoThread = { route = ROUTE_CHAT_PREFIX + NEW_INCOGNITO_THREAD },
                 selectedProjectId = selectedProjectId,
                 onProjectSelect = { projectId -> selectedProjectId = projectId },
+                onOpenProjectMemory = { projectId -> route = ROUTE_MEMORY_PROJECT_PREFIX + projectId },
+                onOpenProjectFiles = { projectId -> route = ROUTE_PROJECT_FILES_PREFIX + projectId },
             )
         }
     }
@@ -385,6 +407,8 @@ private fun ThreadsRoute(
     onNewIncognitoThread: () -> Unit,
     selectedProjectId: String?,
     onProjectSelect: (String?) -> Unit,
+    onOpenProjectMemory: (projectId: String) -> Unit,
+    onOpenProjectFiles: (projectId: String) -> Unit,
 ) {
     val database = application.database
     val summaries by remember { database.threadDao().observeSummaries() }.collectAsState(initial = emptyList())
@@ -460,10 +484,12 @@ private fun ThreadsRoute(
                 onProjectSelect(savedId)
             }
         },
-        onDeleteProject = { projectId ->
+        onDeleteProject = { projectId, keepFacts ->
             onProjectSelect(null)
-            scope.launch { Projects.delete(database, projectId) }
+            scope.launch { Projects.delete(database, application, projectId, keepFacts) }
         },
+        onOpenProjectMemory = onOpenProjectMemory,
+        onOpenProjectFiles = onOpenProjectFiles,
         onMoveThread = { threadId, projectId -> scope.launch { database.threadDao().setProject(threadId, projectId) } },
     )
     val renaming = threadToRename?.let { id -> summaries.firstOrNull { it.thread.id == id } }

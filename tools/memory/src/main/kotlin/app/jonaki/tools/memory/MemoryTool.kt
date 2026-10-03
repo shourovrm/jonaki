@@ -18,18 +18,23 @@ import kotlinx.serialization.json.putJsonObject
 
 /**
  * Remembers, forgets and recalls facts (D-009). A thread fact stays with its
- * thread; a global fact reaches every thread. Facts already in the prompt's
- * memory section need no recall.
+ * thread; a project fact reaches the threads of the thread's project
+ * (D-135); a global fact reaches every thread. Facts already in the prompt's
+ * memory section need no recall. [projectName] is the thread's project, or
+ * null when it has none, in which case the project scope is not offered.
  */
-class MemoryTool(private val store: MemoryStore) : Tool {
+class MemoryTool(private val store: MemoryStore, private val projectName: String? = null) : Tool {
     override val name: String = "memory"
 
     override val promptLine: String =
         "memory: remember, forget or recall lasting facts about the user and this thread"
 
-    override val guidelines: List<String> = listOf(
+    override val guidelines: List<String> = listOfNotNull(
         "Remember lasting facts the user states (names, preferences, deadlines, decisions), one short sentence each that makes sense alone.",
         "Use scope global for facts true in every thread (the user's name, language, habits); otherwise thread.",
+        projectName?.let { name ->
+            "This thread is in the project \"$name\": use scope project for facts about the project's work that its other threads need."
+        },
         "Facts under Memory in this prompt are already known; recall finds older ones by a word they contain, not by meaning.",
         "Forget a fact by its id when the user asks or it turned out wrong. Never remember keys, passwords or card numbers.",
     )
@@ -53,9 +58,12 @@ class MemoryTool(private val store: MemoryStore) : Tool {
                 put("type", "string")
                 putJsonArray("enum") {
                     add(SCOPE_THREAD)
+                    if (projectName != null) {
+                        add(SCOPE_PROJECT)
+                    }
                     add(SCOPE_GLOBAL)
                 }
-                put("description", "remember: thread (default) or global for all threads")
+                put("description", scopeDescription())
             }
             putJsonObject("id") {
                 put("type", "integer")
@@ -103,7 +111,13 @@ class MemoryTool(private val store: MemoryStore) : Tool {
         val scope = when (scopeText) {
             null, "", SCOPE_THREAD -> FactScope.THREAD
             SCOPE_GLOBAL -> FactScope.GLOBAL
-            else -> return ToolOutput.error("unknown scope \"$scopeText\"", "Use scope global or thread.")
+            SCOPE_PROJECT -> {
+                if (projectName == null) {
+                    return ToolOutput.error("this thread is in no project", "Use scope thread or global.")
+                }
+                FactScope.PROJECT
+            }
+            else -> return ToolOutput.error("unknown scope \"$scopeText\"", "Use scope ${scopeNames()}.")
         }
         return when (val result = store.remember(scope, text)) {
             is RememberResult.Saved ->
@@ -119,7 +133,7 @@ class MemoryTool(private val store: MemoryStore) : Tool {
         return when (val result = store.forget(factId)) {
             is ForgetResult.Forgotten -> ToolOutput.success("Forgot fact $factId: ${result.fact.text}")
             ForgetResult.NotFound -> ToolOutput.error(
-                "there is no fact $factId in this thread or the global memory",
+                "there is no fact $factId among the facts this thread can see",
                 "Use action recall to find the fact's id.",
             )
             is ForgetResult.Pinned -> ToolOutput.error(
@@ -149,8 +163,18 @@ class MemoryTool(private val store: MemoryStore) : Tool {
 
     private fun scopeWords(scope: FactScope): String = when (scope) {
         FactScope.GLOBAL -> "all threads"
+        FactScope.PROJECT -> "the project's threads"
         FactScope.THREAD -> "this thread"
     }
+
+    private fun scopeDescription(): String =
+        if (projectName == null) {
+            "remember: thread (default) or global for all threads"
+        } else {
+            "remember: thread (default), project for the project's threads, or global for all threads"
+        }
+
+    private fun scopeNames(): String = if (projectName == null) "thread or global" else "thread, project or global"
 
     private fun labelOf(fact: Fact): String {
         val scope = scopeWords(fact.scope)
@@ -163,6 +187,7 @@ class MemoryTool(private val store: MemoryStore) : Tool {
         const val ACTION_RECALL = "recall"
         const val SCOPE_THREAD = "thread"
         const val SCOPE_GLOBAL = "global"
+        const val SCOPE_PROJECT = "project"
 
         /** A fact is one sentence; a longer text belongs in a file in the thread folder. */
         const val MAX_FACT_LENGTH = 500

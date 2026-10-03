@@ -131,7 +131,7 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
                 "Use another language.",
             )
 
-        val exchange = ThreadFileExchange(context.threadFolder)
+        val exchange = ThreadFileExchange(context.threadFolder, context.projectFolder)
         val inputFiles = when (val selection = withContext(Dispatchers.IO) { exchange.inputsFor(requestedPaths(arguments)) }) {
             is InputSelection.Refused -> return ToolOutput.error(
                 selection.problem,

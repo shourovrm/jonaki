@@ -63,6 +63,8 @@ data class ToolServices(
     val enabledGroups: Set<ToolGroup> = ToolGroup.entries.toSet(),
     /** When set, only these tools are offered; a local model's thread uses ToolGroups.LOCAL_MODEL_TOOLS (D-133). */
     val onlyTools: Set<String>? = null,
+    /** The thread's project, so the memory tool offers the project scope (D-135); null without one. */
+    val projectName: String? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -90,7 +92,7 @@ object ToolRegistry {
             tools += YouTubeSummarizeTool(services.videoSummarizer)
         }
         if (services.memoryStore != null) {
-            tools += MemoryTool(services.memoryStore)
+            tools += MemoryTool(services.memoryStore, services.projectName)
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)

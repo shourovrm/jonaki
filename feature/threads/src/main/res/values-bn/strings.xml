@@ -27,7 +27,7 @@
     <string name="threads_project_edit">প্রজেক্ট এডিট</string>
     <string name="threads_project_delete">প্রজেক্ট মুছুন</string>
     <string name="threads_project_delete_title">প্রজেক্ট মুছবেন?</string>
-    <string name="threads_project_delete_body">এর থ্রেডগুলো থাকবে, প্রজেক্ট ছাড়া।</string>
+    <string name="threads_project_delete_body">এর থ্রেডগুলো থাকবে, প্রজেক্ট ছাড়া। এর ফাইল মুছে যাবে।</string>
     <string name="threads_project_name">নাম</string>
     <string name="threads_project_model">নতুন থ্রেডের মডেল</string>
     <string name="threads_project_model_default">ডিফল্ট মডেল</string>
@@ -47,4 +47,11 @@
     <string name="threads_group_yesterday">গতকাল</string>
     <string name="threads_group_week">গত 7 দিন</string>
     <string name="threads_group_older">আরও আগে</string>
+    <string name="threads_project_memory">মেমরি</string>
+    <string name="threads_project_files">ফাইল</string>
+    <string name="threads_project_delete_keep_facts">এর তথ্য সব থ্রেডের জন্য রাখুন</string>
+    <string name="threads_project_files_add">ফাইল যোগ করুন</string>
+    <string name="threads_project_files_empty">এখনো কোনো ফাইল নেই</string>
+    <string name="threads_project_files_delete_title">ফাইল মুছবেন?</string>
+    <string name="threads_back">ফিরে যান</string>
 </resources>

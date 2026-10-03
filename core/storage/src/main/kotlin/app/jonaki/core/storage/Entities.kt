@@ -231,14 +231,20 @@ enum class SubagentStatus {
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("threadId")],
+    indices = [Index("threadId"), Index("projectId")],
 )
 data class MemoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    /** [MemoryScope] name: "global" or "thread". */
+    /** [MemoryScope] name: "global", "project" or "thread". */
     val scope: String,
-    /** Null for a global fact. */
+    /** Null for a global or project fact. */
     val threadId: String?,
+    /**
+     * The project a project fact belongs to (D-135); null for global and
+     * thread facts. No foreign key, like threads.projectId: deleting a
+     * project turns its facts global or deletes them first.
+     */
+    val projectId: String? = null,
     val text: String,
     /** Pinned facts go into the prompt first and background extraction leaves them alone. */
     val pinned: Boolean = false,
@@ -256,6 +262,7 @@ data class MemoryEntity(
 
 object MemoryScope {
     const val GLOBAL = "global"
+    const val PROJECT = "project"
     const val THREAD = "thread"
 }
 

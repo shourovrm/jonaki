@@ -107,9 +107,33 @@ class MemoryToolTest {
 
     @Test
     fun unknownScopeIsAnError() {
+        val output = call("action" to "remember", "text" to "x y z", "scope" to "team")
+        assertTrue(output.isError)
+        assertTrue(output.text.contains("thread or global"))
+    }
+
+    @Test
+    fun projectScopeOutsideAProjectIsAnError() {
         val output = call("action" to "remember", "text" to "x y z", "scope" to "project")
         assertTrue(output.isError)
-        assertTrue(output.text.contains("global or thread"))
+        assertTrue(output.text.contains("in no project"))
+        assertTrue(store.facts.isEmpty())
+    }
+
+    @Test
+    fun inAProjectTheProjectScopeIsOfferedAndSaved() = runBlocking {
+        val projectTool = MemoryTool(store, projectName = "Thesis")
+        val schemaText = projectTool.parameterSchema.toString()
+        assertTrue(schemaText.contains("\"project\""))
+        assertTrue(projectTool.guidelines.any { guideline -> guideline.contains("\"Thesis\"") })
+        assertFalse(tool.parameterSchema.toString().contains("\"project\""))
+
+        val arguments = JsonObject(mapOf("action" to JsonPrimitive("remember"), "text" to JsonPrimitive("Uses APA"), "scope" to JsonPrimitive("project")))
+        val output = projectTool.run(arguments, context)
+
+        assertFalse(output.isError)
+        assertEquals(FactScope.PROJECT, store.facts.single().scope)
+        assertTrue(output.text.contains("the project's threads"))
     }
 
     @Test

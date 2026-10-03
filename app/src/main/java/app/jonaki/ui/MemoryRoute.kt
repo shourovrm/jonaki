@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import app.jonaki.JonakiApplication
 import app.jonaki.core.storage.MessageEntity
+import app.jonaki.feature.memory.FactScopeUi
 import app.jonaki.feature.memory.MemoryActions
 import app.jonaki.feature.memory.MemoryScreen
 import app.jonaki.memory.MemoryEdits
@@ -17,13 +18,15 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 /**
- * The memory screen for one thread, or for the global facts when [threadId]
- * is null (opened from Settings).
+ * The memory screen for one thread, for one project when [projectId] is
+ * given (D-135), or for the global facts when both are null (opened from
+ * Settings). A thread in a project also shows the project's facts.
  */
 @Composable
 internal fun MemoryRoute(
     application: JonakiApplication,
     threadId: String?,
+    projectId: String? = null,
     onBack: () -> Unit,
     /** Opens a thread's chat at a message: the source of a fact. */
     onOpenMessage: (threadId: String, messageId: String) -> Unit,
@@ -40,13 +43,22 @@ internal fun MemoryRoute(
         if (threadId == null) flowOf(emptyList()) else memoryDao.observeThread(threadId)
     }.collectAsState(initial = emptyList())
     val globalFacts by remember { memoryDao.observeGlobal() }.collectAsState(initial = emptyList())
-    val pendingFacts by remember(threadId) {
-        // Inside a thread, its waiting facts are already among threadFacts.
-        if (threadId == null) memoryDao.observePendingReview() else flowOf(emptyList())
+    // The project shown: the one opened, or the thread's own.
+    val shownProjectId = projectId ?: thread?.projectId
+    val project by remember(shownProjectId) {
+        if (shownProjectId == null) flowOf(null) else database.projectDao().observe(shownProjectId)
+    }.collectAsState(initial = null)
+    val projectFacts by remember(shownProjectId) {
+        if (shownProjectId == null) flowOf(emptyList()) else memoryDao.observeProject(shownProjectId)
+    }.collectAsState(initial = emptyList())
+    val isSettingsView = threadId == null && projectId == null
+    val pendingFacts by remember(isSettingsView) {
+        // Inside a thread or project, its waiting facts are already among its own facts.
+        if (isSettingsView) memoryDao.observePendingReview() else flowOf(emptyList())
     }.collectAsState(initial = emptyList())
     val threads by remember { database.threadDao().observeAll() }.collectAsState(initial = emptyList())
 
-    val allFacts = threadFacts + globalFacts + pendingFacts
+    val allFacts = threadFacts + projectFacts + globalFacts + pendingFacts
     val sourceIds = allFacts.mapNotNull { fact -> fact.sourceMessageId }.toSet()
     var sourceMessages by remember { mutableStateOf<Map<String, MessageEntity>>(emptyMap()) }
     LaunchedEffect(sourceIds) {
@@ -62,14 +74,30 @@ internal fun MemoryRoute(
         sourceMessages = sourceMessages,
         threadTitles = threads.associate { entity -> entity.id to entity.title },
         reviewMode = settingsSnapshot.reviewExtractedMemories,
+        projectName = project?.name,
+        projectFacts = if (project == null) emptyList() else projectFacts,
     )
     val actions = MemoryActions(
         onBack = onBack,
-        onAdd = { text, isGlobal -> scope.launch { edits.add(text, if (isGlobal) null else threadId) } },
+        onAdd = { text, factScope ->
+            scope.launch {
+                when (factScope) {
+                    FactScopeUi.THREAD -> edits.add(text, threadId = threadId)
+                    FactScopeUi.PROJECT -> edits.add(text, threadId = null, projectId = shownProjectId)
+                    FactScopeUi.GLOBAL -> edits.add(text, threadId = null)
+                }
+            }
+        },
         onEdit = { factId, text -> scope.launch { edits.edit(factId, text) } },
         onDelete = { factId -> scope.launch { edits.delete(factId) } },
         onPinChange = { factId, pinned -> scope.launch { edits.setPinned(factId, pinned) } },
         onPromote = { factId -> scope.launch { edits.promote(factId) } },
+        onMoveToProject = { factId ->
+            val targetProjectId = shownProjectId
+            if (targetProjectId != null) {
+                scope.launch { edits.moveToProject(factId, targetProjectId) }
+            }
+        },
         onOpenSource = { factId ->
             val sourceId = allFacts.firstOrNull { fact -> fact.id == factId }?.sourceMessageId
             val source = sourceId?.let(sourceMessages::get)

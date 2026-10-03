@@ -16,6 +16,7 @@ import app.jonaki.core.agent.ContextBreakdown
 import app.jonaki.core.agent.PromptSkill
 import app.jonaki.core.model.ImagePart
 import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.ThreadPaths
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentReport
 import app.jonaki.core.toolapi.SubagentTask
@@ -33,6 +34,11 @@ import app.jonaki.core.agent.ToolDefinitions
 import app.jonaki.core.providerapi.ToolDefinition
 import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.ProjectSection
+import app.jonaki.core.agent.ProjectFilesSection
+import app.jonaki.core.agent.MemoryBudget
+import app.jonaki.core.agent.PromptFactScope
+import app.jonaki.core.storage.MemoryEntity
+import app.jonaki.tools.memory.FactScope
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
@@ -455,14 +461,16 @@ class AgentRunner(
         // Unknown models count as not taking images (D-049).
         val modelAcceptsImages = catalog.find(modelKey)?.acceptsImages == true
         val threadFolder = ThreadFolders.create(context, threadId)
-        val toolServices = toolServicesFor(thread, modelAcceptsImages)
+        val project = projectOf(thread)
+        val toolServices = toolServicesFor(thread, modelAcceptsImages, project, threadFolder)
         val threadTools = ToolRegistry.tools(toolServices)
         val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
         threadApprovalModes[threadId] = thread.approvalMode.orEmpty()
         val permissionBroker = PermissionBroker(session, allowedForThread, approvalMode = { currentApprovalMode(threadId) })
-        val memorySection = ThreadMemory.sectionFor(thread) { memorySectionFor(threadId) }
+        val memorySection = ThreadMemory.sectionFor(thread) { memorySectionFor(thread, project) }
         val skillSection = skillSectionFor(thread)
         val instructionsSection = instructionsSectionFor(thread, snapshot)
+        val projectFilesSection = projectFilesSectionFor(project)
         val imageCache = ThreadFolders.imageCache(context, threadId)
         val threadImageMessages = ImageMessages(ModelImageLoader(threadFolder, imageCache), modelAcceptsImages)
         val thinkingLevel = ThinkingLevels.effective(
@@ -501,12 +509,13 @@ class AgentRunner(
             memorySection = memorySection,
             skillSection = skillSection,
             instructionsSection = instructionsSection,
+            projectFilesSection = projectFilesSection,
         )
         parentRequest = parentRequest.copy(systemPrompt = systemPrompt, tools = ToolDefinitions.of(tools))
         val loop = AgentLoop(
             provider = provider,
             tools = tools,
-            toolContext = ToolContext(threadFolder, httpClient, skillLibrary.folder),
+            toolContext = ToolContext(threadFolder, httpClient, skillLibrary.folder, projectFolder = project?.folder),
             permissionBroker = permissionBroker,
             recorder = session,
             settings = AgentSettings(
@@ -539,22 +548,30 @@ class AgentRunner(
 
     /**
      * What the thread's tools need, from the user's keys and the thread's
-     * switches. A thread on a local model gets the smaller set (D-133).
+     * switches. A thread on a local model gets the smaller set (D-133), and
+     * read_document only when the thread or its project holds files.
      */
-    private fun toolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices {
-        val services = allToolServicesFor(thread, modelAcceptsImages)
+    private fun toolServicesFor(
+        thread: ThreadEntity,
+        modelAcceptsImages: Boolean,
+        project: ThreadProject?,
+        threadFolder: java.io.File,
+    ): ToolServices {
+        val services = allToolServicesFor(thread, modelAcceptsImages, project)
         if (!LocalModelRuntime.isLocal(modelKeyFor(thread))) {
             return services
         }
+        val hasFiles = ProjectFolders.holdsFiles(threadFolder) || (project != null && ProjectFolders.holdsFiles(project.folder))
         // Fixed for the whole run, so the system prompt stays the same and llama.cpp can reuse its cache.
-        return services.copy(onlyTools = LocalModelToolList.offered(settings.snapshot.value.localModelTools))
+        return services.copy(onlyTools = LocalModelToolList.offered(settings.snapshot.value.localModelTools, hasFiles))
     }
 
-    private fun allToolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices = ToolServices(
+    private fun allToolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean, project: ThreadProject?): ToolServices = ToolServices(
         searchBackends = searchBackends(settings.snapshot.value.searchOrder),
         videoSummarizer = videoSummarizer(),
         webAccessEnabled = thread.webSearchEnabled,
-        memoryStore = ThreadMemory.storeFor(thread) { RoomMemoryStore(database, thread.id, System::currentTimeMillis) },
+        memoryStore = ThreadMemory.storeFor(thread) { RoomMemoryStore(database, thread.id, project?.id, System::currentTimeMillis) },
+        projectName = project?.name,
         fileDestinations = fileDestinations,
         modelAcceptsImages = modelAcceptsImages,
         phone = phone,
@@ -577,7 +594,7 @@ class AgentRunner(
             searchBackends = searchBackends(settings.snapshot.value.searchOrder),
             videoSummarizer = videoSummarizer(),
             webAccessEnabled = true,
-            memoryStore = RoomMemoryStore(database, NO_THREAD, System::currentTimeMillis),
+            memoryStore = RoomMemoryStore(database, NO_THREAD, null, System::currentTimeMillis),
             fileDestinations = fileDestinations,
             phone = phone,
             taskScheduler = taskSchedulerFor?.invoke(NO_THREAD),
@@ -595,11 +612,12 @@ class AgentRunner(
         val thread = database.threadDao().find(threadId) ?: return null
         val modelKey = modelKeyFor(thread)
         val modelAcceptsImages = modelKey?.let { key -> catalog.find(key)?.acceptsImages } == true
-        val toolServices = toolServicesFor(thread, modelAcceptsImages)
+        val project = projectOf(thread)
+        val toolServices = toolServicesFor(thread, modelAcceptsImages, project, ThreadFolders.create(context, threadId))
         val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents, toolServices)
         // An incognito thread sends no Memory section (D-111).
-        val facts = if (ThreadMemory.isOn(thread)) promptFactsOf(threadId) else emptyList()
-        val memory = MemorySection.build(facts)
+        val facts = if (ThreadMemory.isOn(thread)) promptFactsOf(thread, project) else emptyList()
+        val memory = MemorySection.build(facts, memoryBudgetFor(thread))
         val skills = enabledSkillsOf(thread)
         // The user's instructions sit between the tools and the skills; the sheet counts them with the system prompt.
         val instructions = instructionsSectionFor(thread, settings.snapshot.value)
@@ -611,7 +629,10 @@ class AgentRunner(
         return ContextBreakdown(
             basePrompt = listOf(SystemPrompt.BASE.trimEnd(), instructions.trim()).filter { part -> part.isNotEmpty() }.joinToString("\n\n"),
             tools = tools,
-            skillSection = SkillSection.build(skills),
+            // The project's files sit between the skills and the memory; the sheet counts them with the skills.
+            skillSection = listOf(SkillSection.build(skills), projectFilesSectionFor(project))
+                .filter { part -> part.isNotEmpty() }
+                .joinToString("\n\n"),
             skillCount = skills.size,
             memorySection = memory.text,
             factCount = memory.includedIds.size,
@@ -676,12 +697,12 @@ class AgentRunner(
     }
 
     /**
-     * Global and thread facts for the system prompt, built once per run so
-     * the prompt stays the same for every request of the run (D-005). Facts
-     * the memory tool saves during the run reach the next run.
+     * Global, project and thread facts for the system prompt, built once per
+     * run so the prompt stays the same for every request of the run (D-005).
+     * Facts the memory tool saves during the run reach the next run.
      */
-    private suspend fun memorySectionFor(threadId: String): String {
-        val section = MemorySection.build(promptFactsOf(threadId))
+    private suspend fun memorySectionFor(thread: ThreadEntity, project: ThreadProject?): String {
+        val section = MemorySection.build(promptFactsOf(thread, project), memoryBudgetFor(thread))
         if (section.includedIds.isNotEmpty()) {
             // Safe for the cache: the section is chosen by use time but written in id order (D-035).
             database.memoryDao().markUsed(section.includedIds, System.currentTimeMillis())
@@ -689,16 +710,41 @@ class AgentRunner(
         return section.text
     }
 
-    private suspend fun promptFactsOf(threadId: String): List<PromptFact> =
-        database.memoryDao().listVisibleFrom(threadId).map { memory ->
+    /** A model on the phone gets a smaller memory section, as every prompt token costs it time (D-135). */
+    private fun memoryBudgetFor(thread: ThreadEntity): MemoryBudget =
+        if (LocalModelRuntime.isLocal(modelKeyFor(thread))) MemoryBudget.LOCAL else MemoryBudget.CLOUD
+
+    private suspend fun promptFactsOf(thread: ThreadEntity, project: ThreadProject?): List<PromptFact> =
+        database.memoryDao().listVisibleFrom(thread.id, project?.id).map { memory ->
             PromptFact(
                 id = memory.id,
                 text = memory.text,
-                isGlobal = memory.threadId == null,
+                scope = promptScopeOf(memory),
                 pinned = memory.pinned,
                 lastUsedAtMillis = memory.lastUsedAtMillis,
             )
         }
+
+    private fun promptScopeOf(memory: MemoryEntity): PromptFactScope = when (RoomMemoryStore.scopeOf(memory)) {
+        FactScope.GLOBAL -> PromptFactScope.GLOBAL
+        FactScope.PROJECT -> PromptFactScope.PROJECT
+        FactScope.THREAD -> PromptFactScope.THREAD
+    }
+
+    /** The thread's project with its shared folder, or null; a project deleted meanwhile counts as none. */
+    private suspend fun projectOf(thread: ThreadEntity): ThreadProject? {
+        val projectId = thread.projectId ?: return null
+        val project = database.projectDao().find(projectId) ?: return null
+        return ThreadProject(project.id, project.name, ProjectFolders.create(context, project.id))
+    }
+
+    /** What the project's threads share, read once per run like the skills (D-135). */
+    private fun projectFilesSectionFor(project: ThreadProject?): String {
+        if (project == null) {
+            return ""
+        }
+        return ProjectFilesSection.build(project.name, ProjectFolders.filePaths(project.folder))
+    }
 
     /** The instructions of the thread's project, read once per run like the skills (D-110). */
     private suspend fun projectSectionFor(thread: ThreadEntity): String {
@@ -829,6 +875,37 @@ object ThreadFolders {
      */
     fun imageCache(context: Context, threadId: String): java.io.File =
         java.io.File(context.filesDir, "image-cache/$threadId")
+}
+
+/** A thread's project as one run needs it (D-135). */
+data class ThreadProject(val id: String, val name: String, val folder: java.io.File)
+
+/**
+ * The folders the threads of a project share (D-135), outside every thread
+ * folder, so deleting a thread never deletes a project file.
+ */
+object ProjectFolders {
+    fun create(context: Context, projectId: String): java.io.File {
+        val folder = folderOf(context, projectId)
+        folder.mkdirs()
+        return folder
+    }
+
+    fun folderOf(context: Context, projectId: String): java.io.File = java.io.File(context.filesDir, "projects/$projectId")
+
+    fun delete(context: Context, projectId: String) {
+        folderOf(context, projectId).deleteRecursively()
+    }
+
+    /** Every file in the folder as the model names it, "/project/..." (ThreadPaths.PROJECT_ROOT). */
+    fun filePaths(folder: java.io.File): List<String> =
+        folder.walkTopDown()
+            .filter { file -> file.isFile }
+            .map { file -> ThreadPaths.PROJECT_ROOT + "/" + file.relativeTo(folder).invariantSeparatorsPath }
+            .toList()
+
+    /** True when the folder holds at least one file at any depth. */
+    fun holdsFiles(folder: java.io.File): Boolean = folder.walkTopDown().any { file -> file.isFile }
 }
 
 internal fun Context.startForegroundServiceCompat(intent: Intent) {

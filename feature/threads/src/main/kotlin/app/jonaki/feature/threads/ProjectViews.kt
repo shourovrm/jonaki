@@ -40,6 +40,8 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Checkbox
+import app.jonaki.core.ui.JonakiIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -147,7 +149,13 @@ private fun filterChipBorder(selected: Boolean): BorderStroke? = FilterChipDefau
 
 /** The selected project's name, model and ⋮ menu, above its threads. */
 @Composable
-internal fun ProjectHeader(project: ProjectUi, onEdit: () -> Unit, onDelete: () -> Unit) {
+internal fun ProjectHeader(
+    project: ProjectUi,
+    onEdit: () -> Unit,
+    onOpenMemory: () -> Unit,
+    onOpenFiles: () -> Unit,
+    onDelete: () -> Unit,
+) {
     var menuOpen by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -177,6 +185,23 @@ internal fun ProjectHeader(project: ProjectUi, onEdit: () -> Unit, onDelete: () 
                     onClick = {
                         menuOpen = false
                         onEdit()
+                    },
+                )
+                // What the project's threads share (D-135).
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.threads_project_memory)) },
+                    leadingIcon = { Icon(JonakiIcons.Lightbulb, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onOpenMemory()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.threads_project_files)) },
+                    leadingIcon = { Icon(JonakiIcons.Folder, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onOpenFiles()
                     },
                 )
                 DropdownMenuItem(
@@ -331,7 +356,9 @@ private fun ProjectChoiceRow(label: String, selected: Boolean, onClick: () -> Un
 
 /** Deleting a project never deletes its threads; they stay without a project. */
 @Composable
-internal fun DeleteProjectDialog(name: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+internal fun DeleteProjectDialog(name: String, onConfirm: (keepFacts: Boolean) -> Unit, onDismiss: () -> Unit) {
+    // Facts often hold what was learned in the project; keeping them is the safe default (D-135).
+    var keepFacts by remember { mutableStateOf(true) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.threads_project_delete_title)) },
@@ -343,10 +370,17 @@ internal fun DeleteProjectDialog(name: String, onConfirm: () -> Unit, onDismiss:
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { keepFacts = !keepFacts },
+                ) {
+                    Checkbox(checked = keepFacts, onCheckedChange = { checked -> keepFacts = checked })
+                    Text(stringResource(R.string.threads_project_delete_keep_facts), style = MaterialTheme.typography.bodyMedium)
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = { onConfirm(keepFacts) }) {
                 Text(stringResource(R.string.threads_delete), color = JonakiTheme.colors.deny)
             }
         },

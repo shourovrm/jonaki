@@ -92,8 +92,11 @@ fun ThreadListScreen(
     onProjectSelect: (projectId: String?) -> Unit = {},
     /** The project dialog was saved; [projectId] is null for a new project. */
     onSaveProject: (projectId: String?, draft: ProjectDraft) -> Unit = { _, _ -> },
-    /** Called after the user confirms; the project's threads stay. */
-    onDeleteProject: (projectId: String) -> Unit = {},
+    /** Called after the user confirms; the project's threads stay, its facts too when [keepFacts]. */
+    onDeleteProject: (projectId: String, keepFacts: Boolean) -> Unit = { _, _ -> },
+    /** The project's memory and its shared files (D-135). */
+    onOpenProjectMemory: (projectId: String) -> Unit = {},
+    onOpenProjectFiles: (projectId: String) -> Unit = {},
     /** Move to project; null takes the thread out of its project. */
     onMoveThread: (threadId: String, projectId: String?) -> Unit = { _, _ -> },
 ) {
@@ -196,6 +199,8 @@ fun ThreadListScreen(
                         projectToEdit = selectedProject
                         projectDialogOpen = true
                     },
+                    onOpenMemory = { onOpenProjectMemory(selectedProject.id) },
+                    onOpenFiles = { onOpenProjectFiles(selectedProject.id) },
                     onDelete = { projectToDelete = selectedProject },
                 )
             }
@@ -269,9 +274,9 @@ fun ThreadListScreen(
     if (deletingProject != null) {
         DeleteProjectDialog(
             name = deletingProject.name,
-            onConfirm = {
+            onConfirm = { keepFacts ->
                 projectToDelete = null
-                onDeleteProject(deletingProject.id)
+                onDeleteProject(deletingProject.id, keepFacts)
             },
             onDismiss = { projectToDelete = null },
         )

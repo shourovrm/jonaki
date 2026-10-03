@@ -7,7 +7,13 @@ import org.junit.Test
 
 class MemorySectionTest {
     private fun fact(id: Long, text: String, global: Boolean = false, pinned: Boolean = false, lastUsed: Long? = null) =
-        PromptFact(id = id, text = text, isGlobal = global, pinned = pinned, lastUsedAtMillis = lastUsed)
+        PromptFact(
+            id = id,
+            text = text,
+            scope = if (global) PromptFactScope.GLOBAL else PromptFactScope.THREAD,
+            pinned = pinned,
+            lastUsedAtMillis = lastUsed,
+        )
 
     @Test
     fun noFactsMeansNoSection() {
@@ -60,7 +66,7 @@ class MemorySectionTest {
             fact(4, "middle $long", lastUsed = 20),
         )
 
-        val section = MemorySection.build(facts, budgetCharactersPerScope = 110)
+        val section = MemorySection.build(facts, budget = MemoryBudget(110, 110, 110))
 
         assertEquals(listOf(2L, 3L), section.includedIds.sorted())
         assertTrue(section.text.endsWith("More facts are saved; find them with memory recall."))
@@ -74,7 +80,7 @@ class MemorySectionTest {
             fact(3, "short", lastUsed = 30),
         )
 
-        val section = MemorySection.build(facts, budgetCharactersPerScope = 110)
+        val section = MemorySection.build(facts, budget = MemoryBudget(110, 110, 110))
 
         assertEquals(listOf(1L, 3L), section.includedIds.sorted())
     }
@@ -84,15 +90,49 @@ class MemorySectionTest {
         val long = "w".repeat(90)
         val section = MemorySection.build(
             listOf(fact(1, long, global = true), fact(2, long)),
-            budgetCharactersPerScope = 110,
+            budget = MemoryBudget(110, 110, 110),
         )
         assertEquals(listOf(1L, 2L), section.includedIds.sorted())
         assertFalse(section.text.contains("More facts"))
     }
 
     @Test
-    fun defaultBudgetIsAbout1500TokensPerScope() {
-        assertEquals(6_000, MemorySection.DEFAULT_BUDGET_CHARACTERS)
+    fun cloudBudgetIsAbout1500TokensForGlobalAndThreadAnd600ForTheProject() {
+        assertEquals(MemoryBudget(6_000, 2_400, 6_000), MemoryBudget.CLOUD)
+    }
+
+    @Test
+    fun projectFactsSitBetweenGlobalAndThreadFacts() {
+        val section = MemorySection.build(
+            listOf(
+                fact(5, "We chose option B"),
+                PromptFact(id = 9, text = "Supervisor wants APA style", scope = PromptFactScope.PROJECT, pinned = false, lastUsedAtMillis = null),
+                fact(3, "User's name is Riad", global = true),
+            ),
+        )
+
+        assertEquals(
+            "Memory (facts saved earlier; [id] is for the memory tool):\n" +
+                "All threads:\n- [3] User's name is Riad\n" +
+                "This project:\n- [9] Supervisor wants APA style\n" +
+                "This thread:\n- [5] We chose option B",
+            section.text,
+        )
+    }
+
+    @Test
+    fun theProjectBudgetLimitsOnlyProjectFacts() {
+        val long = "p".repeat(90)
+        val facts = listOf(
+            PromptFact(id = 1, text = long, scope = PromptFactScope.PROJECT, pinned = false, lastUsedAtMillis = 2),
+            PromptFact(id = 2, text = long, scope = PromptFactScope.PROJECT, pinned = false, lastUsedAtMillis = 1),
+            fact(3, long),
+        )
+
+        val section = MemorySection.build(facts, budget = MemoryBudget(110, 110, 110))
+
+        assertEquals(listOf(1L, 3L), section.includedIds.sorted())
+        assertTrue(section.text.endsWith("More facts are saved; find them with memory recall."))
     }
 
     @Test

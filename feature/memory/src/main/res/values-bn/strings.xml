@@ -29,4 +29,8 @@
     <string name="memory_from">উৎস: %1$s</string>
     <string name="memory_in_thread">%1$s-এ</string>
     <string name="memory_pinned">পিন করা</string>
+    <string name="memory_section_project">এই প্রজেক্ট</string>
+    <string name="memory_empty_project">এখনো কোনো তথ্য নেই</string>
+    <string name="memory_scope_project">এই প্রজেক্ট</string>
+    <string name="memory_menu_move_to_project">প্রজেক্টে সরান</string>
 </resources>

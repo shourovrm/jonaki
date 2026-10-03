@@ -9,15 +9,18 @@ interface MemoryStore {
     /** Saves a fact, or returns the fact already saved with the same text. */
     suspend fun remember(scope: FactScope, text: String): RememberResult
 
-    /** Deletes a global fact or one of this thread's facts. */
+    /** Deletes a global fact, one of this thread's facts or one of its project's. */
     suspend fun forget(factId: Long): ForgetResult
 
-    /** Global and this thread's facts whose text contains [query], at most [limit]. */
+    /** Global, project and this thread's facts whose text contains [query], at most [limit]. */
     suspend fun recall(query: String, limit: Int): List<Fact>
 }
 
 enum class FactScope {
     GLOBAL,
+
+    /** Shared by the threads of one project (D-135). */
+    PROJECT,
     THREAD,
 }
 
@@ -37,7 +40,7 @@ sealed interface RememberResult {
 sealed interface ForgetResult {
     data class Forgotten(val fact: Fact) : ForgetResult
 
-    /** No such id among the global facts and this thread's facts. */
+    /** No such id among the facts this thread can see. */
     data object NotFound : ForgetResult
 
     /** The user pinned the fact; only the user removes it. */

@@ -82,13 +82,15 @@ class ToolContext(
      * delegate tool links its subagents' steps to it (M7). Null outside a call.
      */
     val toolCallId: String? = null,
+    /** The folder the threads of this thread's project share, readable and writable as /project/ (D-135); null without a project. */
+    val projectFolder: File? = null,
 ) {
-    val paths: ThreadPaths = ThreadPaths(threadFolder)
+    val paths: ThreadPaths = ThreadPaths(threadFolder, projectFolder)
     val skillPaths: SkillLibraryPaths? = skillLibraryFolder?.let(::SkillLibraryPaths)
     val outputLimiter: OutputLimiter = OutputLimiter(threadFolder)
 
     /** The same context for one call. */
-    fun forCall(callId: String): ToolContext = ToolContext(threadFolder, httpClient, skillLibraryFolder, callId)
+    fun forCall(callId: String): ToolContext = ToolContext(threadFolder, httpClient, skillLibraryFolder, callId, projectFolder)
 }
 
 /** Plain text for the model. An error says what failed and what to try next. */

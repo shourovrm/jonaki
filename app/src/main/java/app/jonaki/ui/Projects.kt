@@ -1,6 +1,10 @@
 package app.jonaki.ui
 
+import android.content.Context
 import app.jonaki.core.modelcatalog.ModelCatalog
+import app.jonaki.run.ProjectFolders
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.ProjectEntity
@@ -38,12 +42,19 @@ internal object Projects {
     }
 
     /**
-     * Deletes the project only. Its threads are cleared first, so a stop
-     * between the two steps leaves an empty project, never a thread pointing
-     * at a project that is gone.
+     * Deletes the project, its shared folder and, unless [keepFacts], its
+     * facts; kept facts become global (D-135). Its threads are cleared first,
+     * so a stop between the steps leaves an empty project, never a thread
+     * pointing at a project that is gone.
      */
-    suspend fun delete(database: JonakiDatabase, projectId: String) {
+    suspend fun delete(database: JonakiDatabase, context: Context, projectId: String, keepFacts: Boolean) {
         database.threadDao().clearProject(projectId)
+        if (keepFacts) {
+            database.memoryDao().makeProjectFactsGlobal(projectId)
+        } else {
+            database.memoryDao().deleteProjectFacts(projectId)
+        }
+        withContext(Dispatchers.IO) { ProjectFolders.delete(context, projectId) }
         database.projectDao().delete(projectId)
     }
 }

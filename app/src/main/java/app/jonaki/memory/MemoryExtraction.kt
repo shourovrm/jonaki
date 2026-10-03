@@ -20,7 +20,8 @@ data class ExtractionMessage(
 
 /** What the model asked for, before it is checked against the saved facts. */
 sealed interface ExtractionOperation {
-    data class Add(val text: String, val source: String?) : ExtractionOperation
+    /** [forProject] is true when the model marked the fact "scope":"project" (D-135). */
+    data class Add(val text: String, val source: String?, val forProject: Boolean = false) : ExtractionOperation
 
     data class Update(val factId: Long, val text: String) : ExtractionOperation
 
@@ -34,11 +35,12 @@ sealed interface ParsedExtraction {
     data class Failed(val reason: String) : ParsedExtraction
 }
 
-data class NewFact(val text: String, val sourceMessageId: String?)
+/** [forProject] is true for a fact the thread's project shares (D-135). */
+data class NewFact(val text: String, val sourceMessageId: String?, val forProject: Boolean = false)
 
 data class FactUpdate(val factId: Long, val text: String)
 
-/** The changes to make to one thread's facts. */
+/** The changes to make to one thread's facts and its project's. */
 data class ExtractionPlan(
     val adds: List<NewFact>,
     val updates: List<FactUpdate>,
@@ -77,19 +79,29 @@ Rules:
 - Never store keys, passwords or card numbers.
 - When nothing should change, answer {"operations":[]}."""
 
+    /** Added to [SYSTEM_PROMPT] for a thread in a project (D-135). */
+    private const val PROJECT_RULE = """- This thread belongs to a project. Add "scope":"project" to a new fact about the project's work that the project's other threads need (its goals, decisions, names, data, deadlines). Facts about the user in general or only about this thread get no scope. Project facts can be updated and deleted like thread facts."""
+
+    /** The instructions for one thread: [SYSTEM_PROMPT], plus the project rule when the thread has a project. */
+    fun systemPrompt(inProject: Boolean): String = if (inProject) SYSTEM_PROMPT + "\n" + PROJECT_RULE else SYSTEM_PROMPT
+
     private val json = Json { ignoreUnknownKeys = true }
 
     fun userPrompt(
         messages: List<ExtractionMessage>,
         threadFacts: List<MemoryEntity>,
         globalFacts: List<MemoryEntity>,
+        projectFacts: List<MemoryEntity>? = null,
     ): String {
         val messageBlocks = messages.mapIndexed { index, message ->
             val speaker = if (message.isUser) "User" else "Assistant"
             val limit = if (message.isUser) MAX_USER_MESSAGE_LENGTH else MAX_ASSISTANT_MESSAGE_LENGTH
             "[${labelOf(index)}] $speaker: ${cut(message.text.trim(), limit)}"
         }
+        // A thread without a project gets no project block, so its request stays as before.
+        val projectBlock = if (projectFacts == null) "" else "Project facts:\n" + factLines(projectFacts) + "\n\n"
         return "Global facts (read only):\n" + factLines(globalFacts) + "\n\n" +
+            projectBlock +
             "Thread facts:\n" + factLines(threadFacts) + "\n\n" +
             "New messages:\n" + messageBlocks.joinToString("\n\n")
     }
@@ -111,18 +123,26 @@ Rules:
         return ParsedExtraction.Operations(operations, ignored = operationElements.size - operations.size)
     }
 
+    /**
+     * [projectFacts] is null for a thread without a project; then a fact
+     * marked for the project stays with the thread.
+     */
     fun plan(
         parsed: ParsedExtraction,
         threadFacts: List<MemoryEntity>,
         globalFacts: List<MemoryEntity>,
         messages: List<ExtractionMessage>,
+        projectFacts: List<MemoryEntity>? = null,
     ): ExtractionPlan {
         if (parsed is ParsedExtraction.Failed) {
             return ExtractionPlan(emptyList(), emptyList(), emptyList(), skipped = 0, failure = parsed.reason)
         }
         val operations = (parsed as ParsedExtraction.Operations).operations
-        val threadFactsById = threadFacts.associateBy { fact -> fact.id }
-        val knownTexts = (threadFacts + globalFacts).map { fact -> FactText.normalized(fact.text) }.toMutableSet()
+        val inProject = projectFacts != null
+        val changeableFactsById = (threadFacts + projectFacts.orEmpty()).associateBy { fact -> fact.id }
+        val knownTexts = (threadFacts + globalFacts + projectFacts.orEmpty())
+            .map { fact -> FactText.normalized(fact.text) }
+            .toMutableSet()
         val touchedIds = mutableSetOf<Long>()
         val adds = mutableListOf<NewFact>()
         val updates = mutableListOf<FactUpdate>()
@@ -134,13 +154,17 @@ Rules:
                 is ExtractionOperation.Add -> {
                     val isNew = knownTexts.add(FactText.normalized(operation.text))
                     if (isNew) {
-                        adds += NewFact(operation.text, sourceMessageIdOf(operation.source, messages))
+                        adds += NewFact(
+                            text = operation.text,
+                            sourceMessageId = sourceMessageIdOf(operation.source, messages),
+                            forProject = inProject && operation.forProject,
+                        )
                     } else {
                         skipped += 1
                     }
                 }
                 is ExtractionOperation.Update -> {
-                    val fact = changeableFact(operation.factId, threadFactsById, touchedIds)
+                    val fact = changeableFact(operation.factId, changeableFactsById, touchedIds)
                     val changesText = fact != null && FactText.normalized(fact.text) != FactText.normalized(operation.text)
                     if (fact != null && changesText) {
                         touchedIds += fact.id
@@ -151,7 +175,7 @@ Rules:
                     }
                 }
                 is ExtractionOperation.Delete -> {
-                    val fact = changeableFact(operation.factId, threadFactsById, touchedIds)
+                    val fact = changeableFact(operation.factId, changeableFactsById, touchedIds)
                     if (fact != null) {
                         touchedIds += fact.id
                         deletes += fact.id
@@ -165,11 +189,12 @@ Rules:
     }
 
     /**
-     * A thread fact extraction may change: not pinned, not written by the
-     * user, and not already changed by an earlier operation of this answer.
+     * A thread or project fact extraction may change: not pinned, not
+     * written by the user, and not already changed by an earlier operation
+     * of this answer.
      */
-    private fun changeableFact(factId: Long, threadFactsById: Map<Long, MemoryEntity>, touchedIds: Set<Long>): MemoryEntity? {
-        val fact = threadFactsById[factId] ?: return null
+    private fun changeableFact(factId: Long, changeableFactsById: Map<Long, MemoryEntity>, touchedIds: Set<Long>): MemoryEntity? {
+        val fact = changeableFactsById[factId] ?: return null
         val protectedByUser = fact.pinned || fact.origin == MemoryOrigin.USER
         if (protectedByUser || factId in touchedIds) {
             return null
@@ -183,7 +208,10 @@ Rules:
         val text = fields.text("text")?.trim()?.takeIf { it.isNotEmpty() && it.length <= MAX_FACT_LENGTH }
         val factId = fields.number("id")
         return when (kind) {
-            "add" -> text?.let { ExtractionOperation.Add(it, fields.text("source")?.trim()) }
+            "add" -> text?.let {
+                val forProject = fields.text("scope")?.trim()?.lowercase() == "project"
+                ExtractionOperation.Add(it, fields.text("source")?.trim(), forProject)
+            }
             "update" -> if (text != null && factId != null) ExtractionOperation.Update(factId, text) else null
             "delete" -> factId?.let { ExtractionOperation.Delete(it) }
             else -> null

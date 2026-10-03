@@ -56,11 +56,14 @@ class MemoryExtractor(
         val memoryDao = database.memoryDao()
         val threadFacts = memoryDao.listThread(threadId)
         val globalFacts = memoryDao.listGlobal()
+        // A project deleted meanwhile counts as none.
+        val projectId = thread.projectId?.takeIf { id -> database.projectDao().find(id) != null }
+        val projectFacts = projectId?.let { id -> memoryDao.listProject(id) }
         val answer = backgroundModel.complete(
             threadId = threadId,
             threadModelKey = threadModelKey,
-            systemPrompt = MemoryExtraction.SYSTEM_PROMPT,
-            userText = MemoryExtraction.userPrompt(messages, threadFacts, globalFacts),
+            systemPrompt = MemoryExtraction.systemPrompt(inProject = projectId != null),
+            userText = MemoryExtraction.userPrompt(messages, threadFacts, globalFacts, projectFacts),
             maxOutputTokens = MAX_OUTPUT_TOKENS,
         )
         if (answer is BackgroundAnswer.Failed) {
@@ -69,24 +72,25 @@ class MemoryExtractor(
             return
         }
         val text = (answer as BackgroundAnswer.Success).text
-        val plan = MemoryExtraction.plan(MemoryExtraction.parse(text), threadFacts, globalFacts, messages)
+        val plan = MemoryExtraction.plan(MemoryExtraction.parse(text), threadFacts, globalFacts, messages, projectFacts)
         if (plan.failure != null) {
             // Asking again would likely cost as much and fail the same way, so these messages count as read.
             Log.w(TAG, "Memory extraction answer unreadable: ${plan.failure}")
         }
-        apply(threadId, plan)
+        apply(threadId, projectId, plan)
         database.threadDao().setMemoryExtractedUpTo(threadId, lastPosition)
     }
 
-    private suspend fun apply(threadId: String, plan: ExtractionPlan) {
+    private suspend fun apply(threadId: String, projectId: String?, plan: ExtractionPlan) {
         val memoryDao = database.memoryDao()
         val now = clock()
         val waitForReview = reviewMode()
         for (newFact in plan.adds) {
             memoryDao.insert(
                 MemoryEntity(
-                    scope = MemoryScope.THREAD,
-                    threadId = threadId,
+                    scope = if (newFact.forProject) MemoryScope.PROJECT else MemoryScope.THREAD,
+                    threadId = if (newFact.forProject) null else threadId,
+                    projectId = if (newFact.forProject) projectId else null,
                     text = newFact.text,
                     sourceMessageId = newFact.sourceMessageId,
                     origin = MemoryOrigin.EXTRACTED,

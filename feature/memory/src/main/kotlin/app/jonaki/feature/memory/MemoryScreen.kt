@@ -55,7 +55,8 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
     var adding by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
-    val allFacts = state.waitingForReview + state.threadFacts + state.globalFacts
+    val allFacts = state.waitingForReview + state.threadFacts + state.projectFacts + state.globalFacts
+    val subtitle = state.threadTitle ?: state.projectName
 
     Scaffold(
         modifier = modifier,
@@ -64,9 +65,9 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
                 title = {
                     Column {
                         Text(stringResource(R.string.memory_title), fontWeight = FontWeight.SemiBold)
-                        if (state.threadTitle != null) {
+                        if (subtitle != null) {
                             Text(
-                                state.threadTitle,
+                                subtitle,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -106,6 +107,18 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
                     labelId = R.string.memory_section_thread,
                     emptyId = R.string.memory_empty_thread,
                     facts = state.threadFacts,
+                    hasProject = state.projectName != null,
+                    onEdit = { factId -> editingId = factId },
+                    onDelete = { factId -> deletingId = factId },
+                    actions = actions,
+                )
+            }
+            if (state.projectName != null) {
+                factSection(
+                    labelId = R.string.memory_section_project,
+                    emptyId = R.string.memory_empty_project,
+                    facts = state.projectFacts,
+                    hasProject = true,
                     onEdit = { factId -> editingId = factId },
                     onDelete = { factId -> deletingId = factId },
                     actions = actions,
@@ -115,6 +128,7 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
                 labelId = R.string.memory_section_global,
                 emptyId = R.string.memory_empty_global,
                 facts = state.globalFacts,
+                hasProject = state.projectName != null,
                 onEdit = { factId -> editingId = factId },
                 onDelete = { factId -> deletingId = factId },
                 actions = actions,
@@ -129,10 +143,10 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
         FactDialog(
             titleId = R.string.memory_add_title,
             initialText = "",
-            offerScope = state.isThreadView,
-            onSave = { text, isGlobal ->
+            scopes = state.addScopes,
+            onSave = { text, scope ->
                 adding = false
-                actions.onAdd(text, isGlobal)
+                actions.onAdd(text, scope)
             },
             onDismiss = { adding = false },
         )
@@ -142,7 +156,7 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
         FactDialog(
             titleId = R.string.memory_edit_title,
             initialText = editing.text,
-            offerScope = false,
+            scopes = emptyList(),
             onSave = { text, _ ->
                 editingId = null
                 actions.onEdit(editing.id, text)
@@ -179,6 +193,7 @@ private fun LazyListScope.factSection(
     labelId: Int,
     emptyId: Int,
     facts: List<MemoryFactUi>,
+    hasProject: Boolean,
     onEdit: (Long) -> Unit,
     onDelete: (Long) -> Unit,
     actions: MemoryActions,
@@ -196,12 +211,12 @@ private fun LazyListScope.factSection(
         return
     }
     items(facts, key = { fact -> "fact-${fact.id}" }) { fact ->
-        FactCard(fact, onEdit = { onEdit(fact.id) }, onDelete = { onDelete(fact.id) }, actions = actions)
+        FactCard(fact, hasProject, onEdit = { onEdit(fact.id) }, onDelete = { onDelete(fact.id) }, actions = actions)
     }
 }
 
 @Composable
-private fun FactCard(fact: MemoryFactUi, onEdit: () -> Unit, onDelete: () -> Unit, actions: MemoryActions) {
+private fun FactCard(fact: MemoryFactUi, hasProject: Boolean, onEdit: () -> Unit, onDelete: () -> Unit, actions: MemoryActions) {
     // A plain row: the list's spacing separates facts without a card (D-123).
     Surface(
         color = Color.Transparent,
@@ -228,7 +243,7 @@ private fun FactCard(fact: MemoryFactUi, onEdit: () -> Unit, onDelete: () -> Uni
                 }
                 SourceLine(fact, onClick = { actions.onOpenSource(fact.id) })
             }
-            FactMenuButton(fact, onEdit, onDelete, actions)
+            FactMenuButton(fact, hasProject, onEdit, onDelete, actions)
         }
     }
 }
@@ -247,14 +262,14 @@ private fun SourceLine(fact: MemoryFactUi, onClick: () -> Unit) {
 }
 
 @Composable
-private fun FactMenuButton(fact: MemoryFactUi, onEdit: () -> Unit, onDelete: () -> Unit, actions: MemoryActions) {
+private fun FactMenuButton(fact: MemoryFactUi, hasProject: Boolean, onEdit: () -> Unit, onDelete: () -> Unit, actions: MemoryActions) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.memory_more))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            for (item in FactMenu.itemsFor(fact)) {
+            for (item in FactMenu.itemsFor(fact, hasProject)) {
                 DropdownMenuItem(
                     text = {
                         val isDelete = item == FactMenuItem.DELETE
@@ -269,6 +284,7 @@ private fun FactMenuButton(fact: MemoryFactUi, onEdit: () -> Unit, onDelete: () 
                             FactMenuItem.EDIT -> onEdit()
                             FactMenuItem.PIN -> actions.onPinChange(fact.id, true)
                             FactMenuItem.UNPIN -> actions.onPinChange(fact.id, false)
+                            FactMenuItem.MOVE_TO_PROJECT -> actions.onMoveToProject(fact.id)
                             FactMenuItem.PROMOTE -> actions.onPromote(fact.id)
                             FactMenuItem.OPEN_SOURCE -> actions.onOpenSource(fact.id)
                             FactMenuItem.DELETE -> onDelete()
@@ -284,6 +300,7 @@ private fun labelOf(item: FactMenuItem): Int = when (item) {
     FactMenuItem.EDIT -> R.string.memory_menu_edit
     FactMenuItem.PIN -> R.string.memory_menu_pin
     FactMenuItem.UNPIN -> R.string.memory_menu_unpin
+    FactMenuItem.MOVE_TO_PROJECT -> R.string.memory_menu_move_to_project
     FactMenuItem.PROMOTE -> R.string.memory_menu_promote
     FactMenuItem.OPEN_SOURCE -> R.string.memory_menu_source
     FactMenuItem.DELETE -> R.string.memory_menu_delete
