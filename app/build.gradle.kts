@@ -6,8 +6,8 @@ android {
     namespace = "app.jonaki"
     defaultConfig {
         applicationId = "app.jonaki"
-        versionCode = 8
-        versionName = "0.8.0"
+        versionCode = 9
+        versionName = "1.0.0"
     }
     packaging {
         resources {
