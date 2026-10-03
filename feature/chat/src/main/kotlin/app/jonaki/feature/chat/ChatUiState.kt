@@ -62,6 +62,15 @@ data class CodeRunUi(
 @Immutable
 data class NotSavedFileUi(val path: String, val reason: String)
 
+/** "Over 5 subagents. Each can cost up to $0.10." with the user's numbers (D-138). */
+@Immutable
+data class SubagentCostWarning(
+    /** The user's warning number; the card shows when a message goes above it. */
+    val above: Int,
+    /** One subagent's cost cap in US dollars. */
+    val costCapUsd: Double,
+)
+
 /** A file waiting to go into the thread's inbox/ with the next message. */
 @Immutable
 data class AttachmentUi(
@@ -200,8 +209,8 @@ sealed interface ChatItem {
          * allowance.
          */
         val subagentsAfter: Int? = null,
-        /** True above SubagentLauncher.WARN_ABOVE subagents in one message. */
-        val warnsAboutCost: Boolean = false,
+        /** Set above the user's warning number of subagents in one message (D-137, D-138). */
+        val costWarning: SubagentCostWarning? = null,
     ) : ChatItem
 
     /** Under the answer of a turn that used delegate: opens the work sheet (D-126). */

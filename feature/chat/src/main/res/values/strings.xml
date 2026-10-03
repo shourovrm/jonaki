@@ -153,5 +153,8 @@
         <item quantity="one">%1$d subagent in this message</item>
         <item quantity="other">%1$d subagents in this message</item>
     </plurals>
-    <string name="chat_approval_subagents_warning">Over 5 subagents. Each can cost up to $0.10.</string>
+    <plurals name="chat_approval_subagents_warning">
+        <item quantity="one">Over %1$d subagent. Each can cost up to %2$s.</item>
+        <item quantity="other">Over %1$d subagents. Each can cost up to %2$s.</item>
+    </plurals>
 </resources>

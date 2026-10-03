@@ -98,7 +98,6 @@
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>
     </plurals>
-    <string name="settings_section_subagents">Subagents</string>
     <string name="settings_subagent_researcher">Researcher</string>
     <string name="settings_subagent_scout">Scout</string>
     <string name="settings_subagent_writer">Writer</string>

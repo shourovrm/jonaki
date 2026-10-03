@@ -62,11 +62,32 @@ private fun SubagentModelRow(
     options: List<ModelOptionUi>,
     onChange: (agentType: String, modelKey: String?) -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val defaultLabel = stringResource(
         if (row.defaultIsCheapest) R.string.settings_subagent_cheapest_model else R.string.settings_subagent_thread_model,
     )
-    val selectedName = options.firstOrNull { option -> option.key == row.selectedKey }?.name ?: defaultLabel
+    ModelChoiceRow(
+        title = agentTypeLabel(row.agentType),
+        selectedKey = row.selectedKey,
+        defaultLabel = defaultLabel,
+        options = options,
+        onSelect = { modelKey -> onChange(row.agentType, modelKey) },
+    )
+}
+
+/**
+ * A title over the chosen model's name; a tap lists [defaultLabel] first,
+ * then the user's models. [onSelect] gets null for the default.
+ */
+@Composable
+internal fun ModelChoiceRow(
+    title: String,
+    selectedKey: String?,
+    defaultLabel: String,
+    options: List<ModelOptionUi>,
+    onSelect: (modelKey: String?) -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val selectedName = options.firstOrNull { option -> option.key == selectedKey }?.name ?: defaultLabel
     Box {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -77,7 +98,7 @@ private fun SubagentModelRow(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             Column(Modifier.weight(1f)) {
-                Text(agentTypeLabel(row.agentType), style = MaterialTheme.typography.titleSmall)
+                Text(title, style = MaterialTheme.typography.titleSmall)
                 Text(
                     selectedName,
                     style = MaterialTheme.typography.bodyMedium,
@@ -93,7 +114,7 @@ private fun SubagentModelRow(
                 text = { Text(defaultLabel) },
                 onClick = {
                     menuOpen = false
-                    onChange(row.agentType, null)
+                    onSelect(null)
                 },
             )
             for (option in options) {
@@ -101,7 +122,7 @@ private fun SubagentModelRow(
                     text = { Text(option.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     onClick = {
                         menuOpen = false
-                        onChange(row.agentType, option.key)
+                        onSelect(option.key)
                     },
                 )
             }

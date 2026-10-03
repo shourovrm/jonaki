@@ -22,20 +22,26 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * delegate: hands one task, or up to four in parallel, to subagents (M7,
+ * delegate: hands one task, or a few in parallel, to subagents (M7,
  * D-015). A subagent sees only its task, never this conversation, and its
  * answer comes back as this tool's result.
  *
  * The tool itself changes nothing; each subagent's own calls go through the
  * permission broker, so it is declared read-only, up to the subagents a run
  * may start without asking. A call that would start more waits for the
- * user in every approval mode (D-137).
+ * user in every approval mode (D-137). The numbers are the user's limits,
+ * read once when the tool is built for a run (D-138).
  */
 class DelegateTool(private val launcher: SubagentLauncher) : Tool {
+    private val limits = launcher.limitSettings
+
+    /** Subagents one call may start at once. */
+    private val maxTasks = limits.perCall
+
     override val name: String = "delegate"
 
     override val promptLine: String =
-        "delegate: hand a task to a subagent (${typeNames()}), or up to $MAX_TASKS in parallel; returns their answers"
+        "delegate: hand a task to a subagent (${typeNames()}), or up to $maxTasks in parallel; returns their answers"
 
     override val guidelines: List<String> = listOf(
         "Use delegate for reasoning-heavy work such as research and writing, not to run a single search or fetch in parallel.",
@@ -44,9 +50,17 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
         "Subagent types: " + launcher.agentTypes.joinToString("; ") { type -> "${type.name}: ${type.description}" },
         "Name a model in delegate only when the user asks for one; otherwise each type uses the model set for it.",
         "A subagent's answer is its own work; check it before you rely on it.",
-        "Up to ${SubagentLauncher.STARTED_WITHOUT_ASKING} subagents per user message start at once; more wait for the user's approval, " +
-            "so use more only when the user asks for them.",
+        approvalGuideline(),
     )
+
+    private fun approvalGuideline(): String {
+        val automatic = limits.startedWithoutAsking
+        if (automatic == 0) {
+            return "Every delegate call waits for the user's approval, so delegate only when it clearly helps."
+        }
+        return "Up to $automatic subagents per user message start at once; more wait for the user's approval, " +
+            "so use more only when the user asks for them."
+    }
 
     override val parameterSchema: JsonObject = buildJsonObject {
         put("type", "object")
@@ -54,8 +68,8 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
             taskProperties()
             putJsonObject("tasks") {
                 put("type", "array")
-                put("maxItems", MAX_TASKS)
-                put("description", "Up to $MAX_TASKS tasks that run in parallel, instead of agent and task.")
+                put("maxItems", maxTasks)
+                put("description", "Up to $maxTasks tasks that run in parallel, instead of agent and task.")
                 putJsonObject("items") {
                     put("type", "object")
                     putJsonObject("properties") { taskProperties() }
@@ -94,21 +108,21 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
 
     override fun sideEffectOf(arguments: JsonObject): SideEffect {
         val startedAfter = launcher.startedThisRun + taskObjectsOf(arguments).size
-        return if (startedAfter > SubagentLauncher.STARTED_WITHOUT_ASKING) SideEffect.NEEDS_USER else SideEffect.READ_ONLY
+        return if (startedAfter > limits.startedWithoutAsking) SideEffect.NEEDS_USER else SideEffect.READ_ONLY
     }
     override val requiredCapabilities: Set<Capability> = emptySet()
 
-    // Longer than a subagent's own 10 minutes, so that a subagent at its limit still returns what it has.
-    override val timeLimit: Duration = 11.minutes
+    // One minute longer than a subagent's own limit, so that a subagent at its limit still returns what it has.
+    override val timeLimit: Duration = (limits.minutes + 1).minutes
 
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput {
         val taskObjects = taskObjectsOf(arguments)
         if (taskObjects.isEmpty()) {
             return ToolOutput.error("delegate needs agent and task, or tasks", "Call it again with a task.")
         }
-        if (taskObjects.size > MAX_TASKS) {
+        if (taskObjects.size > maxTasks) {
             return ToolOutput.error(
-                "delegate runs at most $MAX_TASKS tasks at once, not ${taskObjects.size}",
+                "delegate runs at most $maxTasks tasks at once, not ${taskObjects.size}",
                 "Merge tasks, or delegate the rest after these finish.",
             )
         }
@@ -189,8 +203,4 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
     }
 
     private fun typeNames(): String = launcher.agentTypes.joinToString(", ") { type -> type.name }
-
-    companion object {
-        const val MAX_TASKS = SubagentLauncher.MAX_PARALLEL
-    }
 }

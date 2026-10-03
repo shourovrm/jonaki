@@ -11,6 +11,7 @@ import app.jonaki.core.modelcatalog.ThinkingSupport
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.settings.ChatService
+import app.jonaki.settings.CustomSubagents
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.SubagentModelChoice
 import app.jonaki.settings.ThinkingLevels
@@ -30,6 +31,10 @@ class AppSubagentModels(
         SubagentModelInfo(key, catalog.find(key)?.displayName ?: ModelKey.modelOf(key))
     }
 
+    /** The built-in types' choices and the models of the types the user made (D-138). */
+    private val savedChoices: Map<String, String> =
+        snapshot.subagentModels + CustomSubagents.modelChoicesOf(snapshot.customSubagents)
+
     /** OpenRouter reports each call's cost, so its limit applies even to a model the catalog has no price for. */
     private fun hasKnownPrice(key: String, info: app.jonaki.core.modelcatalog.ModelInfo?): Boolean {
         val catalogHasPrice = info?.inputUsdPerMillion != null && info.outputUsdPerMillion != null
@@ -40,7 +45,7 @@ class AppSubagentModels(
         val key = SubagentModelChoice.choose(
             agentType = agentType.name,
             requestedModelKey = requestedKey,
-            savedChoices = snapshot.subagentModels,
+            savedChoices = savedChoices,
             scopedModelKeys = snapshot.chatModels.allModelKeys,
             threadModelKey = threadModelKey,
             backgroundModelKey = backgroundModelKey,

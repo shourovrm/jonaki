@@ -1,6 +1,7 @@
 package app.jonaki.ui
 
-import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentLimitSettings
+import app.jonaki.feature.chat.SubagentCostWarning
 import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.storage.CompactionEntity
@@ -57,6 +58,12 @@ object ChatItems {
         pythonCard: (toolCallId: String, need: InstallNeed) -> ChatItem? = { _, _ -> null },
         /** The thread's newest summary; a divider marks where the part it covers ends. */
         compaction: CompactionEntity? = null,
+        /**
+         * The user's subagent limits: the rows' step and cost meters and the
+         * delegate card's warning use them (D-138). Rows of earlier runs are
+         * measured against today's limits, since a subagent's row keeps none.
+         */
+        subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
         /** Labels for the step track and approval cards, in the app's language. */
         stepWords: StepDetail.Words,
     ): List<ChatItem> {
@@ -66,7 +73,7 @@ object ChatItems {
         val stepsById = steps.filter { step -> step.subagentId == null }.associateBy { step -> step.toolCallId }
         val subagentSteps = steps.filter { step -> step.subagentId != null }.groupBy { step -> step.subagentId }
         val subagentsByParent = subagents.groupBy { subagent -> subagent.parentToolCallId }
-        val subagentParts = SubagentParts(subagentsByParent, subagentSteps, modelNameOf, stepWords)
+        val subagentParts = SubagentParts(subagentsByParent, subagentSteps, modelNameOf, stepWords, SubagentLimits.from(subagentLimits))
         val items = mutableListOf<ChatItem>()
         val firstKeptTurn = compaction?.let { summary -> firstTurnAfter(turns, summary.upToPosition) }
         for ((index, turn) in turns.withIndex()) {
@@ -78,7 +85,7 @@ object ChatItems {
             if (isLastTurn) {
                 items += pythonCardFor(turn, stepsById, pythonCard)
                 val stepStarts = steps.associate { step -> step.toolCallId to step.startedAtMillis }
-                items += pendingApprovals.map { pending -> approvalCard(pending, stepStarts, stepWords) }
+                items += pendingApprovals.map { pending -> approvalCard(pending, stepStarts, stepWords, subagentLimits) }
             }
         }
         val withRetry = markRetryableError(items, visibleRows, isRunning)
@@ -116,7 +123,12 @@ object ChatItems {
      * other cards say what the call will do. A subagent's card is withdrawn
      * 3 minutes after its step started (D-062), which is when it was shown.
      */
-    private fun approvalCard(pending: PendingApproval, stepStarts: Map<String, Long>, stepWords: StepDetail.Words): ChatItem.Approval {
+    private fun approvalCard(
+        pending: PendingApproval,
+        stepStarts: Map<String, Long>,
+        stepWords: StepDetail.Words,
+        subagentLimits: SubagentLimitSettings,
+    ): ChatItem.Approval {
         val subagent = pending.subagent
         val reason = subagent?.reason
         val description = if (reason != null) {
@@ -133,8 +145,16 @@ object ChatItems {
             agentLabel = subagent?.agentLabel,
             waitEndsAtMillis = waitEndsAt,
             subagentsAfter = pending.subagentsAfter,
-            warnsAboutCost = (pending.subagentsAfter ?: 0) > SubagentLauncher.WARN_ABOVE,
+            costWarning = costWarningFor(pending.subagentsAfter, subagentLimits),
         )
+    }
+
+    /** Only a delegate card above the user's warning number warns (D-137, D-138). */
+    private fun costWarningFor(subagentsAfter: Int?, limits: SubagentLimitSettings): SubagentCostWarning? {
+        if (subagentsAfter == null || subagentsAfter <= limits.warnAbove) {
+            return null
+        }
+        return SubagentCostWarning(above = limits.warnAbove, costCapUsd = limits.costCapUsd)
     }
 
     /** A running tool wins, then text being written; anything else is thinking. */
@@ -281,9 +301,8 @@ object ChatItems {
         private val stepsBySubagent: Map<String?, List<StepEntity>>,
         private val modelNameOf: (String) -> String?,
         private val stepWords: StepDetail.Words,
+        private val limits: SubagentLimits,
     ) {
-        private val limits = SubagentLimits()
-
         fun stepsOf(subagent: SubagentEntity): List<StepEntity> =
             stepsBySubagent[subagent.id].orEmpty().sortedBy { step -> step.startedAtMillis }
 

@@ -1,0 +1,45 @@
+package app.jonaki.ui
+
+import app.jonaki.core.toolapi.SubagentLimitSettings
+import app.jonaki.feature.settings.SubagentLimit
+import app.jonaki.feature.settings.SubagentLimitUi
+
+/** Settings > Subagents' limit rows from the saved limits, and a row's change back into them (D-138). */
+object SubagentLimitRows {
+    fun of(settings: SubagentLimitSettings): List<SubagentLimitUi> = listOf(
+        row(SubagentLimit.WITHOUT_ASKING, settings.startedWithoutAsking, SubagentLimitSettings.STARTED_WITHOUT_ASKING_RANGE),
+        row(SubagentLimit.PER_CALL, settings.perCall, SubagentLimitSettings.PER_CALL_RANGE),
+        // A warning below the automatic limit would show on every card, so the row stops there.
+        SubagentLimitUi(
+            SubagentLimit.WARN_ABOVE,
+            value = settings.warnAbove,
+            min = maxOf(settings.startedWithoutAsking, SubagentLimitSettings.WARN_ABOVE_RANGE.first),
+            max = SubagentLimitSettings.WARN_ABOVE_RANGE.last,
+        ),
+        row(SubagentLimit.TOOL_STEPS, settings.toolSteps, SubagentLimitSettings.TOOL_STEPS_RANGE),
+        SubagentLimitUi(
+            SubagentLimit.COST_CENTS,
+            value = settings.costCapCents,
+            min = SubagentLimitSettings.COST_CAP_CENTS_RANGE.first,
+            max = SubagentLimitSettings.COST_CAP_CENTS_RANGE.last,
+            step = SubagentLimitSettings.COST_CAP_STEP_CENTS,
+        ),
+        row(SubagentLimit.MINUTES, settings.minutes, SubagentLimitSettings.MINUTES_RANGE),
+    )
+
+    /** [value] moved into its range; raising the automatic limit above the warning raises the warning too. */
+    fun changed(settings: SubagentLimitSettings, limit: SubagentLimit, value: Int): SubagentLimitSettings {
+        val updated = when (limit) {
+            SubagentLimit.WITHOUT_ASKING -> settings.copy(startedWithoutAsking = value)
+            SubagentLimit.PER_CALL -> settings.copy(perCall = value)
+            SubagentLimit.WARN_ABOVE -> settings.copy(warnAbove = value)
+            SubagentLimit.TOOL_STEPS -> settings.copy(toolSteps = value)
+            SubagentLimit.COST_CENTS -> settings.copy(costCapCents = value)
+            SubagentLimit.MINUTES -> settings.copy(minutes = value)
+        }
+        return updated.withinBounds()
+    }
+
+    private fun row(limit: SubagentLimit, value: Int, range: IntRange): SubagentLimitUi =
+        SubagentLimitUi(limit, value = value, min = range.first, max = range.last)
+}

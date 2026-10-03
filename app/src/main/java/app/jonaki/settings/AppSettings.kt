@@ -3,6 +3,7 @@ package app.jonaki.settings
 import app.jonaki.core.agent.AnswerStyle
 import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.providerapi.ThinkingLevel
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import android.content.Context
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +58,10 @@ data class SettingsSnapshot(
     val refusedPermissions: Set<String> = emptySet(),
     /** Tool names a model on the phone is offered (D-133). */
     val localModelTools: Set<String> = LocalModelToolList.DEFAULT,
+    /** Settings > Subagents: how many start, and each one's budget (D-138). */
+    val subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
+    /** Subagent types the user made, in the order they were added (D-138). */
+    val customSubagents: List<CustomSubagent> = emptyList(),
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -117,7 +122,22 @@ class AppSettings(
             refusedPermissions = preferences.getStringSet(REFUSED_PERMISSIONS, emptySet()).orEmpty().toSet(),
             // Missing means never chosen, so the defaults; a saved empty set stays empty.
             localModelTools = preferences.getStringSet(LOCAL_MODEL_TOOLS, null)?.toSet() ?: LocalModelToolList.DEFAULT,
+            subagentLimits = readSubagentLimits(),
+            customSubagents = CustomSubagents.fromText(preferences.getString(CUSTOM_SUBAGENTS, "").orEmpty()),
         )
+    }
+
+    /** A missing value keeps its default; a saved one is moved into its range in case the ranges changed. */
+    private fun readSubagentLimits(): SubagentLimitSettings {
+        val defaults = SubagentLimitSettings()
+        return SubagentLimitSettings(
+            startedWithoutAsking = preferences.getInt(SUBAGENTS_WITHOUT_ASKING, defaults.startedWithoutAsking),
+            perCall = preferences.getInt(SUBAGENTS_PER_CALL, defaults.perCall),
+            warnAbove = preferences.getInt(SUBAGENTS_WARN_ABOVE, defaults.warnAbove),
+            toolSteps = preferences.getInt(SUBAGENT_TOOL_STEPS, defaults.toolSteps),
+            costCapCents = preferences.getInt(SUBAGENT_COST_CENTS, defaults.costCapCents),
+            minutes = preferences.getInt(SUBAGENT_MINUTES, defaults.minutes),
+        ).withinBounds()
     }
 
     private fun readChatModels(presetDefaultModel: (ChatService) -> String): ChatModels {
@@ -170,6 +190,14 @@ class AppSettings(
         editor.putInt(TOOL_PICKER_SEEN_VERSION, snapshot.toolPickerSeenVersion)
         editor.putStringSet(REFUSED_PERMISSIONS, snapshot.refusedPermissions)
         editor.putStringSet(LOCAL_MODEL_TOOLS, snapshot.localModelTools)
+        val limits = snapshot.subagentLimits
+        editor.putInt(SUBAGENTS_WITHOUT_ASKING, limits.startedWithoutAsking)
+        editor.putInt(SUBAGENTS_PER_CALL, limits.perCall)
+        editor.putInt(SUBAGENTS_WARN_ABOVE, limits.warnAbove)
+        editor.putInt(SUBAGENT_TOOL_STEPS, limits.toolSteps)
+        editor.putInt(SUBAGENT_COST_CENTS, limits.costCapCents)
+        editor.putInt(SUBAGENT_MINUTES, limits.minutes)
+        editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
         editor.apply()
     }
 
@@ -202,5 +230,12 @@ class AppSettings(
         // A new key: the old "requested_permissions" also counted dialogs closed with Back (D-127).
         const val REFUSED_PERMISSIONS = "refused_permissions"
         const val LOCAL_MODEL_TOOLS = "local_model_tools"
+        const val SUBAGENTS_WITHOUT_ASKING = "subagents_without_asking"
+        const val SUBAGENTS_PER_CALL = "subagents_per_call"
+        const val SUBAGENTS_WARN_ABOVE = "subagents_warn_above"
+        const val SUBAGENT_TOOL_STEPS = "subagent_tool_steps"
+        const val SUBAGENT_COST_CENTS = "subagent_cost_cents"
+        const val SUBAGENT_MINUTES = "subagent_minutes"
+        const val CUSTOM_SUBAGENTS = "custom_subagents"
     }
 }

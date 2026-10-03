@@ -223,6 +223,20 @@ class SettingsSummariesTest {
         assertFalse(result.needsAttention)
     }
 
+    private fun withoutAsking(count: Int) = SubagentLimitUi(SubagentLimit.WITHOUT_ASKING, value = count, min = 0, max = 10)
+
+    @Test
+    fun subagentsCountsThoseThatStartWithoutAskingAndTheCustomOnes() {
+        val defaults = emptyState.copy(subagentLimits = listOf(withoutAsking(2)))
+        val custom = emptyState.copy(
+            subagentLimits = listOf(withoutAsking(1)),
+            customSubagents = listOf(CustomSubagentRowUi("price-checker", "Checks prices."), CustomSubagentRowUi("digest", "Sums up.")),
+        )
+
+        assertEquals("2 without asking · no custom", summary(SettingsPage.SUBAGENTS, defaults))
+        assertEquals("1 without asking · 2 custom", summary(SettingsPage.SUBAGENTS, custom))
+    }
+
     @Test
     fun aboutShowsTheVersion() {
         assertEquals("Version 1.0.0", summary(SettingsPage.ABOUT, emptyState.copy(appVersion = "1.0.0")))

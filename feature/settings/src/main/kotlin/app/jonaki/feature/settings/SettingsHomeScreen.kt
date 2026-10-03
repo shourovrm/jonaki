@@ -220,6 +220,7 @@ private fun iconOf(page: SettingsPage): ImageVector = when (page) {
     SettingsPage.LOCAL_MODELS -> JonakiIcons.Download
     SettingsPage.WEB -> JonakiIcons.Globe
     SettingsPage.TOOLS -> Icons.Outlined.Build
+    SettingsPage.SUBAGENTS -> JonakiIcons.People
     SettingsPage.ANSWERS -> JonakiIcons.ChatBubble
     SettingsPage.MEMORY_SKILLS -> JonakiIcons.Lightbulb
     SettingsPage.FILES_SCHEDULE -> JonakiIcons.Folder

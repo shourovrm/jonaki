@@ -1,6 +1,7 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentReport
 import app.jonaki.core.toolapi.SubagentTask
@@ -44,13 +45,19 @@ class SubagentRunner(
     private val memorySection: String,
     private val skillSection: String,
     private val now: () -> ZonedDateTime,
-    private val limits: SubagentLimits = SubagentLimits(),
+    /** The user's limits when the run started; fixed for the run (D-138). */
+    override val limitSettings: SubagentLimitSettings = SubagentLimitSettings(),
+    private val limits: SubagentLimits = SubagentLimits.from(limitSettings),
+    /** Types the user made; one named like a built-in type is left out. */
+    customTypes: List<AgentType> = emptyList(),
     private val timer: WaitTimer = WaitTimer.REAL,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SubagentLauncher {
     private val givableTools: List<Tool> = threadTools.filter { tool -> tool.name !in AgentTypes.NEVER_GIVEN }
 
-    override val agentTypes: List<SubagentTypeInfo> = AGENT_TYPES
+    private val types: List<AgentType> = AgentTypes.ALL + customTypes.filter { type -> AgentTypes.byName(type.name) == null }
+
+    override val agentTypes: List<SubagentTypeInfo> = types.map { type -> SubagentTypeInfo(type.name, type.description) }
 
     override val models: List<SubagentModelInfo>
         get() = subagentModels.scoped
@@ -79,8 +86,8 @@ class SubagentRunner(
 
     override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> {
         // The delegate tool refuses more; this guards any other caller of the launcher.
-        if (tasks.size > SubagentLauncher.MAX_PARALLEL) {
-            val refusal = "Error: at most ${SubagentLauncher.MAX_PARALLEL} subagents run at once, not ${tasks.size}."
+        if (tasks.size > limitSettings.perCall) {
+            val refusal = "Error: at most ${limitSettings.perCall} subagents run at once, not ${tasks.size}."
             return tasks.map { task -> SubagentReport(task.agentType, refusal) }
         }
         startedCount.addAndGet(tasks.size)
@@ -108,7 +115,7 @@ class SubagentRunner(
     )
 
     private suspend fun runOne(index: Int, task: SubagentTask, group: DelegationGroup, context: ToolContext): SubagentReport {
-        val type = AgentTypes.byName(task.agentType)
+        val type = types.firstOrNull { candidate -> candidate.name == task.agentType.trim().lowercase() }
         val label = if (group.size > 1) "${task.agentType} ${index + 1}" else task.agentType
         if (type == null) {
             return SubagentReport(label, "Error: there is no agent type named ${task.agentType}.")

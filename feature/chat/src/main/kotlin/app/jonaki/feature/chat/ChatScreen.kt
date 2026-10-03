@@ -86,6 +86,7 @@ import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MarkdownText
 import app.jonaki.core.ui.MonospaceFamily
+import app.jonaki.core.ui.UsageFormat
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -600,9 +601,15 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
-                if (approval.warnsAboutCost) {
+                val costWarning = approval.costWarning
+                if (costWarning != null) {
                     Text(
-                        stringResource(R.string.chat_approval_subagents_warning),
+                        pluralStringResource(
+                            R.plurals.chat_approval_subagents_warning,
+                            costWarning.above,
+                            costWarning.above,
+                            UsageFormat.limit(costWarning.costCapUsd),
+                        ),
                         style = MaterialTheme.typography.labelLarge,
                         color = JonakiTheme.colors.deny,
                         modifier = Modifier.padding(bottom = 10.dp),
