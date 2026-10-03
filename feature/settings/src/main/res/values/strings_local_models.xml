@@ -44,4 +44,9 @@
     <string name="local_models_files_failed">Couldn\'t load the files</string>
     <string name="local_models_files_empty">No model files</string>
     <string name="local_models_suggested">Recommended</string>
+    <string name="local_models_section_downloading">Downloading</string>
+    <string name="local_models_section_tools">Tools for local models</string>
+    <string name="local_models_tool_tokens">~%1$d tokens</string>
+    <string name="local_models_tool_only_with_files">Only in threads with files</string>
+    <string name="local_models_delete_clears">Clears %1$s</string>
 </resources>

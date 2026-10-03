@@ -10,7 +10,10 @@ import app.jonaki.core.localmodels.MemoryNeed
 import app.jonaki.core.localmodels.RecommendedModel
 import app.jonaki.core.localmodels.RepoBlock
 import app.jonaki.core.ui.UsageFormat
+import app.jonaki.feature.settings.ActiveDownloadUi
 import app.jonaki.feature.settings.DownloadUi
+import app.jonaki.feature.settings.LocalToolUi
+import app.jonaki.settings.LocalModelToolList
 import app.jonaki.feature.settings.FitUi
 import app.jonaki.feature.settings.RecommendedModelUi
 import app.jonaki.feature.settings.RepoBlockUi
@@ -38,6 +41,30 @@ object LocalModelsRows {
         FitLabel.TIGHT -> FitUi.TIGHT
         FitLabel.TOO_BIG -> FitUi.TOO_BIG
     }
+
+    /**
+     * Downloads still going, in file-name order, whatever started them; a
+     * file already in the models folder is done even if its job record lingers.
+     */
+    fun downloading(snapshot: DownloadSnapshot): List<ActiveDownloadUi> =
+        snapshot.states
+            .filter { (fileName, state) ->
+                val isActive = state is DownloadState.Waiting || state is DownloadState.Running
+                isActive && fileName !in snapshot.downloadedNames
+            }
+            .toSortedMap()
+            .map { (fileName, state) -> ActiveDownloadUi(fileName, downloadUiOf(state)) }
+
+    /** The local tool list in its fixed order (D-133), with each tool's switch and cost. */
+    fun tools(choices: List<String>, enabled: Set<String>, tokenCosts: Map<String, Int>): List<LocalToolUi> =
+        choices.map { toolName ->
+            LocalToolUi(
+                name = toolName,
+                tokens = tokenCosts[toolName],
+                enabled = toolName in enabled,
+                onlyWithFiles = toolName in LocalModelToolList.ONLY_WITH_FILES,
+            )
+        }
 
     /** A finished file wins over any job record; a running job over an earlier refusal. */
     fun downloadOf(fileName: String, snapshot: DownloadSnapshot): DownloadUi {

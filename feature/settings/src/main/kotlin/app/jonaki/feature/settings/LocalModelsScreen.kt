@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -106,8 +107,16 @@ private fun LocalModelsPage(state: LocalModelsUiState, actions: LocalModelsActio
                 GroupDivider()
                 DeviceRow(stringResource(R.string.local_models_free_storage), state.device.freeStorage)
             }
+            if (state.downloading.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.local_models_section_downloading))
+                DownloadingRows(state.downloading, onCancel = actions.onCancelDownload)
+            }
             SectionLabel(stringResource(R.string.local_models_section_downloaded))
             DownloadedRows(state.downloaded, onDelete = { fileName -> pendingDelete = fileName })
+            if (state.tools.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.local_models_section_tools))
+                ToolRows(state.tools, actions.onToolChange)
+            }
             SectionLabel(stringResource(R.string.local_models_section_recommended))
             Group {
                 state.recommended.forEachIndexed { index, model ->
@@ -120,13 +129,13 @@ private fun LocalModelsPage(state: LocalModelsUiState, actions: LocalModelsActio
             SearchResults(state.search, actions)
         }
     }
-    val deleting = pendingDelete
+    val deleting = state.downloaded.firstOrNull { model -> model.fileName == pendingDelete }
     if (deleting != null) {
         DeleteDialog(
-            fileName = deleting,
+            model = deleting,
             onConfirm = {
                 pendingDelete = null
-                actions.onDelete(deleting)
+                actions.onDelete(deleting.fileName)
             },
             onDismiss = { pendingDelete = null },
         )
@@ -170,6 +179,57 @@ private fun DownloadedRows(models: List<DownloadedModelUi>, onDelete: (String) -
                 },
             ) {
                 SizeLine(model.size)
+            }
+        }
+    }
+}
+
+/** Every download in progress, with its bar and Cancel, so one started from a search stays in sight. */
+@Composable
+private fun DownloadingRows(downloads: List<ActiveDownloadUi>, onCancel: (String) -> Unit) {
+    Group {
+        downloads.forEachIndexed { index, active ->
+            if (index > 0) GroupDivider()
+            ModelRow(
+                name = active.fileName,
+                trailing = {
+                    TextButton(onClick = { onCancel(active.fileName) }) {
+                        Text(stringResource(R.string.settings_cancel))
+                    }
+                },
+            ) {
+                DownloadStatus(active.download)
+            }
+        }
+    }
+}
+
+/** A switch per tool; the cost line says what each adds to every request (D-133). */
+@Composable
+private fun ToolRows(tools: List<LocalToolUi>, onChange: (String, Boolean) -> Unit) {
+    Group {
+        tools.forEachIndexed { index, tool ->
+            if (index > 0) GroupDivider()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onChange(tool.name, !tool.enabled) }
+                    .heightIn(min = 56.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(tool.name, style = MaterialTheme.typography.titleSmall, fontFamily = MonospaceFamily, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val tokens = tool.tokens
+                    val costLine = if (tokens == null) null else stringResource(R.string.local_models_tool_tokens, tokens)
+                    val filesLine = if (tool.onlyWithFiles) stringResource(R.string.local_models_tool_only_with_files) else null
+                    val line = listOfNotNull(costLine, filesLine).joinToString(" · ")
+                    if (line.isNotEmpty()) {
+                        SecondaryText(line)
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = tool.enabled, onCheckedChange = { checked -> onChange(tool.name, checked) })
             }
         }
     }
@@ -492,10 +552,12 @@ private fun HubSearchField(query: String, actions: LocalModelsActions) {
 }
 
 @Composable
-private fun DeleteDialog(fileName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun DeleteDialog(model: DownloadedModelUi, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.local_models_delete_title, fileName)) },
+        title = { Text(stringResource(R.string.local_models_delete_title, model.fileName)) },
+        // The file itself goes, not just the row (user request, 2026-10-03).
+        text = { Text(stringResource(R.string.local_models_delete_clears, model.size), fontFamily = MonospaceFamily) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(stringResource(R.string.local_models_delete))

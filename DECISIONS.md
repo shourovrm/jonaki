@@ -1801,3 +1801,14 @@ ProjectMemoryExtractionTest, ProjectMemoryQueriesTest,
 ProjectMemoryMigrationTest, FactMenuTest, MemoryToolTest. Outcome: pending a
 phone check.
 
+
+## D-136 · 2026-10-03 · Local tool list: four always, read_document with files — accepted
+User ruling 2026-10-03. A local thread is offered web_search, web_fetch,
+phone and read_file, plus read_document only when the thread folder or its
+project folder holds a file (LocalModelToolList.ONLY_WITH_FILES), decided
+once per run so the prompt stays the same within it. Settings > Local
+models gets "Tools for local models": a switch per choosable tool with its
+rough token cost. The page also gets a Downloading section above
+Downloaded, shown only while a download runs, for downloads started from
+any list, and the Remove dialog says "Clears 672 MB" with the file's size.
+Outcome: pending a phone check.

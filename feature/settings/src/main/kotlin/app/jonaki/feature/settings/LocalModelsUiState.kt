@@ -59,6 +59,25 @@ data class DownloadedModelUi(
     val size: String,
 )
 
+/** A file being downloaded, wherever it was started from: recommended, search or a file list. */
+@Immutable
+data class ActiveDownloadUi(
+    val fileName: String,
+    /** Waiting or Running. */
+    val download: DownloadUi,
+)
+
+/** One tool a local model may be offered (D-133), with its switch. */
+@Immutable
+data class LocalToolUi(
+    val name: String,
+    /** Rough prompt tokens; null when the tool is not available now (a missing key). */
+    val tokens: Int?,
+    val enabled: Boolean,
+    /** Offered only in threads that hold files. */
+    val onlyWithFiles: Boolean,
+)
+
 @Immutable
 data class RecommendedModelUi(
     /** The file name; the key the callbacks receive. */
@@ -118,7 +137,10 @@ data class RepoFilesUi(
 @Immutable
 data class LocalModelsUiState(
     val device: DeviceUi,
+    /** Shown above Downloaded, and only while not empty. */
+    val downloading: List<ActiveDownloadUi> = emptyList(),
     val downloaded: List<DownloadedModelUi> = emptyList(),
+    val tools: List<LocalToolUi> = emptyList(),
     val recommended: List<RecommendedModelUi> = emptyList(),
     val query: String = "",
     val search: HubSearchUi = HubSearchUi.Idle,
@@ -139,4 +161,5 @@ class LocalModelsActions(
     val onCancelDownload: (fileName: String) -> Unit = {},
     val onCancelRepoDownload: (repoId: String) -> Unit = {},
     val onDelete: (fileName: String) -> Unit = {},
+    val onToolChange: (toolName: String, enabled: Boolean) -> Unit = { _, _ -> },
 )

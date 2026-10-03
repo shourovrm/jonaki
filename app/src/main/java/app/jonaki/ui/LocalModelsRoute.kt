@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.jonaki.JonakiApplication
+import app.jonaki.settings.LocalModelToolList
 import app.jonaki.core.localmodels.GgufFiles
 import app.jonaki.core.localmodels.HubFile
 import app.jonaki.core.localmodels.HubRepo
@@ -166,6 +167,12 @@ internal fun LocalModelsRoute(application: JonakiApplication, onBack: () -> Unit
             downloadedFiles = localModels.store.downloaded()
         }
     }
+    val settingsSnapshot by application.settings.snapshot.collectAsState()
+    var toolCosts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    LaunchedEffect(Unit) {
+        // Builds the tools with the saved keys, so it runs off the main thread.
+        toolCosts = withContext(Dispatchers.IO) { application.localModelTools.tokenCosts() }
+    }
     val budget = MemoryFit.budgetBytes(deviceMemory.availableBytes, deviceMemory.totalBytes)
     val snapshot = DownloadSnapshot(
         downloadedNames = downloadedFiles.map { file -> file.name }.toSet(),
@@ -182,7 +189,13 @@ internal fun LocalModelsRoute(application: JonakiApplication, onBack: () -> Unit
             availableMemory = UsageFormat.byteSize(deviceMemory.availableBytes),
             freeStorage = freeStorage?.let(UsageFormat::byteSize) ?: "…",
         ),
+        downloading = LocalModelsRows.downloading(snapshot),
         downloaded = downloadedFiles.map { file -> DownloadedModelUi(file.name, UsageFormat.byteSize(file.length())) },
+        tools = LocalModelsRows.tools(
+            choices = application.localModelTools.choices,
+            enabled = LocalModelToolList.offered(settingsSnapshot.localModelTools),
+            tokenCosts = toolCosts,
+        ),
         recommended = LocalModelsRows.recommended(RecommendedModels.ALL, budget, snapshot),
         query = query,
         search = searchUi(memory, budget, snapshot),
@@ -224,6 +237,7 @@ internal fun LocalModelsRoute(application: JonakiApplication, onBack: () -> Unit
             }
         },
         onDelete = { fileName -> scope.launch(Dispatchers.IO) { localModels.delete(fileName) } },
+        onToolChange = { toolName, enabled -> application.localModelTools.setEnabled(toolName, enabled) },
     )
     LocalModelsScreen(state, actions)
 }

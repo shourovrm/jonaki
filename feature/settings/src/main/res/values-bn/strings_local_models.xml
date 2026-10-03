@@ -44,4 +44,9 @@
     <string name="local_models_files_failed">ফাইলের তালিকা আনা যায়নি</string>
     <string name="local_models_files_empty">মডেল ফাইল নেই</string>
     <string name="local_models_suggested">প্রস্তাবিত</string>
+    <string name="local_models_section_downloading">ডাউনলোড হচ্ছে</string>
+    <string name="local_models_section_tools">লোকাল মডেলের টুল</string>
+    <string name="local_models_tool_tokens">~%1$d টোকেন</string>
+    <string name="local_models_tool_only_with_files">শুধু ফাইল থাকা থ্রেডে</string>
+    <string name="local_models_delete_clears">%1$s খালি হবে</string>
 </resources>
