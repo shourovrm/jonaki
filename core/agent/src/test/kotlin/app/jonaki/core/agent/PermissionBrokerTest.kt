@@ -16,6 +16,20 @@ class PermissionBrokerTest {
     private val threadFolderWriter = FakeTool("edit_file", sideEffect = SideEffect.CHANGES_THREAD_FOLDER)
     private val sharer = FakeTool("share_file", sideEffect = SideEffect.CHANGES)
 
+    /** D-137: what the user decides each time asks in every mode, and no allowance covers it. */
+    @Test
+    fun aCallThatNeedsTheUserAsksEvenInBypassAndAfterAllowInThread() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_FOR_THREAD)
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.BYPASS })
+        val delegate = FakeTool("delegate", sideEffect = SideEffect.NEEDS_USER)
+
+        assertTrue(broker.mayRun(delegate, call("1", "delegate")))
+        assertTrue(broker.mayRun(delegate, call("2", "delegate")))
+
+        assertEquals(2, approver.requests.size)
+        assertTrue(broker.toolsAllowedForThread.isEmpty())
+    }
+
     @Test
     fun readOnlyToolRunsWithoutAsking() = runBlocking {
         val approver = FixedApprover(ApprovalDecision.DENY)

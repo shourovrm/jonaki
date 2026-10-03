@@ -1,6 +1,7 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.model.ToolCall
+import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
 import java.util.Collections
 import kotlinx.serialization.json.Json
@@ -70,7 +71,8 @@ class PermissionBroker(
         if (!ApprovalMode.needsApproval(cost, approvalMode())) {
             return true
         }
-        return tool.name in allowedTools
+        // An allowance never covers what the user decides each time (D-137).
+        return cost != SideEffect.NEEDS_USER && tool.name in allowedTools
     }
 
     /** Shows a subagent's card; [SubagentGate] decides what the answer means and how long to wait. */
@@ -85,7 +87,10 @@ class PermissionBroker(
         return when (decision) {
             ApprovalDecision.ALLOW_ONCE -> true
             ApprovalDecision.ALLOW_FOR_THREAD -> {
-                allowedTools += tool.name
+                // The card offers no thread allowance for such calls; should one arrive, it counts as once.
+                if (tool.sideEffectOf(argumentsOf(toolCall)) != SideEffect.NEEDS_USER) {
+                    allowedTools += tool.name
+                }
                 true
             }
             // Only a subagent's card offers this; for the main agent it means once.

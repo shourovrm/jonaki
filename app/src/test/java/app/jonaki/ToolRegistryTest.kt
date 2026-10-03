@@ -109,6 +109,7 @@ class ToolRegistryTest {
         override val agentTypes = emptyList<SubagentTypeInfo>()
         override val models = emptyList<SubagentModelInfo>()
         override val extraToolNames = emptyList<String>()
+        override val startedThisRun = 0
 
         override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext) = emptyList<SubagentReport>()
     }

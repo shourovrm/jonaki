@@ -27,7 +27,9 @@ import kotlinx.serialization.json.putJsonObject
  * answer comes back as this tool's result.
  *
  * The tool itself changes nothing; each subagent's own calls go through the
- * permission broker, so it is declared read-only.
+ * permission broker, so it is declared read-only, up to the subagents a run
+ * may start without asking. A call that would start more waits for the
+ * user in every approval mode (D-137).
  */
 class DelegateTool(private val launcher: SubagentLauncher) : Tool {
     override val name: String = "delegate"
@@ -42,6 +44,8 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
         "Subagent types: " + launcher.agentTypes.joinToString("; ") { type -> "${type.name}: ${type.description}" },
         "Name a model in delegate only when the user asks for one; otherwise each type uses the model set for it.",
         "A subagent's answer is its own work; check it before you rely on it.",
+        "Up to ${SubagentLauncher.STARTED_WITHOUT_ASKING} subagents per user message start at once; more wait for the user's approval, " +
+            "so use more only when the user asks for them.",
     )
 
     override val parameterSchema: JsonObject = buildJsonObject {
@@ -84,7 +88,14 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
         }
     }
 
-    override val sideEffect: SideEffect = SideEffect.READ_ONLY
+    // The highest cost a call can have. Two delegate calls of one turn never run side by side
+    // (ToolCallScheduler.RUN_ALONE), so the second sees the subagents the first started.
+    override val sideEffect: SideEffect = SideEffect.NEEDS_USER
+
+    override fun sideEffectOf(arguments: JsonObject): SideEffect {
+        val startedAfter = launcher.startedThisRun + taskObjectsOf(arguments).size
+        return if (startedAfter > SubagentLauncher.STARTED_WITHOUT_ASKING) SideEffect.NEEDS_USER else SideEffect.READ_ONLY
+    }
     override val requiredCapabilities: Set<Capability> = emptySet()
 
     // Longer than a subagent's own 10 minutes, so that a subagent at its limit still returns what it has.

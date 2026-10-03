@@ -15,6 +15,9 @@ interface SubagentLauncher {
     /** Tools of the thread that extra_tools may add to a subagent. */
     val extraToolNames: List<String>
 
+    /** Subagents started so far in this run, that is, for the current user message (D-137). */
+    val startedThisRun: Int
+
     /**
      * Runs [tasks] in parallel and returns one report per task, in the same
      * order. [context] is the delegate call's own context.
@@ -24,6 +27,15 @@ interface SubagentLauncher {
     companion object {
         /** Subagents of one delegate call; the user set 3 on 2026-10-03 (D-060). */
         const val MAX_PARALLEL = 3
+
+        /**
+         * Subagents a model may start in one run without asking; the delegate
+         * call that would go beyond waits for the user (user ruling, D-137).
+         */
+        const val STARTED_WITHOUT_ASKING = 2
+
+        /** Above this many in one run, the approval card warns about the cost (D-137). */
+        const val WARN_ABOVE = 5
     }
 }
 

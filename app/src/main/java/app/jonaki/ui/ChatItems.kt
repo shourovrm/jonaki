@@ -1,5 +1,6 @@
 package app.jonaki.ui
 
+import app.jonaki.core.toolapi.SubagentLauncher
 import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.storage.CompactionEntity
@@ -131,6 +132,8 @@ object ChatItems {
             description,
             agentLabel = subagent?.agentLabel,
             waitEndsAtMillis = waitEndsAt,
+            subagentsAfter = pending.subagentsAfter,
+            warnsAboutCost = (pending.subagentsAfter ?: 0) > SubagentLauncher.WARN_ABOVE,
         )
     }
 

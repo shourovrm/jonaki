@@ -451,6 +451,7 @@ class AgentRunner(
             },
             modelKey = modelKey,
             priceOf = { usage -> CostCalculator.costUsd(usage, catalog.find(modelKey)) },
+            subagentsStarted = { subagentRunners[threadId]?.startedThisRun ?: 0 },
         )
         val routing = snapshot.routing.effectiveFor(modelKey)
         val provider = chatProvider(service, routing, onRoutingFallback = session::markRoutingFallback)
@@ -647,6 +648,7 @@ class AgentRunner(
         override val agentTypes: List<SubagentTypeInfo> = SubagentRunner.AGENT_TYPES
         override val models: List<SubagentModelInfo> = emptyList()
         override val extraToolNames: List<String> = emptyList()
+        override val startedThisRun: Int = 0
 
         override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> =
             error("PromptOnlySubagents never runs subagents")

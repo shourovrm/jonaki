@@ -57,6 +57,12 @@ class SubagentRunner(
 
     override val extraToolNames: List<String> = givableTools.map { tool -> tool.name }.sorted()
 
+    // One runner serves one run; delegate calls of a turn may run in parallel, so the count is atomic.
+    private val startedCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+    override val startedThisRun: Int
+        get() = startedCount.get()
+
     /** The work of each running subagent by its id, so that the user can stop one alone (D-126). */
     private val runningWork = ConcurrentHashMap<String, Job>()
 
@@ -77,6 +83,7 @@ class SubagentRunner(
             val refusal = "Error: at most ${SubagentLauncher.MAX_PARALLEL} subagents run at once, not ${tasks.size}."
             return tasks.map { task -> SubagentReport(task.agentType, refusal) }
         }
+        startedCount.addAndGet(tasks.size)
         // The OpenAI-compatible stream gives "" for a call without an id.
         val callId = context.toolCallId?.takeIf { id -> id.isNotBlank() } ?: newId()
         val group = DelegationGroup(

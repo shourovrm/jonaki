@@ -42,6 +42,8 @@ class RunSession(
     private val modelKey: String,
     /** Cost in USD of one call: the service's own figure, else priced from the catalog. */
     private val priceOf: (Usage) -> Double?,
+    /** Subagents this run has started, for a delegate card's count (D-137). */
+    private val subagentsStarted: () -> Int = { 0 },
 ) : StepRecorder, ApprovalRequester {
 
     /** Set by the provider during a call; saved on that call's assistant message (D-030). */
@@ -91,7 +93,12 @@ class RunSession(
     override suspend fun requestApproval(request: ApprovalRequest): ApprovalDecision {
         setStepStatus(request.toolCall.id, StepStatus.WAITING_FOR_APPROVAL)
         val answer = CompletableDeferred<ApprovalDecision>()
-        val pending = PendingApproval(threadId, request.toolName, request.toolCall, answer, request.subagent)
+        val subagentsAfter = if (request.toolName == DELEGATE_TOOL && request.subagent == null) {
+            subagentsStarted() + DelegateCalls.taskCount(request.toolCall.argumentsJson)
+        } else {
+            null
+        }
+        val pending = PendingApproval(threadId, request.toolName, request.toolCall, answer, request.subagent, subagentsAfter)
         onApprovalNeeded(pending)
         val decision = try {
             answer.await()
@@ -263,6 +270,8 @@ class RunSession(
     companion object {
         /** The step card shows a short preview; the model got the full text. */
         const val STEP_RESULT_PREVIEW_LENGTH = 2_000
+
+        private const val DELEGATE_TOOL = "delegate"
     }
 }
 
@@ -274,4 +283,20 @@ data class PendingApproval(
     val answer: CompletableDeferred<ApprovalDecision>,
     /** Set when a subagent asks; the card names it and offers "Allow for this task" (D-062). */
     val subagent: SubagentAsk? = null,
+    /**
+     * For a delegate card: the subagents this run will have started if the
+     * user allows it (D-137); null for every other card.
+     */
+    val subagentsAfter: Int? = null,
 )
+
+/** Reads a delegate call's arguments the way the delegate tool does. */
+internal object DelegateCalls {
+    /** The tasks array's length, else 1 for a single agent and task. */
+    fun taskCount(argumentsJson: String): Int {
+        val arguments = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(argumentsJson) }.getOrNull()
+            as? kotlinx.serialization.json.JsonObject ?: return 1
+        val tasks = arguments["tasks"] as? kotlinx.serialization.json.JsonArray
+        return if (tasks.isNullOrEmpty()) 1 else tasks.size
+    }
+}

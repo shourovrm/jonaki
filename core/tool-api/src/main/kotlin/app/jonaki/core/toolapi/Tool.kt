@@ -61,6 +61,13 @@ enum class SideEffect {
      * every answer (D-034, proposed).
      */
     CHANGES_APP_DATA,
+
+    /**
+     * Always asks, in every approval mode, and "Allow in thread" never covers
+     * it: the user decides each time. For costs the user wants to see before
+     * they happen, such as subagents beyond the automatic limit (D-137).
+     */
+    NEEDS_USER,
 }
 
 /** Optional parts of the app a tool needs before it can run. */

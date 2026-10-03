@@ -149,4 +149,9 @@
     <string name="chat_python_not_now">Not now</string>
     <string name="chat_python_close">Close</string>
     <string name="chat_python_try_again">Try again</string>
+    <plurals name="chat_approval_subagents">
+        <item quantity="one">%1$d subagent in this message</item>
+        <item quantity="other">%1$d subagents in this message</item>
+    </plurals>
+    <string name="chat_approval_subagents_warning">Over 5 subagents. Each can cost up to $0.10.</string>
 </resources>

@@ -73,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -592,6 +593,22 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
             )
+            val subagentsAfter = approval.subagentsAfter
+            if (subagentsAfter != null) {
+                Text(
+                    pluralStringResource(R.plurals.chat_approval_subagents, subagentsAfter, subagentsAfter),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                if (approval.warnsAboutCost) {
+                    Text(
+                        stringResource(R.string.chat_approval_subagents_warning),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = JonakiTheme.colors.deny,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
+            }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.Center,
@@ -604,8 +621,9 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                     Text(stringResource(R.string.chat_approval_once))
                 }
                 // A subagent's allowance lasts for its task; the thread's own agent's for the thread (D-062).
+                // Subagents beyond the automatic limit are decided each time, so they get no allowance (D-137).
                 val isSubagent = approval.agentLabel != null
-                FilledTonalButton(
+                if (approval.subagentsAfter == null) FilledTonalButton(
                     onClick = {
                         onChoice(approval.id, if (isSubagent) ApprovalChoice.ALLOW_FOR_TASK else ApprovalChoice.ALLOW_FOR_THREAD)
                     },

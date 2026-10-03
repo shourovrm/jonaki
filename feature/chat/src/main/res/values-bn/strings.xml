@@ -149,4 +149,9 @@
     <string name="chat_python_try_again">আবার চেষ্টা</string>
     <string name="chat_status_web_on">ওয়েব সার্চ চালু</string>
     <string name="chat_status_web_off">ওয়েব সার্চ বন্ধ</string>
+    <plurals name="chat_approval_subagents">
+        <item quantity="one">এই মেসেজে %1$dটি সাবএজেন্ট</item>
+        <item quantity="other">এই মেসেজে %1$dটি সাবএজেন্ট</item>
+    </plurals>
+    <string name="chat_approval_subagents_warning">৫টির বেশি সাবএজেন্ট। প্রতিটির খরচ $0.10 পর্যন্ত হতে পারে।</string>
 </resources>

@@ -24,6 +24,7 @@ enum class ApprovalMode {
             SideEffect.READ_ONLY, SideEffect.CHANGES_APP_DATA -> false
             SideEffect.CHANGES_THREAD_FOLDER -> mode == ASK
             SideEffect.CHANGES -> mode != BYPASS
+            SideEffect.NEEDS_USER -> true
         }
     }
 }

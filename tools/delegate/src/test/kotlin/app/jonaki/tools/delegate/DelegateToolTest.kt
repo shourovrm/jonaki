@@ -1,5 +1,6 @@
 package app.jonaki.tools.delegate
 
+import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.SubagentLauncher
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentReport
@@ -114,6 +115,26 @@ class DelegateToolTest {
         assertTrue(tool.guidelines.any { it.contains("NO context") })
     }
 
+    /** D-137: two subagents per run start at once; a call that goes beyond waits for the user. */
+    @Test
+    fun upToTwoSubagentsPerRunStartWithoutAsking() {
+        val two = arguments("""{"tasks":[{"agent":"researcher","task":"a"},{"agent":"scout","task":"b"}]}""")
+        assertEquals(SideEffect.READ_ONLY, tool.sideEffectOf(two))
+    }
+
+    @Test
+    fun aThirdSubagentInOneCallNeedsTheUser() {
+        val three = arguments("""{"tasks":[{"agent":"researcher","task":"a"},{"agent":"scout","task":"b"},{"agent":"writer","task":"c"}]}""")
+        assertEquals(SideEffect.NEEDS_USER, tool.sideEffectOf(three))
+    }
+
+    @Test
+    fun aLaterCallCountsTheSubagentsAlreadyStartedInTheRun() {
+        launcher.started = 2
+        val one = arguments("""{"agent":"researcher","task":"a"}""")
+        assertEquals(SideEffect.NEEDS_USER, tool.sideEffectOf(one))
+    }
+
     class FakeLauncher : SubagentLauncher {
         val launched = mutableListOf<List<SubagentTask>>()
 
@@ -123,6 +144,8 @@ class DelegateToolTest {
             SubagentModelInfo("gemini:gemini-3-flash", "Gemini 3 Flash"),
         )
         override val extraToolNames = listOf("read_file", "write_file")
+        var started = 0
+        override val startedThisRun: Int get() = started
 
         override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> {
             launched += tasks

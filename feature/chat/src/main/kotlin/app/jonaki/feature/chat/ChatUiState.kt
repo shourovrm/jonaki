@@ -194,6 +194,14 @@ sealed interface ChatItem {
         val agentLabel: String? = null,
         /** When a subagent's card is withdrawn unanswered (D-062's 3 minutes); null when it waits without limit. */
         val waitEndsAtMillis: Long? = null,
+        /**
+         * A delegate card beyond the automatic limit (D-137): the subagents
+         * this message will have started; the card then offers no thread
+         * allowance.
+         */
+        val subagentsAfter: Int? = null,
+        /** True above SubagentLauncher.WARN_ABOVE subagents in one message. */
+        val warnsAboutCost: Boolean = false,
     ) : ChatItem
 
     /** Under the answer of a turn that used delegate: opens the work sheet (D-126). */

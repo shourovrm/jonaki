@@ -1812,3 +1812,19 @@ rough token cost. The page also gets a Downloading section above
 Downloaded, shown only while a download runs, for downloads started from
 any list, and the Remove dialog says "Clears 672 MB" with the file's size.
 Outcome: pending a phone check.
+
+## D-137 · 2026-10-03 · Two subagents per message without asking — accepted
+User ruling 2026-10-03: no model starts more than 2 subagents per user
+message on its own, each with the default limits of D-061; more needs the
+user's approval, and above 5 the app warns. delegate's cost is per call
+(sideEffectOf): READ_ONLY while the run's started subagents plus the call's
+tasks stay at 2 or fewer, else the new SideEffect.NEEDS_USER, which asks in
+every approval mode, Bypass included, and which "Allow in thread" never
+covers (the card shows only Allow once and Deny). The count lives in the
+run's SubagentRunner (startedThisRun); delegate calls never run side by side
+(ToolCallScheduler.RUN_ALONE), so a second call in one turn sees the first's
+subagents. The card says "3 subagents in this message" and, above 5, "Over 5
+subagents. Each can cost up to $0.10." One guideline tells the model that
+more than 2 wait for approval. A delegate call still starts at most 3 at
+once (D-060). Tests: DelegateToolTest, PermissionBrokerTest. Outcome:
+pending a phone check.
