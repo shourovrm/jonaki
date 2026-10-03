@@ -1369,6 +1369,39 @@ the table copies its Markdown source ("Copy table"). Selection works as
 for the rest of the answer. Code: MarkdownTables, MarkdownText.TableView;
 test MarkdownTableParserTest (12). Outcome: pending.
 
+## D-123 · 2026-10-03 · UI revamp "Lantern" with the Leaf colours — proposed
+Amends D-024's visual details; its structure (Material 3, firefly colour
+only for live work, rail step track, theme follows the system with a
+toggle) stays. Source: docs/mockups/revamp-taste.html (direction A) and
+revamp-a-themes.html (palette 1, Leaf). Colours (night / day): background
+#10130E / #F3F6EF, field #1A1E16 / #E7ECE1, ink #E6E9E0 / #171B14, ink-2
+#C3C9B9 / #3A4233, muted #8B927F / #5F6857, line #262B21 / #DDE3D5, accent
+#C9E86B on #1F2A00 / #3F5600 on #F3F6EF, user bubble #20261A / #E2E9D6, run
+panel none / #FFFFFF, rail #33392B / #D3DBC8. WCAG contrast, night: muted
+5.81 on background, 5.25 on field, 4.81 on the user bubble; accent 13.59 on
+background; on-accent 10.97 on accent; live dot 14.69. Day: muted 5.34,
+4.85, 4.68 and 5.83 on the run panel; accent 7.57; on-accent 7.57. The
+day glow #9CC520 is 1.85 on the background, below 3:1 for a status mark, so
+the day dot is #729600 (3.17 on background, 3.46 on white) and #9CC520
+stays as its halo; text never uses the live colour. Type: Geist, numbers in
+Geist Mono (SIL OFL 1.1, variable fonts in core/ui res/font, licence in
+core/ui/OFL-Geist.txt); Bangla falls back to the system font; the APK grows
+by about 190 KB. Thread list: rows without cards or tint, the glow dot only
+on working threads, day groups (Today, Yesterday, Last 7 days, Older), an
+Incognito chip beside the project chips while incognito threads exist (New
+thread then starts an incognito chat, as under a project, D-110), and an
+extended New thread button. Chat: title-only top bar; a globe pill in the
+status strip switches web search ("Web search on" / "Web search off";
+crossed out and muted when off), also before a new thread's first message;
+the ⋮ switch stays. Answers have no bubble, user messages a tinted bubble
+right-aligned at most 86 % wide. Run block and subagent cards: thin bordered
+panels; finished stations are checks on the rail colour, only the running
+station is lit, step names read as words ("Web search"). Settings, Tools,
+Skills and Memory lists lose their card fills where spacing separates rows.
+Tests: WebSearchPillStateTest, ThreadGroupsTest, StepDurationTest. Not
+checked: a device or emulator view of the new screens (previews at 360 dp
+and font scale 1.3 exist but were not rendered). Outcome: pending.
+
 ## D-124 · 2026-10-03 · Settings > Permissions and About — proposed
 Two sections end Settings. Permissions has four live rows, each with its
 purpose and status: Notifications (POST_NOTIFICATIONS from Android 13,

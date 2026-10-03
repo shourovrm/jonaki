@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -131,8 +132,9 @@ private fun RestoreMenu(onRestore: () -> Unit) {
 
 @Composable
 private fun SkillCard(skill: SkillRowUi, showSwitch: Boolean, actions: SkillsActions) {
+    // A plain row: the list's spacing separates skills without a card (D-123).
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = Color.Transparent,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -140,7 +142,7 @@ private fun SkillCard(skill: SkillRowUi, showSwitch: Boolean, actions: SkillsAct
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clickable { actions.onOpenSkill(skill.name) }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 4.dp, vertical = 12.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 // A name keeps one line in a list (D-029); badges get their own line.

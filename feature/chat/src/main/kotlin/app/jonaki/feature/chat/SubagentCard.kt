@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,11 +42,8 @@ import app.jonaki.core.ui.UsageFormat
 @Composable
 internal fun SubagentCard(subagent: ChatItem.Subagent, onOpenStep: (stepId: String) -> Unit, modifier: Modifier = Modifier) {
     var open by rememberSaveable(subagent.id) { mutableStateOf(false) }
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth(),
-    ) {
+    // The run block's thin panel, so a delegate call reads as part of the same run (D-123).
+    RunPanel(modifier) {
         Column(
             Modifier
                 .animateContentSize()
@@ -86,8 +82,14 @@ private fun SubagentHeader(subagent: ChatItem.Subagent, open: Boolean) {
     val colors = JonakiTheme.colors
     val isRunning = subagent.status == SubagentUiStatus.RUNNING
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp)) {
+        // Lit only while it works; a finished one is quiet, one that stopped short is marked.
+        val dotColor = when (subagent.status) {
+            SubagentUiStatus.RUNNING -> colors.live
+            SubagentUiStatus.DONE -> colors.done
+            else -> colors.deny
+        }
         GlowDot(
-            color = if (subagent.status == SubagentUiStatus.DONE || isRunning) colors.live else colors.deny,
+            color = dotColor,
             style = if (isRunning) DotStyle.GLOWING else DotStyle.QUIET,
             dotSize = 8.dp,
         )
@@ -104,7 +106,7 @@ private fun SubagentHeader(subagent: ChatItem.Subagent, open: Boolean) {
         Text(
             statusLabel(subagent.status),
             style = MaterialTheme.typography.labelMedium,
-            color = if (isRunning) colors.live else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isRunning) colors.inkSoft else MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
         )
         Spacer(Modifier.weight(1f))
@@ -141,7 +143,6 @@ private fun SubagentDetails(subagent: ChatItem.Subagent, onOpenStep: (stepId: St
                     step = step,
                     isFirst = index == 0,
                     isLast = index == subagent.steps.lastIndex,
-                    nextIsDone = subagent.steps.getOrNull(index + 1)?.status == StepUiStatus.DONE,
                     onOpen = onOpenStep,
                 )
             }

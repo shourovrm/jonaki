@@ -10,18 +10,21 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -99,13 +102,19 @@ fun ThreadListScreen(
     // Null with the dialog open means a new project.
     var projectToEdit by remember { mutableStateOf<ProjectUi?>(null) }
     var projectToDelete by remember { mutableStateOf<ProjectUi?>(null) }
+    // The Incognito chip is a view of this screen only; the app keeps the selected project.
+    var incognitoChipSelected by rememberSaveable { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val selectedProject = state.projects.firstOrNull { project -> project.id == state.selectedProjectId }
-    val visibleThreads = remember(state.threads, state.searchQuery, selectedProject) {
-        filterThreads(threadsInProject(state.threads, selectedProject?.id), state.searchQuery)
+    val hasIncognitoThreads = state.threads.any { thread -> thread.incognito }
+    // The chip goes when the last incognito thread does, and the list falls back to All.
+    val showingIncognito = incognitoChipSelected && hasIncognitoThreads && selectedProject == null
+    val filteredThreads = remember(state.threads, selectedProject, showingIncognito) {
+        if (showingIncognito) incognitoThreads(state.threads) else threadsInProject(state.threads, selectedProject?.id)
     }
-    val projectThreadCount = remember(state.threads, selectedProject) { threadsInProject(state.threads, selectedProject?.id).size }
+    val visibleThreads = remember(filteredThreads, state.searchQuery) { filterThreads(filteredThreads, state.searchQuery) }
     val zone = remember { ZoneId.systemDefault() }
+    val entries = remember(visibleThreads, nowMillis, zone) { withGroupLabels(visibleThreads, nowMillis, zone) }
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -125,11 +134,13 @@ fun ThreadListScreen(
         floatingActionButton = {
             val newThreadLabel = stringResource(R.string.threads_new)
             ExtendedFloatingActionButton(
-                onClick = onNewThread,
+                // Under the Incognito chip a new thread is incognito, as one under a project joins it (D-110).
+                onClick = if (showingIncognito) onNewIncognitoThread else onNewThread,
                 // The button's text slot is not exposed to accessibility in this Compose version.
                 modifier = Modifier.semantics { contentDescription = newThreadLabel },
-                icon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                text = { Text(newThreadLabel) },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text(newThreadLabel, fontWeight = FontWeight.SemiBold) },
+                shape = RoundedCornerShape(18.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             )
@@ -155,7 +166,21 @@ fun ThreadListScreen(
                 ProjectChips(
                     projects = state.projects,
                     selectedProjectId = selectedProject?.id,
-                    onSelect = onProjectSelect,
+                    onSelect = { projectId ->
+                        incognitoChipSelected = false
+                        onProjectSelect(projectId)
+                    },
+                    incognitoChip = if (hasIncognitoThreads) {
+                        IncognitoChip(
+                            selected = showingIncognito,
+                            onSelect = {
+                                incognitoChipSelected = true
+                                onProjectSelect(null)
+                            },
+                        )
+                    } else {
+                        null
+                    },
                     onNewProject = {
                         projectToEdit = null
                         projectDialogOpen = true
@@ -174,20 +199,26 @@ fun ThreadListScreen(
             }
             when {
                 state.threads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_empty_title), body = null)
-                projectThreadCount == 0 -> EmptyState(title = stringResource(R.string.threads_project_empty), body = null)
+                filteredThreads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_project_empty), body = null)
                 visibleThreads.isEmpty() -> EmptyState(title = stringResource(R.string.threads_no_matches), body = null)
-                else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
-                    items(visibleThreads, key = { thread -> thread.id }) { thread ->
-                        ThreadRowView(
-                            thread = thread,
-                            timeLabel = ThreadTimeLabel.of(thread.updatedAtMillis, nowMillis, zone),
-                            onThreadClick = onThreadClick,
-                            onRename = onRename,
-                            onDeleteRequest = { threadToDelete = thread },
-                            // Inside one project its name would repeat on every row.
-                            showProjectName = selectedProject == null,
-                            onMoveRequest = if (state.projects.isEmpty()) null else ({ threadToMove = thread }),
-                        )
+                else -> LazyColumn(contentPadding = PaddingValues(top = 4.dp, bottom = 104.dp)) {
+                    items(entries, key = { entry -> entry.key }) { entry ->
+                        when (entry) {
+                            is ThreadListEntry.Label -> GroupLabel(entry.group)
+                            is ThreadListEntry.Thread -> {
+                                val thread = entry.row
+                                ThreadRowView(
+                                    thread = thread,
+                                    timeLabel = ThreadTimeLabel.of(thread.updatedAtMillis, nowMillis, zone),
+                                    onThreadClick = onThreadClick,
+                                    onRename = onRename,
+                                    onDeleteRequest = { threadToDelete = thread },
+                                    // Inside one project its name would repeat on every row.
+                                    showProjectName = selectedProject == null,
+                                    onMoveRequest = if (state.projects.isEmpty()) null else ({ threadToMove = thread }),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -261,14 +292,31 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(22.dp),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
         ),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+private fun GroupLabel(group: ThreadGroup) {
+    val label = when (group) {
+        ThreadGroup.TODAY -> R.string.threads_group_today
+        ThreadGroup.YESTERDAY -> R.string.threads_group_yesterday
+        ThreadGroup.LAST_SEVEN_DAYS -> R.string.threads_group_week
+        ThreadGroup.OLDER -> R.string.threads_group_older
+    }
+    Text(
+        stringResource(label),
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.semantics { heading() }.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp),
     )
 }
 
@@ -285,38 +333,14 @@ private fun ThreadRowView(
     onMoveRequest: (() -> Unit)?,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    val colors = JonakiTheme.colors
-    val dotColor: Color
-    val dotStyle: DotStyle
-    when (thread.runState) {
-        is ThreadRunState.Running -> {
-            dotColor = colors.live
-            dotStyle = DotStyle.GLOWING
-        }
-        ThreadRunState.WaitingForApproval, ThreadRunState.Failed -> {
-            dotColor = colors.deny
-            dotStyle = DotStyle.QUIET
-        }
-        ThreadRunState.Idle -> {
-            dotColor = colors.track
-            dotStyle = DotStyle.QUIET
-        }
-    }
-    val rowBackground = if (thread.runState is ThreadRunState.Running) {
-        MaterialTheme.colorScheme.surfaceContainer
-    } else {
-        Color.Transparent
-    }
     val renameLabel = stringResource(R.string.threads_rename)
     val deleteLabel = stringResource(R.string.threads_delete)
+    val titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
     Box {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        // No card and no tint: rows stand apart by their spacing, and only a working thread glows (D-123).
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(rowBackground)
                 .combinedClickable(
                     onClick = { onThreadClick(thread.id) },
                     onLongClick = { menuOpen = true },
@@ -334,27 +358,26 @@ private fun ThreadRowView(
                         },
                     )
                 }
-                .heightIn(min = 72.dp)
-                .padding(start = 4.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+                .padding(horizontal = 20.dp, vertical = 11.dp),
         ) {
-            if (thread.incognito && thread.runState !is ThreadRunState.Running) {
-                // The lock stands where the dot is, so the row keeps its shape (D-111).
-                Icon(
-                    Icons.Filled.Lock,
-                    contentDescription = stringResource(R.string.threads_incognito),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 6.dp).size(16.dp),
-                )
-            } else {
-                GlowDot(dotColor, dotStyle)
-            }
-            Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
+            Row {
+                ThreadMark(thread, titleStyle.fontSize)
                 // The title wraps so the whole name shows; only the preview line is cut short.
                 Text(
                     thread.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = titleStyle,
+                    modifier = Modifier.weight(1f).alignByBaseline(),
                 )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    timeText(timeLabel),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.alignByBaseline(),
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
                 val projectName = thread.projectName
                 val previewLine = if (showProjectName && projectName != null) {
                     stringResource(R.string.threads_project_preview, projectName, thread.lastLine)
@@ -367,24 +390,19 @@ private fun ThreadRowView(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    timeText(timeLabel),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
                 )
                 val cost = thread.costUsd
                 if (thread.runState == ThreadRunState.Idle && cost != null) {
+                    Spacer(Modifier.width(12.dp))
                     Text(
                         UsageFormat.cost(cost),
                         style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
-                } else {
+                } else if (thread.runState != ThreadRunState.Idle) {
+                    Spacer(Modifier.width(12.dp))
                     RunStateText(thread.runState)
                 }
             }
@@ -426,18 +444,45 @@ private fun timeText(label: ThreadTimeLabel): String = when (label) {
     is ThreadTimeLabel.Text -> label.text
 }
 
+/**
+ * Before the title: the glowing dot while the thread works, a lock on an
+ * incognito thread (D-111), nothing otherwise. It sits on the middle of the
+ * title's first line, whatever the font scale.
+ */
+@Composable
+private fun RowScope.ThreadMark(thread: ThreadRow, titleFontSize: TextUnit) {
+    val density = LocalDensity.current
+    // The middle of a lowercase letter is about 0.3 em above the baseline.
+    val markCentreAboveBaseline = with(density) { (titleFontSize * 0.3f).roundToPx() }
+    val onTitleLine = Modifier.alignBy { mark -> mark.measuredHeight / 2 + markCentreAboveBaseline }
+    if (thread.runState is ThreadRunState.Running) {
+        // GlowDot's canvas is wider than the dot, so the dot itself starts near the text edge.
+        GlowDot(JonakiTheme.colors.live, DotStyle.GLOWING, onTitleLine.offset(x = (-4).dp), dotSize = 8.dp)
+    } else if (thread.incognito) {
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = stringResource(R.string.threads_incognito),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = onTitleLine.size(14.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+    }
+}
+
 @Composable
 private fun RunStateText(runState: ThreadRunState) {
     val colors = JonakiTheme.colors
     val style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
     when (runState) {
+        // In ink, not in the live colour: the dot already glows, and the day theme's live green is too light for text.
         is ThreadRunState.Running -> Text(
             stringResource(R.string.threads_state_running, runState.stepNumber),
             style = style,
-            color = colors.live,
+            color = colors.inkSoft,
+            maxLines = 1,
         )
-        ThreadRunState.WaitingForApproval -> Text(stringResource(R.string.threads_state_waiting), style = style, color = colors.deny)
-        ThreadRunState.Failed -> Text(stringResource(R.string.threads_state_failed), style = style, color = colors.deny)
+        ThreadRunState.WaitingForApproval -> Text(stringResource(R.string.threads_state_waiting), style = style, color = colors.deny, maxLines = 1)
+        ThreadRunState.Failed -> Text(stringResource(R.string.threads_state_failed), style = style, color = colors.deny, maxLines = 1)
         ThreadRunState.Idle -> Unit
     }
 }

@@ -8,8 +8,6 @@ import java.util.Locale
 @Immutable
 data class ChatUiState(
     val title: String,
-    /** Shown under the title, for example "DeepSeek V3". */
-    val modelLabel: String,
     val webSearchEnabled: Boolean,
     val items: List<ChatItem>,
     /** True while the agent works on this thread; the Send button becomes Stop. */
@@ -291,6 +289,10 @@ enum class ApprovalChoice {
     ALLOW_FOR_TASK,
     DENY,
 }
+
+/** A step's name as words: "web_search" reads "Web search". */
+fun stepLabel(toolName: String): String =
+    toolName.replace('_', ' ').replaceFirstChar { first -> first.uppercaseChar() }
 
 fun formatStepDuration(durationMillis: Long): String {
     if (durationMillis < 10_000) {

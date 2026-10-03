@@ -44,4 +44,11 @@ class StepDurationTest {
 
         assertEquals(4_000L, totalDurationMillis(steps))
     }
+
+    @Test
+    fun stepLabelTurnsAToolNameIntoWords() {
+        assertEquals("Web search", stepLabel("web_search"))
+        assertEquals("Run code", stepLabel("run_code"))
+        assertEquals("Delegate", stepLabel("delegate"))
+    }
 }
