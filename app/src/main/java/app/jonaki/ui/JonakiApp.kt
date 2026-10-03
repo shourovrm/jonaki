@@ -92,6 +92,7 @@ import app.jonaki.settings.ToolPicker
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
+import androidx.compose.foundation.lazy.LazyListState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
@@ -140,6 +141,9 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
         var route by rememberSaveable { mutableStateOf(ROUTE_THREADS) }
         // The project chip picked in the thread list; kept here so it survives opening a chat (D-110).
         var selectedProjectId by rememberSaveable { mutableStateOf<String?>(null) }
+        // The subagent page and the chat's place stay while a file viewer opened from them is in front (D-126).
+        var openSubagentId by rememberSaveable { mutableStateOf<String?>(null) }
+        val chatListStates = remember { mutableMapOf<String, LazyListState>() }
         RefusedFilesMessage(application)
         val pendingShare by application.incomingShares.pending.collectAsState()
         val share = pendingShare
@@ -255,14 +259,22 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 )
             }
             route.startsWith(ROUTE_CHAT_PREFIX) -> {
-                BackHandler { route = ROUTE_THREADS }
                 val chatTarget = route.removePrefix(ROUTE_CHAT_PREFIX)
                 val chatThreadId = chatTarget.substringBefore(FOCUS_SEPARATOR)
+                val leaveChat = {
+                    openSubagentId = null
+                    chatListStates.remove(chatThreadId)
+                    route = ROUTE_THREADS
+                }
+                BackHandler(onBack = leaveChat)
                 ChatRoute(
                     application = application,
                     threadId = chatThreadId,
                     focusMessageId = chatTarget.substringAfter(FOCUS_SEPARATOR, "").ifEmpty { null },
-                    onBack = { route = ROUTE_THREADS },
+                    onBack = leaveChat,
+                    openSubagentId = openSubagentId,
+                    onOpenSubagent = { subagentId -> openSubagentId = subagentId },
+                    listState = chatListStates.getOrPut(chatThreadId) { LazyListState() },
                     onThreadCreated = { threadId -> route = ROUTE_CHAT_PREFIX + threadId },
                     onEditModels = { route = ROUTE_SETTINGS },
                     onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
@@ -444,6 +456,9 @@ private fun ChatRoute(
     onOpenArtifact: (path: String) -> Unit,
     /** The project a new regular thread joins: the one selected in the thread list (D-110). */
     newThreadProjectId: String?,
+    openSubagentId: String?,
+    onOpenSubagent: (String?) -> Unit,
+    listState: LazyListState,
 ) {
     val database = application.database
     val runner = application.runner
@@ -535,6 +550,8 @@ private fun ChatRoute(
         }
     }
 
+    // Composed after the app's own Back for the chat, so Back closes the subagent page first.
+    BackHandler(enabled = subagents.any { subagent -> subagent.id == openSubagentId }) { onOpenSubagent(null) }
     val isRunning = threadId in running
     val pending = approvals[threadId].orEmpty()
     val tryAgainText = stringResource(R.string.python_try_again_message)
@@ -572,6 +589,7 @@ private fun ChatRoute(
             pendingApprovals = pending,
             fallbackNote = stringResource(R.string.routing_fallback_note),
             subagents = subagents,
+            modelNameOf = { key -> catalog.find(key)?.displayName },
             pythonCard = pythonCards.cardFor,
             compaction = compaction,
             stepWords = stepDetailWords(),
@@ -717,6 +735,10 @@ private fun ChatRoute(
         onPythonCard = pythonCards.onAction,
         onKeepThread = { scope.launch { runner.keepIncognitoThread(threadId) } },
         onOpenStyle = { styleSheetOpen = true },
+        openSubagentId = openSubagentId,
+        onOpenSubagent = onOpenSubagent,
+        onStopSubagent = { subagentId -> runner.stopSubagent(threadId, subagentId) },
+        listState = listState,
     )
     if (styleSheetOpen) {
         ThreadStyleSheetRoute(

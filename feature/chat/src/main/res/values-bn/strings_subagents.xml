@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bangla for strings_subagents.xml (D-126). Model and tool names stay in English. -->
+<resources>
+    <plurals name="subagents_count">
+        <item quantity="one">%1$dটি subagent</item>
+        <item quantity="other">%1$dটি subagent</item>
+    </plurals>
+    <string name="subagents_progress">%2$dটির মধ্যে %1$dটি শেষ</string>
+    <string name="subagents_open">খুলুন</string>
+
+    <string name="subagents_now_thinking">ভাবছে</string>
+    <string name="subagents_now_waiting">আপনার অপেক্ষায়</string>
+    <string name="subagents_now_asking">মূল agent-কে জিজ্ঞেস করছে</string>
+    <string name="subagents_now_done_in">%1$s-এ শেষ</string>
+    <plurals name="subagents_now_done_skipped">
+        <item quantity="one">শেষ, %1$dটি বাদ</item>
+        <item quantity="other">শেষ, %1$dটি বাদ</item>
+    </plurals>
+    <plurals name="subagents_now_done_files">
+        <item quantity="one">শেষ, %1$dটি ফাইল</item>
+        <item quantity="other">শেষ, %1$dটি ফাইল</item>
+    </plurals>
+
+    <plurals name="subagents_work_title">
+        <item quantity="one">%1$dটি subagent-এর কাজ</item>
+        <item quantity="other">%1$dটি subagent-এর কাজ</item>
+    </plurals>
+    <string name="subagents_work_all_done">সব শেষ</string>
+    <plurals name="subagents_work_over_budget">
+        <item quantity="one">%1$dটি বাজেট ছাড়িয়েছে</item>
+        <item quantity="other">%1$dটি বাজেট ছাড়িয়েছে</item>
+    </plurals>
+    <plurals name="subagents_work_out_of_steps">
+        <item quantity="one">%1$dটির ধাপ ফুরিয়েছে</item>
+        <item quantity="other">%1$dটির ধাপ ফুরিয়েছে</item>
+    </plurals>
+    <plurals name="subagents_work_timed_out">
+        <item quantity="one">%1$dটির সময় ফুরিয়েছে</item>
+        <item quantity="other">%1$dটির সময় ফুরিয়েছে</item>
+    </plurals>
+    <plurals name="subagents_work_failed">
+        <item quantity="one">%1$dটি ব্যর্থ</item>
+        <item quantity="other">%1$dটি ব্যর্থ</item>
+    </plurals>
+    <plurals name="subagents_work_stopped">
+        <item quantity="one">%1$dটি থামানো হয়েছে</item>
+        <item quantity="other">%1$dটি থামানো হয়েছে</item>
+    </plurals>
+    <plurals name="subagents_work_skipped">
+        <item quantity="one">%1$dটি অংশ বাদ</item>
+        <item quantity="other">%1$dটি অংশ বাদ</item>
+    </plurals>
+    <plurals name="subagents_work_notes">
+        <item quantity="one">%1$dটি নোট</item>
+        <item quantity="other">%1$dটি নোট</item>
+    </plurals>
+    <string name="subagents_notes_board">নোট বোর্ড</string>
+    <string name="subagents_files_written">লেখা ফাইল</string>
+
+    <string name="subagents_previous">আগের subagent</string>
+    <string name="subagents_next">পরের subagent</string>
+    <string name="subagents_steps">ধাপ</string>
+    <string name="subagents_cost">খরচ</string>
+    <string name="subagents_used_of_limit">%2$s-এর মধ্যে %1$s</string>
+    <string name="subagents_answer_pending">%1$s শেষ হলে এখানে দেখাবে।</string>
+    <string name="subagents_no_steps">এখনো কোনো ধাপ নেই</string>
+    <string name="subagents_files">ফাইল</string>
+    <string name="subagents_skipped">বাদ পড়েছে</string>
+    <string name="subagents_skipped_why">3 মিনিটে উত্তর আসেনি</string>
+    <string name="subagents_stop">%1$s থামান</string>
+</resources>

@@ -53,7 +53,13 @@ private val TrackColumnWidth = 24.dp
  * A finished run folds to its summary line; an active run is always open.
  */
 @Composable
-internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, modifier: Modifier = Modifier) {
+internal fun RunBlock(
+    run: ChatItem.Run,
+    onOpenStep: (stepId: String) -> Unit,
+    modifier: Modifier = Modifier,
+    /** A subagent's row was tapped: the chat opens its page (D-126). */
+    onOpenSubagent: (subagentId: String) -> Unit = {},
+) {
     var expanded by rememberSaveable(run.id) { mutableStateOf(false) }
     val open = run.isActive || expanded
     RunPanel(modifier) {
@@ -62,12 +68,27 @@ internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, m
             if (open) {
                 Column(Modifier.padding(bottom = 6.dp)) {
                     run.steps.forEachIndexed { index, step ->
-                        StepRow(
-                            step = step,
-                            isFirst = index == 0,
-                            isLast = index == run.steps.lastIndex,
-                            onOpen = onOpenStep,
-                        )
+                        val group = run.subagents.filter { subagent -> subagent.delegateStepId == step.id }
+                        if (group.isEmpty()) {
+                            StepRow(
+                                step = step,
+                                isFirst = index == 0,
+                                isLast = index == run.steps.lastIndex,
+                                onOpen = onOpenStep,
+                            )
+                        } else {
+                            // A delegate step becomes its group: "3 subagents", "1 of 3 done", a row each (D-126).
+                            StepRow(
+                                step = step,
+                                isFirst = index == 0,
+                                isLast = index == run.steps.lastIndex,
+                                onOpen = onOpenStep,
+                                label = subagentGroupLabel(group),
+                                detailOverride = subagentGroupProgress(group),
+                            ) {
+                                SubagentGroupRows(group, onOpenSubagent)
+                            }
+                        }
                     }
                 }
             }
@@ -75,7 +96,7 @@ internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, m
     }
 }
 
-/** The run block's frame, shared with subagent cards: a hairline border, no fill at night. */
+/** The run block's frame: a hairline border, no fill at night. */
 @Composable
 internal fun RunPanel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Surface(
@@ -149,6 +170,11 @@ internal fun StepRow(
     isFirst: Boolean,
     isLast: Boolean,
     onOpen: (stepId: String) -> Unit,
+    label: String = stepLabel(step.toolName),
+    /** Replaces the step's own detail line, for example a subagent group's progress. */
+    detailOverride: String? = null,
+    /** Shown under the step's lines, beside the rail: a delegate step's subagent rows. */
+    below: (@Composable () -> Unit)? = null,
 ) {
     // One plain rail: the lit station alone marks where the work is.
     val trackColor = JonakiTheme.colors.track
@@ -176,7 +202,7 @@ internal fun StepRow(
         Column(Modifier.weight(1f).padding(top = 2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stepLabel(step.toolName),
+                    label,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -191,7 +217,19 @@ internal fun StepRow(
                     )
                 }
             }
-            StepDetail(step)
+            if (detailOverride == null) {
+                StepDetail(step)
+            } else {
+                Text(
+                    detailOverride,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 1.dp),
+                )
+            }
+            if (below != null) {
+                below()
+            }
         }
     }
 }

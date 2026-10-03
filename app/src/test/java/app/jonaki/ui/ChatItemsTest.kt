@@ -9,7 +9,9 @@ import app.jonaki.core.storage.SubagentEntity
 import app.jonaki.core.agent.SubagentAsk
 import app.jonaki.run.PendingApproval
 import kotlinx.coroutines.CompletableDeferred
+import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.feature.chat.ChatItem
+import app.jonaki.feature.chat.NotesBoardUi
 import app.jonaki.feature.chat.WorkingActivity
 import app.jonaki.feature.chat.StepUiStatus
 import org.junit.Assert.assertEquals
@@ -245,7 +247,7 @@ class ChatItemsTest {
     )
 
     @Test
-    fun subagentsShowAsCardsUnderTheRunAndTheirStepsStayOutOfTheTrack() {
+    fun subagentsShowAsRowsInTheRunAndTheirStepsStayOutOfTheTrack() {
         val delegateCall = ToolCall("d1", "delegate", """{"tasks":[{"agent":"researcher","task":"a"},{"agent":"scout","task":"b"}]}""")
         val rows = listOf(
             row("u1", "USER", "compare"),
@@ -259,29 +261,87 @@ class ChatItemsTest {
             step("s2/c1", "read_file", "SKIPPED", started = 2, finished = 3).copy(subagentId = "s2"),
         )
 
-        val items = ChatItems.build(rows, steps, isRunning = false, subagents = listOf(subagent("s1", 0, "researcher"), subagent("s2", 1, "scout")), stepWords = englishStepWords)
+        val items = ChatItems.build(
+            rows,
+            steps,
+            isRunning = false,
+            subagents = listOf(subagent("s1", 0, "researcher"), subagent("s2", 1, "scout")),
+            modelNameOf = { key -> if (key == "test:m") "Test Model" else null },
+            stepWords = englishStepWords,
+        )
 
-        assertEquals(listOf("u1", "run-u1", "subagent-s1", "subagent-s2", "a2"), items.map { it.id })
+        assertEquals(listOf("u1", "run-u1", "a2", "work-u1"), items.map { it.id })
         val run = items[1] as ChatItem.Run
         assertEquals(listOf("delegate"), run.steps.map { it.toolName })
         assertEquals("researcher, scout", run.steps.single().detail)
         // The run's cost line includes the subagents' hidden calls.
         assertEquals(0.04, run.costUsd!!, 0.0001)
-        val scout = items[3] as ChatItem.Subagent
+        val scout = run.subagents[1]
+        assertEquals("s2", scout.id)
+        assertEquals("d1", scout.delegateStepId)
         assertEquals("scout 2", scout.label)
+        assertEquals("Test Model", scout.modelName)
         assertEquals(StepUiStatus.SKIPPED, scout.steps.single().status)
         assertEquals("answer s2", scout.answer)
+        assertEquals(10, scout.stepLimit)
+        assertEquals(0.10, scout.costLimitUsd, 0.0001)
     }
 
     @Test
-    fun aSubagentsRequestShowsItsReasonAndName() {
+    fun aFinishedTurnGetsAWorkRowWithTheFilesAndTheNotesBoard() {
+        val delegateCall = ToolCall("d1", "delegate", "{}")
+        val rows = listOf(
+            row("u1", "USER", "write it"),
+            row("a1", "ASSISTANT", "", calls = listOf(delegateCall)),
+            row("r1", "TOOL", "answers", callId = "d1"),
+            row("a2", "ASSISTANT", "Done."),
+        )
+        val steps = listOf(
+            step("d1", "delegate", "DONE", started = 1, finished = 9),
+            step("s1/c1", "write_file", "DONE", """{"path":"work/a.md"}""", started = 2, finished = 3).copy(subagentId = "s1"),
+            step("s1/c2", "artifact", "DONE", """{"path":"./artifacts/r.html"}""", started = 3, finished = 4).copy(subagentId = "s1"),
+            step("s1/c3", "write_file", "DENIED", """{"path":"work/b.md"}""", started = 4, finished = 5).copy(subagentId = "s1"),
+            step("s1/c4", "notes", "DONE", """{"action":"post","text":"VAT included"}""", started = 5, finished = 6).copy(subagentId = "s1"),
+            step("s2/c1", "notes", "DONE", """{"action":"read"}""", started = 5, finished = 6).copy(subagentId = "s2"),
+        )
+        val subagents = listOf(subagent("s1", 0, "writer"), subagent("s2", 1, "scout"))
+
+        val finished = ChatItems.build(rows, steps, isRunning = false, subagents = subagents, stepWords = englishStepWords)
+        val stillRunning = ChatItems.build(rows, steps, isRunning = true, subagents = subagents, stepWords = englishStepWords)
+
+        val work = finished.last() as ChatItem.SubagentWork
+        assertEquals(listOf("work/a.md", "artifacts/r.html"), work.subagents[0].filesWritten)
+        assertEquals(1, work.subagents[0].notesPosted)
+        assertEquals(0, work.subagents[1].notesPosted)
+        assertEquals(listOf(NotesBoardUi(SubagentRunner.notesBoardPath("d1"), notes = 1)), work.notesBoards)
+        assertTrue(stillRunning.none { item -> item is ChatItem.SubagentWork })
+    }
+
+    @Test
+    fun aSubagentsRequestShowsItsReasonNameAndWhenItIsWithdrawn() {
         val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(ToolCall("d1", "delegate", "{}"))))
         val request = ToolCall("s1/c3", "request_tool", """{"name":"share_file","reason":"save the report"}""")
+        val steps = listOf(step("s1/c3", "request_tool", "WAITING_FOR_APPROVAL", request.argumentsJson, started = 1_000).copy(subagentId = "s1"))
         val pending = PendingApproval("t", "share_file", request, CompletableDeferred(), SubagentAsk("writer", "save the report"))
 
-        val card = ChatItems.build(rows, emptyList(), isRunning = true, pendingApprovals = listOf(pending), stepWords = englishStepWords).last() as ChatItem.Approval
+        val card = ChatItems.build(rows, steps, isRunning = true, pendingApprovals = listOf(pending), stepWords = englishStepWords).last() as ChatItem.Approval
 
-        assertEquals(ChatItem.Approval("s1/c3", "share_file", "save the report", agentLabel = "writer"), card)
+        assertEquals(
+            ChatItem.Approval("s1/c3", "share_file", "save the report", agentLabel = "writer", waitEndsAtMillis = 181_000),
+            card,
+        )
+    }
+
+    @Test
+    fun theThreadAgentsOwnCardHasNoCountdown() {
+        val call = ToolCall("c1", "write_file", """{"path":"work/a.md"}""")
+        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(call)))
+        val steps = listOf(step("c1", "write_file", "WAITING_FOR_APPROVAL", call.argumentsJson, started = 1_000))
+        val pending = PendingApproval("t", "write_file", call, CompletableDeferred())
+
+        val card = ChatItems.build(rows, steps, isRunning = true, pendingApprovals = listOf(pending), stepWords = englishStepWords).last() as ChatItem.Approval
+
+        assertEquals(null, card.waitEndsAtMillis)
     }
 
     @Test

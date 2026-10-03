@@ -159,6 +159,8 @@ sealed interface ChatItem {
         val isActive: Boolean,
         /** Cost of this turn's model calls; shown on the folded summary line when known. */
         val costUsd: Double? = null,
+        /** The subagents its delegate steps started; each delegate step shows its own as rows (D-126). */
+        val subagents: List<SubagentUi> = emptyList(),
     ) : ChatItem
 
     /** A tool that changes something and waits for the user (D-015 permission broker). */
@@ -169,22 +171,16 @@ sealed interface ChatItem {
         val description: String,
         /** The subagent that asks, for example "researcher 2"; null for the thread's own agent (D-062). */
         val agentLabel: String? = null,
+        /** When a subagent's card is withdrawn unanswered (D-062's 3 minutes); null when it waits without limit. */
+        val waitEndsAtMillis: Long? = null,
     ) : ChatItem
 
-    /** One subagent of a delegate call, as a card that opens to its steps and answer (M7). */
-    data class Subagent(
+    /** Under the answer of a turn that used delegate: opens the work sheet (D-126). */
+    data class SubagentWork(
         override val id: String,
-        /** "researcher", or "researcher 2" when one call started several. */
-        val label: String,
-        val task: String,
-        val status: SubagentUiStatus,
-        val steps: List<StepUi>,
-        /** Null while no call has a known cost. */
-        val costUsd: Double?,
-        /** The start of the latest text it wrote, for the folded card. */
-        val latestText: String?,
-        /** What it returned; null while it runs. */
-        val answer: String?,
+        val subagents: List<SubagentUi>,
+        /** Only boards that hold notes. */
+        val notesBoards: List<NotesBoardUi>,
     ) : ChatItem
 
     data class Error(override val id: String, val message: String, val canRetry: Boolean) : ChatItem
@@ -303,6 +299,12 @@ fun formatStepDuration(durationMillis: Long): String {
     }
     val totalSeconds = durationMillis / 1000
     return String.format(Locale.ENGLISH, "%d:%02d", totalSeconds / 60, totalSeconds % 60)
+}
+
+/** Time left on a subagent's approval card, "2:41"; a part second counts as a whole one, so 0:00 means gone. */
+fun formatCountdown(millisLeft: Long): String {
+    val secondsLeft = (millisLeft.coerceAtLeast(0) + 999) / 1000
+    return String.format(Locale.ENGLISH, "%d:%02d", secondsLeft / 60, secondsLeft % 60)
 }
 
 /** Time the steps took together: steps that ran side by side count once (D-080). */

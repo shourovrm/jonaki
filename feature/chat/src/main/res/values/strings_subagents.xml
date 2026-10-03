@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Subagent rows, page and work sheet (D-126). Bangla in values-bn/strings_subagents.xml. -->
+<resources>
+    <plurals name="subagents_count">
+        <item quantity="one">%1$d subagent</item>
+        <item quantity="other">%1$d subagents</item>
+    </plurals>
+    <string name="subagents_progress">%1$d of %2$d done</string>
+    <string name="subagents_open">Open</string>
+
+    <string name="subagents_now_thinking">Thinking</string>
+    <string name="subagents_now_waiting">Waiting for you</string>
+    <string name="subagents_now_asking">Asking the main agent</string>
+    <string name="subagents_now_done_in">Done in %1$s</string>
+    <plurals name="subagents_now_done_skipped">
+        <item quantity="one">Done, %1$d skipped</item>
+        <item quantity="other">Done, %1$d skipped</item>
+    </plurals>
+    <plurals name="subagents_now_done_files">
+        <item quantity="one">Done, %1$d file</item>
+        <item quantity="other">Done, %1$d files</item>
+    </plurals>
+
+    <plurals name="subagents_work_title">
+        <item quantity="one">Work from %1$d subagent</item>
+        <item quantity="other">Work from %1$d subagents</item>
+    </plurals>
+    <string name="subagents_work_all_done">All done</string>
+    <plurals name="subagents_work_over_budget">
+        <item quantity="one">%1$d over budget</item>
+        <item quantity="other">%1$d over budget</item>
+    </plurals>
+    <plurals name="subagents_work_out_of_steps">
+        <item quantity="one">%1$d out of steps</item>
+        <item quantity="other">%1$d out of steps</item>
+    </plurals>
+    <plurals name="subagents_work_timed_out">
+        <item quantity="one">%1$d timed out</item>
+        <item quantity="other">%1$d timed out</item>
+    </plurals>
+    <plurals name="subagents_work_failed">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <plurals name="subagents_work_stopped">
+        <item quantity="one">%1$d stopped</item>
+        <item quantity="other">%1$d stopped</item>
+    </plurals>
+    <plurals name="subagents_work_skipped">
+        <item quantity="one">%1$d part skipped</item>
+        <item quantity="other">%1$d parts skipped</item>
+    </plurals>
+    <plurals name="subagents_work_notes">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
+    <string name="subagents_notes_board">Notes board</string>
+    <string name="subagents_files_written">Files written</string>
+
+    <string name="subagents_previous">Previous subagent</string>
+    <string name="subagents_next">Next subagent</string>
+    <string name="subagents_steps">Steps</string>
+    <string name="subagents_cost">Cost</string>
+    <string name="subagents_used_of_limit">%1$s of %2$s</string>
+    <string name="subagents_answer_pending">Shows here when %1$s is done.</string>
+    <string name="subagents_no_steps">No steps yet</string>
+    <string name="subagents_files">Files</string>
+    <string name="subagents_skipped">Skipped</string>
+    <string name="subagents_skipped_why">No answer in 3 min</string>
+    <string name="subagents_stop">Stop %1$s</string>
+</resources>

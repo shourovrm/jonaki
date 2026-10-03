@@ -119,6 +119,9 @@ class AgentRunner(
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
+    /** The subagent runner of each running thread, so that one subagent can be stopped alone (D-126). */
+    private val subagentRunners = ConcurrentHashMap<String, SubagentRunner>()
+
     /** Threads the user left while a run was still going; extraction waits for the run's end. */
     private val leftWhileRunning = MutableStateFlow<Set<String>>(emptySet())
 
@@ -287,6 +290,11 @@ class AgentRunner(
         runningJobs[threadId]?.cancel()
     }
 
+    /** Stops one subagent of the thread's run; the run and the other subagents go on (D-126). */
+    fun stopSubagent(threadId: String, subagentId: String) {
+        subagentRunners[threadId]?.stop(subagentId)
+    }
+
     /**
      * The user left a thread's chat: background extraction reads what the
      * thread holds (D-009), now or, while a run is going, when it ends.
@@ -360,6 +368,7 @@ class AgentRunner(
             } finally {
                 approvals.update { current -> current - threadId }
                 runningJobs.remove(threadId)
+                subagentRunners.remove(threadId)
                 running.update { current -> current - threadId }
             }
         }
@@ -475,6 +484,7 @@ class AgentRunner(
             skillSection = skillSection,
             now = ZonedDateTime::now,
         )
+        subagentRunners[threadId] = subagents
         val tools = threadTools + ToolRegistry.delegateTools(subagents, toolServices.enabledGroups)
         val systemPrompt = promptBuilder.systemPrompt(
             activeTools = tools,
