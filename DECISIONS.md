@@ -1568,3 +1568,33 @@ SettingsSummariesTest and SettingsSearchTest (read the English values
 files), PermissionStatusesTest, BanglaStringsTest. Limit: previews at 360
 dp and font scale 1.3 (dark, light, Bangla) were compiled, not rendered;
 nothing was checked on a phone. Outcome: pending.
+
+## D-131 · 2026-10-03 · web_fetch renders pages that need JavaScript — proposed
+web_fetch can load a page in Android's system WebView, run its scripts and
+read the HTML they built, through the same Readability and HTML-to-text
+steps as a plain download (user's option A). No new dependency and no new
+permission: the WebView is part of Android and INTERNET is already
+declared. The tool module sees only a `PageRenderer` interface, kept in
+tools/web-fetch beside the tool as Phone and TaskScheduler are, because
+web_fetch is its only caller; the app's `WebViewPageRenderer` implements
+it and ToolServices passes it in. When: the model passes `render: true`
+(the download is skipped), or the download has scripts and under 200
+characters of text, or under 1,500 characters that say "enable
+JavaScript" or similar (RenderDecision). A page without scripts is never
+rendered. The WebView: fresh per page and destroyed after it, JavaScript
+and DOM storage on, file and content access off, geolocation off,
+third-party cookies off, no autofill, images not loaded, links to other
+schemes (intent:, market:) blocked; afterwards cookies, storage and the
+HTTP cache are deleted (no other WebView in the app uses them). One page
+at a time. It waits for onPageFinished, then until the visible text
+length is equal in two checks 0.5 s apart, within 25 s; a main-frame HTTP
+error of 400 or more, a load error or a renderer crash fails the render.
+The tool's time limit goes from 30 s to 60 s. If an automatic render
+fails, a download with some text is returned with a notice, and an empty
+one is an error that names the reason. Cost: the schema grows by 92
+characters, about 23 tokens, sent only while web_fetch is active. Not
+done: Cloudflare-style challenge pages (HTTP 403 or 503) are not
+rendered; a browse tool that clicks or fills forms stays later. Tests:
+RenderDecisionTest and WebFetchToolTest with a fake renderer; the
+WebView part runs only on a phone and was not checked there. Outcome:
+pending.

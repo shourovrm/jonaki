@@ -6,6 +6,7 @@ import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import app.jonaki.core.toolapi.await
+import app.jonaki.core.toolapi.booleanArgument
 import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -28,8 +29,13 @@ import okhttp3.Response
  * Downloads one web page and returns its main text. Pages longer than
  * max_length are saved whole to the thread folder and the model gets the
  * start plus the read_file call that continues it (D-005, D-011).
+ *
+ * With a [pageRenderer], a page that needs JavaScript is loaded again in a
+ * browser engine and read from the HTML its scripts built (D-131): when the
+ * model asks with render=true, or when the plain download looks like an
+ * empty app shell or a "please enable JavaScript" page.
  */
-class WebFetchTool : Tool {
+class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
     override val name: String = "web_fetch"
 
     override val promptLine: String = "web_fetch: read the main text of a web page"
@@ -52,13 +58,20 @@ class WebFetchTool : Tool {
                 put("maximum", MAX_LENGTH)
                 put("description", "Characters to return, default $DEFAULT_LENGTH; the rest is saved to a file")
             }
+            if (pageRenderer != null) {
+                putJsonObject("render") {
+                    put("type", "boolean")
+                    put("description", "Run page JavaScript first; auto for empty pages")
+                }
+            }
         }
         putJsonArray("required") { add("url") }
     }
 
     override val sideEffect: SideEffect = SideEffect.READ_ONLY
     override val requiredCapabilities: Set<Capability> = emptySet()
-    override val timeLimit: Duration = 30.seconds
+    /** A plain download (about 20 s at worst) plus a render ([RENDER_TIME_LIMIT]) must fit. */
+    override val timeLimit: Duration = 60.seconds
 
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput {
         val urlText = (arguments["url"] as? JsonPrimitive)?.contentOrNull?.trim()
@@ -70,7 +83,18 @@ class WebFetchTool : Tool {
             return ToolOutput.error("\"$urlText\" is not an http or https address", "Pass a full address starting with https://.")
         }
         val maxLength = ((arguments["max_length"] as? JsonPrimitive)?.intOrNull ?: DEFAULT_LENGTH).coerceIn(MIN_LENGTH, MAX_LENGTH)
+        val renderRequested = arguments.booleanArgument("render") == true
 
+        val pageText = if (renderRequested) {
+            renderOnRequest(url.toString())
+        } else {
+            download(url.toString(), context)
+        }
+        if (pageText.isError) return pageText
+        return ToolOutput.success(context.outputLimiter.limit(pageText.text, maxLength, name))
+    }
+
+    private suspend fun download(url: String, context: ToolContext): ToolOutput {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
@@ -81,9 +105,7 @@ class WebFetchTool : Tool {
         } catch (networkError: IOException) {
             return ToolOutput.error("could not load $url (${networkError.message})", "Check the address, or search for another source.")
         }
-        val pageText = response.use { readPage(it, url.toString()) }
-        if (pageText.isError) return pageText
-        return ToolOutput.success(context.outputLimiter.limit(pageText.text, maxLength, name))
+        return response.use { readPage(it, url) }
     }
 
     private suspend fun readPage(response: Response, url: String): ToolOutput {
@@ -109,14 +131,72 @@ class WebFetchTool : Tool {
 
         if (!isHtml) return ToolOutput.success("Source: $finalUrl\n\n${content.trim()}")
         val page = PageTextExtractor.extract(finalUrl, content)
+        if (pageRenderer != null && RenderDecision.needsRendering(page, content)) {
+            return renderAfterDownload(url, page, finalUrl, pageRenderer)
+        }
         if (page.text.isBlank()) {
             return ToolOutput.error(
                 "$url has no readable text; it may need JavaScript to show its content",
                 "Try web_search for another source on the same topic.",
             )
         }
-        return ToolOutput.success("# ${page.title}\nSource: $finalUrl\n\n${page.text}")
+        return ToolOutput.success(formatPage(page, finalUrl))
     }
+
+    private suspend fun renderOnRequest(url: String): ToolOutput {
+        if (pageRenderer == null) {
+            return ToolOutput.error("this app cannot run a page's JavaScript here", "Call web_fetch without render.")
+        }
+        return try {
+            renderPage(url, pageRenderer)
+        } catch (renderError: PageRenderException) {
+            ToolOutput.error(
+                "could not render $url (${renderError.message})",
+                "Call web_fetch without render, or web_search for another source.",
+            )
+        }
+    }
+
+    /**
+     * The plain download looked empty, so the page is rendered. If rendering
+     * fails, whatever text the download had is still better than nothing,
+     * and the model learns why it is thin.
+     */
+    private suspend fun renderAfterDownload(
+        url: String,
+        downloadedPage: ExtractedPage,
+        finalUrl: String,
+        renderer: PageRenderer,
+    ): ToolOutput {
+        try {
+            return renderPage(url, renderer)
+        } catch (renderError: PageRenderException) {
+            if (downloadedPage.text.isBlank()) {
+                return ToolOutput.error(
+                    "$url needs JavaScript to show its content, and running it failed (${renderError.message})",
+                    "Try web_search for another source on the same topic.",
+                )
+            }
+            val notice = "(Running the page's JavaScript failed: ${renderError.message}. This is the page without it.)"
+            return ToolOutput.success(formatPage(downloadedPage, finalUrl) + "\n\n" + notice)
+        }
+    }
+
+    /** Throws [PageRenderException] when the renderer fails. */
+    private suspend fun renderPage(url: String, renderer: PageRenderer): ToolOutput {
+        val rendered = renderer.render(url, RENDER_TIME_LIMIT)
+        val page = PageTextExtractor.extract(rendered.finalUrl, rendered.html)
+        if (page.text.isBlank()) {
+            return ToolOutput.error(
+                "$url has no readable text even after running its JavaScript",
+                "Try web_search for another source on the same topic.",
+            )
+        }
+        val title = page.title.ifBlank { rendered.title }
+        return ToolOutput.success(formatPage(page.copy(title = title), "${rendered.finalUrl} (rendered)"))
+    }
+
+    private fun formatPage(page: ExtractedPage, source: String): String = "# ${page.title}\nSource: $source\n\n${page.text}"
 
     /** Stops after [limit] bytes so that a huge page cannot exhaust the phone's memory. */
     private fun readAtMost(response: Response, limit: Long): ByteArray {
@@ -131,6 +211,7 @@ class WebFetchTool : Tool {
         const val MIN_LENGTH = 500
         const val MAX_LENGTH = 100_000
         const val MAX_DOWNLOAD_BYTES = 5L * 1024 * 1024
+        val RENDER_TIME_LIMIT = 25.seconds
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Jonaki/0.1"
         val HTML_TYPES = setOf("text/html", "application/xhtml+xml")
         val TEXT_TYPES = setOf("application/json", "application/xml", "application/rss+xml", "application/atom+xml")
