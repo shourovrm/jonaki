@@ -22,6 +22,9 @@ enum class ChatService(
     OPENAI("openai", "OpenAI", SecretName.OPENAI),
     MINIMAX("minimax", "MiniMax", SecretName.MINIMAX),
     QWEN("qwen", "Qwen", SecretName.QWEN),
+
+    // GGUF files on the phone (D-133); its models are the files, not a list the user adds to.
+    LOCAL("local", "Local", null),
     ;
 
     companion object {

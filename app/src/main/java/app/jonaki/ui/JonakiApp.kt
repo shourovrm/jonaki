@@ -840,9 +840,10 @@ private fun stepDetailWords(): StepDetail.Words {
     )
 }
 
+/** The user's added models, then the model files on the phone (D-133). */
 private fun modelChoices(
 chatModels: ChatModels, catalog: ModelCatalog, application: JonakiApplication): List<ModelChoiceUi> =
-    chatModels.allModelKeys.map { key ->
+    (chatModels.allModelKeys + application.localModels.modelKeys()).map { key ->
         val info = catalog.find(key)
         ModelChoiceUi(
             key = key,
@@ -967,6 +968,8 @@ private fun SettingsRoute(
     val state = SettingsUiState(
         chatServices = serviceCards(snapshot, application, ::slotFor, ::accountFor),
         addableServices = ChatService.entries
+            // Local models come from downloaded files, not from a service card (D-133).
+            .filter { service -> service != ChatService.LOCAL }
             .filter { service -> service !in snapshot.chatModels.addedServices }
             .map { service -> AddableServiceUi(service.key, serviceNameOf(service, application), hintFor(service)) },
         geminiKey = slotFor(SecretName.GEMINI),
@@ -1234,6 +1237,7 @@ private fun hintFor(service: ChatService): String = when (service) {
     ChatService.OPENAI -> "openai.com"
     ChatService.MINIMAX -> "minimax.io"
     ChatService.QWEN -> "Alibaba Cloud"
+    ChatService.LOCAL -> "llama.cpp"
 }
 
 private fun displayNameOf(service: SearchService): String = when (service) {

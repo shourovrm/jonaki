@@ -61,6 +61,8 @@ data class ToolServices(
     val pageRenderer: PageRenderer? = null,
     /** The groups switched on in the picker or Settings > Tools; the tools of the others are left out. */
     val enabledGroups: Set<ToolGroup> = ToolGroup.entries.toSet(),
+    /** When set, only these tools are offered; a local model's thread uses ToolGroups.LOCAL_MODEL_TOOLS (D-133). */
+    val onlyTools: Set<String>? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -107,7 +109,9 @@ object ToolRegistry {
         if (codeRuntimes.isNotEmpty()) {
             tools += RunCodeTool(codeRuntimes)
         }
-        return tools.filter { tool -> ToolGroups.isOffered(tool.name, services.enabledGroups) }
+        val offered = tools.filter { tool -> ToolGroups.isOffered(tool.name, services.enabledGroups) }
+        val onlyTools = services.onlyTools ?: return offered
+        return offered.filter { tool -> tool.name in onlyTools }
     }
 
     /**

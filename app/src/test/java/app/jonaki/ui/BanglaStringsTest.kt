@@ -16,9 +16,15 @@ class BanglaStringsTest {
     private val projectRoot: File = generateSequence(File("").absoluteFile) { folder -> folder.parentFile }
         .first { folder -> File(folder, "settings.gradle.kts").exists() }
 
-    /** values/strings*.xml of every module, apart from build output and spikes. */
+    /**
+     * values/strings*.xml of every module, apart from build output, spikes
+     * and native sources (src/main/cpp holds the llama.cpp submodule, whose
+     * Android example has strings of its own, D-133).
+     */
     private val englishFiles: List<File> = projectRoot.walkTopDown()
-        .onEnter { folder -> folder.name != "build" && folder.name != "spikes" && !folder.name.startsWith(".") }
+        .onEnter { folder ->
+            folder.name != "build" && folder.name != "spikes" && folder.name != "cpp" && !folder.name.startsWith(".")
+        }
         .filter { file -> file.parentFile.name == "values" && file.name.startsWith("strings") && file.extension == "xml" }
         .filter { file -> file.path.contains("src${File.separator}main${File.separator}res") }
         .toList()

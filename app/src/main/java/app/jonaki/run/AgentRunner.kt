@@ -69,6 +69,8 @@ import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.SearchService
+import app.jonaki.settings.ToolGroup
+import app.jonaki.settings.ToolGroups
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
 import app.jonaki.files.ModelImageLoader
@@ -118,6 +120,8 @@ class AgentRunner(
     /** The schedule tool's tasks, seen from one thread (plan M9). */
     private val taskSchedulerFor: ((threadId: String) -> TaskScheduler)? = null,
     private val mcpServers: McpServerStore,
+    /** GGUF models on the phone and their one provider (D-133). */
+    private val localModels: LocalModels,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -533,8 +537,27 @@ class AgentRunner(
         val imageMessages: ImageMessages,
     )
 
-    /** What the thread's tools need, from the user's keys and the thread's switches. */
-    private fun toolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices = ToolServices(
+    /**
+     * What the thread's tools need, from the user's keys and the thread's
+     * switches. A thread on a local model gets the smaller set (D-133).
+     */
+    private fun toolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices {
+        val enabledGroups = settings.snapshot.value.enabledToolGroups
+        val services = allToolServicesFor(thread, modelAcceptsImages, enabledGroups)
+        if (!LocalModels.isLocal(modelKeyFor(thread))) {
+            return services
+        }
+        return services.copy(
+            enabledGroups = ToolGroups.forLocalModel(enabledGroups),
+            onlyTools = ToolGroups.LOCAL_MODEL_TOOLS,
+        )
+    }
+
+    private fun allToolServicesFor(
+        thread: ThreadEntity,
+        modelAcceptsImages: Boolean,
+        enabledGroups: Set<ToolGroup>,
+    ): ToolServices = ToolServices(
         searchBackends = searchBackends(settings.snapshot.value.searchOrder),
         videoSummarizer = videoSummarizer(),
         webAccessEnabled = thread.webSearchEnabled,
@@ -547,7 +570,7 @@ class AgentRunner(
         mcpToolListFolder = mcpServers.toolListFolder,
         codeRuntimes = CodeRuntimes.forApp(context),
         pageRenderer = pageRenderer,
-        enabledGroups = settings.snapshot.value.enabledToolGroups,
+        enabledGroups = enabledGroups,
     )
 
     /**
@@ -726,7 +749,7 @@ class AgentRunner(
     private fun chatProvider(service: ChatService, routing: OpenRouterRouting, onRoutingFallback: () -> Unit): ChatProvider? {
         val secret = service.secret
         val key = if (secret == null) null else secrets.read(secret) ?: return null
-        return ChatProviders.create(service, key, httpClient, routing, onRoutingFallback)
+        return ChatProviders.create(service, key, httpClient, routing, onRoutingFallback, localModels)
     }
 
     private fun searchBackends(order: List<SearchService>): List<SearchBackend> =

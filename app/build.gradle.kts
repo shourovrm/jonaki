@@ -4,6 +4,9 @@ plugins {
 
 android {
     namespace = "app.jonaki"
+    // The NDK that builds providers:local-llama; packaging strips its .so with this NDK's tools
+    // (without it AGP looks for its own default NDK, finds none and packs the 105 MB unstripped file).
+    ndkVersion = "28.2.13676358"
     defaultConfig {
         applicationId = "app.jonaki"
         versionCode = 9
@@ -55,6 +58,7 @@ dependencies {
     implementation(project(":core:balance-api"))
     implementation(project(":providers:openai-compatible"))
     implementation(project(":providers:gemini"))
+    implementation(project(":providers:local-llama"))
     implementation(project(":search:tavily"))
     implementation(project(":search:ollama"))
     implementation(project(":search:exa"))

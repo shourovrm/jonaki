@@ -19,6 +19,12 @@ class ToolGroupsTest {
     }
 
     @Test
+    fun aLocalModelKeepsOnlyTheGroupsOfItsTools() {
+        assertEquals(setOf(ToolGroup.FILES, ToolGroup.WEB, ToolGroup.PHONE), ToolGroups.forLocalModel(ToolGroups.enabled(emptySet())))
+        assertEquals(setOf(ToolGroup.FILES, ToolGroup.PHONE), ToolGroups.forLocalModel(ToolGroups.enabled(setOf(ToolGroup.WEB))))
+    }
+
+    @Test
     fun runCodeIsOfferedWhileEitherLanguageIsOn() {
         val pythonOnly = ToolGroups.enabled(setOf(ToolGroup.JAVASCRIPT))
 

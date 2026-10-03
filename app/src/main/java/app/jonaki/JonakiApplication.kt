@@ -23,6 +23,8 @@ import app.jonaki.run.AgentRunner
 import app.jonaki.run.BackgroundModel
 import app.jonaki.run.ChatProviders
 import app.jonaki.run.CodeRuntimes
+import app.jonaki.run.LocalModelFiles
+import app.jonaki.run.LocalModels
 import app.jonaki.run.PythonSetup
 import app.jonaki.runtimes.pyodide.PyodideInstaller
 import app.jonaki.run.ThreadCompactor
@@ -63,6 +65,10 @@ class JonakiApplication : Application() {
     lateinit var catalog: ModelCatalog
         private set
     lateinit var runner: AgentRunner
+        private set
+
+    /** GGUF models on the phone, run by llama.cpp (D-133). */
+    lateinit var localModels: LocalModels
         private set
 
     /** The cheapest set-up model, for memory extraction and compaction (D-036). */
@@ -144,7 +150,8 @@ class JonakiApplication : Application() {
         incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
         skillImporter = SkillImporter(skillLibrary, SkillDownloader(httpClient))
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
-        backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog)
+        localModels = LocalModels(this)
+        backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog, localModels)
         val memoryExtractor = MemoryExtractor(
             database = database,
             backgroundModel = backgroundModel,
@@ -171,6 +178,7 @@ class JonakiApplication : Application() {
             AndroidPhone(this, runtimePermissions, visibleActivity, reminders),
             taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, runtimePermissions) },
             mcpServers = mcpServers,
+            localModels = localModels,
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         val pythonFolder = CodeRuntimes.pythonFolder(this)
@@ -202,6 +210,19 @@ class JonakiApplication : Application() {
         applicationScope.launch(Dispatchers.IO) {
             // Installs new built-in skills and updates unedited ones after an app update (D-038).
             skillLibrary.installBuiltIns(builtInSkills())
+        }
+    }
+
+    /**
+     * A loaded local model holds hundreds of megabytes to gigabytes, so it
+     * goes when Android asks for memory back; the next local turn loads it again.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (LocalModelFiles.shouldUnload(level)) {
+            applicationScope.launch {
+                localModels.unload()
+            }
         }
     }
 

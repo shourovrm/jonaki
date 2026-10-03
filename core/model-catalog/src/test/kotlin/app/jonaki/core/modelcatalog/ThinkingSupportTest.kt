@@ -28,6 +28,11 @@ class ThinkingSupportTest {
     }
 
     @Test
+    fun localModelsTakeTheSettingThroughTheirChatTemplate() {
+        assertEquals(true, ThinkingSupport.isSupported("local:Qwen3.5-2B-Q4_0.gguf", null))
+    }
+
+    @Test
     fun servicesWithoutTheSettingNeverOfferIt() {
         assertEquals(false, ThinkingSupport.isSupported("deepseek:deepseek-flash", null))
         assertEquals(false, ThinkingSupport.isSupported("glm:glm-5.3-flash", null))

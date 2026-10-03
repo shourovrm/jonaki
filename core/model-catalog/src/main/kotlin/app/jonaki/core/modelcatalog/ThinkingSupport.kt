@@ -10,6 +10,8 @@ object ThinkingSupport {
             "openrouter" -> info?.supportsThinkingLevel == true
             "gemini" -> modelId.startsWith("gemini-3") || modelId.startsWith("gemini-2.5")
             "openai" -> openAiReasoningModels.any { prefix -> modelId.startsWith(prefix) }
+            // llama.cpp passes Off to the chat template as enable_thinking=false; a model without thinking ignores it (D-133).
+            "local" -> true
             // DeepSeek, GLM, MiMo and Ollama take no level through their chat API.
             else -> false
         }

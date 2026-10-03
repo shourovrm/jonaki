@@ -36,6 +36,18 @@ enum class ToolGroup(
 object ToolGroups {
     const val RUN_CODE = "run_code"
 
+    /**
+     * What a model on the phone is offered (D-133): about 1,450 prompt
+     * tokens with the base prompt instead of 4,875, because the phone reads
+     * a prompt at about 180 tokens a second. The Settings > Tools switches
+     * and the thread's web switch still apply on top.
+     */
+    val LOCAL_MODEL_TOOLS = setOf("web_search", "web_fetch", "phone", "read_file", "read_document")
+
+    /** The switched-on groups that hold a local model's tools; delegate and run_code fall away with theirs. */
+    fun forLocalModel(enabled: Set<ToolGroup>): Set<ToolGroup> =
+        enabled.filter { group -> group.toolNames.any { toolName -> toolName in LOCAL_MODEL_TOOLS } }.toSet()
+
     /** Every group is on until the user switches it off, so new groups start on too. */
     fun enabled(disabled: Set<ToolGroup>): Set<ToolGroup> =
         ToolGroup.entries.filter { group -> !group.canSwitchOff || group !in disabled }.toSet()

@@ -1680,4 +1680,24 @@ thread; context 8,192 tokens; 4 threads. Why: user ruling 2026-10-03
 search"). Measured on the A059 with Qwen3.5-0.8B Q4_0: 175 to 197 prompt
 tokens/s and 22 generated tokens/s on 4 threads (docs/research/
 local-models-2026-10-03.md). Limit: the APK grows by about 6 MB of native
-code. Outcome: pending.
+code. Built 2026-10-03, not yet run on a device: llama.cpp is a shallow git
+submodule (`providers/local-llama/src/main/cpp/llama.cpp`, tag b11366,
+commit 2923cf286), so Jonaki's history holds only the pin; a fresh clone
+needs `git submodule update --init`. CMake builds llama, ggml's CPU backend
+for one fixed level (armv8.2-a+dotprod+fp16+i8mm, the features of the
+armv8.6 variant the A059 used; the app checks /proc/cpuinfo before loading),
+no OpenMP, no KleidiAI, and llama.cpp's common library, statically into one
+`libjonaki_llama.so`: 6,321,560 bytes stripped (2,560,824 gzipped), LOAD
+segments aligned to 0x4000 (`llvm-readelf -l`), stored uncompressed and
+16 KB-aligned in the APK (`zipalign -c -P 16`). Release APK 6,769,683 →
+13,110,369 bytes. Prefix reuse: each turn keeps the longest common token
+prefix with the previous one; Qwen3.5's recurrent layers cannot be rolled
+back, so the JNI layer saves up to three state checkpoints (llama-server's
+method) at the start of the generation prompt and 4 tokens before the end,
+and a turn that diverges before every checkpoint processes the whole
+prompt again. Local models appear in the model menu as "local:<file name>"
+for each .gguf in `noBackupFilesDir/models`; Thinking Off sends
+enable_thinking=false; the small tool set comes from the Files, Web and
+Phone groups narrowed to the five tools, and only the Settings > Tools
+switches and the thread's web switch change it (no per-thread tool choice
+exists, D-091). Outcome: pending.

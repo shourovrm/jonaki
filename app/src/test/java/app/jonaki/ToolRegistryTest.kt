@@ -221,6 +221,26 @@ class ToolRegistryTest {
         }
     }
 
+    private fun forLocalModel(services: ToolServices) = services.copy(
+        enabledGroups = ToolGroups.forLocalModel(services.enabledGroups),
+        onlyTools = ToolGroups.LOCAL_MODEL_TOOLS,
+    )
+
+    @Test
+    fun aLocalModelGetsTheSmallDefaultSet() {
+        val local = forLocalModel(everything)
+        assertEquals(setOf("web_search", "web_fetch", "phone", "read_file", "read_document"), namesFor(local).toSet())
+        assertEquals(emptyList<String>(), ToolRegistry.delegateTools(launcher, local.enabledGroups).map { tool -> tool.name })
+    }
+
+    @Test
+    fun aLocalModelStillFollowsTheSwitches() {
+        val webOffInSettings = forLocalModel(withGroupsOff(ToolGroup.WEB, ToolGroup.PHONE))
+        assertEquals(setOf("read_file", "read_document"), namesFor(webOffInSettings).toSet())
+        val webOffInThread = forLocalModel(everything.copy(webAccessEnabled = false))
+        assertEquals(setOf("phone", "read_file", "read_document"), namesFor(webOffInThread).toSet())
+    }
+
     @Test
     fun filesCannotBeSwitchedOff() {
         val names = namesFor(withGroupsOff(ToolGroup.FILES)).toSet()
