@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_permissions_header">অনুমতি</string>
+    <string name="settings_permissions_always_on_header">সবসময় চালু</string>
+    <string name="settings_permissions_status_allowed">দেওয়া আছে</string>
+    <string name="settings_permissions_status_not_asked">চাওয়া হয়নি</string>
+    <string name="settings_permissions_status_denied">দেওয়া হয়নি</string>
+    <string name="settings_permissions_status_selected_photos">বাছাই করা ছবি</string>
+    <string name="settings_permissions_status_off">বন্ধ</string>
+    <string name="settings_permissions_action_ask">অনুমতি দিন</string>
+    <string name="settings_permissions_action_open_settings">সেটিংস খুলুন</string>
+    <string name="settings_permissions_notifications">নোটিফিকেশন</string>
+    <string name="settings_permissions_notifications_purpose">রিমাইন্ডার, ফলাফল ও চলমান কাজ</string>
+    <string name="settings_permissions_calendar">ক্যালেন্ডার</string>
+    <string name="settings_permissions_calendar_purpose">ইভেন্ট দেখা ও যোগ করা</string>
+    <string name="settings_permissions_photos">ছবি</string>
+    <string name="settings_permissions_photos_purpose">গ্যালারি থেকে ছবি যুক্ত করা</string>
+    <string name="settings_permissions_alarms">অ্যালার্ম ও রিমাইন্ডার</string>
+    <string name="settings_permissions_alarms_purpose">ঠিক মিনিটে রিমাইন্ডার</string>
+    <string name="settings_permissions_internet">ইন্টারনেট</string>
+    <string name="settings_permissions_internet_purpose">মডেল, ওয়েব সার্চ ও MCP সার্ভার</string>
+    <string name="settings_permissions_network_state">নেটওয়ার্কের অবস্থা</string>
+    <string name="settings_permissions_network_state_purpose">কাজের আগে সংযোগের অপেক্ষা</string>
+    <string name="settings_permissions_background">ব্যাকগ্রাউন্ডে চলা</string>
+    <string name="settings_permissions_background_purpose">বন্ধ থাকলেও উত্তর চলে</string>
+    <string name="settings_permissions_boot">ফোন চালুর সময় শুরু</string>
+    <string name="settings_permissions_boot_purpose">রিস্টার্টের পর রিমাইন্ডার আবার সেট</string>
+    <string name="settings_permissions_keep_awake">জাগিয়ে রাখা</string>
+    <string name="settings_permissions_keep_awake_purpose">নির্ধারিত কাজ শেষ করা</string>
+    <string name="settings_about_header">অ্যাপ সম্পর্কে</string>
+    <string name="settings_about_version">ভার্সন %1$s</string>
+    <string name="settings_about_developer">তৈরি করেছেন Riad Mashrub Shourov</string>
+    <string name="settings_about_github">GitHub</string>
+</resources>

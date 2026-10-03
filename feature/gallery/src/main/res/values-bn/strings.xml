@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gallery_recent">সাম্প্রতিক</string>
+    <string name="gallery_collections">অ্যালবাম</string>
+    <string name="gallery_add">যোগ করুন</string>
+    <string name="gallery_add_count">%1$dটি যোগ করুন</string>
+    <string name="gallery_no_photos">কোনো ছবি নেই</string>
+    <plurals name="gallery_album_count">
+        <item quantity="one">%1$dটি ছবি</item>
+        <item quantity="other">%1$dটি ছবি</item>
+    </plurals>
+    <string name="gallery_album_no_name">নামহীন</string>
+    <string name="gallery_back">ফিরে যান</string>
+    <string name="gallery_photo">ছবি</string>
+    <string name="gallery_some_access">শুধু অনুমতি দেওয়া ছবি</string>
+    <string name="gallery_select_more">আরও বাছুন</string>
+    <string name="gallery_open_settings">সেটিংস</string>
+    <string name="gallery_selected_number">বাছাই %1$d</string>
+</resources>

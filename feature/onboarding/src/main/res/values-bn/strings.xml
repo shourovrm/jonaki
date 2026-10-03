@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_tools_title">টুল বাছুন</string>
+    <string name="onboarding_tools_help">বন্ধ টুল মডেলকে দেওয়া হয় না। সেটিংস > টুল থেকে বদলাতে পারবেন।</string>
+    <string name="onboarding_continue">চালিয়ে যান</string>
+</resources>

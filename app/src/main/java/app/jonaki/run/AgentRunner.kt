@@ -1,6 +1,8 @@
 package app.jonaki.run
 
+import app.jonaki.R
 import app.jonaki.core.providerapi.ThinkingLevel
+
 import app.jonaki.core.modelcatalog.ThinkingSupport
 import app.jonaki.settings.ThinkingLevels
 import android.content.Context
@@ -410,7 +412,7 @@ class AgentRunner(
         val modelKey = modelKeyFor(thread)
         val service = modelKey?.let { ChatService.byKey(ModelKey.serviceOf(it)) }
         if (modelKey == null || service == null) {
-            saveError(threadId, NO_MODEL_ERROR)
+            saveError(threadId, context.getString(R.string.error_no_model))
             return null
         }
         val session = RunSession(
@@ -428,7 +430,7 @@ class AgentRunner(
         val routing = snapshot.routing.effectiveFor(modelKey)
         val provider = chatProvider(service, routing, onRoutingFallback = session::markRoutingFallback)
         if (provider == null) {
-            saveError(threadId, "No ${service.displayName} API key. Add one in Settings.")
+            saveError(threadId, context.getString(R.string.error_no_api_key, service.displayName))
             return null
         }
         // Unknown models count as not taking images (D-049).
@@ -747,7 +749,6 @@ class AgentRunner(
 
         /** A parent's answer to a subagent is a few sentences. */
         const val PARENT_ANSWER_TOKENS = 1_000
-        const val NO_MODEL_ERROR = "No model. Add one in Settings."
     }
 }
 

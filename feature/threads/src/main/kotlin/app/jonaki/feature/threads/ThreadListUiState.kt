@@ -81,25 +81,25 @@ sealed interface ThreadTimeLabel {
     data class Text(val text: String) : ThreadTimeLabel
 
     companion object {
-        private val clock = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH)
-        private val weekday = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH)
-        private val dayMonth = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
-        private val dayMonthYear = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH)
-
-        fun of(updatedAtMillis: Long, nowMillis: Long, zone: ZoneId): ThreadTimeLabel {
+        /**
+         * Weekday and month names follow the app's [locale] (M11); digits stay
+         * ASCII because java.time's default DecimalStyle does not localise them.
+         */
+        fun of(updatedAtMillis: Long, nowMillis: Long, zone: ZoneId, locale: Locale = Locale.ENGLISH): ThreadTimeLabel {
             if (nowMillis - updatedAtMillis in 0 until 60_000) {
                 return Now
             }
             val updated = Instant.ofEpochMilli(updatedAtMillis).atZone(zone)
             val now = Instant.ofEpochMilli(nowMillis).atZone(zone)
             val daysAgo = ChronoUnit.DAYS.between(updated.toLocalDate(), now.toLocalDate())
-            val formatter = when {
-                daysAgo == 0L -> clock
-                daysAgo in 1..6 -> weekday
-                updated.year == now.year -> dayMonth
-                else -> dayMonthYear
+            val pattern = when {
+                daysAgo == 0L -> "HH:mm"
+                daysAgo in 1..6 -> "EEE"
+                updated.year == now.year -> "d MMM"
+                else -> "d MMM yyyy"
             }
-            return Text(formatter.format(updated))
+            return Text(DateTimeFormatter.ofPattern(pattern, locale).format(updated))
+
         }
     }
 }

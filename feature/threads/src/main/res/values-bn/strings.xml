@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="threads_title">জোনাকি</string>
+    <string name="threads_settings">সেটিংস</string>
+    <string name="threads_search">থ্রেড খুঁজুন</string>
+    <string name="threads_clear_search">খোঁজা মুছুন</string>
+    <string name="threads_new">নতুন থ্রেড</string>
+    <string name="threads_now">এখন</string>
+    <string name="threads_state_running">চলছে · ধাপ %1$d</string>
+    <string name="threads_state_waiting">অনুমতি লাগবে</string>
+    <string name="threads_state_failed">ব্যর্থ</string>
+    <string name="threads_empty_title">এখনো কোনো থ্রেড নেই</string>
+    <string name="threads_no_matches">কিছু মেলেনি</string>
+    <string name="threads_month_cost">এই মাসে %1$s</string>
+    <string name="threads_rename">নাম বদলান</string>
+    <string name="threads_rename_title">থ্রেডের নাম বদলান</string>
+    <string name="threads_delete">মুছুন</string>
+    <string name="threads_delete_title">থ্রেড মুছবেন?</string>
+    <string name="threads_save">সেভ</string>
+    <string name="threads_cancel">বাতিল</string>
+    <string name="threads_new_incognito">নতুন ইনকগনিটো চ্যাট</string>
+    <string name="threads_incognito">ইনকগনিটো</string>
+    <string name="threads_all">সব</string>
+    <string name="threads_project_chip">প্রজেক্ট</string>
+    <string name="threads_project_more">প্রজেক্টের অপশন</string>
+    <string name="threads_project_new_title">নতুন প্রজেক্ট</string>
+    <string name="threads_project_edit">প্রজেক্ট এডিট</string>
+    <string name="threads_project_delete">প্রজেক্ট মুছুন</string>
+    <string name="threads_project_delete_title">প্রজেক্ট মুছবেন?</string>
+    <string name="threads_project_delete_body">এর থ্রেডগুলো থাকবে, প্রজেক্ট ছাড়া।</string>
+    <string name="threads_project_name">নাম</string>
+    <string name="threads_project_model">নতুন থ্রেডের মডেল</string>
+    <string name="threads_project_model_default">ডিফল্ট মডেল</string>
+    <string name="threads_project_instructions">নির্দেশনা</string>
+    <string name="threads_project_empty">এই প্রজেক্টে কোনো থ্রেড নেই</string>
+    <string name="threads_project_preview">%1$s · %2$s</string>
+    <string name="threads_move">প্রজেক্টে সরান</string>
+    <string name="threads_no_project">প্রজেক্ট নেই</string>
+    <string name="share_target_title">থ্রেডে যোগ করুন</string>
+    <string name="share_target_untitled">শিরোনামহীন</string>
+    <plurals name="share_target_files">
+        <item quantity="one">%1$dটি ফাইল</item>
+        <item quantity="other">%1$dটি ফাইল</item>
+    </plurals>
+    <string name="share_target_text">লেখা</string>
+    <string name="threads_group_today">আজ</string>
+    <string name="threads_group_yesterday">গতকাল</string>
+    <string name="threads_group_week">গত 7 দিন</string>
+    <string name="threads_group_older">আরও আগে</string>
+</resources>

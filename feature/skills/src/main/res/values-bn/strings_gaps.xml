@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="skills_discard_title">পরিবর্তন বাদ দেবেন?</string>
+    <string name="skills_discard">বাদ দিন</string>
+    <string name="skills_keep_editing">এডিট চালিয়ে যান</string>
+</resources>

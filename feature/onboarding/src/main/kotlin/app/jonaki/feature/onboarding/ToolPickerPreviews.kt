@@ -41,3 +41,11 @@ private fun ToolPickerPythonMissingPreview() {
         ToolPickerScreen(rows, onSwitch = { _, _ -> }, onDownload = {}, onCancelDownload = {}, onContinue = {})
     }
 }
+
+@Preview(name = "Tool picker, Bangla", locale = "bn", widthDp = 360, heightDp = 1400, fontScale = 1.3f)
+@Composable
+private fun ToolPickerBanglaPreview() {
+    JonakiTheme {
+        ToolPickerScreen(sampleRows, onSwitch = { _, _ -> }, onDownload = {}, onCancelDownload = {}, onContinue = {})
+    }
+}

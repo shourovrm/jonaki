@@ -1429,3 +1429,25 @@ subheading, chose "Allow" over "Ask", dropped a camera row (Jonaki holds
 no camera permission) and dropped a description line in About. Limit: a
 permission refused on a build before this record shows "Not asked" until
 Jonaki asks again. Outcome: pending.
+
+## D-125 · 2026-10-03 · Bangla and English interface — proposed
+Jonaki shows Bangla when the phone's language is Bangla and English
+otherwise; Android 13 and later also offer the choice per app (Settings >
+Apps > Jonaki > Language) through `android:localeConfig` and
+res/xml/locales_config.xml (en, bn). No AppCompat, no in-app picker, no new
+dependency or permission. Every values/strings*.xml has a values-bn twin
+with the same keys (515 strings and plurals), written in everyday
+Bangladeshi Bangla: "সেটিংস", "থ্রেড", "মেমরি", no "অনুগ্রহ করে". Kept in
+English letters: model and service names, API key, MCP, JavaScript, Python,
+GitHub, OpenRouter, YouTube, Pyodide, URL, HTML, numpy and pandas, and the
+developer's name. Digits stay ASCII; the thread list's weekday and month
+follow the locale ("মঙ্গল", "24 সেপ"). Stays English on purpose: everything
+the model reads (system prompt, tool results, notes to the model, the
+scheduled-task message), technical failure reasons passed through from
+skill import and Python setup, and the "s" of seconds. The launcher label
+becomes "জোনাকি" in Bangla. Moved out of code: approval and step lines
+(StepDetail.Words), the no-model and no-key errors, "Ollama on this
+network". BanglaStringsTest fails when a key, a placeholder or a plural's
+"other" is missing in values-bn. Limit: the Bangla was not reviewed by a
+second agent (the worker could not spawn one) and the bn previews were
+compiled, not rendered; the user reviews both. Outcome: pending.

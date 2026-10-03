@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_menu_style">স্টাইল ও পারসোনা</string>
+    <string name="chat_style_title">স্টাইল ও পারসোনা</string>
+    <string name="chat_style_answer">উত্তরের স্টাইল</string>
+    <string name="chat_style_persona">পারসোনা</string>
+    <string name="chat_style_persona_none">নেই</string>
+    <string name="chat_style_no_personas">কোনো পারসোনা নেই। সেটিংসে যোগ করুন।</string>
+    <string name="chat_style_instructions">এই থ্রেডের নির্দেশনা</string>
+    <string name="chat_style_save">সেভ</string>
+</resources>

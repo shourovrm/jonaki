@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -115,6 +116,7 @@ fun ThreadListScreen(
     val visibleThreads = remember(filteredThreads, state.searchQuery) { filterThreads(filteredThreads, state.searchQuery) }
     val zone = remember { ZoneId.systemDefault() }
     val entries = remember(visibleThreads, nowMillis, zone) { withGroupLabels(visibleThreads, nowMillis, zone) }
+    val locale = LocalConfiguration.current.locales[0]
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -209,7 +211,7 @@ fun ThreadListScreen(
                                 val thread = entry.row
                                 ThreadRowView(
                                     thread = thread,
-                                    timeLabel = ThreadTimeLabel.of(thread.updatedAtMillis, nowMillis, zone),
+                                    timeLabel = ThreadTimeLabel.of(thread.updatedAtMillis, nowMillis, zone, locale),
                                     onThreadClick = onThreadClick,
                                     onRename = onRename,
                                     onDeleteRequest = { threadToDelete = thread },
