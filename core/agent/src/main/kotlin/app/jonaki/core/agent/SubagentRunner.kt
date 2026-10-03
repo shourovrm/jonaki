@@ -12,9 +12,13 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.time.ZonedDateTime
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -52,6 +56,20 @@ class SubagentRunner(
         get() = subagentModels.scoped
 
     override val extraToolNames: List<String> = givableTools.map { tool -> tool.name }.sorted()
+
+    /** The work of each running subagent by its id, so that the user can stop one alone (D-126). */
+    private val runningWork = ConcurrentHashMap<String, Job>()
+
+    /**
+     * Stops one subagent and lets the others of its call go on. It returns
+     * what it has, as at the thread's Stop. False when no subagent with
+     * [subagentId] is running in this runner.
+     */
+    fun stop(subagentId: String): Boolean {
+        val work = runningWork[subagentId] ?: return false
+        work.cancel()
+        return true
+    }
 
     override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> {
         // The delegate tool refuses more; this guards any other caller of the launcher.
@@ -95,8 +113,10 @@ class SubagentRunner(
         val outcome = try {
             recorder.subagentStarted(SubagentStart(subagentId, group.parentToolCallId, index, type.name, task.task, model.key))
             val loop = buildLoop(subagentId, label, type, task, model, group, context, progress)
-            withTimeoutOrNull(limits.timeLimit) { loop.run(PromptBuilder("").userMessageWithContext(task.task, now())) }
-                ?: progress.stoppedEarly(SubagentStop.TIME_LIMIT)
+            runStoppable(subagentId, progress) {
+                withTimeoutOrNull(limits.timeLimit) { loop.run(PromptBuilder("").userMessageWithContext(task.task, now())) }
+                    ?: progress.stoppedEarly(SubagentStop.TIME_LIMIT)
+            }
         } catch (cancellation: CancellationException) {
             // Stop: the card must not stay "running"; NonCancellable lets the save finish.
             withContext(NonCancellable) { finish(subagentId, label, progress.stoppedEarly(SubagentStop.STOPPED), group, context) }
@@ -107,6 +127,29 @@ class SubagentRunner(
         // Saving waits for a lock, which a Stop at that moment must not interrupt.
         val answerText = withContext(NonCancellable) { finish(subagentId, label, outcome, group, context) }
         return SubagentReport(label, answerText)
+    }
+
+    /**
+     * Runs [work] as its own job, which [stop] can cancel without touching
+     * the other subagents or the thread's run. When the whole run is stopped
+     * the cancellation goes on up, so the caller saves it as before.
+     */
+    private suspend fun runStoppable(
+        subagentId: String,
+        progress: SubagentProgress,
+        work: suspend () -> SubagentOutcome,
+    ): SubagentOutcome = coroutineScope {
+        val job = async { work() }
+        runningWork[subagentId] = job
+        try {
+            job.await()
+        } catch (cancellation: CancellationException) {
+            // Still active here means only this subagent was stopped.
+            ensureActive()
+            progress.stoppedEarly(SubagentStop.STOPPED)
+        } finally {
+            runningWork.remove(subagentId)
+        }
     }
 
     /** Caps the answer, saves the subagent's end, and returns what goes back to the thread's agent. */
@@ -173,17 +216,20 @@ class SubagentRunner(
         )
     }
 
-    /**
-     * A short folder name that stays the same for one call. Call ids come
-     * from the provider, and Gemini 3's carry a thought signature of
-     * hundreds of characters, over the file system's 255-byte name limit.
-     */
-    private fun folderNameFor(callId: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(callId.toByteArray())
-        return digest.take(FOLDER_NAME_BYTES).joinToString("") { byte -> "%02x".format(byte) }
-    }
-
     companion object {
+        /**
+         * A short folder name that stays the same for one call. Call ids come
+         * from the provider, and Gemini 3's carry a thought signature of
+         * hundreds of characters, over the file system's 255-byte name limit.
+         */
+        private fun folderNameFor(callId: String): String {
+            val digest = MessageDigest.getInstance("SHA-256").digest(callId.toByteArray())
+            return digest.take(FOLDER_NAME_BYTES).joinToString("") { byte -> "%02x".format(byte) }
+        }
+
+        /** The notes board of the delegate call [callId], relative to the thread folder (D-060). */
+        fun notesBoardPath(callId: String): String = "$DELEGATIONS_FOLDER/${folderNameFor(callId)}/notes.md"
+
         /** The built-in types as the delegate tool lists them. */
         val AGENT_TYPES: List<SubagentTypeInfo> = AgentTypes.ALL.map { type -> SubagentTypeInfo(type.name, type.description) }
 

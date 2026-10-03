@@ -48,6 +48,7 @@ class SubagentRunnerTest {
         acceptsImages: Boolean = false,
         pricePerCall: Double? = 0.01,
         asker: ParentAsker = ParentAsker { question, _, _ -> ParentAnswer.Answered("Answer to $question") },
+        tools: List<app.jonaki.core.toolapi.Tool> = threadTools,
     ): SubagentRunner {
         var nextId = 0
         val models = object : SubagentModels {
@@ -68,7 +69,7 @@ class SubagentRunnerTest {
             }
         }
         return SubagentRunner(
-            threadTools = threadTools,
+            threadTools = tools,
             broker = PermissionBroker(approver),
             subagentModels = models,
             recorder = recorder,
@@ -306,6 +307,8 @@ class SubagentRunnerTest {
         val folder = java.io.File(threadFolder, "work/delegations").listFiles()!!.single()
         val notes = java.io.File(folder, "notes.md").readText()
         assertTrue(notes.contains("**researcher 1**: Review site: https://example.com"))
+        // The chat finds the same board from the delegate call's id alone.
+        assertEquals(java.io.File(folder, "notes.md"), java.io.File(threadFolder, SubagentRunner.notesBoardPath("delegate-1")))
         assertTrue(first.requests.first().tools.any { it.name == "notes" })
         assertEquals(listOf("delegate-1", "delegate-1"), recorder.starts.map { it.parentToolCallId })
     }
@@ -440,6 +443,47 @@ class SubagentRunnerTest {
             .launch(listOf(SubagentTask("researcher", "Search")), context)
 
         assertEquals(SubagentStop.COMPLETED, recorder.outcomes.single().stop)
+    }
+
+    @Test
+    fun stoppingOneSubagentLeavesTheOthersRunning() = runBlocking {
+        val searchStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val slowSearch = FakeTool("web_search") {
+            searchStarted.complete(Unit)
+            delay(Long.MAX_VALUE)
+            ToolOutput.success("never")
+        }
+        val stuck = ScriptedProvider(
+            flowOf(
+                StreamEvent.TextDelta("Looking at Ryans."),
+                StreamEvent.ToolCallReady(call("c1", "web_search", "query" to "ryans laptop")),
+                StreamEvent.Finished(FinishReason.TOOL_CALLS, null),
+            ),
+        )
+        val healthy = ScriptedProvider(usageTurn(call("c1", "read_file", "path" to "a.md")), textTurn("Daraz done."))
+        val subagents = runner(mapOf("researcher" to stuck, "scout" to healthy), tools = listOf(slowSearch, readFile))
+
+        val launched = async {
+            subagents.launch(listOf(SubagentTask("researcher", "Ryans"), SubagentTask("scout", "Daraz")), context)
+        }
+        // s0 is the researcher, stopped while its search hangs.
+        searchStarted.await()
+        assertTrue(subagents.stop("s0"))
+        val reports = launched.await()
+
+        assertTrue(reports[0].text.contains("Looking at Ryans."))
+        assertTrue(reports[0].text.contains("Stopped by the user."))
+        assertTrue(reports[1].text.startsWith("Daraz done."))
+        assertEquals(setOf(SubagentStop.STOPPED, SubagentStop.COMPLETED), recorder.outcomes.map { it.stop }.toSet())
+    }
+
+    @Test
+    fun aSubagentThatHasEndedCannotBeStopped() = runBlocking {
+        val provider = ScriptedProvider(textTurn("Done."))
+        val subagents = runner(mapOf("scout" to provider))
+        subagents.launch(listOf(SubagentTask("scout", "Find")), context)
+
+        assertFalse(subagents.stop("s0"))
     }
 
     @Test
