@@ -117,12 +117,19 @@ object ToolRegistry {
     /**
      * The delegate tool joins last, because its subagents get the thread's
      * other tools (M7); a subagent never gets delegate itself. Empty while
-     * Subagents is switched off.
+     * Subagents is switched off, and for a thread whose [ToolServices.onlyTools]
+     * leaves it out (a local model's, D-133).
      */
-    fun delegateTools(launcher: SubagentLauncher, enabledGroups: Set<ToolGroup>): List<Tool> {
-        if (ToolGroup.SUBAGENTS !in enabledGroups) {
+    fun delegateTools(launcher: SubagentLauncher, services: ToolServices): List<Tool> {
+        if (ToolGroup.SUBAGENTS !in services.enabledGroups) {
+            return emptyList()
+        }
+        val onlyTools = services.onlyTools
+        if (onlyTools != null && DELEGATE !in onlyTools) {
             return emptyList()
         }
         return listOf(DelegateTool(launcher))
     }
+
+    private const val DELEGATE = "delegate"
 }

@@ -10,6 +10,7 @@ import app.jonaki.core.toolapi.SubagentReport
 import app.jonaki.core.toolapi.SubagentTask
 import app.jonaki.core.toolapi.SubagentTypeInfo
 import app.jonaki.core.toolapi.ToolContext
+import app.jonaki.settings.LocalModelToolList
 import app.jonaki.settings.ToolGroup
 import app.jonaki.settings.ToolGroups
 import app.jonaki.core.searchapi.SearchBackend
@@ -204,7 +205,7 @@ class ToolRegistryTest {
 
     @Test
     fun everyToolBelongsToAGroup() {
-        val names = namesFor(everything) + ToolRegistry.delegateTools(launcher, everything.enabledGroups).map { tool -> tool.name }
+        val names = namesFor(everything) + ToolRegistry.delegateTools(launcher, everything).map { tool -> tool.name }
         val grouped = ToolGroup.entries.flatMap { group -> group.toolNames }.toSet()
 
         assertEquals(emptyList<String>(), names.filter { name -> name !in grouped })
@@ -221,24 +222,43 @@ class ToolRegistryTest {
         }
     }
 
-    private fun forLocalModel(services: ToolServices) = services.copy(
-        enabledGroups = ToolGroups.forLocalModel(services.enabledGroups),
-        onlyTools = ToolGroups.LOCAL_MODEL_TOOLS,
-    )
+    /** As AgentRunner builds a local model's thread: the saved list, without what is never offered. */
+    private fun forLocalModel(services: ToolServices, saved: Set<String> = LocalModelToolList.DEFAULT) =
+        services.copy(onlyTools = LocalModelToolList.offered(saved))
 
-    @Test
-    fun aLocalModelGetsTheSmallDefaultSet() {
-        val local = forLocalModel(everything)
-        assertEquals(setOf("web_search", "web_fetch", "phone", "read_file", "read_document"), namesFor(local).toSet())
-        assertEquals(emptyList<String>(), ToolRegistry.delegateTools(launcher, local.enabledGroups).map { tool -> tool.name })
+    private fun localNames(services: ToolServices): Set<String> {
+        val delegate = ToolRegistry.delegateTools(launcher, services).map { tool -> tool.name }
+        return (namesFor(services) + delegate).toSet()
     }
 
     @Test
-    fun aLocalModelStillFollowsTheSwitches() {
-        val webOffInSettings = forLocalModel(withGroupsOff(ToolGroup.WEB, ToolGroup.PHONE))
-        assertEquals(setOf("read_file", "read_document"), namesFor(webOffInSettings).toSet())
+    fun aLocalModelGetsTheSmallDefaultSet() {
+        assertEquals(setOf("web_search", "web_fetch", "phone", "read_file", "read_document"), localNames(forLocalModel(everything)))
+    }
+
+    @Test
+    fun aLocalModelGetsTheOptionalToolsTheUserAdds() {
+        val saved = LocalModelToolList.DEFAULT + "memory" + "edit_file"
+        assertEquals(
+            setOf("web_search", "web_fetch", "phone", "read_file", "read_document", "memory", "edit_file"),
+            localNames(forLocalModel(everything, saved)),
+        )
+    }
+
+    @Test
+    fun aLocalModelNeverGetsDelegateRunCodeViewImageOrArtifact() {
+        val mcpServer = McpServer(id = "a", name = "deepwiki", url = "https://mcp.deepwiki.com/mcp")
+        val withMcp = everything.copy(mcpServers = listOf(mcpServer), mcpToolListFolder = File("unused"))
+        val saved = LocalModelToolList.DEFAULT + LocalModelToolList.NEVER
+        assertEquals(LocalModelToolList.DEFAULT, localNames(forLocalModel(withMcp, saved)))
+    }
+
+    @Test
+    fun aLocalModelStillFollowsTheGroupSwitchesAndTheThreadsWebSwitch() {
+        val webAndPhoneOff = forLocalModel(withGroupsOff(ToolGroup.WEB, ToolGroup.PHONE))
+        assertEquals(setOf("read_file", "read_document"), localNames(webAndPhoneOff))
         val webOffInThread = forLocalModel(everything.copy(webAccessEnabled = false))
-        assertEquals(setOf("phone", "read_file", "read_document"), namesFor(webOffInThread).toSet())
+        assertEquals(setOf("phone", "read_file", "read_document"), localNames(webOffInThread))
     }
 
     @Test
@@ -266,8 +286,8 @@ class ToolRegistryTest {
 
     @Test
     fun subagentsOffLeavesDelegateOut() {
-        val groups = ToolGroups.enabled(setOf(ToolGroup.SUBAGENTS))
+        val subagentsOff = withGroupsOff(ToolGroup.SUBAGENTS)
 
-        assertEquals(emptyList<String>(), ToolRegistry.delegateTools(launcher, groups).map { tool -> tool.name })
+        assertEquals(emptyList<String>(), ToolRegistry.delegateTools(launcher, subagentsOff).map { tool -> tool.name })
     }
 }

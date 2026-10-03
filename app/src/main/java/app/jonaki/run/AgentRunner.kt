@@ -56,6 +56,7 @@ import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.ThreadEntity
+import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.providers.gemini.GeminiProvider
 import app.jonaki.providers.gemini.VideoSummaryOutcome
@@ -68,9 +69,8 @@ import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.McpServerStore
+import app.jonaki.settings.LocalModelToolList
 import app.jonaki.settings.SearchService
-import app.jonaki.settings.ToolGroup
-import app.jonaki.settings.ToolGroups
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
 import app.jonaki.files.ModelImageLoader
@@ -495,7 +495,7 @@ class AgentRunner(
             now = ZonedDateTime::now,
         )
         subagentRunners[threadId] = subagents
-        val tools = threadTools + ToolRegistry.delegateTools(subagents, toolServices.enabledGroups)
+        val tools = threadTools + ToolRegistry.delegateTools(subagents, toolServices)
         val systemPrompt = promptBuilder.systemPrompt(
             activeTools = tools,
             memorySection = memorySection,
@@ -542,22 +542,15 @@ class AgentRunner(
      * switches. A thread on a local model gets the smaller set (D-133).
      */
     private fun toolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices {
-        val enabledGroups = settings.snapshot.value.enabledToolGroups
-        val services = allToolServicesFor(thread, modelAcceptsImages, enabledGroups)
+        val services = allToolServicesFor(thread, modelAcceptsImages)
         if (!LocalModelRuntime.isLocal(modelKeyFor(thread))) {
             return services
         }
-        return services.copy(
-            enabledGroups = ToolGroups.forLocalModel(enabledGroups),
-            onlyTools = ToolGroups.LOCAL_MODEL_TOOLS,
-        )
+        // Fixed for the whole run, so the system prompt stays the same and llama.cpp can reuse its cache.
+        return services.copy(onlyTools = LocalModelToolList.offered(settings.snapshot.value.localModelTools))
     }
 
-    private fun allToolServicesFor(
-        thread: ThreadEntity,
-        modelAcceptsImages: Boolean,
-        enabledGroups: Set<ToolGroup>,
-    ): ToolServices = ToolServices(
+    private fun allToolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices = ToolServices(
         searchBackends = searchBackends(settings.snapshot.value.searchOrder),
         videoSummarizer = videoSummarizer(),
         webAccessEnabled = thread.webSearchEnabled,
@@ -570,8 +563,28 @@ class AgentRunner(
         mcpToolListFolder = mcpServers.toolListFolder,
         codeRuntimes = CodeRuntimes.forApp(context),
         pageRenderer = pageRenderer,
-        enabledGroups = enabledGroups,
+        enabledGroups = settings.snapshot.value.enabledToolGroups,
     )
+
+    /**
+     * The tools a local model could be offered, built with the app's keys
+     * and services only to measure their prompt text for the Local models
+     * page (D-133); none of them runs. Reads saved keys, so call it off the
+     * main thread.
+     */
+    fun toolsForLocalPromptCosts(): List<Tool> {
+        val services = ToolServices(
+            searchBackends = searchBackends(settings.snapshot.value.searchOrder),
+            videoSummarizer = videoSummarizer(),
+            webAccessEnabled = true,
+            memoryStore = RoomMemoryStore(database, NO_THREAD, System::currentTimeMillis),
+            fileDestinations = fileDestinations,
+            phone = phone,
+            taskScheduler = taskSchedulerFor?.invoke(NO_THREAD),
+            onlyTools = LocalModelToolList.CHOOSABLE.toSet(),
+        )
+        return ToolRegistry.tools(services)
+    }
 
     /**
      * The pieces the thread's next request would send, for the context
@@ -583,7 +596,7 @@ class AgentRunner(
         val modelKey = modelKeyFor(thread)
         val modelAcceptsImages = modelKey?.let { key -> catalog.find(key)?.acceptsImages } == true
         val toolServices = toolServicesFor(thread, modelAcceptsImages)
-        val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents, toolServices.enabledGroups)
+        val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents, toolServices)
         // An incognito thread sends no Memory section (D-111).
         val facts = if (ThreadMemory.isOn(thread)) promptFactsOf(threadId) else emptyList()
         val memory = MemorySection.build(facts)
@@ -786,6 +799,9 @@ class AgentRunner(
 
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
+
+        /** The thread id of tools built only for their prompt text; it matches no thread. */
+        const val NO_THREAD = ""
 
         /** A parent's answer to a subagent is a few sentences. */
         const val PARENT_ANSWER_TOKENS = 1_000

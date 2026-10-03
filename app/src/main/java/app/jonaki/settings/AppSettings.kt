@@ -55,6 +55,8 @@ data class SettingsSnapshot(
      * D-127).
      */
     val refusedPermissions: Set<String> = emptySet(),
+    /** Tool names a model on the phone is offered (D-133). */
+    val localModelTools: Set<String> = LocalModelToolList.DEFAULT,
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -113,6 +115,8 @@ class AppSettings(
             disabledToolGroups = ToolGroups.disabledFromText(preferences.getString(DISABLED_TOOL_GROUPS, "").orEmpty()),
             toolPickerSeenVersion = preferences.getInt(TOOL_PICKER_SEEN_VERSION, 0),
             refusedPermissions = preferences.getStringSet(REFUSED_PERMISSIONS, emptySet()).orEmpty().toSet(),
+            // Missing means never chosen, so the defaults; a saved empty set stays empty.
+            localModelTools = preferences.getStringSet(LOCAL_MODEL_TOOLS, null)?.toSet() ?: LocalModelToolList.DEFAULT,
         )
     }
 
@@ -165,6 +169,7 @@ class AppSettings(
         editor.putString(DISABLED_TOOL_GROUPS, ToolGroups.disabledToText(snapshot.disabledToolGroups))
         editor.putInt(TOOL_PICKER_SEEN_VERSION, snapshot.toolPickerSeenVersion)
         editor.putStringSet(REFUSED_PERMISSIONS, snapshot.refusedPermissions)
+        editor.putStringSet(LOCAL_MODEL_TOOLS, snapshot.localModelTools)
         editor.apply()
     }
 
@@ -196,5 +201,6 @@ class AppSettings(
         const val TOOL_PICKER_SEEN_VERSION = "tool_picker_seen_version"
         // A new key: the old "requested_permissions" also counted dialogs closed with Back (D-127).
         const val REFUSED_PERMISSIONS = "refused_permissions"
+        const val LOCAL_MODEL_TOOLS = "local_model_tools"
     }
 }

@@ -37,6 +37,7 @@ import app.jonaki.skills.AssetSkills
 import app.jonaki.skills.SkillImporter
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
+import app.jonaki.settings.LocalModelTools
 import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.SecretStore
 import app.jonaki.settings.UsdRates
@@ -69,6 +70,10 @@ class JonakiApplication : Application() {
 
     /** Runs the downloaded GGUF models with llama.cpp (D-133). */
     lateinit var localModelRuntime: LocalModelRuntime
+        private set
+
+    /** The tools a local model is offered, for Settings > Local models (D-133). */
+    lateinit var localModelTools: LocalModelTools
         private set
 
     /** The cheapest set-up model, for memory extraction and compaction (D-036). */
@@ -185,6 +190,7 @@ class JonakiApplication : Application() {
             mcpServers = mcpServers,
             localRuntime = localModelRuntime,
         )
+        localModelTools = LocalModelTools(settings, runner::toolsForLocalPromptCosts)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         val pythonFolder = CodeRuntimes.pythonFolder(this)
         python = PythonSetup(pythonFolder, PyodideInstaller(pythonFolder, httpClient), applicationScope)

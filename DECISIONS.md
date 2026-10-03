@@ -1698,10 +1698,15 @@ method) at the start of the generation prompt and 4 tokens before the end,
 and a turn that diverges before every checkpoint processes the whole
 prompt again. Local models appear in the model menu as "local:<file name>"
 for each .gguf that LocalModelStore lists; Thinking Off sends
-enable_thinking=false; the small tool set comes from the Files, Web and
-Phone groups narrowed to the five tools, and only the Settings > Tools
-switches and the thread's web switch change it (no per-thread tool choice
-exists, D-091). Finding and downloading, built separately: module
+enable_thinking=false. A local thread's tools are those whose group is on
+(Settings > Tools, and the thread's web switch) that are also in the saved
+local tool list (AppSettings `local_model_tools`, default the five above);
+memory, write_file, youtube_summarize, schedule, find_files, search_files,
+share_file and edit_file can be added; delegate, mcp, run_code, view_image
+and artifact never are. `LocalModelTools` gives the Local models page the
+list, a switch per tool and a rough token cost per tool ((prompt line +
+guidelines + schema characters) / 4); that page section is not built.
+Finding and downloading, built separately: module
 `core:local-models` (HuggingFaceClient, MemoryFit, GgufFiles,
 SupportedArchitectures, RecommendedModels, ModelDownloader) and Settings >
 Local models, a tenth row on the first page after Models ("2 downloaded ·
