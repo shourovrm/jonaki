@@ -152,7 +152,9 @@ message, never the system prompt. Answers under 0.6 confidence or slower
 than 1.5 s are ignored. Why: $0.042 per million input tokens; TypeSafe
 reports 2.3x fewer wrong skill loads. Rejected: Jev for model routing and
 jev-router as main model (user ruling). Risk: English-first; spike S-5
-tests Bangla.
+tests Bangla. Outcome (2026-10-03): built on branch
+worktree-agent-a3724d9efa58b5358; the M10 check saved 4.1 % of prompt
+tokens, so it is left out of the app for now (D-129).
 
 ## D-023 · 2026-10-02 · Room 2.7.2 with the bundled SQLite driver — accepted
 Use Room 2.7.2 with androidx.sqlite:sqlite-bundled 2.5.2 instead of Room
@@ -271,7 +273,7 @@ Amendment (user, 2026-10-03): a card shows only what the service itself
 reports. Jonaki's own count of the month is dropped, so DeepSeek shows
 "$x left" only, and Gemini, Ollama, GLM and MiMo show no line.
 
-## D-033 · 2026-10-02 · Compaction of long threads — proposed
+## D-033 · 2026-10-02 · Compaction of long threads — accepted
 When a run ends and its last request filled 70 % of the model's context
 window (128k tokens assumed when the catalog does not know it), the
 background model (D-036) writes a summary with the sections Goal,
@@ -1525,7 +1527,7 @@ copies of the strip pattern (chat, list preview, thread name) became one,
 PromptBuilder.userTextOf, beside the code that writes the line. Tests:
 ThreadListQueriesTest, PromptBuilderTest. Outcome: pending.
 
-## D-128 · 2026-10-03 · Settings sub-pages and one word per intent — proposed
+## D-128 · 2026-10-03 · Settings sub-pages and one word per intent — accepted
 Settings is a first page and nine sub-pages (mockup
 docs/mockups/settings-pages.html). The first page has "Search settings"
 and nine rows in three unlabelled groups: Models, Web and YouTube, Tools
@@ -1568,3 +1570,22 @@ SettingsSummariesTest and SettingsSearchTest (read the English values
 files), PermissionStatusesTest, BanglaStringsTest. Limit: previews at 360
 dp and font scale 1.3 (dark, light, Bangla) were compiled, not rendered;
 nothing was checked on a phone. Outcome: pending.
+
+## D-129 · 2026-10-03 · Jev left out of the app for now — accepted
+The Jev branch (worktree-agent-a3724d9efa58b5358) is not merged. On 20
+labelled messages Jev saved 4.1 % of prompt tokens in all and the model
+sometimes took more steps (spikes/m10-check/results.md on that branch), and
+the provider cache already makes the repeated prompt cheap. The branch stays
+for a later look. Why: user ruling, 2026-10-03. The prompt plus 18 tools
+(4,875 tokens against the 3,500 target) stays as it is for now, also by user
+ruling, because a request is still cheap with the cache.
+
+## D-130 · 2026-10-03 · About as a short page — proposed
+Settings > About is a short page of text, not rows: the lit j on its dark
+launcher tile (56 dp) beside "Jonaki" and "Version 1.0.0" in Geist Mono;
+one sentence on what the app does; "Made by Riad Mashrub Shourov"; and the
+GitHub path as an underlined link with the GitHub icon. The logo is a copy
+of the launcher foreground in the settings module, because feature modules
+cannot read app resources. Why: user request ("not like rows"); nothing on
+the page is a setting. Amends D-124's About rows. Outcome: pending a phone
+check.

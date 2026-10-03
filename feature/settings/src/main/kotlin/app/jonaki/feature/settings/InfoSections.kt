@@ -1,5 +1,7 @@
 package app.jonaki.feature.settings
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,11 +21,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.MonospaceFamily
 
 /** One live permission row and the status the app read for it. */
 @Immutable
@@ -106,44 +113,84 @@ private fun statusColor(status: PermissionStatus): Color = when (status) {
     PermissionStatus.BLOCKED -> MaterialTheme.colorScheme.error
 }
 
-/** Settings > About: the version, the developer and the GitHub link. */
+/**
+ * Settings > About: the app's name, version and one line on what it does,
+ * then who made it and where the source is. A short page of text rather than
+ * a list of rows, because nothing here is a setting.
+ */
 @Composable
 internal fun AboutSection(appVersion: String, onOpenGitHub: () -> Unit) {
-    Spacer(Modifier.height(8.dp))
-    Group {
-        OneLineRow(stringResource(R.string.settings_about_version, appVersion))
-        GroupDivider()
-        OneLineRow(stringResource(R.string.settings_about_developer))
-        GroupDivider()
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenGitHub)
-                .heightIn(min = 56.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            Icon(painterResource(R.drawable.ic_github), contentDescription = null)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            JonakiMark()
             Spacer(Modifier.width(16.dp))
-            TitleAndLine(
-                title = stringResource(R.string.settings_about_github),
-                line = stringResource(R.string.settings_about_github_url),
-                modifier = Modifier.weight(1f),
-            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.settings_about_app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Text(
+                    stringResource(R.string.settings_about_version, appVersion),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = MonospaceFamily,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
+        Spacer(Modifier.height(20.dp))
+        Text(stringResource(R.string.settings_about_description), style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(20.dp))
+        Text(
+            stringResource(R.string.settings_about_developer),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        GitHubLink(onOpenGitHub)
     }
 }
 
+/** The launcher icon as the home screen shows it: the lit j on its dark tile, in both themes. */
 @Composable
-private fun OneLineRow(text: String) {
+private fun JonakiMark() {
+    Image(
+        painterResource(R.drawable.ic_jonaki_mark),
+        contentDescription = null,
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(LauncherTileColor),
+    )
+}
+
+// ic_launcher_background in the app module.
+private val LauncherTileColor = Color(0xFF11140F)
+
+/** The link keeps the 48 dp touch height; the path wraps to two lines, then "…" (D-029). */
+@Composable
+private fun GitHubLink(onOpenGitHub: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 16.dp),
+            .clickable(onClick = onOpenGitHub)
+            .heightIn(min = 48.dp)
+            .padding(vertical = 4.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Icon(
+            painterResource(R.drawable.ic_github),
+            contentDescription = stringResource(R.string.settings_about_github),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            stringResource(R.string.settings_about_github_url),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

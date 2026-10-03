@@ -25,6 +25,8 @@
     <string name="settings_permissions_boot_purpose">রিস্টার্টের পর রিমাইন্ডার আবার সেট</string>
     <string name="settings_permissions_keep_awake">জাগিয়ে রাখা</string>
     <string name="settings_permissions_keep_awake_purpose">নির্ধারিত কাজ শেষ করা</string>
+    <string name="settings_about_app_name">জোনাকি</string>
+    <string name="settings_about_description">নিজের API কী দিয়ে AI মডেলের সাথে কথা বলুন। জোনাকি ওয়েবে সার্চ করতে, YouTube ভিডিওর সারাংশ দিতে, কোড চালাতে আর রিমাইন্ডার সেট করতে পারে।</string>
     <string name="settings_about_version">ভার্সন %1$s</string>
     <string name="settings_about_developer">তৈরি করেছেন Riad Mashrub Shourov</string>
     <string name="settings_about_github">GitHub</string>

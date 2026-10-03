@@ -24,7 +24,7 @@ private fun InfoSectionsSample(themeMode: ThemeMode) {
     JonakiTheme(themeMode) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
             PermissionsSection(sampleRows, onTap = {})
-            AboutSection(appVersion = "0.8.0", onOpenGitHub = {})
+            AboutSection(appVersion = "1.0.0", onOpenGitHub = {})
         }
     }
 }
