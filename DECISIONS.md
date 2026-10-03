@@ -1680,4 +1680,33 @@ thread; context 8,192 tokens; 4 threads. Why: user ruling 2026-10-03
 search"). Measured on the A059 with Qwen3.5-0.8B Q4_0: 175 to 197 prompt
 tokens/s and 22 generated tokens/s on 4 threads (docs/research/
 local-models-2026-10-03.md). Limit: the APK grows by about 6 MB of native
-code. Outcome: pending.
+code. Built (finding and downloading; the provider is separate): module
+`core:local-models` (HuggingFaceClient, MemoryFit, GgufFiles,
+SupportedArchitectures, RecommendedModels, ModelDownloader) and Settings >
+Local models, a tenth row on the first page after Models ("2 downloaded ·
+Qwen3.5-2B fits", or "None downloaded · No model fits"). Recommended:
+unsloth Qwen3.5-0.8B, 2B, 4B and gemma-4-E2B-it, Q4_0, pinned to commits
+6ab4614, f6d5376, e87f176, 0314792 with size and SHA-256 from the tree,
+and exact KV cache and compute buffer from each config.json (Gemma 4 E2B:
+63 MB cache, 540 MB buffer, 4.0 GB required). Search rows have no per-layer
+data, so they estimate high: a 4-bit file of 5.7 bits per parameter, a KV
+cache of 147,456 bytes per token (36 layers × 1,024 KV values × 2 × 2
+bytes), times parameters/8 B above 8 B, times 1/4 for qwen35, qwen3next and
+Gemma 3/3n/4 and 1/2 for Gemma 2 and LFM2, and a buffer for a 262,144-token
+vocabulary; the four recommended models' exact figures are never above the
+estimate (MemoryFitTest), so Qwen3.5-2B's search row reads Tight on the
+A059 while its recommended row reads Fits. Default file: Q4_K_M, else
+Q4_0, else the smallest Q4; never BF16, F16, F32; mmproj, imatrix, split
+parts and mtp or eagle draft heads are not listed. Architectures: the 126
+text generators of LLM_ARCH_NAMES in llama.cpp b11366; gated ("auto" or
+"manual") and unknown architectures show the reason without Download.
+Files: `noBackupFilesDir/models/<file>.gguf`, partials in
+`models-downloading/<file>.part`; the worker is a dataSync foreground
+CoroutineWorker (WorkManager's SystemForegroundService declared with
+dataSync, no new permission) with 5 attempts, hashing the part file first
+on resume; storage must hold the rest plus 1 GB (getAllocatableBytes).
+Searched files download from `main`, not a pinned commit (the tree gives
+none); a change mid-download fails the hash and deletes the file. Tests:
+38 in core:local-models with recorded responses in testdata/huggingface/,
+LocalModelsRowsTest, summary and search tests. Not checked: anything on a
+phone; previews at 360 dp and 1.3 compiled, not rendered. Outcome: pending.
