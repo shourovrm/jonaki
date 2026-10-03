@@ -6,6 +6,7 @@ import app.jonaki.core.providerapi.FinishReason
 import app.jonaki.core.providerapi.StreamEvent
 import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.toolapi.SideEffect
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentTask
 import app.jonaki.core.toolapi.ToolContext
@@ -44,7 +45,9 @@ class SubagentRunnerTest {
     private fun runner(
         providers: Map<String, ChatProvider>,
         approver: ApprovalRequester = FixedApprover(ApprovalDecision.ALLOW_ONCE),
-        limits: SubagentLimits = SubagentLimits(),
+        limitSettings: SubagentLimitSettings = SubagentLimitSettings(),
+        limits: SubagentLimits = SubagentLimits.from(limitSettings),
+        customTypes: List<AgentType> = emptyList(),
         acceptsImages: Boolean = false,
         pricePerCall: Double? = 0.01,
         asker: ParentAsker = ParentAsker { question, _, _ -> ParentAnswer.Answered("Answer to $question") },
@@ -77,10 +80,71 @@ class SubagentRunnerTest {
             memorySection = "Memory:\n- [1] The user lives in Dhaka.",
             skillSection = "Skills:\n- report: writes reports (/skills/report/SKILL.md)",
             now = { ZonedDateTime.of(2026, 10, 3, 9, 0, 0, 0, ZoneOffset.UTC) },
+            limitSettings = limitSettings,
             limits = limits,
+            customTypes = customTypes,
             timer = clock,
             newId = { "s${nextId++}" },
         )
+    }
+
+    private val priceChecker = AgentTypes.custom(
+        name = "price-checker",
+        description = "Checks laptop prices in Dhaka shops.",
+        instructions = "Answer with a table of shops and prices.",
+        tools = setOf("web_search", "write_file", "memory", "delegate"),
+    )
+
+    /** D-138: a type the user made runs like a built-in one, with its own tools, text and model. */
+    @Test
+    fun aCustomTypeGetsItsOwnToolsInstructionsAndModel() = runBlocking {
+        val provider = ScriptedProvider(textTurn("| Shop | Price |"))
+        val runner = runner(mapOf("price-checker" to provider), customTypes = listOf(priceChecker))
+
+        runner.launch(listOf(SubagentTask("price-checker", "Find the X1 price")), context)
+
+        val request = provider.requests.single()
+        assertEquals(listOf("researcher", "scout", "writer", "worker", "price-checker"), runner.agentTypes.map { it.name })
+        assertEquals("Checks laptop prices in Dhaka shops.", runner.agentTypes.last().description)
+        assertEquals(listOf("ask_parent", "request_tool", "web_search", "write_file"), request.tools.map { it.name })
+        assertTrue(request.systemPrompt.contains("You are a price-checker subagent"))
+        assertTrue(request.systemPrompt.contains("Answer with a table of shops and prices."))
+        // It writes files, so it sees the skill list like the writer.
+        assertTrue(request.systemPrompt.contains("Skills:"))
+        assertEquals("test:price-checker", recorder.starts.single().modelKey)
+    }
+
+    @Test
+    fun aCustomTypeNamedLikeABuiltInOneIsIgnored() {
+        val impostor = AgentTypes.custom("researcher", "Writes poems.", "", setOf("write_file"))
+
+        val types = runner(emptyMap(), customTypes = listOf(impostor)).agentTypes
+
+        assertEquals(1, types.count { it.name == "researcher" })
+        assertFalse(types.any { it.description == "Writes poems." })
+    }
+
+    @Test
+    fun theUsersLimitsReachTheSubagent() = runBlocking {
+        val provider = ScriptedProvider(textTurn("Done."))
+        val settings = SubagentLimitSettings(toolSteps = 4, costCapCents = 25, minutes = 3)
+
+        runner(mapOf("scout" to provider), limitSettings = settings).launch(listOf(SubagentTask("scout", "Find a.md")), context)
+
+        assertTrue(provider.requests.single().systemPrompt.contains("4 tool steps and $0.25 of model cost"))
+        assertEquals(SubagentLimits(maxToolSteps = 4, costCapUsd = 0.25, timeLimit = 3.minutes), SubagentLimits.from(settings))
+    }
+
+    @Test
+    fun aLaunchAboveTheUsersPerCallLimitIsRefused() = runBlocking {
+        val provider = ScriptedProvider(textTurn("Done."))
+        val runner = runner(mapOf("scout" to provider), limitSettings = SubagentLimitSettings(perCall = 1))
+
+        val reports = runner.launch(listOf(SubagentTask("scout", "a"), SubagentTask("scout", "b")), context)
+
+        assertTrue(reports.all { report -> report.text.contains("at most 1 subagents run at once") })
+        assertTrue(provider.requests.isEmpty())
+        assertEquals(1, runner.limitSettings.perCall)
     }
 
     private fun usageTurn(vararg calls: ToolCall): Flow<StreamEvent> = flowOf(

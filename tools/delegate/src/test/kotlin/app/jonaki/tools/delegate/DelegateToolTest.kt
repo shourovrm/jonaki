@@ -2,12 +2,14 @@ package app.jonaki.tools.delegate
 
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentReport
 import app.jonaki.core.toolapi.SubagentTask
 import app.jonaki.core.toolapi.SubagentTypeInfo
 import app.jonaki.core.toolapi.ToolContext
 import java.nio.file.Files
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -135,10 +137,72 @@ class DelegateToolTest {
         assertEquals(SideEffect.NEEDS_USER, tool.sideEffectOf(one))
     }
 
-    class FakeLauncher : SubagentLauncher {
+    /** The user's limits from Settings > Subagents replace the defaults (D-138). */
+    @Test
+    fun theUsersAutomaticLimitDecidesWhenACallAsks() {
+        val strict = DelegateTool(FakeLauncher(SubagentLimitSettings(startedWithoutAsking = 0)))
+        val generous = DelegateTool(FakeLauncher(SubagentLimitSettings(startedWithoutAsking = 4, perCall = 4)))
+        val one = arguments("""{"agent":"researcher","task":"a"}""")
+        val three = arguments("""{"tasks":[{"agent":"researcher","task":"a"},{"agent":"scout","task":"b"},{"agent":"writer","task":"c"}]}""")
+
+        assertEquals(SideEffect.NEEDS_USER, strict.sideEffectOf(one))
+        assertEquals(SideEffect.READ_ONLY, generous.sideEffectOf(three))
+        assertTrue(generous.guidelines.any { it.startsWith("Up to 4 subagents per user message") })
+    }
+
+    @Test
+    fun noSubagentStartsWithoutAskingWhenTheLimitIsZero() {
+        val strict = DelegateTool(FakeLauncher(SubagentLimitSettings(startedWithoutAsking = 0)))
+
+        assertTrue(strict.guidelines.any { it.startsWith("Every delegate call waits for the user's approval") })
+    }
+
+    @Test
+    fun theUsersPerCallLimitShapesTheSchemaAndTheRefusal() = runBlocking {
+        val fiveLauncher = FakeLauncher(SubagentLimitSettings(perCall = 5))
+        val five = DelegateTool(fiveLauncher)
+        val task = """{"agent":"scout","task":"x"}"""
+
+        val ran = five.run(arguments("""{"tasks":[$task,$task,$task,$task,$task]}"""), context)
+        val refused = five.run(arguments("""{"tasks":[$task,$task,$task,$task,$task,$task]}"""), context)
+
+        assertFalse(ran.isError)
+        assertTrue(refused.text.contains("at most 5"))
+        assertTrue(five.parameterSchema.toString().contains("\"maxItems\":5"))
+        assertTrue(five.promptLine.contains("up to 5 in parallel"))
+        assertEquals(1, fiveLauncher.launched.size)
+    }
+
+    @Test
+    fun theTimeLimitIsOneMinuteMoreThanASubagents() {
+        val tool = DelegateTool(FakeLauncher(SubagentLimitSettings(minutes = 20)))
+
+        assertEquals(21.minutes, tool.timeLimit)
+        assertEquals(11.minutes, DelegateTool(FakeLauncher()).timeLimit)
+    }
+
+    @Test
+    fun aCustomTypeIsListedBesideTheBuiltInOnes() = runBlocking {
+        val launcher = FakeLauncher(extraTypes = listOf(SubagentTypeInfo("price-checker", "Checks laptop prices in Dhaka shops.")))
+        val tool = DelegateTool(launcher)
+
+        val output = tool.run(arguments("""{"agent":"price-checker","task":"Find the X1 price"}"""), context)
+
+        assertFalse(output.isError)
+        assertEquals("price-checker", launcher.launched.single().single().agentType)
+        assertTrue(tool.parameterSchema.toString().contains("\"worker\",\"price-checker\"]"))
+        assertTrue(tool.guidelines.any { it.contains("price-checker: Checks laptop prices in Dhaka shops.") })
+        assertTrue(tool.promptLine.contains("worker, price-checker"))
+    }
+
+    class FakeLauncher(
+        override val limitSettings: SubagentLimitSettings = SubagentLimitSettings(),
+        extraTypes: List<SubagentTypeInfo> = emptyList(),
+    ) : SubagentLauncher {
         val launched = mutableListOf<List<SubagentTask>>()
 
-        override val agentTypes = listOf("researcher", "scout", "writer", "worker").map { SubagentTypeInfo(it, "does $it work") }
+        override val agentTypes =
+            listOf("researcher", "scout", "writer", "worker").map { SubagentTypeInfo(it, "does $it work") } + extraTypes
         override val models = listOf(
             SubagentModelInfo("openrouter:z-ai/glm-5.3-flash", "GLM 5.3 Flash"),
             SubagentModelInfo("gemini:gemini-3-flash", "Gemini 3 Flash"),

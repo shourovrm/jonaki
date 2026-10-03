@@ -1,8 +1,8 @@
 package app.jonaki.core.agent
 
 /**
- * One kind of subagent (M7 step 1). Version 1 has only the four built-in
- * types; the user cannot add more.
+ * One kind of subagent (M7 step 1): one of the four built-in types, or one
+ * the user made in Settings > Subagents (D-138).
  */
 data class AgentType(
     val name: String,
@@ -86,5 +86,25 @@ What stopped you and the smallest next step, or "None".""",
 
     val ALL: List<AgentType> = listOf(RESEARCHER, SCOUT, WRITER, WORKER)
 
+    /** A type that writes files sees the skill list, as the writer and the worker do. */
+    private val WRITING_TOOLS: Set<String> = setOf("write_file", "edit_file", "artifact")
+
     fun byName(name: String): AgentType? = ALL.firstOrNull { type -> type.name == name.trim().lowercase() }
+
+    /**
+     * A type the user made in Settings > Subagents (D-138). It starts with
+     * [tools] only, never with delegate or memory, so subagents still do not
+     * nest.
+     */
+    fun custom(name: String, description: String, instructions: String, tools: Set<String>): AgentType {
+        val givenTools = tools - NEVER_GIVEN
+        return AgentType(
+            name = name,
+            description = description,
+            defaultTools = givenTools,
+            usesEveryThreadTool = false,
+            seesSkills = givenTools.any { tool -> tool in WRITING_TOOLS },
+            instructions = instructions,
+        )
+    }
 }

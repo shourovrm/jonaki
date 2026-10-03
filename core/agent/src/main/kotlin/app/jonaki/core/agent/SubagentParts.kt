@@ -4,6 +4,7 @@ import app.jonaki.core.model.ToolCall
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.providerapi.Usage
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.ToolOutput
 import kotlin.time.Duration
@@ -51,7 +52,16 @@ data class SubagentLimits(
     val timeLimit: Duration = 10.minutes,
     /** Wait before the one retry of an overloaded model, as for the thread's agent (D-026). */
     val retryDelay: Duration = 2.seconds,
-)
+) {
+    companion object {
+        /** The budgets the user set in Settings > Subagents (D-138). */
+        fun from(settings: SubagentLimitSettings): SubagentLimits = SubagentLimits(
+            maxToolSteps = settings.toolSteps,
+            costCapUsd = settings.costCapUsd,
+            timeLimit = settings.minutes.minutes,
+        )
+    }
+}
 
 enum class SubagentStop {
     COMPLETED,

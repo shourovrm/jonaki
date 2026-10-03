@@ -5,6 +5,12 @@ import org.junit.Test
 
 class UsageFormatTest {
     @Test
+    fun aLimitAlwaysShowsCents() {
+        assertEquals("$0.10", UsageFormat.limit(0.10))
+        assertEquals("$1.00", UsageFormat.limit(1.0))
+    }
+
+    @Test
     fun costBelowOneCentShowsFourDecimals() {
         assertEquals("$0.0041", UsageFormat.cost(0.00412))
         assertEquals("$0.0001", UsageFormat.cost(0.00005))

@@ -664,6 +664,7 @@ private fun ChatRoute(
             modelNameOf = { key -> catalog.find(key)?.displayName },
             pythonCard = pythonCards.cardFor,
             compaction = compaction,
+            subagentLimits = settingsSnapshot.subagentLimits,
             stepWords = stepDetailWords(),
         ),
         isRunning = isRunning,

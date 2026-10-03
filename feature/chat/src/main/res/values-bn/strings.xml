@@ -153,5 +153,5 @@
         <item quantity="one">এই মেসেজে %1$dটি সাবএজেন্ট</item>
         <item quantity="other">এই মেসেজে %1$dটি সাবএজেন্ট</item>
     </plurals>
-    <string name="chat_approval_subagents_warning">৫টির বেশি সাবএজেন্ট। প্রতিটির খরচ $0.10 পর্যন্ত হতে পারে।</string>
+    <string name="chat_approval_subagents_warning">%1$dটির বেশি সাবএজেন্ট। প্রতিটির খরচ %2$s পর্যন্ত হতে পারে।</string>
 </resources>

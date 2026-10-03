@@ -5,6 +5,7 @@ import app.jonaki.core.runtimeapi.CodeLanguage
 import app.jonaki.core.runtimeapi.CodeRunOutcome
 import app.jonaki.core.runtimeapi.CodeRuntime
 import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentReport
 import app.jonaki.core.toolapi.SubagentTask
@@ -110,6 +111,7 @@ class ToolRegistryTest {
         override val models = emptyList<SubagentModelInfo>()
         override val extraToolNames = emptyList<String>()
         override val startedThisRun = 0
+        override val limitSettings = SubagentLimitSettings()
 
         override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext) = emptyList<SubagentReport>()
     }

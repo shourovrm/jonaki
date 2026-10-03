@@ -16,6 +16,7 @@ import app.jonaki.core.agent.ContextBreakdown
 import app.jonaki.core.agent.PromptSkill
 import app.jonaki.core.model.ImagePart
 import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.ThreadPaths
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentReport
@@ -74,6 +75,7 @@ import app.jonaki.search.tavily.TavilySearchBackend
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
+import app.jonaki.settings.CustomSubagents
 import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.LocalModelToolList
 import app.jonaki.settings.SearchService
@@ -502,6 +504,9 @@ class AgentRunner(
             memorySection = memorySection,
             skillSection = skillSection,
             now = ZonedDateTime::now,
+            // Read once here, so delegate's prompt text stays the same for the whole run (D-138).
+            limitSettings = snapshot.subagentLimits,
+            customTypes = CustomSubagents.agentTypesOf(snapshot.customSubagents),
         )
         subagentRunners[threadId] = subagents
         val tools = threadTools + ToolRegistry.delegateTools(subagents, toolServices)
@@ -615,7 +620,7 @@ class AgentRunner(
         val modelAcceptsImages = modelKey?.let { key -> catalog.find(key)?.acceptsImages } == true
         val project = projectOf(thread)
         val toolServices = toolServicesFor(thread, modelAcceptsImages, project, ThreadFolders.create(context, threadId))
-        val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents, toolServices)
+        val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents(settings.snapshot.value), toolServices)
         // An incognito thread sends no Memory section (D-111).
         val facts = if (ThreadMemory.isOn(thread)) promptFactsOf(thread, project) else emptyList()
         val memory = MemorySection.build(facts, memoryBudgetFor(thread))
@@ -643,12 +648,17 @@ class AgentRunner(
         )
     }
 
-    /** Stands in for the subagent runner where only the delegate tool's prompt text is needed. */
-    private object PromptOnlySubagents : SubagentLauncher {
-        override val agentTypes: List<SubagentTypeInfo> = SubagentRunner.AGENT_TYPES
+    /**
+     * Stands in for the subagent runner where only the delegate tool's prompt
+     * text is needed, with the same types and limits a run would read.
+     */
+    private class PromptOnlySubagents(snapshot: SettingsSnapshot) : SubagentLauncher {
+        override val agentTypes: List<SubagentTypeInfo> = SubagentRunner.AGENT_TYPES +
+            snapshot.customSubagents.map { subagent -> SubagentTypeInfo(subagent.name, subagent.description) }
         override val models: List<SubagentModelInfo> = emptyList()
         override val extraToolNames: List<String> = emptyList()
         override val startedThisRun: Int = 0
+        override val limitSettings: SubagentLimitSettings = snapshot.subagentLimits
 
         override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext): List<SubagentReport> =
             error("PromptOnlySubagents never runs subagents")

@@ -26,6 +26,9 @@ object UsageFormat {
         return "$" + String.format(Locale.ENGLISH, "%.${decimals}f", shown)
     }
 
+    /** A limit the user sets, such as a subagent's cost cap, always with cents: "$0.10", "$1.00" (D-138). */
+    fun limit(usd: Double): String = "$" + String.format(Locale.ENGLISH, "%.2f", usd)
+
     /** A context window or token total in short form: 950, 8K, 131K, 1M, 1.5M. */
     fun tokenCount(tokens: Int): String = when {
         tokens < 1_000 -> tokens.toString()

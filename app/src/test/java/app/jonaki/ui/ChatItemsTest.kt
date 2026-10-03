@@ -12,6 +12,8 @@ import kotlinx.coroutines.CompletableDeferred
 import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.feature.chat.ChatItem
 import app.jonaki.feature.chat.NotesBoardUi
+import app.jonaki.feature.chat.SubagentCostWarning
+import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.feature.chat.WorkingActivity
 import app.jonaki.feature.chat.StepUiStatus
 import org.junit.Assert.assertEquals
@@ -345,6 +347,51 @@ class ChatItemsTest {
             ChatItem.Approval("s1/c3", "share_file", "save the report", agentLabel = "writer", waitEndsAtMillis = 181_000),
             card,
         )
+    }
+
+    /** D-137 with D-138: the card warns above the user's number and names the user's cost cap. */
+    @Test
+    fun aDelegateCardWarnsAboveTheUsersNumber() {
+        val call = ToolCall("d2", "delegate", """{"agent":"scout","task":"a"}""")
+        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(call)))
+        val steps = listOf(step("d2", "delegate", "WAITING_FOR_APPROVAL", call.argumentsJson, started = 1_000))
+        fun cardFor(subagentsAfter: Int, limits: SubagentLimitSettings): ChatItem.Approval {
+            val pending = PendingApproval("t", "delegate", call, CompletableDeferred(), subagentsAfter = subagentsAfter)
+            val items = ChatItems.build(
+                rows,
+                steps,
+                isRunning = true,
+                pendingApprovals = listOf(pending),
+                subagentLimits = limits,
+                stepWords = englishStepWords,
+            )
+            return items.last() as ChatItem.Approval
+        }
+
+        assertEquals(null, cardFor(5, SubagentLimitSettings()).costWarning)
+        assertEquals(SubagentCostWarning(above = 5, costCapUsd = 0.10), cardFor(6, SubagentLimitSettings()).costWarning)
+        val strict = SubagentLimitSettings(startedWithoutAsking = 1, warnAbove = 2, costCapCents = 25)
+        assertEquals(SubagentCostWarning(above = 2, costCapUsd = 0.25), cardFor(3, strict).costWarning)
+        assertEquals(null, cardFor(2, strict).costWarning)
+    }
+
+    @Test
+    fun subagentRowsMeasureAgainstTheUsersBudgets() {
+        val delegateCall = ToolCall("d1", "delegate", """{"agent":"researcher","task":"a"}""")
+        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(delegateCall)))
+        val steps = listOf(step("d1", "delegate", "RUNNING", delegateCall.argumentsJson, started = 1))
+
+        val run = ChatItems.build(
+            rows,
+            steps,
+            isRunning = true,
+            subagents = listOf(subagent("s1", 0, "researcher", status = "RUNNING")),
+            subagentLimits = SubagentLimitSettings(toolSteps = 20, costCapCents = 50),
+            stepWords = englishStepWords,
+        ).filterIsInstance<ChatItem.Run>().single()
+
+        assertEquals(20, run.subagents.single().stepLimit)
+        assertEquals(0.50, run.subagents.single().costLimitUsd, 0.0001)
     }
 
     @Test
