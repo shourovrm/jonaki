@@ -4,7 +4,6 @@ package app.jonaki.feature.chat
 object ChatSample {
     val running: ChatUiState = ChatUiState(
         title = "Thesis — sample size",
-        modelLabel = "DeepSeek V3",
         webSearchEnabled = true,
         isRunning = true,
         draft = "",
@@ -78,7 +77,6 @@ object ChatSample {
 
     val empty: ChatUiState = ChatUiState(
         title = "New thread",
-        modelLabel = "DeepSeek V3",
         webSearchEnabled = true,
         isRunning = false,
         draft = "",

@@ -1,5 +1,6 @@
 package app.jonaki.feature.chat
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,6 +45,8 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -151,6 +155,7 @@ fun ChatScreen(
                     onOpenApprovals = { openSheet = ChatSheet.APPROVALS },
                     onOpenStyle = onOpenStyle,
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 if (state.incognito) {
                     // A thread that has no message yet does not exist, so there is nothing to keep.
                     IncognitoBanner(onKeep = if (state.title.isNotBlank()) onKeepThread else null)
@@ -166,6 +171,8 @@ fun ChatScreen(
                         isRunning = state.isRunning,
                         onModelClick = { openSheet = ChatSheet.MODEL },
                         onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
+                        webSearchEnabled = state.webSearchEnabled,
+                        onWebSearchChange = onWebSearchChange,
                         onContextClick = onOpenContext?.let { openContext ->
                             {
                                 openSheet = ChatSheet.CONTEXT
@@ -293,18 +300,15 @@ private fun ChatTopBar(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.chat_back))
             }
         },
+        // The title only: the model and web search are pills in the status strip (D-123).
         title = {
-            Column {
-                Text(state.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
-                val subtitle = if (state.webSearchEnabled) R.string.chat_subtitle_search_on else R.string.chat_subtitle_search_off
-                Text(
-                    stringResource(subtitle, state.modelLabel),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Text(
+                state.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         },
         actions = {
             Box {
@@ -419,8 +423,8 @@ private fun MessageList(
     }
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         items(items, key = { item -> item.id }) { item ->
@@ -466,16 +470,17 @@ private fun contentLength(item: ChatItem?): Int = when (item) {
 private fun UserBubble(text: String) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 22.dp, bottomEnd = 6.dp),
-            modifier = Modifier.widthIn(max = 320.dp),
+            color = JonakiTheme.colors.userBubble,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 6.dp),
+            // The mockup's 86 % of the column; agent answers take the full width, like a page.
+            modifier = Modifier.fillMaxWidth(0.86f).wrapContentWidth(Alignment.End),
         ) {
             // A long press selects part of the prompt; the Copy button below takes all of it.
             SelectionContainer {
                 Text(
                     text,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
                 )
             }
         }
@@ -620,15 +625,20 @@ private fun Composer(
     Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier) {
         Row(
             verticalAlignment = Alignment.Bottom,
-            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 12.dp),
         ) {
-            IconButton(onClick = { addSheetOpen = true }, modifier = Modifier.size(52.dp)) {
+            OutlinedIconButton(
+                onClick = { addSheetOpen = true },
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.size(52.dp),
+            ) {
                 Icon(
                     Icons.Filled.Add,
                     contentDescription = stringResource(R.string.chat_attach),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = JonakiTheme.colors.inkSoft,
                 )
             }
+            Spacer(Modifier.width(8.dp))
             TextField(
                 value = draft,
                 onValueChange = onDraftChange,
@@ -636,8 +646,8 @@ private fun Composer(
                 maxLines = 6,
                 shape = RoundedCornerShape(26.dp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
@@ -773,7 +783,7 @@ private fun StopButton(onStop: () -> Unit) {
         contentPadding = PaddingValues(start = 14.dp, end = 18.dp),
         modifier = Modifier.heightIn(min = 52.dp),
     ) {
-        Icon(JonakiIcons.Stop, contentDescription = null, tint = colors.live, modifier = Modifier.size(20.dp))
+        Icon(JonakiIcons.Stop, contentDescription = null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(6.dp))
         Text(stringResource(R.string.chat_stop), fontWeight = FontWeight.SemiBold)
     }

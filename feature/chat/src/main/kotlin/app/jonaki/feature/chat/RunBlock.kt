@@ -1,7 +1,10 @@
 package app.jonaki.feature.chat
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,8 +12,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
@@ -34,7 +39,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import app.jonaki.core.ui.DotStyle
 import app.jonaki.core.ui.GlowDot
 import app.jonaki.core.ui.JonakiTheme
@@ -44,20 +48,16 @@ import app.jonaki.core.ui.UsageFormat
 private val TrackColumnWidth = 24.dp
 
 /**
- * One agent turn's tool steps as a rail track (D-024): a station per step,
- * the line between stations filled where the work is done. A finished run
- * folds to its summary line; an active run is always open.
+ * One agent turn's tool steps as a rail track (D-024) in a thin bordered
+ * panel (D-123): a station per step, and only the running station is lit.
+ * A finished run folds to its summary line; an active run is always open.
  */
 @Composable
 internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, modifier: Modifier = Modifier) {
     var expanded by rememberSaveable(run.id) { mutableStateOf(false) }
     val open = run.isActive || expanded
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.animateContentSize().padding(horizontal = 14.dp, vertical = 6.dp)) {
+    RunPanel(modifier) {
+        Column(Modifier.animateContentSize().padding(horizontal = 14.dp, vertical = 4.dp)) {
             RunHeader(run, open, onToggle = { expanded = !expanded })
             if (open) {
                 Column(Modifier.padding(bottom = 6.dp)) {
@@ -66,7 +66,6 @@ internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, m
                             step = step,
                             isFirst = index == 0,
                             isLast = index == run.steps.lastIndex,
-                            nextIsDone = run.steps.getOrNull(index + 1)?.status == StepUiStatus.DONE,
                             onOpen = onOpenStep,
                         )
                     }
@@ -74,6 +73,18 @@ internal fun RunBlock(run: ChatItem.Run, onOpenStep: (stepId: String) -> Unit, m
             }
         }
     }
+}
+
+/** The run block's frame, shared with subagent cards: a hairline border, no fill at night. */
+@Composable
+internal fun RunPanel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Surface(
+        color = JonakiTheme.colors.runPanel,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier.fillMaxWidth(),
+        content = content,
+    )
 }
 
 @Composable
@@ -85,11 +96,13 @@ private fun RunHeader(run: ChatItem.Run, open: Boolean, onToggle: () -> Unit) {
         modifier = headerModifier.fillMaxWidth().heightIn(min = 40.dp),
     ) {
         if (run.isActive) {
+            GlowDot(colors.live, DotStyle.GLOWING, dotSize = 8.dp)
+            Spacer(Modifier.width(4.dp))
             Text(
                 stringResource(R.string.chat_run_working),
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.live,
+                fontWeight = FontWeight.Medium,
+                color = colors.inkSoft,
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -135,15 +148,10 @@ internal fun StepRow(
     step: StepUi,
     isFirst: Boolean,
     isLast: Boolean,
-    nextIsDone: Boolean,
     onOpen: (stepId: String) -> Unit,
 ) {
-    val colors = JonakiTheme.colors
-    val doneColor = colors.done
-    val trackColor = colors.track
-    // The segment below a station is "travelled" when this step and the next are done.
-    val segmentBelowColor = if (step.status == StepUiStatus.DONE && nextIsDone) doneColor else trackColor
-    val segmentAboveColor = if (step.status == StepUiStatus.DONE) doneColor else trackColor
+    // One plain rail: the lit station alone marks where the work is.
+    val trackColor = JonakiTheme.colors.track
     val openModifier = if (step.opensDetail) Modifier.clickable { onOpen(step.id) } else Modifier
     Row(
         modifier = openModifier
@@ -153,10 +161,10 @@ internal fun StepRow(
                 val stationY = 16.dp.toPx()
                 val stroke = 2.dp.toPx()
                 if (!isFirst) {
-                    drawLine(segmentAboveColor, Offset(x, 0f), Offset(x, stationY), stroke)
+                    drawLine(trackColor, Offset(x, 0f), Offset(x, stationY), stroke)
                 }
                 if (!isLast) {
-                    drawLine(segmentBelowColor, Offset(x, stationY), Offset(x, size.height), stroke)
+                    drawLine(trackColor, Offset(x, stationY), Offset(x, size.height), stroke)
                 }
             }
             .padding(vertical = 4.dp),
@@ -168,10 +176,10 @@ internal fun StepRow(
         Column(Modifier.weight(1f).padding(top = 2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    step.toolName.uppercase(),
-                    style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.06.em),
-                    fontWeight = FontWeight.Bold,
-                    color = if (step.status == StepUiStatus.RUNNING) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    stepLabel(step.toolName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
                 val duration = step.durationMillis
@@ -192,8 +200,12 @@ internal fun StepRow(
 private fun StationDot(status: StepUiStatus) {
     val colors = JonakiTheme.colors
     val outline = MaterialTheme.colorScheme.outline
+    if (status == StepUiStatus.DONE) {
+        DoneStation()
+        return
+    }
     val (color, style) = when (status) {
-        StepUiStatus.DONE -> colors.done to DotStyle.QUIET
+        StepUiStatus.DONE -> colors.track to DotStyle.QUIET
         StepUiStatus.RUNNING -> colors.live to DotStyle.GLOWING
         StepUiStatus.WAITING_FOR_APPROVAL -> colors.deny to DotStyle.RING
         StepUiStatus.FAILED -> colors.deny to DotStyle.QUIET
@@ -203,6 +215,20 @@ private fun StationDot(status: StepUiStatus) {
     }
     // GlowDot's canvas is 2.4x the dot; 10 dp dot -> 24 dp box, centred on the track.
     GlowDot(color, style, dotSize = 10.dp)
+}
+
+/** A finished station: a check on the rail's colour, unlit. Its box matches GlowDot's 24 dp. */
+@Composable
+private fun DoneStation() {
+    val colors = JonakiTheme.colors
+    Box(Modifier.size(TrackColumnWidth), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(16.dp).background(colors.track, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.Check, contentDescription = null, tint = colors.inkSoft, modifier = Modifier.size(11.dp))
+        }
+    }
 }
 
 @Composable

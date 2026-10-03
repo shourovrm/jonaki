@@ -509,6 +509,8 @@ private fun ChatRoute(
     var modelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
     // A new thread has no row to hold its thinking level until the first message creates it.
     var thinkingForNewThread by rememberSaveable(threadId) { mutableStateOf(ThinkingChoice.DEFAULT) }
+    // The globe pill can be tapped before the first message too; null follows Settings.
+    var webSearchForNewThread by rememberSaveable(threadId) { mutableStateOf<Boolean?>(null) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
     // Style, persona and instructions picked before the first message, like the thinking level above.
     var styleForNewThread by rememberSaveable(threadId, stateSaver = ThreadStyleDraftSaver) { mutableStateOf(ThreadStyleDraft()) }
@@ -538,7 +540,11 @@ private fun ChatRoute(
             runner.send(threadId, tryAgainText)
         }
     }
-    val webSearchEnabled = thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
+    val webSearchEnabled = if (isNew) {
+        webSearchForNewThread ?: !settingsSnapshot.webSearchOffInNewThreads
+    } else {
+        thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
+    }
     val modelKey = (if (isNew) modelForNewThread ?: newThreadProjectModel else null) ?: runner.modelKeyFor(thread)
     val modelInfo = modelKey?.let(catalog::find)
     val modelName = modelInfo?.displayName ?: modelKey?.let(ModelKey::modelOf).orEmpty()
@@ -555,7 +561,6 @@ private fun ChatRoute(
     }
     val state = ChatUiState(
         title = thread?.title.orEmpty(),
-        modelLabel = modelName,
         webSearchEnabled = webSearchEnabled,
         items = ChatItems.build(
             rows = messages,
@@ -613,6 +618,10 @@ private fun ChatRoute(
                 if (isNew && pickedModel != null) {
                     runner.setThreadModel(targetThreadId, pickedModel)
                 }
+                val pickedWebSearch = webSearchForNewThread
+                if (isNew && pickedWebSearch != null) {
+                    runner.setWebSearchEnabled(targetThreadId, pickedWebSearch)
+                }
                 if (isNew && thinkingForNewThread != ThinkingChoice.DEFAULT) {
                     runner.setThreadThinking(targetThreadId, thinkingLevelOf(thinkingForNewThread))
                 }
@@ -664,7 +673,9 @@ private fun ChatRoute(
         onApprovalChoice = { approvalId, choice -> runner.answerApproval(threadId, approvalId, decisionOf(choice)) },
         onRetry = { runner.retry(threadId) },
         onWebSearchChange = { enabled ->
-            if (!isNew) {
+            if (isNew) {
+                webSearchForNewThread = enabled
+            } else {
                 scope.launch { runner.setWebSearchEnabled(threadId, enabled) }
             }
         },

@@ -2,8 +2,6 @@
 <resources>
     <string name="chat_back">Back</string>
     <string name="chat_more">More options</string>
-    <string name="chat_subtitle_search_on">%1$s · web search on</string>
-    <string name="chat_subtitle_search_off">%1$s · web search off</string>
     <string name="chat_menu_web_search">Web search</string>
     <string name="chat_menu_rename">Rename</string>
     <string name="chat_menu_memory">Memory</string>
@@ -41,6 +39,8 @@
     <string name="chat_status_context_used">Context used: %1$d%%</string>
     <string name="chat_status_cost">Cost: %1$s</string>
     <string name="chat_status_bypass">Bypass</string>
+    <string name="chat_status_web_on">Web search on</string>
+    <string name="chat_status_web_off">Web search off</string>
     <string name="chat_status_bypass_description">Bypass: tools run without asking</string>
     <string name="chat_menu_approvals">Approvals</string>
     <string name="chat_approvals_title">Approvals in this thread</string>
