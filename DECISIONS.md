@@ -1368,3 +1368,31 @@ table wider than the message scrolls sideways. A small copy button under
 the table copies its Markdown source ("Copy table"). Selection works as
 for the rest of the answer. Code: MarkdownTables, MarkdownText.TableView;
 test MarkdownTableParserTest (12). Outcome: pending.
+
+## D-124 · 2026-10-03 · Settings > Permissions and About — proposed
+Two sections end Settings. Permissions has four live rows, each with its
+purpose and status: Notifications (POST_NOTIFICATIONS from Android 13,
+the app switch before), Calendar (read and write together), Photos (as
+D-086: READ_MEDIA_IMAGES, "Selected photos" for Android 14's partial
+grant, READ_EXTERNAL_STORAGE up to 12) and Alarms & reminders
+(canScheduleExactAlarms, "Off" when false, always allowed below 12).
+Android cannot tell "Not asked" from "Denied", so RuntimePermissions and
+the composer's photo request record each permission whose dialog was
+shown in AppSettings (`requested_permissions` in the "settings"
+preferences); recorded and not granted is "Denied". Photos also count
+D-086's `photo_access` refusal. "Not asked" rows ask through
+RuntimePermissions ("Allow"); "Denied" and "Off" open Jonaki's page in
+system settings, or the exact-alarm page ("Open settings"); allowed rows
+open the same page on tap, with no button. Statuses are read again on
+every resume. "Always on" lists the install-time permissions (Internet,
+network state, foreground service, boot, wake lock) without status.
+ManifestPermissionsTest fails when a manifest permission, or WorkManager's
+WAKE_LOCK and ACCESS_NETWORK_STATE, has no row or two. About shows
+"Version x" from PackageManager (no BuildConfig), the developer, and a
+GitHub row with the Invertocat mark (Simple Icons path, CC0, tinted by the
+theme) that opens github.com/shourovrm/jonaki. The strings were agreed in
+an adversarial Sonnet review that cut an intro line, made "Always on" a
+subheading, chose "Allow" over "Ask", dropped a camera row (Jonaki holds
+no camera permission) and dropped a description line in About. Limit: a
+permission refused on a build before this record shows "Not asked" until
+Jonaki asks again. Outcome: pending.
