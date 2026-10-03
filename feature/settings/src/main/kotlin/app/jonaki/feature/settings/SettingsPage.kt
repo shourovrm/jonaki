@@ -13,6 +13,8 @@ import app.jonaki.core.ui.ApprovalModeChoice
  */
 enum class SettingsPage(val key: String, @StringRes val title: Int) {
     MODELS("models", R.string.settings_root_models),
+    /** Drawn by [LocalModelsScreen], which keeps its own search and file list (D-133). */
+    LOCAL_MODELS("local-models", R.string.settings_root_local_models),
     WEB("web", R.string.settings_root_web),
     TOOLS("tools", R.string.settings_root_tools),
     ANSWERS("answers", R.string.settings_root_answers),
@@ -26,7 +28,7 @@ enum class SettingsPage(val key: String, @StringRes val title: Int) {
     companion object {
         /** The first page's three groups, separated by space and without labels. */
         val GROUPS: List<List<SettingsPage>> = listOf(
-            listOf(MODELS, WEB, TOOLS),
+            listOf(MODELS, LOCAL_MODELS, WEB, TOOLS),
             listOf(ANSWERS, MEMORY_SKILLS, FILES_SCHEDULE),
             listOf(THEME, PERMISSIONS, ABOUT),
         )

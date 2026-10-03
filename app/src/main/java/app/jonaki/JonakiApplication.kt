@@ -10,6 +10,7 @@ import app.jonaki.files.MediaThumbnails
 import app.jonaki.feature.gallery.GallerySource
 import app.jonaki.files.IncomingShares
 import app.jonaki.files.LinkedFolder
+import app.jonaki.localmodels.LocalModels
 import app.jonaki.files.VisibleActivity
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.phone.AndroidPhone
@@ -116,6 +117,10 @@ class JonakiApplication : Application() {
     lateinit var python: PythonSetup
         private set
 
+    /** Settings > Local models and its download worker (D-133). */
+    lateinit var localModels: LocalModels
+        private set
+
     /** The phone's photos for the composer's gallery sheet, with one thumbnail cache for the app's life (D-085). */
     val gallerySource: GallerySource by lazy {
         GallerySource(MediaStorePhotoLibrary(contentResolver), MediaThumbnails(contentResolver))
@@ -175,6 +180,7 @@ class JonakiApplication : Application() {
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         val pythonFolder = CodeRuntimes.pythonFolder(this)
         python = PythonSetup(pythonFolder, PyodideInstaller(pythonFolder, httpClient), applicationScope)
+        localModels = LocalModels(this, httpClient, applicationScope)
         applicationScope.launch {
             python.refresh()
         }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The notification of a model download (D-133). -->
+    <string name="model_download_channel_name">মডেল ডাউনলোড</string>
+    <string name="model_download_title">%1$s ডাউনলোড হচ্ছে</string>
+    <string name="model_download_cancel">বাতিল</string>
+</resources>

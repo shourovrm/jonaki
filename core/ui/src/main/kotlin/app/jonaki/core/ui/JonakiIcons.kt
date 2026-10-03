@@ -213,6 +213,9 @@ object JonakiIcons {
         )
     }
 
+    /** Material "download": Settings > Local models (D-133). */
+    val Download: ImageVector by lazy { icon("Download", "M5,20h14v-2H5V20zM19,9h-4V3H9v6H5l7,7L19,9z") }
+
     /** Material "skip_next": a part a subagent skipped (D-126). */
     val SkipNext: ImageVector by lazy { icon("SkipNext", "M6,18l8.5,-6L6,6v12zM16,6v12h2V6h-2z") }
 

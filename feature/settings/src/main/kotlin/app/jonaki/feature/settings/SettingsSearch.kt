@@ -27,6 +27,12 @@ object SettingsSearch {
             R.string.settings_subagent_writer,
             R.string.settings_subagent_worker,
         ),
+        SettingsPage.LOCAL_MODELS to listOf(
+            R.string.local_models_section_downloaded,
+            R.string.local_models_section_recommended,
+            R.string.local_models_search_hint,
+            R.string.local_models_free_storage,
+        ),
         SettingsPage.WEB to listOf(
             R.string.settings_section_search,
             R.string.settings_search_order,

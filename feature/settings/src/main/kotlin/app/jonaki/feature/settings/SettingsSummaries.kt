@@ -20,6 +20,7 @@ object SettingsSummaries {
 
     fun of(page: SettingsPage, state: SettingsUiState, texts: SettingsTexts): PageSummary = when (page) {
         SettingsPage.MODELS -> PageSummary(models(state, texts))
+        SettingsPage.LOCAL_MODELS -> PageSummary(localModels(state.localModels, texts))
         SettingsPage.WEB -> PageSummary(web(state, texts))
         SettingsPage.TOOLS -> PageSummary(tools(state, texts))
         SettingsPage.ANSWERS -> PageSummary(answers(state, texts))
@@ -43,6 +44,23 @@ object SettingsSummaries {
             return texts.plural(R.plurals.settings_summary_models_no_balance, modelCount, service.displayName, modelCount)
         }
         return texts.plural(R.plurals.settings_summary_models, modelCount, service.displayName, modelCount, balance)
+    }
+
+    /** "2 downloaded · Qwen3.5-2B fits": what is on the phone, and the largest recommended model it can run now. */
+    private fun localModels(summary: LocalModelsSummaryUi, texts: SettingsTexts): String {
+        val count = summary.downloadedCount
+        val downloaded = if (count == 0) {
+            texts.string(R.string.settings_summary_local_none_downloaded)
+        } else {
+            texts.plural(R.plurals.settings_summary_local_downloaded, count, count)
+        }
+        val fittingName = summary.largestFittingName
+        val fits = if (fittingName == null) {
+            texts.string(R.string.settings_summary_local_none_fits)
+        } else {
+            texts.string(R.string.settings_summary_local_fits, fittingName)
+        }
+        return downloaded + SEPARATOR + fits
     }
 
     /** Search services in the order web_search tries them, only those with a key. */

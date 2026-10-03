@@ -53,6 +53,8 @@ data class SettingsUiState(
     val factCount: Int = 0,
     /** Skills in the library, for the first page's summary. */
     val skillCount: Int = 0,
+    /** Settings > Local models' row on the first page (D-133). */
+    val localModels: LocalModelsSummaryUi = LocalModelsSummaryUi(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -281,5 +283,6 @@ object SettingsSample {
         toolGroupCount = 12,
         factCount = 3,
         skillCount = 5,
+        localModels = LocalModelsSummaryUi(downloadedCount = 2, largestFittingName = "Qwen3.5-2B"),
     )
 }

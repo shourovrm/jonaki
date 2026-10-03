@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings > Local models (D-133). -->
+    <string name="settings_root_local_models">Local models</string>
+    <plurals name="settings_summary_local_downloaded">
+        <item quantity="one">%1$d downloaded</item>
+        <item quantity="other">%1$d downloaded</item>
+    </plurals>
+    <string name="settings_summary_local_none_downloaded">None downloaded</string>
+    <string name="settings_summary_local_fits">%1$s fits</string>
+    <string name="settings_summary_local_none_fits">No model fits</string>
+
+    <string name="local_models_section_phone">This phone</string>
+    <string name="local_models_ram">RAM</string>
+    <string name="local_models_available_memory">Available memory</string>
+    <string name="local_models_free_storage">Free storage</string>
+    <string name="local_models_section_downloaded">Downloaded</string>
+    <string name="local_models_none_downloaded">None yet</string>
+    <string name="local_models_section_recommended">Recommended</string>
+    <string name="local_models_section_search">Hugging Face</string>
+    <string name="local_models_search_hint">Search Hugging Face</string>
+    <string name="local_models_search_failed">Search failed. Check the connection.</string>
+    <string name="local_models_search_empty">No GGUF models found</string>
+
+    <string name="local_models_fits">Fits</string>
+    <string name="local_models_tight">Tight</string>
+    <string name="local_models_too_big">Too big</string>
+    <string name="local_models_gated">Gated on Hugging Face</string>
+    <string name="local_models_not_supported">Not supported</string>
+
+    <string name="local_models_download">Download</string>
+    <string name="local_models_delete">Delete</string>
+    <string name="local_models_delete_title">Delete %1$s?</string>
+    <string name="local_models_waiting">Waiting…</string>
+    <string name="local_models_progress">%1$s of %2$s</string>
+    <string name="local_models_downloaded">Downloaded</string>
+    <string name="local_models_failed">Download failed</string>
+    <string name="local_models_damaged">Damaged, deleted</string>
+    <string name="local_models_no_space">Needs %1$s free</string>
+
+    <string name="local_models_parameters">%1$s parameters</string>
+    <string name="local_models_downloads">%1$s downloads</string>
+    <string name="local_models_files_title">Files</string>
+    <string name="local_models_files_failed">Couldn\'t load the files</string>
+    <string name="local_models_files_empty">No model files</string>
+    <string name="local_models_suggested">Suggested</string>
+</resources>

@@ -46,10 +46,10 @@ sealed interface DownloadOutcome {
  * coroutine stops between two chunks.
  */
 class ModelDownloader(private val httpClient: OkHttpClient) {
-    suspend fun download(request: DownloadRequest, onProgress: (downloadedBytes: Long) -> Unit): DownloadOutcome =
+    suspend fun download(request: DownloadRequest, onProgress: suspend (downloadedBytes: Long) -> Unit): DownloadOutcome =
         withContext(Dispatchers.IO) { fetchAndCheck(request, onProgress) }
 
-    private suspend fun fetchAndCheck(request: DownloadRequest, onProgress: (Long) -> Unit): DownloadOutcome {
+    private suspend fun fetchAndCheck(request: DownloadRequest, onProgress: suspend (Long) -> Unit): DownloadOutcome {
         request.partFile.parentFile?.mkdirs()
         request.targetFile.parentFile?.mkdirs()
         if (request.partFile.length() > request.expectedBytes) {
@@ -112,7 +112,7 @@ class ModelDownloader(private val httpClient: OkHttpClient) {
         append: Boolean,
         digest: MessageDigest,
         startBytes: Long,
-        onProgress: (Long) -> Unit,
+        onProgress: suspend (Long) -> Unit,
     ): Long {
         var total = startBytes
         FileOutputStream(partFile, append).use { output ->
