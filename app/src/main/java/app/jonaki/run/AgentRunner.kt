@@ -77,6 +77,7 @@ import app.jonaki.tools.schedule.TaskScheduler
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
+import app.jonaki.web.WebViewPageRenderer
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -138,6 +139,9 @@ class AgentRunner(
     val runStepCounts: StateFlow<Map<String, Int>> = stepCounts.asStateFlow()
 
     private val promptBuilder = PromptBuilder(SystemPrompt.BASE)
+
+    /** One for the app, because it lets only one page render at a time (D-131). */
+    private val pageRenderer = WebViewPageRenderer(context)
 
     /**
      * Each running thread's own approval mode name, "" when it follows
@@ -540,6 +544,7 @@ class AgentRunner(
         mcpServers = mcpServers.forTools(),
         mcpToolListFolder = mcpServers.toolListFolder,
         codeRuntimes = CodeRuntimes.forApp(context),
+        pageRenderer = pageRenderer,
         enabledGroups = settings.snapshot.value.enabledToolGroups,
     )
 

@@ -25,6 +25,7 @@ import app.jonaki.tools.searchfiles.SearchFilesTool
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.ShareFileTool
 import app.jonaki.tools.viewimage.ViewImageTool
+import app.jonaki.tools.webfetch.PageRenderer
 import app.jonaki.tools.webfetch.WebFetchTool
 import app.jonaki.tools.websearch.WebSearchTool
 import app.jonaki.tools.writefile.WriteFileTool
@@ -56,6 +57,8 @@ data class ToolServices(
     val mcpToolListFolder: File? = null,
     /** One engine per language for run_code; empty leaves run_code out. */
     val codeRuntimes: List<CodeRuntime> = emptyList(),
+    /** The off-screen WebView that lets web_fetch run a page's JavaScript (D-131); null reads pages without it. */
+    val pageRenderer: PageRenderer? = null,
     /** The groups switched on in the picker or Settings > Tools; the tools of the others are left out. */
     val enabledGroups: Set<ToolGroup> = ToolGroup.entries.toSet(),
 )
@@ -79,7 +82,7 @@ object ToolRegistry {
             tools += WebSearchTool(services.searchBackends)
         }
         if (services.webAccessEnabled) {
-            tools += WebFetchTool()
+            tools += WebFetchTool(services.pageRenderer)
         }
         if (services.videoSummarizer != null) {
             tools += YouTubeSummarizeTool(services.videoSummarizer)
