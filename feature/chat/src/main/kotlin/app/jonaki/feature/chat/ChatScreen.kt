@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -63,6 +64,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -81,6 +83,8 @@ import app.jonaki.core.ui.approvalModeLabel
 import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MarkdownText
+import app.jonaki.core.ui.MonospaceFamily
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,119 +141,161 @@ fun ChatScreen(
     onOpenFile: (path: String) -> Unit = {},
     /** A button on the Python install card (plan M8 step 4). */
     onPythonCard: (card: ChatItem.PythonInstall, action: PythonCardAction) -> Unit = { _, _ -> },
+    /**
+     * The subagent whose page is open, or null (D-126). The app holds it, so
+     * the page is still open after a file viewer it opened is closed.
+     */
+    openSubagentId: String? = null,
+    onOpenSubagent: (subagentId: String?) -> Unit = {},
+    /** Stop on a subagent's page; null hides it. */
+    onStopSubagent: ((subagentId: String) -> Unit)? = null,
+    /** The app keeps the list's position while a file viewer opened from the chat is in front. */
+    listState: LazyListState = rememberLazyListState(),
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
-    Scaffold(
-        modifier = modifier,
-        contentWindowInsets = WindowInsets(0),
-        topBar = {
-            Column {
-                ChatTopBar(
-                    state = state,
-                    onBack = onBack,
-                    onWebSearchChange = onWebSearchChange,
-                    onRename = onRename,
-                    onOpenMemory = onOpenMemory,
-                    onOpenSkills = onOpenSkills,
-                    onOpenApprovals = { openSheet = ChatSheet.APPROVALS },
-                    onOpenStyle = onOpenStyle,
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                if (state.incognito) {
-                    // A thread that has no message yet does not exist, so there is nothing to keep.
-                    IncognitoBanner(onKeep = if (state.title.isNotBlank()) onKeepThread else null)
-                }
-            }
-        },
-        bottomBar = {
-            Column(Modifier.navigationBarsPadding().imePadding()) {
-                val status = state.status
-                if (status != null) {
-                    StatusStrip(
-                        status = status,
-                        isRunning = state.isRunning,
-                        onModelClick = { openSheet = ChatSheet.MODEL },
-                        onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
-                        webSearchEnabled = state.webSearchEnabled,
+    var openWorkId by rememberSaveable { mutableStateOf<String?>(null) }
+    Box(modifier) {
+        Scaffold(
+            contentWindowInsets = WindowInsets(0),
+            topBar = {
+                Column {
+                    ChatTopBar(
+                        state = state,
+                        onBack = onBack,
                         onWebSearchChange = onWebSearchChange,
-                        onContextClick = onOpenContext?.let { openContext ->
-                            {
-                                openSheet = ChatSheet.CONTEXT
-                                openContext()
-                            }
-                        },
+                        onRename = onRename,
+                        onOpenMemory = onOpenMemory,
+                        onOpenSkills = onOpenSkills,
+                        onOpenApprovals = { openSheet = ChatSheet.APPROVALS },
+                        onOpenStyle = onOpenStyle,
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    if (state.incognito) {
+                        // A thread that has no message yet does not exist, so there is nothing to keep.
+                        IncognitoBanner(onKeep = if (state.title.isNotBlank()) onKeepThread else null)
+                    }
+                }
+            },
+            bottomBar = {
+                Column(Modifier.navigationBarsPadding().imePadding()) {
+                    val status = state.status
+                    if (status != null) {
+                        StatusStrip(
+                            status = status,
+                            isRunning = state.isRunning,
+                            onModelClick = { openSheet = ChatSheet.MODEL },
+                            onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
+                            webSearchEnabled = state.webSearchEnabled,
+                            onWebSearchChange = onWebSearchChange,
+                            onContextClick = onOpenContext?.let { openContext ->
+                                {
+                                    openSheet = ChatSheet.CONTEXT
+                                    openContext()
+                                }
+                            },
+                        )
+                    }
+                    if (state.attachments.isNotEmpty()) {
+                        AttachmentChips(state.attachments, onRemoveAttachment)
+                    }
+                    if (state.editingMessageId != null) {
+                        EditingBanner(onCancelEdit)
+                    }
+                    Composer(
+                        draft = state.draft,
+                        canSend = state.draft.isNotBlank() || state.attachments.isNotEmpty(),
+                        isRunning = state.isRunning,
+                        onDraftChange = onDraftChange,
+                        onSend = onSend,
+                        onStop = onStop,
+                        onAttach = onAttach,
+                        onTakePhoto = onTakePhoto,
+                        onPickPhotos = onPickPhotos,
                     )
                 }
-                if (state.attachments.isNotEmpty()) {
-                    AttachmentChips(state.attachments, onRemoveAttachment)
+            },
+        ) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                if (state.items.isNotEmpty()) {
+                    MessageList(
+                        listState = listState,
+                        items = state.items,
+                        onApprovalChoice = onApprovalChoice,
+                        onRetry = onRetry,
+                        focusMessageId = focusMessageId,
+                        onOpenArtifact = onOpenArtifact,
+                        onOpenStep = onOpenStep,
+                        // Editing while the agent works would change the history under the run.
+                        onEditMessage = if (state.isRunning) null else onEditMessage,
+                        onPythonCard = onPythonCard,
+                        canTryAgain = !state.isRunning,
+                        onOpenSubagent = { subagentId -> onOpenSubagent(subagentId) },
+                        onOpenWork = { workId -> openWorkId = workId },
+                    )
                 }
-                if (state.editingMessageId != null) {
-                    EditingBanner(onCancelEdit)
-                }
-                Composer(
-                    draft = state.draft,
-                    canSend = state.draft.isNotBlank() || state.attachments.isNotEmpty(),
-                    isRunning = state.isRunning,
-                    onDraftChange = onDraftChange,
-                    onSend = onSend,
-                    onStop = onStop,
-                    onAttach = onAttach,
-                    onTakePhoto = onTakePhoto,
-                    onPickPhotos = onPickPhotos,
-                )
-            }
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            if (state.items.isNotEmpty()) {
-                MessageList(
-                    items = state.items,
-                    onApprovalChoice = onApprovalChoice,
-                    onRetry = onRetry,
-                    focusMessageId = focusMessageId,
-                    onOpenArtifact = onOpenArtifact,
-                    onOpenStep = onOpenStep,
-                    // Editing while the agent works would change the history under the run.
-                    onEditMessage = if (state.isRunning) null else onEditMessage,
-                    onPythonCard = onPythonCard,
-                    canTryAgain = !state.isRunning,
-                )
             }
         }
-    }
-    val codeRun = state.codeRun
-    if (codeRun != null) {
-        CodeRunSheet(codeRun, onOpenFile = onOpenFile, onDismiss = onCloseCodeRun)
-    }
-    val usage = state.usage
-    when {
-        openSheet == ChatSheet.MODEL -> ModelSheet(
-            choices = state.modelChoices,
-            selectedKey = state.selectedModelKey,
-            thinking = state.threadThinking,
-            onThinkingChange = onThinkingChange,
-            onSelect = { modelKey ->
-                openSheet = ChatSheet.NONE
-                onModelSelect(modelKey)
-            },
-            onEditModels = {
-                openSheet = ChatSheet.NONE
-                onEditModels()
-            },
-            onDismiss = { openSheet = ChatSheet.NONE },
-        )
-        openSheet == ChatSheet.USAGE && usage != null -> UsageSheet(usage, onDismiss = { openSheet = ChatSheet.NONE })
-        openSheet == ChatSheet.CONTEXT -> ContextSheet(state.context, onDismiss = { openSheet = ChatSheet.NONE })
-        openSheet == ChatSheet.APPROVALS -> ApprovalModeDialog(
-            selected = state.threadApprovalMode,
-            defaultChoice = state.defaultApprovalMode,
-            onSelect = { choice ->
-                openSheet = ChatSheet.NONE
-                onApprovalModeChange(choice)
-            },
-            onDismiss = { openSheet = ChatSheet.NONE },
-        )
+        val codeRun = state.codeRun
+        if (codeRun != null) {
+            CodeRunSheet(codeRun, onOpenFile = onOpenFile, onDismiss = onCloseCodeRun)
+        }
+        val usage = state.usage
+        when {
+            openSheet == ChatSheet.MODEL -> ModelSheet(
+                choices = state.modelChoices,
+                selectedKey = state.selectedModelKey,
+                thinking = state.threadThinking,
+                onThinkingChange = onThinkingChange,
+                onSelect = { modelKey ->
+                    openSheet = ChatSheet.NONE
+                    onModelSelect(modelKey)
+                },
+                onEditModels = {
+                    openSheet = ChatSheet.NONE
+                    onEditModels()
+                },
+                onDismiss = { openSheet = ChatSheet.NONE },
+            )
+            openSheet == ChatSheet.USAGE && usage != null -> UsageSheet(usage, onDismiss = { openSheet = ChatSheet.NONE })
+            openSheet == ChatSheet.CONTEXT -> ContextSheet(state.context, onDismiss = { openSheet = ChatSheet.NONE })
+            openSheet == ChatSheet.APPROVALS -> ApprovalModeDialog(
+                selected = state.threadApprovalMode,
+                defaultChoice = state.defaultApprovalMode,
+                onSelect = { choice ->
+                    openSheet = ChatSheet.NONE
+                    onApprovalModeChange(choice)
+                },
+                onDismiss = { openSheet = ChatSheet.NONE },
+            )
+        }
+        val openWork = state.items.firstOrNull { item -> item.id == openWorkId } as? ChatItem.SubagentWork
+        if (openWork != null) {
+            SubagentWorkSheet(
+                work = openWork,
+                onOpenSubagent = { subagentId ->
+                    openWorkId = null
+                    onOpenSubagent(subagentId)
+                },
+                onOpenFile = onOpenFile,
+                onDismiss = { openWorkId = null },
+            )
+        }
+        // Drawn over the chat, which stays composed underneath, so Back finds it at the same place.
+        val subagents = state.items.filterIsInstance<ChatItem.Run>().flatMap { run -> run.subagents }
+        val openSubagent = subagents.firstOrNull { subagent -> subagent.id == openSubagentId }
+        if (openSubagent != null) {
+            SubagentPage(
+                subagent = openSubagent,
+                siblings = subagents.filter { subagent -> subagent.delegateStepId == openSubagent.delegateStepId },
+                onSelect = { subagentId -> onOpenSubagent(subagentId) },
+                onBack = { onOpenSubagent(null) },
+                onOpenFile = onOpenFile,
+                onOpenStep = onOpenStep,
+                onStop = onStopSubagent,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 
@@ -380,6 +426,7 @@ private fun ChatTopBar(
 
 @Composable
 private fun MessageList(
+    listState: LazyListState,
     items: List<ChatItem>,
     onApprovalChoice: (String, ApprovalChoice) -> Unit,
     onRetry: (String) -> Unit,
@@ -389,8 +436,9 @@ private fun MessageList(
     onEditMessage: ((messageId: String, text: String) -> Unit)?,
     onPythonCard: (ChatItem.PythonInstall, PythonCardAction) -> Unit,
     canTryAgain: Boolean,
+    onOpenSubagent: (String) -> Unit,
+    onOpenWork: (String) -> Unit,
 ) {
-    val listState = rememberLazyListState()
     // Follow the stream only while the user is at the bottom; scrolling up to
     // read earlier steps must not be undone by the next chunk.
     // This is read after the new items are laid out, so "at the bottom" allows
@@ -402,7 +450,8 @@ private fun MessageList(
             lastVisible >= listState.layoutInfo.totalItemsCount - ROWS_ONE_UPDATE_CAN_ADD
         }
     }
-    var openedAtBottom by remember { mutableStateOf(false) }
+    // A list the app kept while a file viewer was in front is already placed; only a new one jumps to the end.
+    var openedAtBottom by remember { mutableStateOf(listState.firstVisibleItemIndex > 0) }
     // The working line is always last and never grows, so the newest few items are measured.
     val contentSignature = items.size to items.takeLast(ITEMS_THAT_GROW).sumOf(::contentLength)
     LaunchedEffect(contentSignature) {
@@ -441,8 +490,8 @@ private fun MessageList(
                 }
                 is ChatItem.Reasoning -> ReasoningBlock(item)
                 is ChatItem.Working -> WorkingRow(item)
-                is ChatItem.Run -> RunBlock(item, onOpenStep)
-                is ChatItem.Subagent -> SubagentCard(item, onOpenStep)
+                is ChatItem.Run -> RunBlock(item, onOpenStep, onOpenSubagent = onOpenSubagent)
+                is ChatItem.SubagentWork -> SubagentWorkRow(item, onOpenWork)
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)
@@ -461,8 +510,8 @@ private const val ITEMS_THAT_GROW = 3
 private fun contentLength(item: ChatItem?): Int = when (item) {
     is ChatItem.AssistantMessage -> item.markdown.length
     is ChatItem.Reasoning -> item.text.length
-    is ChatItem.Run -> item.steps.size
-    is ChatItem.Subagent -> item.steps.size + item.latestText.orEmpty().length
+    // Rows of subagents grow too: count their steps and the lines they wrote.
+    is ChatItem.Run -> item.steps.size + item.subagents.sumOf { subagent -> subagent.steps.size + subagent.latestText.orEmpty().length }
     else -> 0
 }
 
@@ -507,7 +556,13 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                     title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
                 )
+                val waitEndsAt = approval.waitEndsAtMillis
+                if (waitEndsAt != null) {
+                    Spacer(Modifier.width(8.dp))
+                    WaitCountdown(waitEndsAt)
+                }
             }
             Text(
                 approval.description,
@@ -788,3 +843,20 @@ private fun StopButton(onStop: () -> Unit) {
         Text(stringResource(R.string.chat_stop), fontWeight = FontWeight.SemiBold)
     }
 }
+
+/** The time left before a subagent's card is withdrawn unanswered (D-062), ticking each second. */
+@Composable
+private fun WaitCountdown(waitEndsAtMillis: Long) {
+    val now by produceState(System.currentTimeMillis(), waitEndsAtMillis) {
+        while (value < waitEndsAtMillis) {
+            delay(COUNTDOWN_TICK_MILLIS)
+            value = System.currentTimeMillis()
+        }
+    }
+    Text(
+        formatCountdown(waitEndsAtMillis - now),
+        style = MaterialTheme.typography.labelLarge.copy(fontFamily = MonospaceFamily),
+    )
+}
+
+private const val COUNTDOWN_TICK_MILLIS = 1_000L

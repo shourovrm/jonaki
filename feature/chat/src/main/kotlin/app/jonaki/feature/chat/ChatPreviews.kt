@@ -15,24 +15,10 @@ private const val LONG_TITLE = "Compare three e-readers for Bangla PDFs!"
 
 private const val LONG_MODEL_NAME = "deepseek/deepseek-v4-flash-0925-preview-x"
 
-private val previewSubagent = ChatItem.Subagent(
-    id = "sub1",
-    label = "researcher 2",
-    task = "Find whether the Kobo Clara BW renders embedded Bangla fonts in PDFs",
-    status = SubagentUiStatus.RUNNING,
-    steps = listOf(
-        StepUi("sub1-s1", "web_search", StepUiStatus.DONE, "Tavily · 5 results", durationMillis = 1_800),
-        StepUi("sub1-s2", "web_fetch", StepUiStatus.RUNNING, "help.kobo.com/hc/en-us/articles/360017"),
-    ),
-    costUsd = 0.0031,
-    latestText = "The Kobo help pages list the supported PDF fonts.",
-    answer = null,
-)
-
 private val previewState: ChatUiState = ChatSample.withUsage.copy(
     title = LONG_TITLE,
     status = ChatSample.withUsage.status?.copy(modelName = LONG_MODEL_NAME),
-    items = ChatSample.withUsage.items + previewSubagent,
+    items = ChatSample.withUsage.items + SubagentSamples.runningRun + SubagentSamples.approval,
 )
 
 @Composable

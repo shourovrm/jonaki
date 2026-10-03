@@ -9,7 +9,12 @@ import app.jonaki.core.storage.StepEntity
 import app.jonaki.core.storage.StepStatus
 import app.jonaki.tools.runcode.InstallNeed
 import app.jonaki.tools.runcode.InstallNeeds
+import app.jonaki.core.agent.SubagentGate
+import app.jonaki.core.agent.SubagentLimits
+import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.core.storage.SubagentEntity
+import app.jonaki.feature.chat.NotesBoardUi
+import app.jonaki.feature.chat.SubagentUi
 import app.jonaki.feature.chat.SubagentUiStatus
 import app.jonaki.run.PendingApproval
 import app.jonaki.feature.chat.ChatItem
@@ -41,8 +46,10 @@ object ChatItems {
         pendingApprovals: List<PendingApproval> = emptyList(),
         /** Shown after an answer whose OpenRouter call fell back to the cheapest provider (D-030). */
         fallbackNote: String = "",
-        /** The thread's subagents (M7); each shows as a card under the run that started it. */
+        /** The thread's subagents (M7); each shows as a row under the delegate step that started it (D-126). */
         subagents: List<SubagentEntity> = emptyList(),
+        /** A model's display name from its "service:modelId" key, for a subagent's page; null when unknown. */
+        modelNameOf: (modelKey: String) -> String? = { null },
         /**
          * Makes the install card when the last turn's run_code found Python or
          * its packages missing (plan M8 step 4); null shows no card, for
@@ -58,6 +65,7 @@ object ChatItems {
         val stepsById = steps.filter { step -> step.subagentId == null }.associateBy { step -> step.toolCallId }
         val subagentSteps = steps.filter { step -> step.subagentId != null }.groupBy { step -> step.subagentId }
         val subagentsByParent = subagents.groupBy { subagent -> subagent.parentToolCallId }
+        val subagentParts = SubagentParts(subagentsByParent, subagentSteps, modelNameOf)
         val items = mutableListOf<ChatItem>()
         val firstKeptTurn = compaction?.let { summary -> firstTurnAfter(turns, summary.upToPosition) }
         for ((index, turn) in turns.withIndex()) {
@@ -65,10 +73,11 @@ object ChatItems {
             if (compaction != null && index == firstKeptTurn) {
                 items += ChatItem.SummaryDivider("summary-${compaction.id}", compaction.summaryText)
             }
-            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentsByParent, subagentSteps)
+            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentParts)
             if (isLastTurn) {
                 items += pythonCardFor(turn, stepsById, pythonCard)
-                items += pendingApprovals.map(::approvalCard)
+                val stepStarts = steps.associate { step -> step.toolCallId to step.startedAtMillis }
+                items += pendingApprovals.map { pending -> approvalCard(pending, stepStarts) }
             }
         }
         val withRetry = markRetryableError(items, visibleRows, isRunning)
@@ -101,8 +110,12 @@ object ChatItems {
         return listOfNotNull(pythonCard(step.toolCallId, need))
     }
 
-    /** A subagent's request_tool card names the tool it wants and says why; other cards say what the call will do. */
-    private fun approvalCard(pending: PendingApproval): ChatItem.Approval {
+    /**
+     * A subagent's request_tool card names the tool it wants and says why;
+     * other cards say what the call will do. A subagent's card is withdrawn
+     * 3 minutes after its step started (D-062), which is when it was shown.
+     */
+    private fun approvalCard(pending: PendingApproval, stepStarts: Map<String, Long>): ChatItem.Approval {
         val subagent = pending.subagent
         val reason = subagent?.reason
         val description = if (reason != null) {
@@ -110,7 +123,15 @@ object ChatItems {
         } else {
             StepDetail.of(pending.toolCall.toolName, pending.toolCall.argumentsJson).target.orEmpty()
         }
-        return ChatItem.Approval(pending.toolCall.id, pending.toolName, description, agentLabel = subagent?.agentLabel)
+        val shownAt = stepStarts[pending.toolCall.id]
+        val waitEndsAt = if (subagent == null || shownAt == null) null else shownAt + SubagentGate.WAIT_LIMIT.inWholeMilliseconds
+        return ChatItem.Approval(
+            pending.toolCall.id,
+            pending.toolName,
+            description,
+            agentLabel = subagent?.agentLabel,
+            waitEndsAtMillis = waitEndsAt,
+        )
     }
 
     /** A running tool wins, then text being written; anything else is thinking. */
@@ -153,8 +174,7 @@ object ChatItems {
         stepsById: Map<String, StepEntity>,
         isActiveTurn: Boolean,
         fallbackNote: String,
-        subagentsByParent: Map<String, List<SubagentEntity>>,
-        subagentSteps: Map<String?, List<StepEntity>>,
+        subagentParts: SubagentParts,
     ): List<ChatItem> {
         val items = mutableListOf<ChatItem>()
         val turnId = turn.first().id
@@ -167,17 +187,21 @@ object ChatItems {
             .flatMap { row -> HistoryMapper.toolCallsFromJson(row.toolCallsJson) }
             .mapNotNull { call -> stepsById[call.id] }
             .sortedBy { step -> step.startedAtMillis }
-        val turnSubagents = turnSteps.flatMap { step -> subagentsByParent[step.toolCallId].orEmpty() }
+        val turnSubagents = turnSteps.flatMap { step -> subagentParts.byParent[step.toolCallId].orEmpty() }
+        val subagentRows = turnSubagents.map { subagent -> subagentParts.uiOf(subagent, turnSubagents) }
         if (turnSteps.isNotEmpty()) {
             // The turn's cost is only final once the run has ended.
             val turnCost = if (isActiveTurn) null else costOf(turn, turnSubagents)
-            items += ChatItem.Run("run-$turnId", turnSteps.map(::stepUi), isActive = isActiveTurn, costUsd = turnCost)
-        }
-        for (subagent in turnSubagents) {
-            items += subagentCard(subagent, subagentSteps[subagent.id].orEmpty(), turnSubagents)
+            items += ChatItem.Run(
+                "run-$turnId",
+                turnSteps.map(::stepUi),
+                isActive = isActiveTurn,
+                costUsd = turnCost,
+                subagents = subagentRows,
+            )
         }
         // A writer subagent's artifacts open from the chat like the thread agent's own.
-        val stepsOfTurn = turnSteps + turnSubagents.flatMap { subagent -> subagentSteps[subagent.id].orEmpty() }
+        val stepsOfTurn = turnSteps + turnSubagents.flatMap { subagent -> subagentParts.stepsOf(subagent) }
         items += artifactsShown(stepsOfTurn, turnId)
         for (row in turn) {
             when (row.role) {
@@ -188,8 +212,21 @@ object ChatItems {
                 items += ChatItem.Note("note-${row.id}", fallbackNote)
             }
         }
+        // Under the final answer, once the run has ended (D-126).
+        if (!isActiveTurn && subagentRows.isNotEmpty()) {
+            items += ChatItem.SubagentWork("work-$turnId", subagentRows, notesBoardsOf(subagentRows))
+        }
         return items
     }
+
+    /** One board per delegate call whose subagents posted notes; its path follows from the call's id. */
+    private fun notesBoardsOf(subagents: List<SubagentUi>): List<NotesBoardUi> =
+        subagents
+            .groupBy { subagent -> subagent.delegateStepId }
+            .map { (delegateStepId, group) ->
+                NotesBoardUi(SubagentRunner.notesBoardPath(delegateStepId), notes = group.sumOf { subagent -> subagent.notesPosted })
+            }
+            .filter { board -> board.notes > 0 }
 
     /** The reasoning block, then the answer text, of one assistant row. */
     private fun assistantItems(row: MessageEntity, isActiveTurn: Boolean): List<ChatItem> {
@@ -232,21 +269,62 @@ object ChatItems {
         return if (costs.isEmpty()) null else costs.sum()
     }
 
-    private fun subagentCard(subagent: SubagentEntity, steps: List<StepEntity>, sameCall: List<SubagentEntity>): ChatItem.Subagent {
-        val siblings = sameCall.count { other -> other.parentToolCallId == subagent.parentToolCallId }
-        // The same names the delegate result uses: "researcher", or "researcher 2" among several.
-        val label = if (siblings > 1) "${subagent.agentType} ${subagent.orderInCall + 1}" else subagent.agentType
-        return ChatItem.Subagent(
-            id = "subagent-${subagent.id}",
-            label = label,
-            task = subagent.task,
-            status = SubagentUiStatus.entries.firstOrNull { it.name == subagent.status } ?: SubagentUiStatus.STOPPED,
-            steps = steps.sortedBy { step -> step.startedAtMillis }.map(::stepUi),
-            costUsd = subagent.costUsd,
-            latestText = subagent.latestText,
-            answer = subagent.resultText,
-        )
+    /** The thread's subagents with their steps, turned into rows. */
+    private class SubagentParts(
+        val byParent: Map<String, List<SubagentEntity>>,
+        private val stepsBySubagent: Map<String?, List<StepEntity>>,
+        private val modelNameOf: (String) -> String?,
+    ) {
+        private val limits = SubagentLimits()
+
+        fun stepsOf(subagent: SubagentEntity): List<StepEntity> =
+            stepsBySubagent[subagent.id].orEmpty().sortedBy { step -> step.startedAtMillis }
+
+        fun uiOf(subagent: SubagentEntity, sameTurn: List<SubagentEntity>): SubagentUi {
+            val siblings = sameTurn.count { other -> other.parentToolCallId == subagent.parentToolCallId }
+            // The same names the delegate result uses: "researcher", or "researcher 2" among several.
+            val label = if (siblings > 1) "${subagent.agentType} ${subagent.orderInCall + 1}" else subagent.agentType
+            val steps = stepsOf(subagent)
+            return SubagentUi(
+                id = subagent.id,
+                label = label,
+                delegateStepId = subagent.parentToolCallId,
+                task = subagent.task,
+                modelName = subagent.model?.let { key -> modelNameOf(key) ?: key.substringAfter(':') },
+                status = SubagentUiStatus.entries.firstOrNull { it.name == subagent.status } ?: SubagentUiStatus.STOPPED,
+                steps = steps.map(::stepUi),
+                costUsd = subagent.costUsd,
+                latestText = subagent.latestText,
+                answer = subagent.resultText,
+                startedAtMillis = subagent.startedAtMillis,
+                finishedAtMillis = subagent.finishedAtMillis,
+                filesWritten = filesWrittenBy(steps),
+                notesPosted = steps.count(::isNotePosted),
+                stepLimit = limits.maxToolSteps,
+                costLimitUsd = limits.costCapUsd,
+            )
+        }
+
+        /** Files it wrote, edited or showed, in the order first touched; a denied or failed call wrote nothing. */
+        private fun filesWrittenBy(steps: List<StepEntity>): List<String> =
+            steps
+                .filter { step -> step.toolName in FILE_WRITING_TOOLS && step.status == StepStatus.DONE.name }
+                .mapNotNull { step -> artifactPathOf(step.argumentsJson) }
+                .distinct()
+
+        private fun isNotePosted(step: StepEntity): Boolean {
+            if (step.toolName != NOTES_TOOL || step.status != StepStatus.DONE.name) {
+                return false
+            }
+            val arguments = runCatching { Json.parseToJsonElement(step.argumentsJson) as? JsonObject }.getOrNull() ?: return false
+            return (arguments["action"] as? JsonPrimitive)?.contentOrNull == "post"
+        }
     }
+
+    /** Tools whose "path" names a file the call wrote. */
+    private val FILE_WRITING_TOOLS = setOf("write_file", "edit_file", ARTIFACT_TOOL)
+
+    private const val NOTES_TOOL = "notes"
 
     private fun stepUi(step: StepEntity): StepUi {
         val detail = StepDetail.of(step.toolName, step.argumentsJson)
