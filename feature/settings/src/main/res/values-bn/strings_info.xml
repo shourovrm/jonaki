@@ -16,7 +16,7 @@
     <string name="settings_permissions_photos">ছবি</string>
     <string name="settings_permissions_photos_purpose">গ্যালারি থেকে ছবি যুক্ত করা</string>
     <string name="settings_permissions_alarms">অ্যালার্ম ও রিমাইন্ডার</string>
-    <string name="settings_permissions_alarms_purpose">ঠিক মিনিটে রিমাইন্ডার</string>
+    <string name="settings_permissions_alarms_purpose">ঠিক সময়ে রিমাইন্ডার</string>
     <string name="settings_permissions_internet">ইন্টারনেট</string>
     <string name="settings_permissions_internet_purpose">মডেল, ওয়েব সার্চ ও MCP সার্ভার</string>
     <string name="settings_permissions_network_state">নেটওয়ার্কের অবস্থা</string>

@@ -2,7 +2,7 @@
 <resources>
     <string name="settings_title">সেটিংস</string>
     <string name="settings_back">ফিরে যান</string>
-    <string name="settings_section_chat">চ্যাট মডেল</string>
+    <string name="settings_section_chat">চ্যাট সার্ভিস</string>
     <string name="settings_api_key">API key</string>
     <string name="settings_section_youtube">YouTube সারাংশ</string>
     <string name="settings_gemini_key">Gemini API key</string>
@@ -12,11 +12,11 @@
     <string name="settings_move_down">%1$s নিচে নিন</string>
     <string name="settings_search_off_new">নতুন থ্রেডে বন্ধ</string>
     <string name="settings_section_appearance">থিম</string>
-    <string name="settings_theme_system">সিস্টেম</string>
+    <string name="settings_theme_system">ফোন</string>
     <string name="settings_theme_light">লাইট</string>
     <string name="settings_theme_dark">ডার্ক</string>
-    <string name="settings_key_set">সেট করা</string>
-    <string name="settings_key_not_set">সেট করা নেই</string>
+    <string name="settings_key_set">যোগ করা</string>
+    <string name="settings_key_not_set">key নেই</string>
     <string name="settings_balance_low">ব্যালেন্স কম</string>
     <string name="settings_key_hint">key পেস্ট করুন</string>
     <string name="settings_key_replace_hint">নতুন key পেস্ট করুন</string>
@@ -50,17 +50,17 @@
     <string name="settings_icon_model">মডেল</string>
     <string name="settings_icon_model_help">এই থ্রেডের মডেল। বদলাতে ট্যাপ করুন।</string>
     <string name="settings_icon_window">কনটেক্সট উইন্ডো</string>
-    <string name="settings_icon_window_help">মডেল একবারে কতটা লেখা ধরে রাখতে পারে, টোকেনে।</string>
+    <string name="settings_icon_window_help">মডেল কতটা লেখা ধরে রাখতে পারে, টোকেনে।</string>
     <string name="settings_icon_used">কনটেক্সট ব্যবহার</string>
-    <string name="settings_icon_used_help">কতটা ভরেছে।</string>
+    <string name="settings_icon_used_help">উইন্ডো কতটা ভরেছে।</string>
     <string name="settings_icon_cost">খরচ</string>
     <string name="settings_icon_cost_help">এই থ্রেডে খরচ, মার্কিন ডলারে। বিস্তারিত দেখতে ট্যাপ করুন।</string>
     <string name="settings_icon_bypass">বাইপাস</string>
     <string name="settings_icon_bypass_help">এই থ্রেডের টুল জিজ্ঞেস না করেই চলে।</string>
-    <string name="settings_section_approvals">অনুমতি</string>
+    <string name="settings_section_approvals">নতুন থ্রেডে অনুমতি</string>
     <string name="settings_show_status_strip">স্ট্যাটাস বার দেখান</string>
     <string name="settings_key_change">key বদলান</string>
-    <string name="settings_key_delete">key মুছুন</string>
+    <string name="settings_key_delete">key সরান</string>
     <string name="settings_cancel">বাতিল</string>
     <string name="settings_add_service">সার্ভিস যোগ করুন</string>
     <string name="settings_remove_service">সার্ভিস সরান</string>
@@ -99,16 +99,16 @@
         <item quantity="one">%1$dটি বাছাই</item>
         <item quantity="other">%1$dটি বাছাই</item>
     </plurals>
-    <string name="settings_section_subagents">সাবএজেন্টের মডেল</string>
+    <string name="settings_section_subagents">সাবএজেন্ট</string>
     <string name="settings_subagent_researcher">গবেষক</string>
     <string name="settings_subagent_scout">স্কাউট</string>
     <string name="settings_subagent_writer">লেখক</string>
     <string name="settings_subagent_worker">কর্মী</string>
-    <string name="settings_subagent_thread_model">থ্রেডের মডেল</string>
+    <string name="settings_subagent_thread_model">থ্রেডের মতোই</string>
     <string name="settings_subagent_cheapest_model">সবচেয়ে সস্তা মডেল</string>
     <string name="settings_section_tools">টুল</string>
     <string name="settings_tools">টুল</string>
-    <string name="settings_tools_help">বন্ধ টুল মডেলকে দেওয়া হয় না।</string>
+    <string name="settings_tools_help">বন্ধ টুল মডেল দেখতে পায় না।</string>
     <string name="settings_python">Python</string>
     <string name="settings_python_status">অবস্থা</string>
     <string name="settings_python_checking">দেখা হচ্ছে…</string>
@@ -122,9 +122,9 @@
     <string name="settings_python_install_short">ইনস্টল</string>
     <string name="settings_python_repair">ঠিক করুন</string>
     <string name="settings_python_remove">সরান</string>
-    <string name="settings_python_remove_partial">ডাউনলোড করা ফাইল মুছুন</string>
+    <string name="settings_python_remove_partial">ডাউনলোড করা ফাইল সরান</string>
     <string name="settings_python_remove_title">Python সরাবেন?</string>
-    <string name="settings_python_remove_text">Python ও এর প্যাকেজ মুছে যাবে। পরে আবার ইনস্টল করতে পারবেন।</string>
+    <string name="settings_python_remove_text">Python ও এর প্যাকেজ সরিয়ে দেয়। পরে আবার ইনস্টল করতে পারবেন।</string>
     <string name="settings_python_downloading_python">Python ডাউনলোড হচ্ছে</string>
     <string name="settings_python_downloading">%1$s ডাউনলোড হচ্ছে</string>
     <string name="settings_python_packages">প্যাকেজ</string>

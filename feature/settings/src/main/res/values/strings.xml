@@ -2,7 +2,7 @@
 <resources>
     <string name="settings_title">Settings</string>
     <string name="settings_back">Back</string>
-    <string name="settings_section_chat">Chat models</string>
+    <string name="settings_section_chat">Chat services</string>
     <string name="settings_api_key">API key</string>
     <string name="settings_section_youtube">YouTube summaries</string>
     <string name="settings_gemini_key">Gemini API key</string>
@@ -12,11 +12,11 @@
     <string name="settings_move_down">Move %1$s down</string>
     <string name="settings_search_off_new">Off in new threads</string>
     <string name="settings_section_appearance">Theme</string>
-    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_system">Phone</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_key_set">Set</string>
-    <string name="settings_key_not_set">Not set</string>
+    <string name="settings_key_set">Added</string>
+    <string name="settings_key_not_set">No key</string>
     <string name="settings_balance_low">Low balance</string>
     <string name="settings_key_hint">Paste key</string>
     <string name="settings_key_replace_hint">Paste new key</string>
@@ -50,17 +50,17 @@
     <string name="settings_icon_model">Model</string>
     <string name="settings_icon_model_help">The model this thread uses. Tap to switch.</string>
     <string name="settings_icon_window">Context window</string>
-    <string name="settings_icon_window_help">How much text the model can hold at once, in tokens.</string>
+    <string name="settings_icon_window_help">How much text the model can hold, in tokens.</string>
     <string name="settings_icon_used">Context used</string>
-    <string name="settings_icon_used_help">How full it is.</string>
+    <string name="settings_icon_used_help">How full the window is.</string>
     <string name="settings_icon_cost">Cost</string>
     <string name="settings_icon_cost_help">Spent in this thread, in US dollars. Tap for details.</string>
     <string name="settings_icon_bypass">Bypass</string>
     <string name="settings_icon_bypass_help">Tools in this thread run without asking.</string>
-    <string name="settings_section_approvals">Approvals</string>
+    <string name="settings_section_approvals">Approvals in new threads</string>
     <string name="settings_show_status_strip">Show status strip</string>
     <string name="settings_key_change">Change key</string>
-    <string name="settings_key_delete">Delete key</string>
+    <string name="settings_key_delete">Remove key</string>
     <string name="settings_cancel">Cancel</string>
     <string name="settings_add_service">Add service</string>
     <string name="settings_remove_service">Remove service</string>
@@ -99,16 +99,16 @@
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>
     </plurals>
-    <string name="settings_section_subagents">Subagent models</string>
+    <string name="settings_section_subagents">Subagents</string>
     <string name="settings_subagent_researcher">Researcher</string>
     <string name="settings_subagent_scout">Scout</string>
     <string name="settings_subagent_writer">Writer</string>
     <string name="settings_subagent_worker">Worker</string>
-    <string name="settings_subagent_thread_model">Thread\'s model</string>
+    <string name="settings_subagent_thread_model">Same as the thread</string>
     <string name="settings_subagent_cheapest_model">Cheapest model</string>
     <string name="settings_section_tools">Tools</string>
     <string name="settings_tools">Tools</string>
-    <string name="settings_tools_help">Switched-off tools are not offered to the model.</string>
+    <string name="settings_tools_help">Switched-off tools are hidden from the model.</string>
     <string name="settings_python">Python</string>
     <string name="settings_python_status">Status</string>
     <string name="settings_python_checking">Checking…</string>
@@ -122,9 +122,9 @@
     <string name="settings_python_install_short">Install</string>
     <string name="settings_python_repair">Repair</string>
     <string name="settings_python_remove">Remove</string>
-    <string name="settings_python_remove_partial">Delete downloaded files</string>
+    <string name="settings_python_remove_partial">Remove downloaded files</string>
     <string name="settings_python_remove_title">Remove Python?</string>
-    <string name="settings_python_remove_text">Python and its packages are deleted. You can install them again.</string>
+    <string name="settings_python_remove_text">Removes Python and its packages. You can install them again.</string>
     <string name="settings_python_downloading_python">Downloading Python</string>
     <string name="settings_python_downloading">Downloading %1$s</string>
     <string name="settings_python_packages">Packages</string>

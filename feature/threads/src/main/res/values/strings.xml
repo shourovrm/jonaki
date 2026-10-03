@@ -18,7 +18,7 @@
     <string name="threads_delete_title">Delete thread?</string>
     <string name="threads_save">Save</string>
     <string name="threads_cancel">Cancel</string>
-    <string name="threads_new_incognito">New incognito chat</string>
+    <string name="threads_new_incognito">New incognito thread</string>
     <string name="threads_incognito">Incognito</string>
     <string name="threads_all">All</string>
     <string name="threads_project_chip">Project</string>

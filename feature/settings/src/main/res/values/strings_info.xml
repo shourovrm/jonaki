@@ -17,7 +17,7 @@
     <string name="settings_permissions_photos">Photos</string>
     <string name="settings_permissions_photos_purpose">Attach photos from the gallery</string>
     <string name="settings_permissions_alarms">Alarms &amp; reminders</string>
-    <string name="settings_permissions_alarms_purpose">Reminders on the minute</string>
+    <string name="settings_permissions_alarms_purpose">Reminders at the exact time</string>
     <string name="settings_permissions_internet">Internet</string>
     <string name="settings_permissions_internet_purpose">Models, web search and MCP servers</string>
     <string name="settings_permissions_network_state">Network state</string>

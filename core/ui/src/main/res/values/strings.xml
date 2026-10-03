@@ -17,7 +17,7 @@
     <string name="ui_approval_bypass_help">Never ask, including subagents</string>
     <string name="ui_approval_default">Default (%1$s)</string>
     <string name="ui_tools_files">Files</string>
-    <string name="ui_tools_files_help">Read, write and search thread files, documents and images</string>
+    <string name="ui_tools_files_help">Read, write and search files and images</string>
     <string name="ui_tools_web">Web</string>
     <string name="ui_tools_web_help">Search the web and read pages</string>
     <string name="ui_tools_youtube">YouTube</string>
@@ -35,9 +35,9 @@
     <string name="ui_tools_schedule">Schedule</string>
     <string name="ui_tools_schedule_help">Run a prompt at a set time</string>
     <string name="ui_tools_mcp">MCP</string>
-    <string name="ui_tools_mcp_help">Tools from servers added in Settings</string>
+    <string name="ui_tools_mcp_help">Tools from your MCP servers</string>
     <string name="ui_tools_javascript">JavaScript</string>
-    <string name="ui_tools_javascript_help">Run small programs, offline</string>
+    <string name="ui_tools_javascript_help">Run JavaScript, offline</string>
     <string name="ui_tools_python">Python</string>
     <string name="ui_tools_python_help">Run Python programs, offline</string>
     <string name="ui_tools_data_add_on">Data add-on</string>
@@ -46,7 +46,7 @@
     <string name="ui_download_again">Download again</string>
     <string name="ui_download_size">%1$s download</string>
     <string name="ui_installed">Installed</string>
-    <string name="ui_damaged">Files damaged</string>
+    <string name="ui_damaged">Damaged</string>
     <string name="ui_downloaded_of">%1$s of %2$s</string>
     <string name="ui_downloaded">%1$s</string>
     <string name="ui_cancel">Cancel</string>

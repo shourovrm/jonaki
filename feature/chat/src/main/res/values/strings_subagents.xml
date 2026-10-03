@@ -9,7 +9,7 @@
     <string name="subagents_open">Open</string>
 
     <string name="subagents_now_thinking">Thinking</string>
-    <string name="subagents_now_waiting">Waiting for you</string>
+    <string name="subagents_now_waiting">Needs approval</string>
     <string name="subagents_now_asking">Asking the main agent</string>
     <string name="subagents_now_done_in">Done in %1$s</string>
     <plurals name="subagents_now_done_skipped">

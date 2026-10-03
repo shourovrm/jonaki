@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="onboarding_tools_title">Choose tools</string>
-    <string name="onboarding_tools_help">Switched-off tools are not offered to the model. You can change this in Settings > Tools.</string>
+    <string name="onboarding_tools_help">Switched-off tools are hidden from the model. Change this later in Settings.</string>
     <string name="onboarding_continue">Continue</string>
 </resources>

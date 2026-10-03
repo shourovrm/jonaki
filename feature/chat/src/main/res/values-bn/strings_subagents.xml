@@ -9,7 +9,7 @@
     <string name="subagents_open">খুলুন</string>
 
     <string name="subagents_now_thinking">ভাবছে</string>
-    <string name="subagents_now_waiting">আপনার অপেক্ষায়</string>
+    <string name="subagents_now_waiting">অনুমতি লাগবে</string>
     <string name="subagents_now_asking">মূল agent-কে জিজ্ঞেস করছে</string>
     <string name="subagents_now_done_in">%1$s-এ শেষ</string>
     <plurals name="subagents_now_done_skipped">

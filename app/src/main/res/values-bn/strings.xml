@@ -14,9 +14,9 @@
     <string name="reminders_channel_name">রিমাইন্ডার</string>
     <string name="reminder_notification_title">রিমাইন্ডার</string>
     <string name="scheduled_tasks_channel_name">নির্ধারিত কাজ</string>
-    <string name="scheduled_task_needs_approval">আপনার অনুমতির অপেক্ষায়</string>
+    <string name="scheduled_task_needs_approval">অনুমতি লাগবে</string>
     <string name="scheduled_task_failed">ব্যর্থ: %1$s</string>
-    <string name="scheduled_task_no_answer">উত্তর ছাড়াই শেষ হয়েছে</string>
+    <string name="scheduled_task_no_answer">উত্তর নেই</string>
     <string name="scheduled_task_stopped">%1$d মিনিট পর থামানো হয়েছে</string>
     <string name="scheduled_kind_once">একবার</string>
     <string name="scheduled_kind_daily">প্রতিদিন</string>
@@ -24,7 +24,7 @@
     <string name="scheduled_item_detail">%1$s · %2$s</string>
     <string name="files_open_missing">ফাইল পাওয়া যায়নি</string>
     <string name="files_open_no_app">এই ফাইল খোলার অ্যাপ নেই</string>
-    <string name="routing_fallback_note">এই মডেলের প্রাইভেট প্রোভাইডার নেই; সবচেয়ে সস্তাটি ব্যবহার হয়েছে।</string>
+    <string name="routing_fallback_note">এই মডেলের প্রাইভেট প্রোভাইডার নেই। সবচেয়ে সস্তাটি ব্যবহার হয়েছে।</string>
     <string name="python_try_again_message">ইনস্টল হয়েছে। আবার চেষ্টা করুন।</string>
     <string name="error_no_model">কোনো মডেল নেই। সেটিংসে যোগ করুন।</string>
     <string name="error_no_api_key">%1$s-এর API key নেই। সেটিংসে যোগ করুন।</string>
