@@ -122,6 +122,17 @@ interface MessageDao {
     @Query("UPDATE messages SET reasoningText = :reasoningText WHERE id = :messageId")
     suspend fun updateReasoning(messageId: String, reasoningText: String)
 
+    /** Saved when the first visible text arrives, so the chat can time its first draw against it (D-132). */
+    @Query(
+        "UPDATE messages SET requestSentAtMillis = :sentAtMillis, requestSentElapsedMillis = :sentElapsedMillis, " +
+            "firstTextElapsedMillis = :firstTextElapsedMillis WHERE id = :messageId",
+    )
+    suspend fun updateRequestTimes(messageId: String, sentAtMillis: Long, sentElapsedMillis: Long, firstTextElapsedMillis: Long)
+
+    /** Only the first draw counts; a later redraw of the same answer keeps the first time. */
+    @Query("UPDATE messages SET firstShownElapsedMillis = :shownElapsedMillis WHERE id = :messageId AND firstShownElapsedMillis IS NULL")
+    suspend fun markFirstShown(messageId: String, shownElapsedMillis: Long)
+
     /** Removes a thread's messages from [fromPosition] on, when an edited prompt replaces them (D-056). */
     @Query("DELETE FROM messages WHERE threadId = :threadId AND position >= :fromPosition")
     suspend fun deleteFrom(threadId: String, fromPosition: Long)

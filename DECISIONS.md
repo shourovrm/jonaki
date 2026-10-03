@@ -1619,3 +1619,39 @@ rendered; a browse tool that clicks or fills forms stays later. Tests:
 RenderDecisionTest and WebFetchToolTest with a fake renderer; the
 WebView part runs only on a phone and was not checked there. Outcome:
 pending.
+
+## D-132 · 2026-10-03 · Request-log times for the first streamed token — proposed
+The plan's budget "first streamed token shown: provider latency plus under
+100 ms" named a request log that did not exist; assistant message rows
+held token counts but no times. Each model call of the thread's agent now
+saves four nullable columns on its messages row (Room 8 to 9,
+AutoMigration): requestSentAtMillis (wall clock, for display),
+requestSentElapsedMillis, firstTextElapsedMillis and
+firstShownElapsedMillis (all SystemClock.elapsedRealtime). AgentLoop
+records a new AgentEvent.RequestSent before each provider.stream call;
+RequestTimer (core/agent) takes the sent time there and the first-text
+time at the first text delta with a visible character, since the chat
+draws nothing for blank text. RunSession writes both as soon as that
+delta is saved. The chat marks an answer row that has a first-text time
+and no shown time; a drawWithContent modifier on the answer calls back
+after drawing it, and the app reads elapsedRealtime in that draw pass and
+saves it once (UPDATE ... WHERE firstShownElapsedMillis IS NULL; the final
+row save keeps the mark inside a transaction). The usage sheet gets a
+"Requests" table of the latest 10 timed calls, newest first: Sent,
+"Service wait" (first text minus sent) and "App delay" (shown minus
+first text), "–" when a call only used tools. Bangla: রিকোয়েস্ট, পাঠানো,
+সার্ভিসের দেরি, অ্যাপের দেরি. Error of "App delay": it ends when the
+frame is recorded on the UI thread, before RenderThread and the display
+show it, so it reads about one to two frames (8 to 33 ms at 120 to 60 Hz)
+short of what the eye sees; it includes the database write, Room's
+invalidation, the flow, ChatItems.build and the recomposition. It is too
+long when the answer is off screen (scrolled up, app in the background)
+and drawn later. "Service wait" starts when the flow is collected, so
+it includes connection setup and any reasoning stream. Subagents and
+background calls are not timed. Strings after an adversarial review:
+"Service wait" and "App delay" replace "Provider wait" and "Shown after",
+because the app says "service" and "after what?" was open. Limit: nothing
+was checked on a phone. Tests: RequestTimerTest (through AgentLoop with a
+scripted provider and a fake clock), RequestTimesMigrationTest,
+RequestLogRowsTest, ChatItemsTest. Outcome: pending the phone
+measurement.

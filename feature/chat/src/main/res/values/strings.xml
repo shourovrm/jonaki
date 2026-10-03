@@ -94,6 +94,11 @@
     <string name="chat_context_no_request">Estimated. No request yet.</string>
     <string name="chat_context_compact_at">Older messages are summarised at %1$d%% (%2$s tokens).</string>
     <string name="chat_usage_footnote">OpenRouter reports cost; others are priced from token counts.</string>
+    <string name="chat_requests_title">Requests</string>
+    <string name="chat_requests_sent">Sent</string>
+    <string name="chat_requests_provider_wait">Service wait</string>
+    <string name="chat_requests_shown_after">App delay</string>
+    <string name="chat_requests_millis">%1$d ms</string>
     <string name="chat_artifact_open">Open</string>
     <string name="chat_working_thinking">Thinking…</string>
     <string name="chat_working_writing">Writing…</string>

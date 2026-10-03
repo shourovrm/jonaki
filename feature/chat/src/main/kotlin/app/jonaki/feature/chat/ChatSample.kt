@@ -50,6 +50,10 @@ object ChatSample {
                 ModelUsageUi("GLM 5.3 Flash", turns = 6, costUsd = 0.0062),
                 ModelUsageUi("Claude Sonnet 5.5", turns = 1, costUsd = 0.0072),
             ),
+            requests = listOf(
+                RequestTimeUi("21:47:12", providerWaitMillis = 812, shownAfterMillis = 23),
+                RequestTimeUi("21:47:05", providerWaitMillis = null, shownAfterMillis = null),
+            ),
         ),
     )
 

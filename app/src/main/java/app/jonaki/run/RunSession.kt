@@ -1,9 +1,11 @@
 package app.jonaki.run
 
+import androidx.room.withTransaction
 import app.jonaki.core.agent.AgentEvent
 import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.agent.ApprovalRequest
 import app.jonaki.core.agent.ApprovalRequester
+import app.jonaki.core.agent.RequestTimer
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.agent.StepRecorder
 import app.jonaki.core.agent.SubagentAsk
@@ -27,6 +29,8 @@ class RunSession(
     private val threadId: String,
     private val database: JonakiDatabase,
     private val clock: () -> Long,
+    /** Milliseconds since boot (SystemClock.elapsedRealtime), for the request-log times (D-132). */
+    elapsedClock: () -> Long,
     /** Shows the approval card; the runner clears it once answered. */
     private val onApprovalNeeded: (PendingApproval) -> Unit,
     /** Removes a card nobody answered in time (a subagent's 3-minute rule, D-062), or one cut off by Stop. */
@@ -48,6 +52,8 @@ class RunSession(
         routingFellBack = true
     }
 
+    private val requestTimer = RequestTimer(elapsedClock = elapsedClock, wallClock = clock)
+
     private var streamingMessageId: String? = null
     private var streamingPosition: Long = 0
     private val streamingText = StringBuilder()
@@ -57,7 +63,10 @@ class RunSession(
     private val stepsOfThisRun = mutableSetOf<String>()
 
     override suspend fun record(event: AgentEvent) {
+        val isFirstVisibleText = requestTimer.observe(event)
         when (event) {
+            // The timer has noted the time; the row is created by the first chunk.
+            AgentEvent.RequestSent -> Unit
             is AgentEvent.TextDelta -> appendStreamedText(event.text)
             is AgentEvent.ReasoningDelta -> appendStreamedReasoning(event.text)
             is AgentEvent.AssistantMessage -> saveAssistantMessage(event)
@@ -65,6 +74,17 @@ class RunSession(
             is AgentEvent.ToolFinished -> saveToolFinished(event)
             is AgentEvent.RunFinished -> saveRunFinished(event.outcome)
         }
+        if (isFirstVisibleText) {
+            saveRequestTimes()
+        }
+    }
+
+    /** Saved at the first visible text, before the turn ends, so the chat can mark its first draw against it. */
+    private suspend fun saveRequestTimes() {
+        val times = requestTimer.current ?: return
+        val messageId = streamingMessageId ?: return
+        val firstTextElapsedMillis = times.firstTextElapsedMillis ?: return
+        database.messageDao().updateRequestTimes(messageId, times.sentAtMillis, times.sentElapsedMillis, firstTextElapsedMillis)
     }
 
     override suspend fun requestApproval(request: ApprovalRequest): ApprovalDecision {
@@ -132,6 +152,7 @@ class RunSession(
         // Streamed text already has a row; the final message completes it in place.
         val existingId = streamingMessageId
         val position = if (existingId == null) messageDao.nextPosition(threadId) else streamingPosition
+        val times = requestTimer.current
         val row = MessageEntity(
             id = existingId ?: newMessageId(),
             threadId = threadId,
@@ -150,8 +171,16 @@ class RunSession(
             costUsd = event.usage?.let(priceOf),
             routingFallback = if (routingFellBack) true else null,
             reasoningText = streamingReasoning.toString().trim().ifEmpty { null },
+            requestSentAtMillis = times?.sentAtMillis,
+            requestSentElapsedMillis = times?.sentElapsedMillis,
+            firstTextElapsedMillis = times?.firstTextElapsedMillis,
         )
-        messageDao.upsert(row)
+        // The chat may already have marked the first draw; the transaction keeps that mark
+        // from being lost between reading it and replacing the row.
+        database.withTransaction {
+            val shownElapsedMillis = existingId?.let { id -> messageDao.findAll(listOf(id)).firstOrNull()?.firstShownElapsedMillis }
+            messageDao.upsert(row.copy(firstShownElapsedMillis = shownElapsedMillis))
+        }
         streamingMessageId = null
         routingFellBack = false
         streamingText.clear()

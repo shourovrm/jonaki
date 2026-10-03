@@ -70,6 +70,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -149,6 +150,11 @@ fun ChatScreen(
     onOpenSubagent: (subagentId: String?) -> Unit = {},
     /** Stop on a subagent's page; null hides it. */
     onStopSubagent: ((subagentId: String) -> Unit)? = null,
+    /**
+     * Called from the draw pass while an answer awaits its first draw, possibly
+     * more than once; the app keeps the first call's time for the request log (D-132).
+     */
+    onAnswerDrawn: (messageId: String) -> Unit = {},
     /** The app keeps the list's position while a file viewer opened from the chat is in front. */
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -232,6 +238,7 @@ fun ChatScreen(
                         canTryAgain = !state.isRunning,
                         onOpenSubagent = { subagentId -> onOpenSubagent(subagentId) },
                         onOpenWork = { workId -> openWorkId = workId },
+                        onAnswerDrawn = onAnswerDrawn,
                     )
                 }
             }
@@ -438,6 +445,7 @@ private fun MessageList(
     canTryAgain: Boolean,
     onOpenSubagent: (String) -> Unit,
     onOpenWork: (String) -> Unit,
+    onAnswerDrawn: (String) -> Unit,
 ) {
     // Follow the stream only while the user is at the bottom; scrolling up to
     // read earlier steps must not be undone by the next chunk.
@@ -482,7 +490,7 @@ private fun MessageList(
                     UserBubble(item.text)
                     MessageActions(item.text, alignEnd = true, onEdit = onEditMessage?.let { edit -> { edit(item.id, item.text) } })
                 }
-                is ChatItem.AssistantMessage -> Column {
+                is ChatItem.AssistantMessage -> Column(Modifier.reportDraw(item.awaitsFirstDraw) { onAnswerDrawn(item.id) }) {
                     MarkdownText(item.markdown, showCaret = item.isStreaming)
                     if (!item.isStreaming) {
                         MessageActions(item.markdown, alignEnd = false, onEdit = null)
@@ -504,6 +512,21 @@ private fun MessageList(
 }
 
 private const val ROWS_ONE_UPDATE_CAN_ADD = 4
+
+/**
+ * Calls [onDrawn] each time the content is drawn while [enabled]. The draw pass
+ * is the latest point the app sees before the frame goes to the screen, so the
+ * request log's "Shown after" is measured to it (D-132).
+ */
+private fun Modifier.reportDraw(enabled: Boolean, onDrawn: () -> Unit): Modifier {
+    if (!enabled) {
+        return this
+    }
+    return drawWithContent {
+        drawContent()
+        onDrawn()
+    }
+}
 
 private const val ITEMS_THAT_GROW = 3
 
