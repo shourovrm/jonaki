@@ -311,15 +311,11 @@ internal fun SectionLabel(text: String) {
     )
 }
 
+/** A section's rows on the page itself, no card (D-123); the label above and the hairlines set it apart. */
 @Composable
 internal fun Group(content: @Composable () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    ) {
-        Column { content() }
-    }
+    // Rows pad themselves by 16 dp, so 4 dp here lines their text up with the 20 dp section label.
+    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) { content() }
 }
 
 @Composable

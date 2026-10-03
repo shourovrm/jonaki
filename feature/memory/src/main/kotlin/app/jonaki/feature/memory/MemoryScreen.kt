@@ -41,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -201,14 +202,15 @@ private fun LazyListScope.factSection(
 
 @Composable
 private fun FactCard(fact: MemoryFactUi, onEdit: () -> Unit, onDelete: () -> Unit, actions: MemoryActions) {
+    // A plain row: the list's spacing separates facts without a card (D-123).
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = Color.Transparent,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             verticalAlignment = Alignment.Top,
-            modifier = Modifier.clickable(onClick = onEdit).padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier.clickable(onClick = onEdit).padding(start = 4.dp, top = 12.dp, bottom = 12.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Top) {

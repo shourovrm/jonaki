@@ -11,7 +11,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -61,21 +60,16 @@ fun ToolPickerScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp),
         ) {
             Text(
                 stringResource(R.string.onboarding_tools_help),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 12.dp),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
             )
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ToolGroupList(rows, onSwitch, onDownload, onCancelDownload)
-            }
+            // On the page itself, no card (D-123).
+            ToolGroupList(rows, onSwitch, onDownload, onCancelDownload)
         }
     }
 }
