@@ -730,7 +730,8 @@ whole task, its steps as a track and its answer. Its approval cards read
 "Researcher 2 asks for share_file" with the reason, and Allow once, Allow
 for task, Deny. Several cards can wait at once. Strings reviewed by an
 Opus subagent (6 of 36 changed). Artifacts a subagent
-shows get "Open" cards like the thread agent's. Outcome: pending.
+shows get "Open" cards like the thread agent's. Outcome: pending; D-126
+proposes rows in the run in place of the cards.
 
 ## D-067 · 2026-10-03 · run_code: files in by name, results out from work/ and artifacts/ — proposed
 run_code takes language (javascript or python), code and files (thread
@@ -1429,3 +1430,35 @@ subheading, chose "Allow" over "Ask", dropped a camera row (Jonaki holds
 no camera permission) and dropped a description line in About. Limit: a
 permission refused on a build before this record shows "Not asked" until
 Jonaki asks again. Outcome: pending.
+
+## D-126 · 2026-10-03 · Subagent rows, page and work sheet — proposed
+Option A of docs/mockups/subagents.html; replaces D-066's stacked cards.
+In the run block a delegate step becomes its group: "3 subagents", "1 of 3
+done" (every subagent that has ended counts), and one row per subagent:
+the task on one line ending in "…", the name and what it does now
+("Web fetch ryans.com/…", "Waiting for you", "Asking the main agent", the
+first line it wrote, "Thinking"; ended: "Done in 41 s", "Done, 1 skipped",
+"Done, 2 files", "Over budget" and the other D-066 words), and steps of 10
+and the cost on the right. Only a running row is lit; waiting shows a hand,
+asking a speech bubble, done a check, every early stop a warning sign, all
+in ink; the second line turns full ink when the row needs a look. A
+subagent's approval card shows the 3 minutes counting down (step start +
+D-062's limit). A tap opens a full-screen page over the chat (the chat stays
+composed, so Back returns to the same place; the app keeps the open page and
+the list position while a file viewer opened from it is in front): whole
+task, steps and cost meters in ink against SubagentLimits, the step track,
+and once ended the folded steps, skipped parts, files written (write_file,
+edit_file and artifact calls that succeeded; Open uses the existing viewer)
+and the Markdown answer; arrows step through the same call's subagents.
+While it runs a bar holds "Stop Researcher 1": SubagentRunner now runs each
+loop as its own job, so stop(id) ends that one with what it has and the
+others go on (SubagentRunnerTest). After the run, "Work from N subagents"
+under the answer names early stops, skipped parts and notes ("All done, 4
+notes") and opens a sheet with the same rows, the notes board
+(SubagentRunner.notesBoardPath, shown when notes were posted) and the
+files. No Room change: everything comes from SubagentEntity and the steps.
+Strings in feature/chat strings_subagents.xml with Bangla in values-bn; the
+adversarial string review was not run (this worker may not spawn
+subagents). Tests: SubagentRowsTest, ChatItemsTest, SubagentRunnerTest.
+Not checked: a device view; previews at 360 dp and font scale 1.3 exist but
+were not rendered. Outcome: pending.
