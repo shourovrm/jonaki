@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings > Permissions and About (D-124). Agreed in an adversarial review. -->
+    <string name="settings_permissions_header">Permissions</string>
+    <string name="settings_permissions_always_on_header">Always on</string>
+    <string name="settings_permissions_status_allowed">Allowed</string>
+    <string name="settings_permissions_status_not_asked">Not asked</string>
+    <string name="settings_permissions_status_denied">Denied</string>
+    <string name="settings_permissions_status_selected_photos">Selected photos</string>
+    <string name="settings_permissions_status_off">Off</string>
+    <string name="settings_permissions_action_ask">Allow</string>
+    <string name="settings_permissions_action_open_settings">Open settings</string>
+    <string name="settings_permissions_notifications">Notifications</string>
+    <string name="settings_permissions_notifications_purpose">Reminders, results and running tasks</string>
+    <string name="settings_permissions_calendar">Calendar</string>
+    <string name="settings_permissions_calendar_purpose">Read and add events</string>
+    <string name="settings_permissions_photos">Photos</string>
+    <string name="settings_permissions_photos_purpose">Attach photos from the gallery</string>
+    <string name="settings_permissions_alarms">Alarms &amp; reminders</string>
+    <string name="settings_permissions_alarms_purpose">Reminders on the minute</string>
+    <string name="settings_permissions_internet">Internet</string>
+    <string name="settings_permissions_internet_purpose">Models, web search and MCP servers</string>
+    <string name="settings_permissions_network_state">Network state</string>
+    <string name="settings_permissions_network_state_purpose">Wait for a connection before runs</string>
+    <string name="settings_permissions_background">Run in background</string>
+    <string name="settings_permissions_background_purpose">Keep replies going when closed</string>
+    <string name="settings_permissions_boot">Start at boot</string>
+    <string name="settings_permissions_boot_purpose">Set reminders again after restart</string>
+    <string name="settings_permissions_keep_awake">Keep awake</string>
+    <string name="settings_permissions_keep_awake_purpose">Finish scheduled tasks</string>
+    <string name="settings_about_header">About</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_developer">Developed by Riad Mashrub Shourov</string>
+    <string name="settings_about_github">GitHub</string>
+    <string name="settings_about_github_url">github.com/shourovrm/jonaki</string>
+</resources>

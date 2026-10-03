@@ -42,6 +42,10 @@ data class SettingsUiState(
     val subagentModels: List<SubagentModelRowUi> = emptyList(),
     /** The user's scoped models, offered for each type. */
     val subagentModelOptions: List<ModelOptionUi> = emptyList(),
+    /** Settings > Permissions, read again each time the screen resumes (D-124). */
+    val permissions: List<PermissionRowUi> = emptyList(),
+    /** The installed version name, for example "0.8.0". */
+    val appVersion: String = "",
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -182,6 +186,10 @@ class SettingsActions(
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
     /** [modelKey] null returns the type to its default. */
     val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
+    /** A tap on a permission row or its button; the app asks or opens system settings by [PermissionRowUi.status]. */
+    val onPermissionTap: (PermissionRow) -> Unit = {},
+    /** Opens the project's GitHub page in the browser. */
+    val onOpenGitHub: () -> Unit = {},
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},
