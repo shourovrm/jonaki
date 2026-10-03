@@ -84,6 +84,10 @@ class JonakiApplication : Application() {
     /** The activity on screen, for pickers and the share sheet that share_file opens (D-045). */
     val visibleActivity = VisibleActivity()
 
+    /** Asks for runtime permissions in the visible window; also used by Settings > Permissions (D-124). */
+    lateinit var runtimePermissions: RuntimePermissions
+        private set
+
     /** MCP servers from Settings, for the mcp tool (D-104). */
     lateinit var mcpServers: McpServerStore
         private set
@@ -149,7 +153,7 @@ class JonakiApplication : Application() {
         )
         reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json")))
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
-        val permissions = RuntimePermissions(this, visibleActivity)
+        runtimePermissions = RuntimePermissions(this, visibleActivity, settings::recordPermissionRequest)
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
         runner = AgentRunner(
             this,
@@ -164,8 +168,8 @@ class JonakiApplication : Application() {
             skillLibrary,
             AndroidFileDestinations(this, visibleActivity, linkedFolder),
             backgroundModel,
-            AndroidPhone(this, permissions, visibleActivity, reminders),
-            taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, permissions) },
+            AndroidPhone(this, runtimePermissions, visibleActivity, reminders),
+            taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, runtimePermissions) },
             mcpServers = mcpServers,
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))

@@ -48,6 +48,7 @@ fun rememberPhotosChoice(threadKey: String, application: JonakiApplication): () 
         systemPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
     val permissionRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        application.settings.recordPermissionRequest(PhotoAccess.permissionsToAsk(Build.VERSION.SDK_INT))
         // The answer map does not tell Android 14's "Select photos" apart, so the grant is read again.
         grant = currentPhotoGrant(context)
         reloadKey += 1
@@ -101,20 +102,20 @@ fun rememberPhotosChoice(threadKey: String, application: JonakiApplication): () 
     }
 }
 
-private fun currentPhotoGrant(context: Context): PhotoGrant =
+internal fun currentPhotoGrant(context: Context): PhotoGrant =
     PhotoAccess.grant(Build.VERSION.SDK_INT) { permission ->
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
     }
 
 /** Jonaki's page in system settings, where Permissions > Photos and videos offers Allow all. */
-private fun openAppSettings(context: Context) {
+internal fun openAppSettings(context: Context) {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
 }
 
 /** Whether the user once refused the photo permission; kept so Jonaki never asks a second time (D-086). */
-private object PhotoRefusal {
+internal object PhotoRefusal {
     private const val PREFERENCES = "photo_access"
     private const val REFUSED = "refused"
 

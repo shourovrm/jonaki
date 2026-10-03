@@ -17,6 +17,8 @@ import app.jonaki.files.VisibleActivity
 class RuntimePermissions(
     private val context: Context,
     private val visibleActivity: VisibleActivity,
+    /** Keeps the names of permissions whose dialog was shown, so Settings can tell "Not asked" from "Denied" (D-124). */
+    private val recordRequest: (permissions: List<String>) -> Unit,
 ) {
     enum class Answer {
         GRANTED,
@@ -37,6 +39,7 @@ class RuntimePermissions(
         val answer = visibleActivity.launchForResult(ActivityResultContracts.RequestMultiplePermissions(), missing.toTypedArray())
         return when (answer) {
             is VisibleActivity.Answer.Result -> {
+                recordRequest(missing)
                 val allGranted = missing.all { permission -> answer.value[permission] == true }
                 if (allGranted) Answer.GRANTED else Answer.DENIED
             }

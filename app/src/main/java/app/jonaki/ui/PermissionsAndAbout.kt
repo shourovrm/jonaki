@@ -1,0 +1,131 @@
+package app.jonaki.ui
+
+import android.Manifest
+import android.app.AlarmManager
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import app.jonaki.JonakiApplication
+import app.jonaki.feature.gallery.PhotoAccess
+import app.jonaki.feature.gallery.PhotoGrant
+import app.jonaki.feature.settings.PermissionButton
+import app.jonaki.feature.settings.PermissionRow
+import app.jonaki.feature.settings.PermissionRowUi
+import app.jonaki.feature.settings.PermissionStatus
+import app.jonaki.feature.settings.PermissionStatuses
+
+/** The page the About section's GitHub row opens. */
+private const val GITHUB_URL = "https://github.com/shourovrm/jonaki"
+
+/**
+ * Reads Settings > Permissions (D-124). [requestedPermissions] is the
+ * app's record of the dialogs it has shown; Android alone cannot tell
+ * "Not asked" from "Denied".
+ */
+internal fun readPermissionRows(context: Context, requestedPermissions: Set<String>): List<PermissionRowUi> =
+    PermissionRow.entries.map { row -> PermissionRowUi(row, statusOf(row, context, requestedPermissions)) }
+
+private fun statusOf(row: PermissionRow, context: Context, requestedPermissions: Set<String>): PermissionStatus {
+    val sdkInt = Build.VERSION.SDK_INT
+    val isGranted = { permission: String ->
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    }
+    val requestedBefore = row.permissions.any { permission -> permission in requestedPermissions }
+    return when (row) {
+        PermissionRow.NOTIFICATIONS -> PermissionStatuses.notifications(
+            sdkInt,
+            permissionGranted = isGranted(Manifest.permission.POST_NOTIFICATIONS),
+            notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
+            requestedBefore = requestedBefore,
+        )
+        PermissionRow.CALENDAR -> PermissionStatuses.calendar(
+            readGranted = isGranted(Manifest.permission.READ_CALENDAR),
+            writeGranted = isGranted(Manifest.permission.WRITE_CALENDAR),
+            requestedBefore = requestedBefore,
+        )
+        PermissionRow.PHOTOS -> PermissionStatuses.photos(
+            sdkInt,
+            imagesGranted = isGranted(Manifest.permission.READ_MEDIA_IMAGES),
+            selectedPhotosGranted = isGranted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED),
+            externalStorageGranted = isGranted(Manifest.permission.READ_EXTERNAL_STORAGE),
+            // Versions before the record kept only the composer's refusal (D-086).
+            requestedBefore = requestedBefore || PhotoRefusal.happened(context),
+        )
+        PermissionRow.ALARMS -> PermissionStatuses.alarms(sdkInt, canScheduleExactAlarms(context))
+    }
+}
+
+private fun canScheduleExactAlarms(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        return true
+    }
+    return context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+}
+
+/** "Allow" shows Android's dialog; every other tap opens the system page where the user can change the permission. */
+internal suspend fun onPermissionTapped(application: JonakiApplication, context: Context, item: PermissionRowUi) {
+    if (PermissionStatuses.buttonFor(item.status) == PermissionButton.ALLOW) {
+        askFor(application, context, item.row)
+    } else {
+        openSystemPageFor(context, item.row)
+    }
+}
+
+private suspend fun askFor(application: JonakiApplication, context: Context, row: PermissionRow) {
+    val permissions = application.runtimePermissions
+    when (row) {
+        PermissionRow.NOTIFICATIONS -> permissions.requestNotifications()
+        PermissionRow.CALENDAR -> permissions.request(listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR))
+        PermissionRow.PHOTOS -> {
+            permissions.request(PhotoAccess.permissionsToAsk(Build.VERSION.SDK_INT))
+            // The composer never asks again after a refusal, wherever it happened (D-086).
+            if (currentPhotoGrant(context) == PhotoGrant.NONE) {
+                PhotoRefusal.remember(context)
+            }
+        }
+        // A special access switch has no dialog; it is never "Not asked".
+        PermissionRow.ALARMS -> openSystemPageFor(context, row)
+    }
+}
+
+private fun openSystemPageFor(context: Context, row: PermissionRow) {
+    if (row == PermissionRow.ALARMS && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.fromParts("package", context.packageName, null))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(intent)
+            return
+        } catch (missing: ActivityNotFoundException) {
+            // Some phones leave this page out; Jonaki's own page in system settings links to it.
+        }
+    }
+    openAppSettings(context)
+}
+
+/** The installed version name, read from the package so the build needs no BuildConfig. */
+internal fun installedVersionName(context: Context): String {
+    val packageManager = context.packageManager
+    val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION")
+        packageManager.getPackageInfo(context.packageName, 0)
+    }
+    return info.versionName.orEmpty()
+}
+
+internal fun openGitHub(context: Context) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_URL))
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (noBrowser: ActivityNotFoundException) {
+        // A phone without any browser has nowhere to show the page; the row's text names the address.
+    }
+}

@@ -14,6 +14,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,6 +22,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.res.stringResource
 import app.jonaki.JonakiApplication
 import app.jonaki.R
@@ -814,6 +817,15 @@ private fun SettingsRoute(
     val reminders by application.reminders.book.reminders.collectAsState()
     val scheduledTasks by application.scheduledTasks.book.tasks.collectAsState()
     val mcpServers by application.mcpServers.servers.collectAsState()
+    val context = LocalContext.current
+    val permissionScope = rememberCoroutineScope()
+    // Bumped on every resume, so statuses are right after a visit to system settings (D-124).
+    var permissionCheck by remember { mutableIntStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { permissionCheck += 1 }
+    val permissionRows = remember(permissionCheck, snapshot.requestedPermissions) {
+        readPermissionRows(context, snapshot.requestedPermissions)
+    }
+    val appVersion = remember { installedVersionName(context) }
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
         if (treeUri != null) {
             linkFolder(application, treeUri)
@@ -862,6 +874,8 @@ private fun SettingsRoute(
         subagentModelOptions = snapshot.chatModels.allModelKeys.map { key ->
             ModelOptionUi(key, application.catalog.find(key)?.displayName ?: ModelKey.modelOf(key))
         },
+        permissions = permissionRows,
+        appVersion = appVersion,
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -931,6 +945,14 @@ private fun SettingsRoute(
         },
         onOpenCustomInstructions = onOpenCustomInstructions,
         onOpenPersona = onOpenPersona,
+        onPermissionTap = { row ->
+            val item = permissionRows.first { candidate -> candidate.row == row }
+            permissionScope.launch {
+                onPermissionTapped(application, context, item)
+                permissionCheck += 1
+            }
+        },
+        onOpenGitHub = { openGitHub(context) },
     )
     SettingsScreen(state = state, actions = actions)
 }
