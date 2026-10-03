@@ -1655,3 +1655,29 @@ was checked on a phone. Tests: RequestTimerTest (through AgentLoop with a
 scripted provider and a fake clock), RequestTimesMigrationTest,
 RequestLogRowsTest, ChatItemsTest. Outcome: pending the phone
 measurement.
+
+## D-133 · 2026-10-03 · Local models with llama.cpp, downloaded on demand — proposed
+Jonaki runs GGUF models on the phone with llama.cpp (pinned release, built
+from source with NDK r28 and CMake 3.31, arm64 only) in a new module
+`providers:local-llama` that implements ChatProvider in-process, with its
+own JNI layer using llama.cpp's chat templates, lazy tool-call grammar and
+streaming parser. No model ships in the APK. Settings gets a "Local models"
+sub-page: a short recommended list (Qwen3.5 0.8B, 2B, 4B; Gemma 4 E2B)
+and a search of Hugging Face (`/api/models?search=…&filter=gguf
+&expand[]=gguf&expand[]=gated&expand[]=downloads`, sorted by downloads),
+showing each repo's parameter count, architecture, licence and a fit label
+(fits, tight, too big) from the rule (file + KV cache + compute buffer) ×
+1.1 against min(available memory, 0.6 × RAM); opening a repo lists its
+.gguf files from `/api/models/<repo>/tree/main` with sizes, defaulting to
+Q4_K_M or Q4_0. Gated repos and architectures the bundled llama.cpp cannot
+load are shown but cannot be downloaded. A foreground WorkManager download
+resumes with Range and checks the SHA-256 from the tree's `lfs.oid`; files
+live in app-specific storage, excluded from backup. Local models get a
+smaller default tool set (web_search, web_fetch, phone, read_file,
+read_document: about 1,450 tokens with the base prompt), changeable per
+thread; context 8,192 tokens; 4 threads. Why: user ruling 2026-10-03
+("go with llama.cpp", "don't put the models inside the app", "a way to
+search"). Measured on the A059 with Qwen3.5-0.8B Q4_0: 175 to 197 prompt
+tokens/s and 22 generated tokens/s on 4 threads (docs/research/
+local-models-2026-10-03.md). Limit: the APK grows by about 6 MB of native
+code. Outcome: pending.

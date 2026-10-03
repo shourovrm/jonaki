@@ -45,11 +45,23 @@ fallback budget is 4.8 GB, so it fits on paper; Qwen3.5-2B needs about
 
 ## Test phone
 
-A059 is the Nothing Phone (3a): Snapdragon 7s Gen 3, 8 GB or 12 GB RAM.
-No published llama.cpp speeds exist for it; estimates (unverified) are
-7 to 12 tokens per second for a 2B model and 3 to 6 for a 4B model on the
-CPU. `llama-bench` from the official Android build, pushed with adb, gives
-real numbers in about ten minutes without app code.
+A059 is the Nothing Phone (3a): Snapdragon 7s Gen 3, 7.6 GB RAM visible to
+Android, 2.7 GB `MemAvailable` with the usual apps open (`/proc/meminfo`,
+2026-10-03). `llama-bench` from llama.cpp b11366 (CPU, armv8.6 variant
+chosen by the loader, 2 repetitions) on Qwen3.5-0.8B Q4_0 (473 MiB):
+
+| Threads | Prompt 512 tokens | Prompt 1,500 tokens | Generation |
+|---|---|---|---|
+| 4 | 197 tokens/s | 175 tokens/s | 22.2 tokens/s |
+| 6 | 154 tokens/s | 122 tokens/s | 19.2 tokens/s |
+
+Four threads beat six, because the extra threads land on the slow A520
+cores. With the 1,450-token local tool set the 0.8B model reads the first
+prompt in about 8 s; the full 4,875-token prompt would take about 28 s.
+Larger models were not measured (user ruling: test with one small model);
+a 2B model has about 2.5 times the weights, so roughly 70 and 9 tokens/s
+is an extrapolation, not a measurement. With 2.7 GB available, the fit
+rule allows Qwen3.5-2B (about 2.0 GB) but not Qwen3.5-4B (about 3.7 GB).
 
 ## Models (GGUF, ungated, Apache-2.0)
 
