@@ -1,0 +1,253 @@
+[
+  {
+    "_id": "6a5c53b3dd4adc6511a71e1b",
+    "id": "DavidAU/Qwen3.5-9B-The-Defiant-Fable-Uncensored-Heretic-NEO-IMATRIX-MAX-MTP-GGUF",
+    "cardData": {
+      "language": [
+        "en",
+        "zh"
+      ],
+      "license": "apache-2.0",
+      "tags": [
+        "MTP GGUFS",
+        "Regular GGUFS",
+        "NEO Imatrix",
+        "fine tune",
+        "unsloth",
+        "heretic",
+        "uncensored",
+        "abliterated",
+        "multi-stage tuned.",
+        "all use cases",
+        "thinking",
+        "reasoning",
+        "qwen3.5",
+        "coder",
+        "creative",
+        "writing",
+        "fiction",
+        "roleplaying",
+        "bfloat16",
+        "all use cases"
+      ],
+      "pipeline_tag": "image-text-to-text",
+      "base_model": [
+        "DavidAU/Qwen3.5-9B-The-Defiant-Fable-Uncensored-Heretic-NEO-IMATRIX-MAX-MTP"
+      ]
+    },
+    "gated": false,
+    "downloads": 1912225,
+    "gguf": {
+      "total": 8953803264,
+      "architecture": "qwen35",
+      "context_length": 262144,
+      "quantize_imatrix_file": "w:/_imx/The-Defiant-Fable-Uncensored-Heretic-NEO-MX-NEO.gguf",
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 4942441760
+    }
+  },
+  {
+    "_id": "69a2f5edef408247323ee7f4",
+    "id": "unsloth/Qwen3.5-9B-GGUF",
+    "cardData": {
+      "tags": [
+        "unsloth"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "license_link": "https://huggingface.co/Qwen/Qwen3.5-9B/blob/main/LICENSE",
+      "pipeline_tag": "image-text-to-text",
+      "base_model": [
+        "Qwen/Qwen3.5-9B"
+      ]
+    },
+    "gated": false,
+    "downloads": 1303453,
+    "gguf": {
+      "total": 8953803264,
+      "architecture": "qwen35",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 17920697312
+    }
+  },
+  {
+    "_id": "69a52438a50ce97141e4a0eb",
+    "id": "unsloth/Qwen3.5-4B-GGUF",
+    "cardData": {
+      "tags": [
+        "unsloth"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "license_link": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/main/LICENSE",
+      "pipeline_tag": "image-text-to-text",
+      "base_model": [
+        "Qwen/Qwen3.5-4B"
+      ]
+    },
+    "gated": false,
+    "downloads": 1024272,
+    "gguf": {
+      "total": 4205751296,
+      "architecture": "qwen35",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 8424393632
+    }
+  },
+  {
+    "_id": "69a77bbf40a682fb162ab03e",
+    "id": "HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive",
+    "cardData": {
+      "license": "apache-2.0",
+      "base_model": [
+        "Qwen/Qwen3.5-9B"
+      ],
+      "tags": [
+        "uncensored",
+        "qwen3.5",
+        "qwen",
+        "gguf"
+      ],
+      "language": [
+        "en",
+        "zh",
+        "multilingual"
+      ]
+    },
+    "gated": false,
+    "downloads": 706465,
+    "gguf": {
+      "total": 8953803264,
+      "architecture": "qwen35",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 17920696704
+    }
+  },
+  {
+    "_id": "69a591f64814fea218e241cc",
+    "id": "lmstudio-community/Qwen3.5-9B-GGUF",
+    "cardData": {
+      "base_model": "Qwen/Qwen3.5-9B",
+      "license": "apache-2.0",
+      "tags": [
+        "gguf"
+      ]
+    },
+    "gated": false,
+    "downloads": 457535,
+    "gguf": {
+      "total": 8953803264,
+      "architecture": "qwen35",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 5627044256
+    }
+  },
+  {
+    "_id": "69a2f5f8ef408247323ee8f4",
+    "id": "unsloth/Qwen3.5-2B-GGUF",
+    "cardData": {
+      "tags": [
+        "unsloth"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "license_link": "https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/LICENSE",
+      "pipeline_tag": "image-text-to-text",
+      "base_model": [
+        "Qwen/Qwen3.5-2B"
+      ]
+    },
+    "gated": false,
+    "downloads": 314271,
+    "gguf": {
+      "total": 1881825088,
+      "architecture": "qwen35",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 3775709216
+    }
+  },
+  {
+    "_id": "699dba3fd60bb0f94de4ee9d",
+    "id": "unsloth/Qwen3.5-35B-A3B-GGUF",
+    "cardData": {
+      "tags": [
+        "unsloth",
+        "qwen3_5_moe"
+      ],
+      "base_model": [
+        "Qwen/Qwen3.5-35B-A3B"
+      ],
+      "license": "apache-2.0",
+      "license_link": "https://huggingface.co/Qwen/Qwen3.5-35B-A3B/blob/main/LICENSE",
+      "pipeline_tag": "image-text-to-text"
+    },
+    "gated": false,
+    "downloads": 259291,
+    "gguf": {
+      "total": 34660610688,
+      "architecture": "qwen35moe",
+      "context_length": 262144,
+      "quantize_imatrix_file": "Qwen3.5-35B-A3B-GGUF/imatrix_unsloth.gguf",
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 21587638912
+    }
+  },
+  {
+    "_id": "69f22df4e0c88c9638262e75",
+    "id": "Jackrong/Qwen3.5-9B-DeepSeek-V4-Flash-GGUF",
+    "cardData": {
+      "base_model": "unsloth/Qwen3.5-9B",
+      "tags": [
+        "text-generation-inference",
+        "transformers",
+        "unsloth",
+        "qwen3_5",
+        "reasoning",
+        "distillation",
+        "deepseek",
+        "deepseek-v4",
+        "sft",
+        "long-cot",
+        "chain-of-thought",
+        "efficient-inference",
+        "agent",
+        "multilingual"
+      ],
+      "license": "apache-2.0",
+      "language": [
+        "en",
+        "zh",
+        "ko",
+        "ja",
+        "es",
+        "ru"
+      ],
+      "pipeline_tag": "image-text-to-text",
+      "datasets": [
+        "Jackrong/DeepSeek-V4-Distill-8000x"
+      ]
+    },
+    "gated": false,
+    "downloads": 244829,
+    "gguf": {
+      "total": 8953803264,
+      "architecture": "qwen35",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "eos_token": "<|im_end|>",
+      "totalFileSize": 4623521024
+    }
+  }
+]
