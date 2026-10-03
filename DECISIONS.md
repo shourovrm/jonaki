@@ -1798,8 +1798,13 @@ as global ones or deletes them. Strings reviewed by the main session only
 (user ruling: no subagents), not by a separate reviewer as AGENTS.md asks.
 Tests: ProjectPathsTest, ProjectFilesSectionTest, MemorySectionTest,
 ProjectMemoryExtractionTest, ProjectMemoryQueriesTest,
-ProjectMemoryMigrationTest, FactMenuTest, MemoryToolTest. Outcome: pending a
-phone check.
+ProjectMemoryMigrationTest, FactMenuTest, MemoryToolTest. Outcome (A059,
+2026-10-03, project "test", DeepSeek V4.1 Flash, $0.0004): the model saved
+"Project "test" deadline is 15 December." with scope project and, after
+Allow once, wrote /project/notes.md (14 bytes); the project's Memory screen
+listed the fact under This project, its Files screen listed notes.md; a
+second thread of the project, on another model and told to use no tool,
+named the deadline and /project/notes.md from its prompt.
 
 
 ## D-136 · 2026-10-03 · Local tool list: four always, read_document with files — accepted
