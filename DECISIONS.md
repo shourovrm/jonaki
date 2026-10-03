@@ -1483,3 +1483,10 @@ adversarial string review was not run (this worker may not spawn
 subagents). Tests: SubagentRowsTest, ChatItemsTest, SubagentRunnerTest.
 Not checked: a device view; previews at 360 dp and font scale 1.3 exist but
 were not rendered. Outcome: pending.
+
+## D-127 · 2026-10-03 · Fixes from the first phone check of the revamp — proposed
+Thread list: the title keeps one line and ends in "…", like the preview
+line under it. This reverses D-029's "Thread names wrap in full in the
+thread list" (and the matching line in AGENTS.md "Interface text") at the
+user's request after the phone check, where long titles took three lines;
+the chat's top bar still shows the name. Outcome: pending.
