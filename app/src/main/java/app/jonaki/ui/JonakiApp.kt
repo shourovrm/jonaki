@@ -65,6 +65,7 @@ import app.jonaki.feature.settings.AddableModelUi
 import app.jonaki.feature.settings.AddableServiceUi
 import app.jonaki.feature.settings.ChatServiceCardUi
 import app.jonaki.feature.settings.KeySlot
+import app.jonaki.feature.settings.LocalModelsSummaryUi
 import app.jonaki.feature.settings.McpServerUi
 import app.jonaki.feature.settings.RoutingUi
 import app.jonaki.feature.settings.SearchServiceRow
@@ -193,6 +194,10 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     }
                 }
                 BackHandler(onBack = goBack)
+                if (settingsPage == SettingsPage.LOCAL_MODELS) {
+                    LocalModelsRoute(application, onBack = goBack)
+                    return@JonakiTheme
+                }
                 SettingsRoute(
                     application = application,
                     page = settingsPage,
@@ -947,6 +952,11 @@ private fun SettingsRoute(
         readPermissionRows(context, snapshot.refusedPermissions)
     }
     val appVersion = remember { installedVersionName(context) }
+    val localModelChanges by application.localModels.changes.collectAsState()
+    var localModelsSummary by remember { mutableStateOf(LocalModelsSummaryUi()) }
+    LaunchedEffect(localModelChanges) {
+        localModelsSummary = withContext(Dispatchers.IO) { localModelsSummaryOf(application.localModels, context) }
+    }
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
         if (treeUri != null) {
             linkFolder(application, treeUri)
@@ -1001,6 +1011,7 @@ private fun SettingsRoute(
         toolGroupCount = ToolGroup.entries.size,
         factCount = globalFacts.size,
         skillCount = skillCount,
+        localModels = localModelsSummary,
     )
     val actions = SettingsActions(
         onBack = onBack,

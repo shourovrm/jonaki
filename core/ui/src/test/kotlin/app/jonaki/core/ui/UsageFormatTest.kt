@@ -75,6 +75,13 @@ class UsageFormatTest {
     }
 
     @Test
+    fun largeByteSizesAreGigabytes() {
+        assertEquals("1.2 GB", UsageFormat.byteSize(1_214_873_856))
+        assertEquals("507.2 MB", UsageFormat.byteSize(507_154_688))
+        assertEquals("7.6 GB", UsageFormat.byteSize(7_600_000_000))
+    }
+
+    @Test
     fun smallByteSizesAreKilobytesOrBytes() {
         assertEquals("119 KB", UsageFormat.byteSize(119_077))
         assertEquals("0 B", UsageFormat.byteSize(0))

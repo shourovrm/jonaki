@@ -1,0 +1,197 @@
+[
+  {
+    "_id": "621ffdc036468d709f176266",
+    "id": "KBLab/sentence-bert-swedish-cased",
+    "cardData": {
+      "pipeline_tag": "sentence-similarity",
+      "lang": [
+        "sv"
+      ],
+      "tags": [
+        "sentence-transformers",
+        "feature-extraction",
+        "sentence-similarity",
+        "transformers"
+      ],
+      "widget": [
+        {
+          "source_sentence": "Mannen åt mat.",
+          "sentences": [
+            "Han förtärde en närande och nyttig måltid.",
+            "Det var ett sunkigt hak med ganska gott käk.",
+            "Han inmundigade middagen tillsammans med ett glas rödvin.",
+            "Potatischips är jättegoda.",
+            "Tryck på knappen för att få tala med kundsupporten."
+          ],
+          "example_title": "Mat"
+        },
+        {
+          "source_sentence": "Kan jag deklarera digitalt från utlandet?",
+          "sentences": [
+            "Du som befinner dig i utlandet kan deklarera digitalt på flera olika sätt.",
+            "Du som har kvarskatt att betala ska göra en inbetalning till ditt skattekonto.",
+            "Efter att du har deklarerat går vi igenom uppgifterna i din deklaration och räknar ut din skatt.",
+            "I din deklaration som du får från oss har vi räknat ut vad du ska betala eller få tillbaka.",
+            "Tryck på knappen för att få tala med kundsupporten."
+          ],
+          "example_title": "Skatteverket FAQ"
+        },
+        {
+          "source_sentence": "Hon kunde göra bakåtvolter.",
+          "sentences": [
+            "Hon var atletisk.",
+            "Hon var bra på gymnastik.",
+            "Hon var inte atletisk.",
+            "Hon var oförmögen att flippa baklänges."
+          ],
+          "example_title": "Gymnastik"
+        }
+      ],
+      "license": "apache-2.0",
+      "language": [
+        "sv"
+      ]
+    },
+    "gated": false,
+    "downloads": 69299,
+    "gguf": {
+      "total": 124100352,
+      "architecture": "bert",
+      "context_length": 512,
+      "causal": false,
+      "bos_token": "[CLS]",
+      "eos_token": "[SEP]",
+      "totalFileSize": 250281056,
+      "chat_template": "(trimmed)"
+    }
+  },
+  {
+    "_id": "69fb641e399d3856999c3ada",
+    "id": "mradermacher/Berthier-Mistral-Military-24B-i1-GGUF",
+    "cardData": {
+      "base_model": "racineai/Mistral-Military-24B",
+      "language": [
+        "fr",
+        "en"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "mradermacher": {
+        "readme_rev": 1
+      },
+      "quantized_by": "mradermacher",
+      "tags": [
+        "defense",
+        "military",
+        "french",
+        "continued-pretraining",
+        "mistral",
+        "ties-merge"
+      ]
+    },
+    "gated": false,
+    "downloads": 2509,
+    "gguf": {
+      "total": 23572403200,
+      "architecture": "mistral3",
+      "context_length": 131072,
+      "quantize_imatrix_file": "Berthier-Mistral-Military-24B-i1-GGUF/Berthier-Mistral-Military-24B.imatrix.gguf",
+      "chat_template": "(trimmed)",
+      "bos_token": "<s>",
+      "eos_token": "</s>",
+      "totalFileSize": 5750498048
+    }
+  },
+  {
+    "_id": "69eb8f90dcdb86215143dd13",
+    "id": "mradermacher/Berthier-Mistral-Military-24B-GGUF",
+    "cardData": {
+      "base_model": "racineai/Mistral-Military-24B",
+      "language": [
+        "fr",
+        "en"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "mradermacher": {
+        "readme_rev": 1
+      },
+      "quantized_by": "mradermacher",
+      "tags": [
+        "defense",
+        "military",
+        "french",
+        "continued-pretraining",
+        "mistral",
+        "ties-merge"
+      ]
+    },
+    "gated": false,
+    "downloads": 837,
+    "gguf": {
+      "total": 23572403200,
+      "architecture": "mistral3",
+      "context_length": 131072,
+      "chat_template": "(trimmed)",
+      "bos_token": "<s>",
+      "eos_token": "</s>",
+      "totalFileSize": 12889989600
+    }
+  },
+  {
+    "_id": "683adba200f90dff0c377f32",
+    "id": "mradermacher/emotion-analyzer-bert-GGUF",
+    "cardData": {
+      "base_model": "logasanjeev/bert-emotion-classifier",
+      "datasets": [
+        "google-research-datasets/go_emotions"
+      ],
+      "language": "en",
+      "library_name": "transformers",
+      "license": "mit",
+      "mradermacher": {
+        "readme_rev": 1
+      },
+      "quantized_by": "mradermacher",
+      "tags": [
+        "text-classification",
+        "transformers",
+        "pytorch",
+        "onnx",
+        "multi-label-classification",
+        "multi-class-classification",
+        "emotion",
+        "bert",
+        "go_emotions",
+        "emotion-classification",
+        "sentiment-analysis",
+        "tensorflow"
+      ]
+    },
+    "gated": false,
+    "downloads": 478,
+    "gguf": {
+      "total": 108913180,
+      "architecture": "bert",
+      "context_length": 512,
+      "causal": false,
+      "totalFileSize": 219499264,
+      "chat_template": "(trimmed)"
+    }
+  },
+  {
+    "_id": "66ce7c224c8a29c677114dd7",
+    "id": "RichardErkhov/Q-bert_-_MetaMath-Cybertron-Starling-gguf",
+    "gated": false,
+    "downloads": 452,
+    "gguf": {
+      "total": 7241732096,
+      "architecture": "llama",
+      "context_length": 32768,
+      "bos_token": "<s>",
+      "eos_token": "</s>",
+      "totalFileSize": 3284892224,
+      "chat_template": "(trimmed)"
+    }
+  }
+]

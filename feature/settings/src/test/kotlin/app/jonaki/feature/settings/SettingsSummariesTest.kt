@@ -147,6 +147,13 @@ class SettingsSummariesTest {
     }
 
     @Test
+    fun localModelsCountsDownloadsAndNamesTheLargestThatFits() {
+        val two = emptyState.copy(localModels = LocalModelsSummaryUi(downloadedCount = 2, largestFittingName = "Qwen3.5-2B"))
+        assertEquals("2 downloaded · Qwen3.5-2B fits", summary(SettingsPage.LOCAL_MODELS, two))
+        assertEquals("None downloaded · No model fits", summary(SettingsPage.LOCAL_MODELS, emptyState))
+    }
+
+    @Test
     fun themeNamesTheChoice() {
         assertEquals("Follows the phone", summary(SettingsPage.THEME, emptyState))
         assertEquals("Dark", summary(SettingsPage.THEME, emptyState.copy(themeMode = ThemeMode.DARK)))

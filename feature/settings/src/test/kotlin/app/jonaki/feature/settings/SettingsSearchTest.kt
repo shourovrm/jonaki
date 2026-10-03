@@ -41,6 +41,12 @@ class SettingsSearchTest {
     }
 
     @Test
+    fun huggingFaceOpensLocalModels() {
+        assertEquals(listOf(SettingsSearchEntry("Search Hugging Face", SettingsPage.LOCAL_MODELS)), search("hugging"))
+        assertEquals(listOf(SettingsSearchEntry("Local models", SettingsPage.LOCAL_MODELS)), search("local"))
+    }
+
+    @Test
     fun permissionRowsAreFound() {
         assertEquals(listOf(SettingsSearchEntry("Calendar", SettingsPage.PERMISSIONS)), search("calendar"))
     }

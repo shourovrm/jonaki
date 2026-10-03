@@ -87,6 +87,8 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
         ) {
             when (page) {
                 SettingsPage.MODELS -> ModelsPage(state, actions)
+                // The app shows LocalModelsScreen for this page instead; it never reaches here.
+                SettingsPage.LOCAL_MODELS -> Unit
                 SettingsPage.WEB -> WebPage(state, actions)
                 SettingsPage.TOOLS -> ToolsPage(state, actions)
                 SettingsPage.ANSWERS -> AnswersAndPersonasSections(state, actions)
