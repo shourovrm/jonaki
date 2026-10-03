@@ -23,6 +23,7 @@ object SettingsSummaries {
         SettingsPage.LOCAL_MODELS -> PageSummary(localModels(state.localModels, texts))
         SettingsPage.WEB -> PageSummary(web(state, texts))
         SettingsPage.TOOLS -> PageSummary(tools(state, texts))
+        SettingsPage.SUBAGENTS -> PageSummary(subagents(state, texts))
         SettingsPage.ANSWERS -> PageSummary(answers(state, texts))
         SettingsPage.MEMORY_SKILLS -> PageSummary(memoryAndSkills(state, texts))
         SettingsPage.FILES_SCHEDULE -> PageSummary(filesAndSchedule(state, texts))
@@ -84,6 +85,20 @@ object SettingsSummaries {
         state.toolGroupCount,
         texts.approvalMode(state.approvalMode),
     )
+
+    /** "2 without asking · 1 custom": the limit that decides when the user is asked, and the user's own types. */
+    private fun subagents(state: SettingsUiState, texts: SettingsTexts): String {
+        val customCount = state.customSubagents.size
+        val custom = if (customCount == 0) {
+            texts.string(R.string.settings_summary_subagents_no_custom)
+        } else {
+            texts.plural(R.plurals.settings_summary_subagents_custom, customCount, customCount)
+        }
+        val withoutAsking = state.subagentLimits.firstOrNull { limit -> limit.limit == SubagentLimit.WITHOUT_ASKING }
+            ?: return custom
+        val automatic = texts.plural(R.plurals.settings_summary_subagents_auto, withoutAsking.value, withoutAsking.value)
+        return automatic + SEPARATOR + custom
+    }
 
     private fun answers(state: SettingsUiState, texts: SettingsTexts): String {
         val personaCount = state.personas.size

@@ -91,6 +91,7 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
                 SettingsPage.LOCAL_MODELS -> Unit
                 SettingsPage.WEB -> WebPage(state, actions)
                 SettingsPage.TOOLS -> ToolsPage(state, actions)
+                SettingsPage.SUBAGENTS -> SubagentsPage(state, actions)
                 SettingsPage.ANSWERS -> AnswersAndPersonasSections(state, actions)
                 SettingsPage.MEMORY_SKILLS -> MemoryAndSkillsPage(state, actions)
                 SettingsPage.FILES_SCHEDULE -> FilesAndSchedulePage(state, actions)
@@ -106,12 +107,6 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
 private fun ModelsPage(state: SettingsUiState, actions: SettingsActions) {
     SectionLabel(stringResource(R.string.settings_section_chat))
     ChatServicesSection(state, actions)
-    if (state.subagentModels.isNotEmpty()) {
-        SectionLabel(stringResource(R.string.settings_section_subagents))
-        Group {
-            SubagentModelRows(state.subagentModels, state.subagentModelOptions, actions.onSubagentModelChange)
-        }
-    }
 }
 
 @Composable

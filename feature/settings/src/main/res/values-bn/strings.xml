@@ -98,7 +98,6 @@
         <item quantity="one">%1$dটি বাছাই</item>
         <item quantity="other">%1$dটি বাছাই</item>
     </plurals>
-    <string name="settings_section_subagents">সাবএজেন্ট</string>
     <string name="settings_subagent_researcher">গবেষক</string>
     <string name="settings_subagent_scout">স্কাউট</string>
     <string name="settings_subagent_writer">লেখক</string>

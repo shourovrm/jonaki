@@ -17,6 +17,8 @@ enum class SettingsPage(val key: String, @StringRes val title: Int) {
     LOCAL_MODELS("local-models", R.string.settings_root_local_models),
     WEB("web", R.string.settings_root_web),
     TOOLS("tools", R.string.settings_root_tools),
+    /** Limits, the built-in types' models and the user's own types (D-138). */
+    SUBAGENTS("subagents", R.string.settings_root_subagents),
     ANSWERS("answers", R.string.settings_root_answers),
     MEMORY_SKILLS("memory-skills", R.string.settings_root_memory_skills),
     FILES_SCHEDULE("files-schedule", R.string.settings_root_files_schedule),
@@ -28,7 +30,7 @@ enum class SettingsPage(val key: String, @StringRes val title: Int) {
     companion object {
         /** The first page's three groups, separated by space and without labels. */
         val GROUPS: List<List<SettingsPage>> = listOf(
-            listOf(MODELS, LOCAL_MODELS, WEB, TOOLS),
+            listOf(MODELS, LOCAL_MODELS, WEB, TOOLS, SUBAGENTS),
             listOf(ANSWERS, MEMORY_SKILLS, FILES_SCHEDULE),
             listOf(THEME, PERMISSIONS, ABOUT),
         )

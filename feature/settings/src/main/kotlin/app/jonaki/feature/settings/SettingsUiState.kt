@@ -42,6 +42,10 @@ data class SettingsUiState(
     val subagentModels: List<SubagentModelRowUi> = emptyList(),
     /** The user's scoped models, offered for each type. */
     val subagentModelOptions: List<ModelOptionUi> = emptyList(),
+    /** Settings > Subagents' limits, in the order the page shows them (D-138). */
+    val subagentLimits: List<SubagentLimitUi> = emptyList(),
+    /** Subagent types the user made, in the order they were added (D-138). */
+    val customSubagents: List<CustomSubagentRowUi> = emptyList(),
     /** Settings > Permissions, read again each time the screen resumes (D-124). */
     val permissions: List<PermissionRowUi> = emptyList(),
     /** The installed version name, for example "0.8.0". */
@@ -197,6 +201,10 @@ class SettingsActions(
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
     /** [modelKey] null returns the type to its default. */
     val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
+    /** A limit's new value, one step from the old; the app keeps it in range (D-138). */
+    val onSubagentLimitChange: (limit: SubagentLimit, value: Int) -> Unit = { _, _ -> },
+    /** Opens a custom subagent's editor; null opens an empty one for a new subagent. */
+    val onOpenCustomSubagent: (name: String?) -> Unit = {},
     /** A tap on a permission row or its button; the app asks or opens system settings by [PermissionRowUi.status]. */
     val onPermissionTap: (PermissionRow) -> Unit = {},
     /** Opens the project's GitHub page in the browser. */
@@ -271,6 +279,12 @@ object SettingsSample {
         subagentModels = listOf(
             SubagentModelRowUi("researcher", selectedKey = null, defaultIsCheapest = false),
             SubagentModelRowUi("scout", selectedKey = null, defaultIsCheapest = true),
+        ),
+        subagentLimits = SubagentLimitUi.SAMPLE,
+        // A 30-character name and a long description check that each keeps one line (D-029).
+        customSubagents = listOf(
+            CustomSubagentRowUi("price-checker", "Checks laptop prices in Dhaka shops and lists them by price."),
+            CustomSubagentRowUi("bangla-legal-summary-writer-02", "Summarises court papers in plain Bangla."),
         ),
         permissions = listOf(
             PermissionRowUi(PermissionRow.NOTIFICATIONS, PermissionStatus.ALLOWED),

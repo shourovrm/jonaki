@@ -226,6 +226,9 @@ object JonakiIcons {
         )
     }
 
+    /** Material "remove" (a minus sign): lowers a limit in Settings > Subagents (D-138). */
+    val Remove: ImageVector by lazy { icon("Remove", "M19,13H5v-2h14v2z") }
+
     /** Material "skip_next": a part a subagent skipped (D-126). */
     val SkipNext: ImageVector by lazy { icon("SkipNext", "M6,18l8.5,-6L6,6v12zM16,6v12h2V6h-2z") }
 

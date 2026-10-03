@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings > Subagents (D-138). -->
+<resources>
+    <string name="settings_root_subagents">সাবএজেন্ট</string>
+    <string name="settings_subagents_section_limits">সীমা</string>
+    <string name="settings_subagents_without_asking">না জিজ্ঞেস করে শুরু</string>
+    <string name="settings_subagents_per_message">প্রতি মেসেজে</string>
+    <string name="settings_subagents_per_call">একসাথে শুরু</string>
+    <string name="settings_subagents_in_one_call">এক কলে</string>
+    <string name="settings_subagents_warn_above">এর বেশি হলে সতর্কতা</string>
+    <string name="settings_subagents_section_each">প্রতিটি সাবএজেন্ট</string>
+    <string name="settings_subagents_tool_steps">টুল ধাপ</string>
+    <string name="settings_subagents_cost">খরচ</string>
+    <string name="settings_subagents_minutes">মিনিট</string>
+    <string name="settings_subagents_lower">%1$s কমান</string>
+    <string name="settings_subagents_raise">%1$s বাড়ান</string>
+    <string name="settings_subagents_section_custom">কাস্টম</string>
+    <string name="settings_subagents_add">সাবএজেন্ট যোগ করুন</string>
+    <string name="settings_subagents_new">নতুন সাবএজেন্ট</string>
+    <string name="settings_subagents_edit">সাবএজেন্ট এডিট</string>
+    <string name="settings_subagents_name_rule">ছোট হাতের ইংরেজি অক্ষর, সংখ্যা ও -</string>
+    <string name="settings_subagents_name_taken">এই নাম আগেই আছে</string>
+    <string name="settings_subagents_description">বিবরণ</string>
+    <string name="settings_subagents_description_help">থ্রেডের মডেল এটা দেখে কখন ব্যবহার করবে</string>
+    <string name="settings_subagents_model">মডেল</string>
+    <plurals name="settings_summary_subagents_auto">
+        <item quantity="one">না জিজ্ঞেস করে %1$dটি</item>
+        <item quantity="other">না জিজ্ঞেস করে %1$dটি</item>
+    </plurals>
+    <string name="settings_summary_subagents_no_custom">কাস্টম নেই</string>
+    <plurals name="settings_summary_subagents_custom">
+        <item quantity="one">%1$dটি কাস্টম</item>
+        <item quantity="other">%1$dটি কাস্টম</item>
+    </plurals>
+</resources>

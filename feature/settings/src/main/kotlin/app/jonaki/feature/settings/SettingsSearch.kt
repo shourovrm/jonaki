@@ -21,11 +21,6 @@ object SettingsSearch {
             R.string.settings_add_service,
             R.string.settings_add_model,
             R.string.settings_routing,
-            R.string.settings_section_subagents,
-            R.string.settings_subagent_researcher,
-            R.string.settings_subagent_scout,
-            R.string.settings_subagent_writer,
-            R.string.settings_subagent_worker,
         ),
         SettingsPage.LOCAL_MODELS to listOf(
             R.string.local_models_section_downloaded,
@@ -47,6 +42,22 @@ object SettingsSearch {
             R.string.settings_python,
             R.string.settings_section_mcp,
             R.string.settings_mcp_add,
+        ),
+        SettingsPage.SUBAGENTS to listOf(
+            R.string.settings_subagents_section_limits,
+            R.string.settings_subagents_without_asking,
+            R.string.settings_subagents_per_call,
+            R.string.settings_subagents_warn_above,
+            R.string.settings_subagents_section_each,
+            R.string.settings_subagents_tool_steps,
+            R.string.settings_subagents_cost,
+            R.string.settings_subagents_minutes,
+            R.string.settings_subagent_researcher,
+            R.string.settings_subagent_scout,
+            R.string.settings_subagent_writer,
+            R.string.settings_subagent_worker,
+            R.string.settings_subagents_section_custom,
+            R.string.settings_subagents_add,
         ),
         SettingsPage.ANSWERS to listOf(
             R.string.settings_custom_instructions,
@@ -85,7 +96,8 @@ object SettingsSearch {
 
     /**
      * Every searchable title, with the names of the user's chat and search
-     * services so that "Tavily" finds Web and YouTube.
+     * services so that "Tavily" finds Web and YouTube, and of the user's
+     * own subagents.
      */
     fun entries(texts: SettingsTexts, state: SettingsUiState): List<SettingsSearchEntry> {
         val entries = mutableListOf<SettingsSearchEntry>()
@@ -100,6 +112,9 @@ object SettingsSearch {
         }
         for (service in state.searchServices) {
             entries += SettingsSearchEntry(service.displayName, SettingsPage.WEB)
+        }
+        for (subagent in state.customSubagents) {
+            entries += SettingsSearchEntry(subagent.name, SettingsPage.SUBAGENTS)
         }
         return entries.distinct()
     }

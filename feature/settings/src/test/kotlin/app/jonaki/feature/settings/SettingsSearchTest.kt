@@ -47,6 +47,21 @@ class SettingsSearchTest {
     }
 
     @Test
+    fun subagentSettingsOpenTheSubagentsPage() {
+        assertEquals(
+            listOf("Subagents", "Each subagent", "Add subagent").map { title -> SettingsSearchEntry(title, SettingsPage.SUBAGENTS) },
+            search("subagent"),
+        )
+        assertEquals(listOf(SettingsSearchEntry("Researcher", SettingsPage.SUBAGENTS)), search("researcher"))
+        assertEquals(listOf(SettingsSearchEntry("Start without asking", SettingsPage.SUBAGENTS)), search("without asking"))
+    }
+
+    @Test
+    fun aCustomSubagentsNameOpensTheSubagentsPage() {
+        assertEquals(listOf(SettingsSearchEntry("price-checker", SettingsPage.SUBAGENTS)), search("price"))
+    }
+
+    @Test
     fun permissionRowsAreFound() {
         assertEquals(listOf(SettingsSearchEntry("Calendar", SettingsPage.PERMISSIONS)), search("calendar"))
     }

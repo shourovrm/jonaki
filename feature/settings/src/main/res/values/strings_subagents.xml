@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings > Subagents (D-138). -->
+<resources>
+    <string name="settings_root_subagents">Subagents</string>
+    <string name="settings_subagents_section_limits">Limits</string>
+    <string name="settings_subagents_without_asking">Start without asking</string>
+    <string name="settings_subagents_per_message">Per message</string>
+    <string name="settings_subagents_per_call">Start at once</string>
+    <string name="settings_subagents_in_one_call">In one call</string>
+    <string name="settings_subagents_warn_above">Warn above</string>
+    <string name="settings_subagents_section_each">Each subagent</string>
+    <string name="settings_subagents_tool_steps">Tool steps</string>
+    <string name="settings_subagents_cost">Cost</string>
+    <string name="settings_subagents_minutes">Minutes</string>
+    <string name="settings_subagents_lower">Lower %1$s</string>
+    <string name="settings_subagents_raise">Raise %1$s</string>
+    <string name="settings_subagents_section_custom">Custom</string>
+    <string name="settings_subagents_add">Add subagent</string>
+    <string name="settings_subagents_new">New subagent</string>
+    <string name="settings_subagents_edit">Edit subagent</string>
+    <string name="settings_subagents_name_rule">Lowercase letters, digits and -</string>
+    <string name="settings_subagents_name_taken">Name already used</string>
+    <string name="settings_subagents_description">Description</string>
+    <string name="settings_subagents_description_help">Tells the thread\'s model when to use it</string>
+    <string name="settings_subagents_model">Model</string>
+    <plurals name="settings_summary_subagents_auto">
+        <item quantity="one">%1$d without asking</item>
+        <item quantity="other">%1$d without asking</item>
+    </plurals>
+    <string name="settings_summary_subagents_no_custom">no custom</string>
+    <plurals name="settings_summary_subagents_custom">
+        <item quantity="one">%1$d custom</item>
+        <item quantity="other">%1$d custom</item>
+    </plurals>
+</resources>

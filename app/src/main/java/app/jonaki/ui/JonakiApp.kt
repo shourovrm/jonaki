@@ -31,7 +31,7 @@ import app.jonaki.R
 import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.ApprovalMode
-import app.jonaki.feature.settings.ModelOptionUi
+import app.jonaki.feature.settings.CustomSubagentRowUi
 import app.jonaki.feature.settings.SubagentModelRowUi
 import app.jonaki.settings.SubagentModelChoice
 import app.jonaki.core.ui.ApprovalModeChoice
@@ -128,6 +128,9 @@ private const val ROUTE_CUSTOM_INSTRUCTIONS = "custom-instructions"
 /** "persona:<id>", the id empty for a new persona (D-109). */
 private const val ROUTE_PERSONA_PREFIX = "persona:"
 
+/** "subagent:<name>", the name empty for a new custom subagent (D-138). */
+private const val ROUTE_SUBAGENT_PREFIX = "subagent:"
+
 /** "artifact:<thread id>@<path relative to the thread folder>" (D-047). */
 private const val ROUTE_ARTIFACT_PREFIX = "artifact:"
 
@@ -216,6 +219,16 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenPython = { route = ROUTE_PYTHON },
                     onOpenCustomInstructions = { route = ROUTE_CUSTOM_INSTRUCTIONS },
                     onOpenPersona = { personaId -> route = ROUTE_PERSONA_PREFIX + personaId.orEmpty() },
+                    onOpenCustomSubagent = { name -> route = ROUTE_SUBAGENT_PREFIX + name.orEmpty() },
+                )
+            }
+            route.startsWith(ROUTE_SUBAGENT_PREFIX) -> {
+                val backRoute = settingsPageRoute(SettingsPage.SUBAGENTS)
+                BackHandler { route = backRoute }
+                CustomSubagentEditorRoute(
+                    application = application,
+                    subagentName = route.removePrefix(ROUTE_SUBAGENT_PREFIX).ifEmpty { null },
+                    onBack = { route = backRoute },
                 )
             }
             route == ROUTE_CUSTOM_INSTRUCTIONS -> {
@@ -950,6 +963,7 @@ private fun SettingsRoute(
     onOpenPersona: (personaId: String?) -> Unit,
     onOpenTools: () -> Unit,
     onOpenPython: () -> Unit,
+    onOpenCustomSubagent: (name: String?) -> Unit,
 ) {
     val personas by remember { application.database.personaDao().observeAll() }.collectAsState(initial = emptyList())
     val settings = application.settings
@@ -1039,9 +1053,9 @@ private fun SettingsRoute(
                 defaultIsCheapest = type.name == SubagentModelChoice.SCOUT,
             )
         },
-        subagentModelOptions = snapshot.chatModels.allModelKeys.map { key ->
-            ModelOptionUi(key, application.catalog.find(key)?.displayName ?: ModelKey.modelOf(key))
-        },
+        subagentModelOptions = subagentModelOptionsOf(snapshot, application),
+        subagentLimits = SubagentLimitRows.of(snapshot.subagentLimits),
+        customSubagents = snapshot.customSubagents.map { subagent -> CustomSubagentRowUi(subagent.name, subagent.description) },
         permissions = permissionRows,
         appVersion = appVersion,
         toolGroupsOn = snapshot.enabledToolGroups.size,
@@ -1099,6 +1113,10 @@ private fun SettingsRoute(
                 current.copy(subagentModels = choices)
             }
         },
+        onSubagentLimitChange = { limit, value ->
+            settings.update { current -> current.copy(subagentLimits = SubagentLimitRows.changed(current.subagentLimits, limit, value)) }
+        },
+        onOpenCustomSubagent = onOpenCustomSubagent,
         onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },
         onModelThinkingChange = { modelKey, choice ->
             settings.update { current ->
