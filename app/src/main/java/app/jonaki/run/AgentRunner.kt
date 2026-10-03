@@ -121,7 +121,7 @@ class AgentRunner(
     private val taskSchedulerFor: ((threadId: String) -> TaskScheduler)? = null,
     private val mcpServers: McpServerStore,
     /** GGUF models on the phone and their one provider (D-133). */
-    private val localModels: LocalModels,
+    private val localRuntime: LocalModelRuntime,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -544,7 +544,7 @@ class AgentRunner(
     private fun toolServicesFor(thread: ThreadEntity, modelAcceptsImages: Boolean): ToolServices {
         val enabledGroups = settings.snapshot.value.enabledToolGroups
         val services = allToolServicesFor(thread, modelAcceptsImages, enabledGroups)
-        if (!LocalModels.isLocal(modelKeyFor(thread))) {
+        if (!LocalModelRuntime.isLocal(modelKeyFor(thread))) {
             return services
         }
         return services.copy(
@@ -749,7 +749,7 @@ class AgentRunner(
     private fun chatProvider(service: ChatService, routing: OpenRouterRouting, onRoutingFallback: () -> Unit): ChatProvider? {
         val secret = service.secret
         val key = if (secret == null) null else secrets.read(secret) ?: return null
-        return ChatProviders.create(service, key, httpClient, routing, onRoutingFallback, localModels)
+        return ChatProviders.create(service, key, httpClient, routing, onRoutingFallback, localRuntime)
     }
 
     private fun searchBackends(order: List<SearchService>): List<SearchBackend> =

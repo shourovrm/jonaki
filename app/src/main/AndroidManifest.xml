@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Model, search and web calls (D-006). -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -72,6 +73,12 @@
             android:name=".run.AgentService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <!-- WorkManager's own service runs model downloads in the foreground (D-133); Android 14
+             needs its type declared, and dataSync is the type Jonaki already holds. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
         <receiver
             android:name=".phone.ReminderReceiver"
             android:exported="false" />

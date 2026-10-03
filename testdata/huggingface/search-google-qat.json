@@ -1,0 +1,129 @@
+[
+  {
+    "_id": "69f42b6650e9e725ecb7f671",
+    "id": "google/gemma-4-26B-A4B-it-qat-q4_0-gguf",
+    "cardData": {
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "license_link": "https://ai.google.dev/gemma/docs/gemma_4_license",
+      "pipeline_tag": "image-text-to-text",
+      "base_model": [
+        "google/gemma-4-26B-A4B-it-qat-q4_0-unquantized"
+      ]
+    },
+    "gated": false,
+    "downloads": 427188,
+    "gguf": {
+      "total": 25233142046,
+      "architecture": "gemma4",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "bos_token": "<bos>",
+      "eos_token": "<eos>",
+      "totalFileSize": 14439363584
+    }
+  },
+  {
+    "_id": "69f42bccd346795c8ad723d2",
+    "id": "google/gemma-4-31B-it-qat-q4_0-gguf",
+    "cardData": {
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "license_link": "https://ai.google.dev/gemma/docs/gemma_4_license",
+      "pipeline_tag": "image-text-to-text",
+      "base_model": [
+        "google/gemma-4-31B-it-qat-q4_0-unquantized"
+      ]
+    },
+    "gated": false,
+    "downloads": 347002,
+    "gguf": {
+      "total": 30697345596,
+      "architecture": "gemma4",
+      "context_length": 262144,
+      "chat_template": "(trimmed)",
+      "bos_token": "<bos>",
+      "eos_token": "<eos>",
+      "totalFileSize": 17651001568
+    }
+  },
+  {
+    "_id": "67d1f1f08dbf13ec3de1e1fd",
+    "id": "google/gemma-3-4b-it-qat-q4_0-gguf",
+    "cardData": {
+      "base_model": "google/gemma-3-4b-it",
+      "license": "gemma",
+      "tags": [
+        "gemma3",
+        "gemma",
+        "google"
+      ],
+      "pipeline_tag": "image-text-to-text"
+    },
+    "gated": "manual",
+    "downloads": 2551,
+    "gguf": {
+      "total": 3880099328,
+      "architecture": "gemma3",
+      "context_length": 131072,
+      "chat_template": "(trimmed)",
+      "bos_token": "<bos>",
+      "eos_token": "<eos>",
+      "totalFileSize": 3155051328
+    }
+  },
+  {
+    "_id": "67cf6ae199ef0ed8c2cf3a52",
+    "id": "google/gemma-3-1b-it-qat-q4_0-gguf",
+    "cardData": {
+      "license": "gemma",
+      "pipeline_tag": "text-generation",
+      "extra_gated_heading": "Access Gemma on Hugging Face",
+      "extra_gated_prompt": "To access Gemma on Hugging Face, you’re required to review and agree to Google’s usage license. To do this, please ensure you’re logged in to Hugging Face and click below. Requests are processed immediately.",
+      "extra_gated_button_content": "Acknowledge license",
+      "base_model": "google/gemma-3-1b-it",
+      "tags": [
+        "gemma",
+        "gemma3"
+      ]
+    },
+    "gated": "manual",
+    "downloads": 933,
+    "gguf": {
+      "total": 999885952,
+      "architecture": "gemma3",
+      "context_length": 32768,
+      "chat_template": "(trimmed)",
+      "bos_token": "<bos>",
+      "eos_token": "<eos>",
+      "totalFileSize": 1003541152
+    }
+  },
+  {
+    "_id": "67d17ee922ae3de80fcf54fd",
+    "id": "google/gemma-3-12b-it-qat-q4_0-gguf",
+    "cardData": {
+      "license": "gemma",
+      "pipeline_tag": "image-text-to-text",
+      "extra_gated_heading": "Access Gemma on Hugging Face",
+      "extra_gated_prompt": "To access Gemma on Hugging Face, you’re required to review and agree to Google’s usage license. To do this, please ensure you’re logged in to Hugging Face and click below. Requests are processed immediately.",
+      "extra_gated_button_content": "Acknowledge license",
+      "base_model": "google/gemma-3-12b-it",
+      "tags": [
+        "gemma",
+        "gemma3"
+      ]
+    },
+    "gated": "manual",
+    "downloads": 763,
+    "gguf": {
+      "total": 11765788416,
+      "architecture": "gemma3",
+      "context_length": 131072,
+      "chat_template": "(trimmed)",
+      "bos_token": "<bos>",
+      "eos_token": "<eos>",
+      "totalFileSize": 8074473920
+    }
+  }
+]

@@ -14,8 +14,8 @@ object ChatProviders {
     /**
      * [apiKey] is null only for a service without a key (Ollama on the user's
      * network, local models). [routing] and [onRoutingFallback] apply to
-     * OpenRouter only (D-030). Local models share [localModels]' one provider,
-     * which keeps one model loaded (D-133).
+     * OpenRouter only (D-030). Local models share [localRuntime]'s one
+     * provider, which keeps one model loaded (D-133).
      */
     fun create(
         service: ChatService,
@@ -23,10 +23,10 @@ object ChatProviders {
         httpClient: OkHttpClient,
         routing: OpenRouterRouting,
         onRoutingFallback: () -> Unit,
-        localModels: LocalModels,
+        localRuntime: LocalModelRuntime,
     ): ChatProvider {
         if (service == ChatService.LOCAL) {
-            return localModels.provider
+            return localRuntime.provider
         }
         if (service == ChatService.GEMINI) {
             return GeminiProvider(apiKey.orEmpty(), httpClient)

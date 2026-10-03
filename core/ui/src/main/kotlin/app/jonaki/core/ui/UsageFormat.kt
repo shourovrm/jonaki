@@ -36,12 +36,14 @@ object UsageFormat {
     /**
      * A download or storage size in decimal megabytes with one decimal, as
      * download sizes are usually given: 13,532,188 bytes is "13.5 MB".
-     * Below one megabyte, whole kilobytes.
+     * Below one megabyte, whole kilobytes; from one gigabyte, gigabytes
+     * with one decimal (a model file of 1,214,873,856 bytes is "1.2 GB").
      */
     fun byteSize(bytes: Long): String = when {
         bytes < 1_000 -> "$bytes B"
         bytes < 1_000_000 -> "${(bytes / 1_000.0).roundToInt()} KB"
-        else -> String.format(Locale.ENGLISH, "%.1f MB", bytes / 1_000_000.0)
+        bytes < 1_000_000_000 -> String.format(Locale.ENGLISH, "%.1f MB", bytes / 1_000_000.0)
+        else -> String.format(Locale.ENGLISH, "%.1f GB", bytes / 1_000_000_000.0)
     }
 
     /** An exact count with thousands separators, for the usage sheet. */

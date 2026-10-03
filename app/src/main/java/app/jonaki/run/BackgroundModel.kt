@@ -42,7 +42,7 @@ class BackgroundModel(
     private val secrets: SecretStore,
     private val httpClient: OkHttpClient,
     private val catalog: ModelCatalog,
-    private val localModels: LocalModels,
+    private val localRuntime: LocalModelRuntime,
 ) {
     /** The model [complete] would use for a thread whose own model is [threadModelKey]. */
     fun modelFor(threadModelKey: String?): String? = choose(
@@ -87,7 +87,7 @@ class BackgroundModel(
         val secret = service.secret
         val apiKey = if (secret == null) null else secrets.read(secret) ?: return BackgroundAnswer.Failed("no key for ${service.displayName}")
         val routing = settings.snapshot.value.routing.effectiveFor(modelKey)
-        val provider = ChatProviders.create(service, apiKey, httpClient, routing, onRoutingFallback = {}, localModels)
+        val provider = ChatProviders.create(service, apiKey, httpClient, routing, onRoutingFallback = {}, localRuntime)
         val request = ChatRequest(
             model = ModelKey.modelOf(modelKey),
             systemPrompt = systemPrompt,

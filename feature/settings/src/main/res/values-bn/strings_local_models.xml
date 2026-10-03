@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings > Local models (D-133). -->
+    <string name="settings_root_local_models">লোকাল মডেল</string>
+    <plurals name="settings_summary_local_downloaded">
+        <item quantity="one">%1$dটি ডাউনলোড করা</item>
+        <item quantity="other">%1$dটি ডাউনলোড করা</item>
+    </plurals>
+    <string name="settings_summary_local_none_downloaded">কিছু ডাউনলোড করা নেই</string>
+    <string name="settings_summary_local_fits">%1$s চলবে</string>
+    <string name="settings_summary_local_none_fits">কোনো মডেল চলবে না</string>
+
+    <string name="local_models_section_phone">এই ফোন</string>
+    <string name="local_models_ram">RAM</string>
+    <string name="local_models_available_memory">খালি RAM</string>
+    <string name="local_models_free_storage">খালি জায়গা</string>
+    <string name="local_models_section_downloaded">ডাউনলোড করা</string>
+    <string name="local_models_none_downloaded">এখনো নেই</string>
+    <string name="local_models_section_recommended">প্রস্তাবিত</string>
+    <string name="local_models_section_search">Hugging Face</string>
+    <string name="local_models_search_hint">Hugging Face-এ খুঁজুন</string>
+    <string name="local_models_search_failed">খোঁজা যায়নি</string>
+    <string name="local_models_search_empty">কোনো GGUF মডেল পাওয়া যায়নি</string>
+
+    <string name="local_models_fits">চলবে</string>
+    <string name="local_models_tight">টেনেটুনে চলবে</string>
+    <string name="local_models_too_big">খুব বড়</string>
+    <string name="local_models_gated">Hugging Face-এ লগইন লাগবে</string>
+    <string name="local_models_not_supported">সমর্থিত নয়</string>
+
+    <string name="local_models_download">ডাউনলোড</string>
+    <string name="local_models_delete">সরান</string>
+    <string name="local_models_delete_title">%1$s সরাবেন?</string>
+    <string name="local_models_waiting">অপেক্ষায়…</string>
+    <string name="local_models_progress">%2$s-এর %1$s</string>
+    <string name="local_models_downloaded">ডাউনলোড হয়েছে</string>
+    <string name="local_models_failed">ডাউনলোড হয়নি</string>
+    <string name="local_models_damaged">নষ্ট</string>
+    <string name="local_models_no_space">%1$s খালি জায়গা লাগবে</string>
+
+    <string name="local_models_parameters">%1$s প্যারামিটার</string>
+    <string name="local_models_downloads">%1$s ডাউনলোড</string>
+    <string name="local_models_files_title">ফাইল</string>
+    <string name="local_models_files_failed">ফাইলের তালিকা আনা যায়নি</string>
+    <string name="local_models_files_empty">মডেল ফাইল নেই</string>
+    <string name="local_models_suggested">প্রস্তাবিত</string>
+</resources>

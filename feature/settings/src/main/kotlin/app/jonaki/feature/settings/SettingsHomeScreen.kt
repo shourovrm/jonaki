@@ -217,6 +217,7 @@ private fun SettingsSearchField(query: String, onQueryChange: (String) -> Unit) 
 /** Material equivalents of the mockup's Phosphor icons; the core set and JonakiIcons only, no new dependency. */
 private fun iconOf(page: SettingsPage): ImageVector = when (page) {
     SettingsPage.MODELS -> JonakiIcons.Memory
+    SettingsPage.LOCAL_MODELS -> JonakiIcons.Download
     SettingsPage.WEB -> JonakiIcons.Globe
     SettingsPage.TOOLS -> Icons.Outlined.Build
     SettingsPage.ANSWERS -> JonakiIcons.ChatBubble

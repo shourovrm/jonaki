@@ -52,3 +52,18 @@ and 2 hold Helvetica text, page 3 holds only a filled square, so it has no
 text layer. `locked.pdf` is the same file after `qpdf --encrypt secret owner
 256`, so it needs the password "secret". Word, Excel and PowerPoint test
 files are built in the tests themselves (`OfficeFixtures.kt`).
+
+## huggingface/ (D-133, Local models)
+
+Recorded with curl on 2026-10-03, without a key. In the search files every
+`gguf.chat_template` value is replaced by `"(trimmed)"` (the templates are
+up to 30 KB each and the code ignores them); nothing else is changed.
+
+| File | Request | Result |
+|---|---|---|
+| `search-qwen3.5.json` | `GET /api/models?search=qwen3.5&filter=gguf&sort=downloads&limit=30&expand[]=gguf&expand[]=gated&expand[]=downloads&expand[]=cardData`, first 8 of 30 | All `qwen35`, ungated, apache-2.0; `gguf.total` is the parameter count |
+| `search-google-qat.json` | Same expands, `author=google&search=qat-q4_0-gguf`, entries 4 to 8 | Gemma 3 repos have `"gated": "manual"`; Gemma 4 repos `false` |
+| `search-bert.json` | Same expands, `search=bert`, limit 5 | Architectures `bert`, `mistral3`, `llama`; one has no `cardData.license` |
+| `tree-unsloth-qwen3.5-0.8b.json` | `GET /api/models/unsloth/Qwen3.5-0.8B-GGUF/tree/main` | 28 files; `lfs.oid` is the SHA-256 (the resolve address's `x-linked-etag` matches) |
+| `tree-unsloth-gemma-4-e2b-it.json` | Same for `unsloth/gemma-4-E2B-it-GGUF` | A folder (`MTP`), a draft head `mtp-gemma-4-E2B-it.gguf`, three `mmproj` files |
+| `tree-bartowski-qwen3.5-35b-a3b.json` | Same for `bartowski/Qwen_Qwen3.5-35B-A3B-GGUF` | Two folders, an `imatrix.gguf`, `mmproj` files |

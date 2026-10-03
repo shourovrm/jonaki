@@ -10,6 +10,7 @@ import app.jonaki.files.MediaThumbnails
 import app.jonaki.feature.gallery.GallerySource
 import app.jonaki.files.IncomingShares
 import app.jonaki.files.LinkedFolder
+import app.jonaki.localmodels.LocalModels
 import app.jonaki.files.VisibleActivity
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.phone.AndroidPhone
@@ -23,8 +24,7 @@ import app.jonaki.run.AgentRunner
 import app.jonaki.run.BackgroundModel
 import app.jonaki.run.ChatProviders
 import app.jonaki.run.CodeRuntimes
-import app.jonaki.run.LocalModelFiles
-import app.jonaki.run.LocalModels
+import app.jonaki.run.LocalModelRuntime
 import app.jonaki.run.PythonSetup
 import app.jonaki.runtimes.pyodide.PyodideInstaller
 import app.jonaki.run.ThreadCompactor
@@ -67,8 +67,8 @@ class JonakiApplication : Application() {
     lateinit var runner: AgentRunner
         private set
 
-    /** GGUF models on the phone, run by llama.cpp (D-133). */
-    lateinit var localModels: LocalModels
+    /** Runs the downloaded GGUF models with llama.cpp (D-133). */
+    lateinit var localModelRuntime: LocalModelRuntime
         private set
 
     /** The cheapest set-up model, for memory extraction and compaction (D-036). */
@@ -122,6 +122,10 @@ class JonakiApplication : Application() {
     lateinit var python: PythonSetup
         private set
 
+    /** Settings > Local models and its download worker (D-133). */
+    lateinit var localModels: LocalModels
+        private set
+
     /** The phone's photos for the composer's gallery sheet, with one thumbnail cache for the app's life (D-085). */
     val gallerySource: GallerySource by lazy {
         GallerySource(MediaStorePhotoLibrary(contentResolver), MediaThumbnails(contentResolver))
@@ -150,8 +154,9 @@ class JonakiApplication : Application() {
         incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
         skillImporter = SkillImporter(skillLibrary, SkillDownloader(httpClient))
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
-        localModels = LocalModels(this)
-        backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog, localModels)
+        localModels = LocalModels(this, httpClient, applicationScope)
+        localModelRuntime = LocalModelRuntime(localModels.store)
+        backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog, localModelRuntime)
         val memoryExtractor = MemoryExtractor(
             database = database,
             backgroundModel = backgroundModel,
@@ -178,7 +183,7 @@ class JonakiApplication : Application() {
             AndroidPhone(this, runtimePermissions, visibleActivity, reminders),
             taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, runtimePermissions) },
             mcpServers = mcpServers,
-            localModels = localModels,
+            localRuntime = localModelRuntime,
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
         val pythonFolder = CodeRuntimes.pythonFolder(this)
@@ -219,9 +224,9 @@ class JonakiApplication : Application() {
      */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (LocalModelFiles.shouldUnload(level)) {
+        if (LocalModelRuntime.shouldUnload(level)) {
             applicationScope.launch {
-                localModels.unload()
+                localModelRuntime.unload()
             }
         }
     }

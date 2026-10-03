@@ -1680,10 +1680,11 @@ thread; context 8,192 tokens; 4 threads. Why: user ruling 2026-10-03
 search"). Measured on the A059 with Qwen3.5-0.8B Q4_0: 175 to 197 prompt
 tokens/s and 22 generated tokens/s on 4 threads (docs/research/
 local-models-2026-10-03.md). Limit: the APK grows by about 6 MB of native
-code. Built 2026-10-03, not yet run on a device: llama.cpp is a shallow git
+code. Provider built 2026-10-03, not yet run on a device: llama.cpp is a shallow git
 submodule (`providers/local-llama/src/main/cpp/llama.cpp`, tag b11366,
 commit 2923cf286), so Jonaki's history holds only the pin; a fresh clone
-needs `git submodule update --init`. CMake builds llama, ggml's CPU backend
+needs `git submodule update --init --depth 1` (without `--depth 1` it
+fetched llama.cpp's whole history, 384 MB, in over 10 minutes). CMake builds llama, ggml's CPU backend
 for one fixed level (armv8.2-a+dotprod+fp16+i8mm, the features of the
 armv8.6 variant the A059 used; the app checks /proc/cpuinfo before loading),
 no OpenMP, no KleidiAI, and llama.cpp's common library, statically into one
@@ -1696,8 +1697,59 @@ back, so the JNI layer saves up to three state checkpoints (llama-server's
 method) at the start of the generation prompt and 4 tokens before the end,
 and a turn that diverges before every checkpoint processes the whole
 prompt again. Local models appear in the model menu as "local:<file name>"
-for each .gguf in `noBackupFilesDir/models`; Thinking Off sends
+for each .gguf that LocalModelStore lists; Thinking Off sends
 enable_thinking=false; the small tool set comes from the Files, Web and
 Phone groups narrowed to the five tools, and only the Settings > Tools
 switches and the thread's web switch change it (no per-thread tool choice
-exists, D-091). Outcome: pending.
+exists, D-091). Finding and downloading, built separately: module
+`core:local-models` (HuggingFaceClient, MemoryFit, GgufFiles,
+SupportedArchitectures, RecommendedModels, ModelDownloader) and Settings >
+Local models, a tenth row on the first page after Models ("2 downloaded ·
+Qwen3.5-2B fits", or "None downloaded · No model fits"). Recommended:
+unsloth Qwen3.5-0.8B, 2B, 4B and gemma-4-E2B-it, Q4_0, pinned to commits
+6ab4614, f6d5376, e87f176, 0314792 with size and SHA-256 from the tree,
+and exact KV cache and compute buffer from each config.json (Gemma 4 E2B:
+63 MB cache, 540 MB buffer, 4.0 GB required). Search rows have no per-layer
+data, so they estimate high: a 4-bit file of 5.7 bits per parameter, a KV
+cache of 147,456 bytes per token (36 layers × 1,024 KV values × 2 × 2
+bytes), times parameters/8 B above 8 B, times 1/4 for qwen35, qwen3next and
+Gemma 3/3n/4 and 1/2 for Gemma 2 and LFM2, and a buffer for a 262,144-token
+vocabulary; the four recommended models' exact figures are never above the
+estimate (MemoryFitTest), so Qwen3.5-2B's search row reads Tight on the
+A059 while its recommended row reads Fits. Default file: Q4_K_M, else
+Q4_0, else the smallest Q4; never BF16, F16, F32; mmproj, imatrix, split
+parts and mtp or eagle draft heads are not listed. Architectures: the 126
+text generators of LLM_ARCH_NAMES in llama.cpp b11366; gated ("auto" or
+"manual") and unknown architectures show the reason without Download.
+Files: `noBackupFilesDir/models/<file>.gguf`, partials in
+`models-downloading/<file>.part`; the worker is a dataSync foreground
+CoroutineWorker (WorkManager's SystemForegroundService declared with
+dataSync, no new permission) with 5 attempts, hashing the part file first
+on resume; storage must hold the rest plus 1 GB (getAllocatableBytes).
+Searched files download from `main`, not a pinned commit (the tree gives
+none); a change mid-download fails the hash and deletes the file. Tests:
+38 in core:local-models with recorded responses in testdata/huggingface/,
+LocalModelsRowsTest, summary and search tests. Not checked: anything on a
+phone; previews at 360 dp and 1.3 compiled, not rendered. Outcome: pending.
+
+## D-134 · 2026-10-03 · Reddit skill reads threads from Arctic Shift — proposed
+The built-in reddit skill searches through Reddit's RSS feed and reads a
+thread's comments from Arctic Shift, a third-party archive of Reddit
+(`arctic-shift.photon-reddit.com/api/comments/search?link_id=<id>&limit=100
+&sort=asc&fields=id,parent_id,author,body`), with Reddit's own thread feed
+as the fallback after two failures. Why: Reddit's feeds answer one request
+per window of up to about a minute (`x-ratelimit-remaining: 0` after each
+request, HTTP 429 inside the window), so a search followed by 2 to 4 thread
+feeds could not work. Measured from a PC with curl and the app's
+User-Agent, not on the phone: search feed 59 KB without `limit`, 17 KB
+with `limit=10`; Arctic Shift, 100 comments with the four fields, 14 KB,
+each with the id of the comment it answers; a post made about an hour
+earlier was already there; 3 of 11 Arctic Shift requests failed (HTTP 525
+twice, one timeout) and worked on a retry. The skill passes `max_length`
+20000 for these fetches. Rejected: Arctic Shift's `comments/tree` (95 KB
+for 58 comments, no `fields` parameter); PullPush as a third source (it
+ignores `fields`: 190 KB for 100 comments); comment scores (the search
+endpoint's scores are from the time of archiving: at most 5 where the tree
+shows 196). No code, dependency or permission changes: one asset file,
+which reaches installed copies through D-038 unless the user edited the
+skill. Limit: it depends on a volunteer-run archive. Outcome: pending.

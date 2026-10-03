@@ -65,6 +65,7 @@ import app.jonaki.feature.settings.AddableModelUi
 import app.jonaki.feature.settings.AddableServiceUi
 import app.jonaki.feature.settings.ChatServiceCardUi
 import app.jonaki.feature.settings.KeySlot
+import app.jonaki.feature.settings.LocalModelsSummaryUi
 import app.jonaki.feature.settings.McpServerUi
 import app.jonaki.feature.settings.RoutingUi
 import app.jonaki.feature.settings.SearchServiceRow
@@ -193,6 +194,10 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     }
                 }
                 BackHandler(onBack = goBack)
+                if (settingsPage == SettingsPage.LOCAL_MODELS) {
+                    LocalModelsRoute(application, onBack = goBack)
+                    return@JonakiTheme
+                }
                 SettingsRoute(
                     application = application,
                     page = settingsPage,
@@ -430,7 +435,7 @@ private fun ThreadsRoute(
             monthCostUsd = monthCost,
             projects = projects.map { project -> Projects.uiOf(project, application.catalog) },
             selectedProjectId = selectedProjectId,
-            projectModelOptions = modelChoices(settingsSnapshot.chatModels, application.catalog, application)
+            projectModelOptions = modelChoices(settingsSnapshot.chatModels, application.catalog, application, rememberLocalModelKeys(application))
                 .map { choice -> ProjectModelOption(choice.key, choice.name) },
         ),
         nowMillis = nowMillis,
@@ -638,7 +643,7 @@ private fun ChatRoute(
         isRunning = isRunning,
         draft = draft,
         status = status,
-        modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application),
+        modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application, rememberLocalModelKeys(application)),
         selectedModelKey = modelKey,
         usage = usageOf(modelUsage, catalog, threadCost, messages),
         attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name) },
@@ -840,10 +845,17 @@ private fun stepDetailWords(): StepDetail.Words {
     )
 }
 
+/** The downloaded models' keys, read again whenever a download finishes or a model is deleted (D-133). */
+@Composable
+private fun rememberLocalModelKeys(application: JonakiApplication): List<String> {
+    val localModelChanges by application.localModels.changes.collectAsState()
+    return remember(localModelChanges) { application.localModelRuntime.modelKeys() }
+}
+
 /** The user's added models, then the model files on the phone (D-133). */
 private fun modelChoices(
-chatModels: ChatModels, catalog: ModelCatalog, application: JonakiApplication): List<ModelChoiceUi> =
-    (chatModels.allModelKeys + application.localModels.modelKeys()).map { key ->
+chatModels: ChatModels, catalog: ModelCatalog, application: JonakiApplication, localModelKeys: List<String>): List<ModelChoiceUi> =
+    (chatModels.allModelKeys + localModelKeys).map { key ->
         val info = catalog.find(key)
         ModelChoiceUi(
             key = key,
@@ -948,6 +960,11 @@ private fun SettingsRoute(
         readPermissionRows(context, snapshot.refusedPermissions)
     }
     val appVersion = remember { installedVersionName(context) }
+    val localModelChanges by application.localModels.changes.collectAsState()
+    var localModelsSummary by remember { mutableStateOf(LocalModelsSummaryUi()) }
+    LaunchedEffect(localModelChanges) {
+        localModelsSummary = withContext(Dispatchers.IO) { localModelsSummaryOf(application.localModels, context) }
+    }
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
         if (treeUri != null) {
             linkFolder(application, treeUri)
@@ -1004,6 +1021,7 @@ private fun SettingsRoute(
         toolGroupCount = ToolGroup.entries.size,
         factCount = globalFacts.size,
         skillCount = skillCount,
+        localModels = localModelsSummary,
     )
     val actions = SettingsActions(
         onBack = onBack,
