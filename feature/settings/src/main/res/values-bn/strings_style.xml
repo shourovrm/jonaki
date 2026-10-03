@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_section_answers">উত্তর</string>
+    <string name="settings_custom_instructions">নিজের নির্দেশনা</string>
+    <string name="settings_custom_instructions_none">নেই</string>
+    <string name="settings_section_personas">পারসোনা</string>
+    <string name="settings_add_persona">পারসোনা যোগ করুন</string>
+    <string name="settings_persona_new">নতুন পারসোনা</string>
+    <string name="settings_persona_edit">পারসোনা এডিট</string>
+    <string name="settings_editor_name">নাম</string>
+    <string name="settings_editor_instructions">নির্দেশনা</string>
+    <string name="settings_editor_save">সেভ</string>
+    <string name="settings_editor_delete">মুছুন</string>
+    <string name="settings_persona_delete_title">%1$s মুছবেন?</string>
+</resources>

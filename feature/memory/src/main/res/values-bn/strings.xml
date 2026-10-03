@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_title">মেমরি</string>
+    <string name="memory_back">ফিরে যান</string>
+    <string name="memory_section_review">যাচাই বাকি</string>
+    <string name="memory_section_thread">এই থ্রেড</string>
+    <string name="memory_section_global">সব থ্রেড</string>
+    <string name="memory_empty_thread">এখনো কোনো তথ্য নেই</string>
+    <string name="memory_empty_global">এখনো কোনো তথ্য নেই</string>
+    <string name="memory_review_switch">চ্যাটে পাওয়া তথ্য যাচাই করুন</string>
+    <string name="memory_add">তথ্য যোগ করুন</string>
+    <string name="memory_add_title">নতুন তথ্য</string>
+    <string name="memory_edit_title">তথ্য এডিট</string>
+    <string name="memory_scope_thread">এই থ্রেড</string>
+    <string name="memory_scope_global">সব থ্রেড</string>
+    <string name="memory_save">সেভ</string>
+    <string name="memory_cancel">বাতিল</string>
+    <string name="memory_more">আরও অপশন</string>
+    <string name="memory_menu_edit">এডিট</string>
+    <string name="memory_menu_pin">পিন করুন</string>
+    <string name="memory_menu_unpin">আনপিন করুন</string>
+    <string name="memory_menu_promote">সব থ্রেডে সরান</string>
+    <string name="memory_menu_source">মেসেজে যান</string>
+    <string name="memory_menu_delete">মুছুন</string>
+    <string name="memory_delete_title">তথ্য মুছবেন?</string>
+    <string name="memory_delete">মুছুন</string>
+    <string name="memory_keep">রাখুন</string>
+    <string name="memory_discard">বাদ দিন</string>
+    <string name="memory_from">উৎস: %1$s</string>
+    <string name="memory_in_thread">%1$s-এ</string>
+    <string name="memory_pinned">পিন করা</string>
+</resources>

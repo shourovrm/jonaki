@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="skills_title">স্কিল</string>
+    <string name="skills_back">ফিরে যান</string>
+    <string name="skills_more">আরও অপশন</string>
+    <string name="skills_add">স্কিল যোগ করুন</string>
+    <string name="skills_empty">এখনো কোনো স্কিল নেই</string>
+    <string name="skills_built_in">বিল্ট-ইন</string>
+    <string name="skills_edited">এডিট করা</string>
+    <string name="skills_restore">বিল্ট-ইন স্কিল ফেরত আনুন</string>
+    <string name="skills_import_link">লিংক</string>
+    <string name="skills_import_link_hint">GitHub ফোল্ডার বা SKILL.md</string>
+    <string name="skills_import_file">ফাইল বাছুন</string>
+    <string name="skills_import_add">যোগ করুন</string>
+    <string name="skills_import_working">যোগ হচ্ছে…</string>
+    <string name="skills_import_failed">যোগ হয়নি: %1$s</string>
+    <string name="skills_replace_title">%1$s বদলাবেন?</string>
+    <string name="skills_replace">বদলান</string>
+    <string name="skills_cancel">বাতিল</string>
+    <string name="skills_save">সেভ</string>
+    <string name="skills_save_failed">সেভ হয়নি: %1$s</string>
+    <string name="skills_reset">বিল্ট-ইনে ফেরত নিন</string>
+    <string name="skills_delete">মুছুন</string>
+    <string name="skills_delete_title">%1$s মুছবেন?</string>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_style_default">ডিফল্ট</string>
+    <string name="ui_style_concise">সংক্ষেপে</string>
+    <string name="ui_style_normal">সাধারণ</string>
+    <string name="ui_style_detailed">বিস্তারিত</string>
+    <string name="ui_instructions_count">%1$s / %2$s</string>
+</resources>

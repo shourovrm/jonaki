@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="artifact_back">ফিরে যান</string>
+    <string name="artifact_print">প্রিন্ট</string>
+    <string name="artifact_current">বর্তমান</string>
+    <string name="artifact_version">ভার্সন %1$d</string>
+    <string name="artifact_versions">ভার্সন</string>
+    <string name="artifact_missing">ফাইল পাওয়া যায়নি</string>
+</resources>
