@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The first Settings page and its sub-pages (D-128). -->
+    <string name="settings_root_models">মডেল</string>
+    <string name="settings_root_web">ওয়েব ও YouTube</string>
+    <string name="settings_root_tools">টুল ও অনুমতি</string>
+    <string name="settings_root_answers">উত্তর</string>
+    <string name="settings_root_memory_skills">মেমরি ও স্কিল</string>
+    <string name="settings_root_files_schedule">ফাইল ও সময়সূচি</string>
+    <string name="settings_root_theme">থিম</string>
+    <string name="settings_root_permissions">ফোনের অনুমতি</string>
+    <string name="settings_root_about">অ্যাপ সম্পর্কে</string>
+    <string name="settings_search">সেটিংসে খুঁজুন</string>
+    <string name="settings_search_none">কিছু পাওয়া যায়নি</string>
+
+    <!-- One-line summaries under the first page's rows. -->
+    <plurals name="settings_summary_models">
+        <item quantity="one">%1$s, %2$d মডেল · %3$s</item>
+        <item quantity="other">%1$s, %2$d মডেল · %3$s</item>
+    </plurals>
+    <plurals name="settings_summary_models_no_balance">
+        <item quantity="one">%1$s, %2$d মডেল</item>
+        <item quantity="other">%1$s, %2$d মডেল</item>
+    </plurals>
+    <string name="settings_summary_no_chat_service">চ্যাট সার্ভিস নেই</string>
+    <string name="settings_summary_web_then">%1$s, তারপর %2$s</string>
+    <string name="settings_summary_search_off">সার্চ বন্ধ</string>
+    <string name="settings_summary_no_gemini_key">Gemini key নেই</string>
+    <plurals name="settings_summary_tools">
+        <item quantity="one">%2$d-এর %1$d টুল চালু · %3$s</item>
+        <item quantity="other">%2$d-এর %1$d টুল চালু · %3$s</item>
+    </plurals>
+    <plurals name="settings_summary_personas">
+        <item quantity="one">%1$d পারসোনা</item>
+        <item quantity="other">%1$d পারসোনা</item>
+    </plurals>
+    <string name="settings_summary_no_personas">পারসোনা নেই</string>
+    <plurals name="settings_summary_facts">
+        <item quantity="one">%1$d তথ্য</item>
+        <item quantity="other">%1$d তথ্য</item>
+    </plurals>
+    <plurals name="settings_summary_skills">
+        <item quantity="one">%1$d স্কিল</item>
+        <item quantity="other">%1$d স্কিল</item>
+    </plurals>
+    <string name="settings_summary_folder">%1$s ফোল্ডার</string>
+    <string name="settings_summary_no_folder">ফোল্ডার নেই</string>
+    <plurals name="settings_summary_scheduled">
+        <item quantity="one">%1$d নির্ধারিত</item>
+        <item quantity="other">%1$d নির্ধারিত</item>
+    </plurals>
+    <string name="settings_summary_nothing_scheduled">কিছু নির্ধারিত নেই</string>
+    <string name="settings_summary_theme_phone">ফোনের মতো</string>
+    <string name="settings_summary_one_denied">%1$s দেওয়া হয়নি</string>
+    <plurals name="settings_summary_denied">
+        <item quantity="one">%1$d টি দেওয়া হয়নি</item>
+        <item quantity="other">%1$d টি দেওয়া হয়নি</item>
+    </plurals>
+    <string name="settings_summary_all_allowed">সব দেওয়া আছে</string>
+
+    <!-- Tools and approvals page. -->
+    <string name="settings_tools_all">সব টুল</string>
+    <plurals name="settings_tools_all_summary">
+        <item quantity="one">%1$d টুল</item>
+        <item quantity="other">%1$d টুল</item>
+    </plurals>
+</resources>

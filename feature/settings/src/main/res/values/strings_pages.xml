@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The first Settings page and its sub-pages (D-128). -->
+    <string name="settings_root_models">Models</string>
+    <string name="settings_root_web">Web and YouTube</string>
+    <string name="settings_root_tools">Tools and approvals</string>
+    <string name="settings_root_answers">Answers</string>
+    <string name="settings_root_memory_skills">Memory and skills</string>
+    <string name="settings_root_files_schedule">Files and schedule</string>
+    <string name="settings_root_theme">Theme</string>
+    <string name="settings_root_permissions">Permissions</string>
+    <string name="settings_root_about">About</string>
+    <string name="settings_search">Search settings</string>
+    <string name="settings_search_none">Nothing found</string>
+
+    <!-- One-line summaries under the first page's rows. -->
+    <plurals name="settings_summary_models">
+        <item quantity="one">%1$s, %2$d model · %3$s</item>
+        <item quantity="other">%1$s, %2$d models · %3$s</item>
+    </plurals>
+    <plurals name="settings_summary_models_no_balance">
+        <item quantity="one">%1$s, %2$d model</item>
+        <item quantity="other">%1$s, %2$d models</item>
+    </plurals>
+    <string name="settings_summary_no_chat_service">No chat service</string>
+    <string name="settings_summary_web_then">%1$s, then %2$s</string>
+    <string name="settings_summary_search_off">Search off</string>
+    <string name="settings_summary_no_gemini_key">No Gemini key</string>
+    <plurals name="settings_summary_tools">
+        <item quantity="one">%1$d of %2$d tool on · %3$s</item>
+        <item quantity="other">%1$d of %2$d tools on · %3$s</item>
+    </plurals>
+    <plurals name="settings_summary_personas">
+        <item quantity="one">%1$d persona</item>
+        <item quantity="other">%1$d personas</item>
+    </plurals>
+    <string name="settings_summary_no_personas">no personas</string>
+    <plurals name="settings_summary_facts">
+        <item quantity="one">%1$d fact</item>
+        <item quantity="other">%1$d facts</item>
+    </plurals>
+    <plurals name="settings_summary_skills">
+        <item quantity="one">%1$d skill</item>
+        <item quantity="other">%1$d skills</item>
+    </plurals>
+    <string name="settings_summary_folder">%1$s folder</string>
+    <string name="settings_summary_no_folder">No folder</string>
+    <plurals name="settings_summary_scheduled">
+        <item quantity="one">%1$d scheduled</item>
+        <item quantity="other">%1$d scheduled</item>
+    </plurals>
+    <string name="settings_summary_nothing_scheduled">nothing scheduled</string>
+    <string name="settings_summary_theme_phone">Follows the phone</string>
+    <string name="settings_summary_one_denied">%1$s denied</string>
+    <plurals name="settings_summary_denied">
+        <item quantity="one">%1$d denied</item>
+        <item quantity="other">%1$d denied</item>
+    </plurals>
+    <string name="settings_summary_all_allowed">All allowed</string>
+
+    <!-- Tools and approvals page. -->
+    <string name="settings_tools_all">All tools</string>
+    <plurals name="settings_tools_all_summary">
+        <item quantity="one">%1$d tool</item>
+        <item quantity="other">%1$d tools</item>
+    </plurals>
+</resources>

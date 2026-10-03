@@ -46,6 +46,13 @@ data class SettingsUiState(
     val permissions: List<PermissionRowUi> = emptyList(),
     /** The installed version name, for example "0.8.0". */
     val appVersion: String = "",
+    /** Tool groups switched on, and all of them, for the first page's "12 of 12 tools on" (D-128). */
+    val toolGroupsOn: Int = 0,
+    val toolGroupCount: Int = 0,
+    /** Global saved facts, for the first page's summary. */
+    val factCount: Int = 0,
+    /** Skills in the library, for the first page's summary. */
+    val skillCount: Int = 0,
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -148,6 +155,8 @@ class SettingsActions(
     val onSearchServiceMove: (serviceKey: String, offset: Int) -> Unit,
     val onWebSearchOffInNewThreadsChange: (Boolean) -> Unit,
     val onThemeModeChange: (ThemeMode) -> Unit,
+    /** Opens one Settings sub-page from the first page's rows or its search (D-128). */
+    val onOpenPage: (SettingsPage) -> Unit = {},
     /** Opens the Status icons page; the app shows [StatusIconsScreen]. */
     val onOpenStatusIcons: () -> Unit = {},
     /** Opens the memory screen with the global facts (M4). */
