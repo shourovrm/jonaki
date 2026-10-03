@@ -1511,4 +1511,9 @@ as "- - -") is a rule, drawn as a thin divider in the outline colour.
 Dashes directly under a text line are a rule as well, not CommonMark's
 setext heading, so a model's "Summary\n---" shows the text and a line.
 A table's separator row is read as a table first. Test:
-MarkdownParserTest. Outcome: pending.
+MarkdownParserTest.
+Step names: stepLabel turns a tool name into words by its first letter,
+so "mcp" read "Mcp"; two names now have fixed labels, "MCP" and "YouTube
+summary" (from youtube_summarize). Both stay in English letters in Bangla
+(D-125), so no string resource is added. Test: StepDurationTest. Outcome:
+pending.

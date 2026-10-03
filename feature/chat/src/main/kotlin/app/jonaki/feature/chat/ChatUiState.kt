@@ -286,9 +286,20 @@ enum class ApprovalChoice {
     DENY,
 }
 
+/** Tool names that the word rule below would spell wrong: an acronym and a brand. */
+private val stepLabelExceptions = mapOf(
+    "mcp" to "MCP",
+    "youtube_summarize" to "YouTube summary",
+)
+
 /** A step's name as words: "web_search" reads "Web search". */
-fun stepLabel(toolName: String): String =
-    toolName.replace('_', ' ').replaceFirstChar { first -> first.uppercaseChar() }
+fun stepLabel(toolName: String): String {
+    val exception = stepLabelExceptions[toolName]
+    if (exception != null) {
+        return exception
+    }
+    return toolName.replace('_', ' ').replaceFirstChar { first -> first.uppercaseChar() }
+}
 
 fun formatStepDuration(durationMillis: Long): String {
     if (durationMillis < 10_000) {
