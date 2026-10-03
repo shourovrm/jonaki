@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki: subagents while running and after</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  /* Page chrome around the phones, copied from revamp-taste.html. */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0b0c0b;
+    color: #d9dcd5;
+    font-family: "Geist", "Noto Sans Bengali", system-ui, sans-serif;
+    padding: 40px 32px 80px;
+  }
+  .page-head { max-width: 1600px; margin: 0 auto 36px; }
+  .page-head h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-head p { margin-top: 8px; max-width: 80ch; color: #9aa094; line-height: 1.55; font-size: 14px; }
+  .direction { max-width: 1600px; margin: 0 auto 72px; }
+  .direction-head { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 20px; }
+  .direction-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .direction-head p { color: #9aa094; font-size: 14px; line-height: 1.55; max-width: 84ch; }
+  .phones { display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start; }
+  .cell-label { font-size: 13px; color: #9aa094; margin: 0 0 12px 4px; }
+  .notes { flex: 1 1 260px; max-width: 340px; font-size: 13.5px; line-height: 1.6; color: #b4b9ad; }
+  .notes h3 { font-size: 13px; font-weight: 600; color: #e4e7df; margin: 14px 0 6px; }
+  .notes h3:first-child { margin-top: 0; }
+  .notes ul { padding-left: 18px; }
+  .notes li { margin-bottom: 6px; }
+  .verdict { margin-top: 14px; padding-left: 12px; border-left: 2px solid #3a4130; color: #d9dcd5; }
+
+  /* ---------- Phone frame (shared, from revamp-taste.html) ---------- */
+  .phone {
+    width: 360px; height: 760px; border-radius: 34px; overflow: hidden;
+    position: relative; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font), "Noto Sans Bengali", system-ui, sans-serif;
+    box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080;
+  }
+  .statusbar { height: 30px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; color: var(--ink); }
+  .statusbar i { font-size: 13px; margin-left: 4px; }
+  .mono { font-family: var(--mono), monospace; font-feature-settings: "tnum"; }
+  .muted { color: var(--muted); }
+  .bn { font-family: "Noto Sans Bengali", var(--font), sans-serif; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; color: var(--ink); font-size: 21px; flex: none; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px 2px var(--glow-halo); flex: none; animation: breathe 2.4s ease-in-out infinite; }
+
+  /* ---------- Chat (from revamp-taste.html) ---------- */
+  .chat-top { height: 56px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-bottom: 1px solid var(--line); }
+  .chat-top .title { flex: 1; min-width: 0; font-size: 16.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 4px; }
+  .transcript { flex: 1; overflow: hidden; padding: 16px 18px 8px; display: flex; flex-direction: column; gap: 14px; }
+  .msg-user { align-self: flex-end; max-width: 86%; background: var(--user-bubble); color: var(--ink); padding: 11px 14px; border-radius: var(--r-bubble) var(--r-bubble) 6px var(--r-bubble); font-size: 14.5px; line-height: 1.5; }
+  .msg-agent { font-size: 14.5px; line-height: 1.6; color: var(--ink); }
+  .msg-agent b { font-weight: 600; }
+  .msg-agent ul { padding-left: 18px; margin-top: 6px; }
+
+  .run { border-radius: var(--r-card); background: var(--run-bg); border: 1px solid var(--line); padding: 12px 14px 6px; flex: none; }
+  .run-head { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .run-head .working { color: var(--ink-2); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .step { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 0 10px; position: relative; padding-bottom: 12px; font-size: 13.5px; }
+  .step::before { content: ""; position: absolute; left: 8px; top: 16px; bottom: 0; width: 2px; background: var(--rail); }
+  .step:last-child::before { display: none; }
+  .station { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; margin-top: 1px; position: relative; z-index: 1; }
+  .station.done { background: var(--rail); color: var(--ink-2); }
+  .station.running { background: var(--glow); box-shadow: 0 0 10px 2px var(--glow-halo); color: #1d2600; }
+  .station.waiting { border: 2px solid var(--rail); background: var(--bg); }
+  .station.flag { background: var(--bg); border: 2px solid var(--ink-2); color: var(--ink); font-size: 10px; }
+  .step .label { color: var(--ink); min-width: 0; }
+  .step .detail { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .step .reply { display: block; color: var(--ink-2); font-size: 12.5px; margin-top: 3px; padding-left: 9px; border-left: 2px solid var(--rail); }
+  .step .time { color: var(--muted); font-size: 12px; }
+
+  .strip { display: flex; gap: 6px; padding: 8px 14px 4px; align-items: center; flex: none; }
+  .pill { height: 30px; border-radius: 15px; padding: 0 10px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; background: var(--pill); color: var(--ink-2); white-space: nowrap; }
+  .pill i { font-size: 15px; }
+  .pill.model { flex: 1; min-width: 0; }
+  .pill.model span { overflow: hidden; text-overflow: ellipsis; }
+  .ring { width: 15px; height: 15px; border-radius: 50%; background: conic-gradient(var(--ink-2) 0 31%, var(--rail) 31% 100%); -webkit-mask: radial-gradient(circle, transparent 4.5px, #000 5px); mask: radial-gradient(circle, transparent 4.5px, #000 5px); }
+  .composer { display: flex; align-items: flex-end; gap: 8px; padding: 6px 12px 16px; flex: none; }
+  .plus { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--line); display: grid; place-items: center; font-size: 21px; color: var(--ink-2); flex: none; }
+  .field { flex: 1; min-height: 44px; border-radius: 22px; background: var(--field); display: flex; align-items: center; padding: 0 16px; font-size: 14.5px; color: var(--muted); }
+  .send { width: 44px; height: 44px; border-radius: 22px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 19px; flex: none; }
+  .stop { background: var(--field); color: var(--ink); }
+  /* The firefly colour is kept for live work only, so Send is ink here. */
+  .send:not(.stop) { background: var(--chip-on); color: var(--chip-on-ink); }
+
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+  /* Layout and shape of direction A, shared by both modes (revamp-a-themes.html). */
+  .phone { --font: "Geist"; --mono: "Geist Mono"; --r-field: 22px; --r-fab: 18px; --r-bubble: 20px; --r-card: 16px; }
+  /* Theme 1, Leaf (revamp-a-themes.html). */
+  .leaf.dark  { --bg:#10130e; --ink:#e6e9e0; --ink-2:#c3c9b9; --muted:#8b927f; --line:#262b21; --field:#1a1e16; --pill:#1a1e16; --tag:#22281c; --accent:#c9e86b; --on-accent:#1f2a00; --glow:#d4f06a; --glow-halo:#c9e86b55; --chip-on:#e6e9e0; --chip-on-ink:#10130e; --user-bubble:#20261a; --run-bg:transparent; --rail:#33392b; --shadow:#00000066; }
+  .leaf.light { --bg:#f3f6ef; --ink:#171b14; --ink-2:#3a4233; --muted:#5f6857; --line:#dde3d5; --field:#e7ece1; --pill:#e7ece1; --tag:#e3ead9; --accent:#3f5600; --on-accent:#f3f6ef; --glow:#9cc520; --glow-halo:#9cc52066; --chip-on:#3f5600; --chip-on-ink:#f3f6ef; --user-bubble:#e2e9d6; --run-bg:#ffffff; --rail:#d3dbc8; --shadow:#3f560033; }
+  .scrolled .transcript { justify-content: flex-end; }
+  .light .station.running { color: #ffffff; }
+
+  /* ---------- New for this page ---------- */
+
+  /* One subagent as one row: task on top, type and live step under it, steps and cost on the right.
+     Used inside the run (option A), in the list sheet and nowhere else, so the shape is learned once. */
+  .subagents { grid-column: 2 / -1; margin-top: 8px; }
+  .sa-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 1px 8px; padding: 8px 0; border-top: 1px solid var(--line); align-items: baseline; }
+  .sa-row .glyph { grid-row: 1 / 3; align-self: start; margin-top: 3px; width: 16px; height: 16px; display: grid; place-items: center; font-size: 14px; color: var(--ink-2); }
+  .sa-row .glyph .live-dot { width: 7px; height: 7px; }
+  .sa-row .task { font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sa-row .now { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sa-row .now b { font-weight: 500; color: var(--ink-2); }
+  .sa-row .now.attention { color: var(--ink); }
+  .sa-row .now.attention b { color: var(--ink); }
+  .sa-row .num { font-size: 12px; color: var(--muted); text-align: right; }
+  .sa-row .num.strong { color: var(--ink-2); }
+
+  /* Approval card for a subagent's request_tool (D-062). The one surface that asks for a tap. */
+  .ask { border: 1px solid var(--ink-2); border-radius: var(--r-card); padding: 12px 14px; flex: none; }
+  .ask .ask-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 600; }
+  .ask .ask-title .mono { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .ask .reason { font-size: 13px; color: var(--ink-2); margin-top: 4px; line-height: 1.45; }
+  .ask .args { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .buttons { display: flex; gap: 6px; margin-top: 10px; }
+  .btn { height: 34px; padding: 0 12px; border-radius: 17px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; border: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--chip-on); color: var(--chip-on-ink); border-color: transparent; }
+  .btn i { font-size: 15px; }
+
+  /* Option B: a dock of chips above the status strip. */
+  .dock { display: flex; gap: 6px; padding: 8px 14px 2px; overflow: hidden; flex: none; position: relative; }
+  .dock::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 36px; background: linear-gradient(to right, transparent, var(--bg)); }
+  .dock-chip { height: 36px; border-radius: 18px; border: 1px solid var(--line); padding: 0 12px 0 10px; display: flex; align-items: center; gap: 7px; font-size: 13px; white-space: nowrap; color: var(--ink); flex: none; }
+  .dock-chip i { font-size: 14px; color: var(--ink-2); }
+  .dock-chip .mono { font-size: 11.5px; color: var(--muted); }
+  .dock-chip.attention { border-color: var(--ink-2); }
+  .dock-chip.quiet { color: var(--muted); }
+
+  /* Subagent page (full screen). */
+  .page-top { height: 56px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px 0 8px; border-bottom: 1px solid var(--line); }
+  .page-top .title { flex: 1; min-width: 0; padding-left: 4px; }
+  .page-top .title .name { font-size: 16.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .page-top .title .sub { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .page-top .pager { display: flex; align-items: center; color: var(--muted); font-size: 12px; }
+  .page-top .pager .icon-btn { width: 34px; font-size: 18px; color: var(--ink-2); }
+  .page-body { flex: 1; overflow: hidden; padding: 14px 18px 8px; display: flex; flex-direction: column; gap: 14px; }
+  .task-full { font-size: 14.5px; line-height: 1.5; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+  .meter .meter-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .meter .meter-label .mono { color: var(--ink-2); }
+  .bar { height: 4px; border-radius: 2px; background: var(--rail); margin-top: 5px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--ink-2); border-radius: 2px; }
+  .facts .model { grid-column: 1 / -1; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .section-label { font-size: 12.5px; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  .section-label .mono { font-weight: 400; }
+  .track { margin-top: -4px; }
+  .folded { display: flex; align-items: center; justify-content: space-between; height: 40px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+  .folded .mono { color: var(--muted); font-size: 12px; }
+  .answer { font-size: 14px; line-height: 1.55; color: var(--ink); }
+  .answer p + p, .answer p + ol, .answer ol + p { margin-top: 6px; }
+  .answer ol { padding-left: 18px; }
+  .answer li { margin-bottom: 3px; }
+  .answer a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 2px; }
+  .answer h4 { font-size: 13.5px; font-weight: 600; margin-top: 8px; }
+  .file-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .file-row:last-child { border-bottom: 1px solid var(--line); }
+  .file-row i { font-size: 19px; color: var(--ink-2); }
+  .file-row .path { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; }
+  .file-row .meta { font-size: 12px; color: var(--muted); display: block; }
+  .file-row .open { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .skip-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .skip-row i { font-size: 18px; color: var(--ink-2); margin-top: 1px; }
+  .skip-row .why { display: block; font-size: 12.5px; color: var(--muted); }
+  .bottom-bar { flex: none; padding: 10px 18px 18px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .bottom-bar .working { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+
+  /* After the run. */
+  .run-folded { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--muted); padding: 2px 0; flex: none; }
+  .run-folded span { display: flex; gap: 6px; align-items: center; }
+  .artifact-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-card); font-size: 13.5px; flex: none; }
+  .artifact-row i { font-size: 19px; color: var(--ink-2); }
+  .artifact-row .meta { display: block; font-size: 12px; color: var(--muted); }
+  .work-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); flex: none; }
+  .work-row .what { font-size: 13.5px; font-weight: 500; }
+  .work-row .sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .work-row i { font-size: 16px; color: var(--ink-2); grid-row: 1 / 3; grid-column: 2; }
+
+  .scrim { position: absolute; inset: 0; background: #000000a0; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--sheet); border-radius: 24px 24px 0 0; padding: 8px 18px 20px; }
+  .leaf.dark { --sheet: #161a13; }
+  .leaf.light { --sheet: #ffffff; }
+  .handle { width: 36px; height: 4px; border-radius: 2px; background: var(--rail); margin: 4px auto 12px; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .sheet-head .t { font-size: 17px; font-weight: 600; }
+  .sheet-head .mono { font-size: 12px; color: var(--muted); }
+  .sheet .sa-row { padding: 10px 0; }
+  .sheet .sa-row:last-of-type { border-bottom: 1px solid var(--line); }
+  .sheet-link { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .sheet-link i { font-size: 18px; color: var(--ink-2); }
+  .sheet-link .meta { font-size: 12px; color: var(--muted); }
+
+  .note { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .note .who { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); }
+  .note .who b { font-weight: 500; color: var(--ink-2); }
+  .note .text { font-size: 13.5px; line-height: 1.5; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Subagents: the list while running, the subagent page, and checking the work</h1>
+  <p>Every screen follows direction A (Lantern) with the Leaf colours. One example runs through the page: a user asks, partly in Bangla, for a laptop under ৳80,000 for her sister. The main agent starts three researchers (Star Tech, Ryans, Daraz) and one writer, which reads the department's spec sheet and drafts a Bangla page for their mother. The firefly yellow-green appears only on work that is running at that moment.</p>
+</header>
+
+<!-- ======================= 1A ======================= -->
+<section class="direction">
+  <div class="direction-head">
+    <h2>1. The list while running, option A: rows inside the run (recommended)</h2>
+    <p>The delegate step in the run track turns into a group with one row per subagent. Each row shows the task on one line ending in "…" (D-029). Under the task are the type and what the subagent is doing now. Steps used of 10 and the cost sit on the right. The station of the group shows "N of 4 done", which is the only overall progress.</p>
+  </div>
+  <div class="phones">
+    <div>
+      <div class="cell-label">Early: running, waiting for approval, asking the main agent</div>
+      <div class="phone leaf dark scrolled">
+        <div class="statusbar"><span>14:06</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="chat-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title">Laptop for Nabila's CSE course</div>
+          <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+        </div>
+        <div class="transcript">
+          <div class="msg-user bn">আপুর জন্য ৮০,০০০ টাকার মধ্যে একটা laptop খুঁজে দাও। Star Tech, Ryans আর Daraz দেখো। Department এর spec sheet inbox এ আছে।</div>
+          <div class="run">
+            <div class="run-head"><span class="working"><span class="live-dot"></span>Subagents working</span><span class="mono">0:52</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read document<span class="detail">inbox/cse-laptop-specs.pdf</span></span><span class="time mono">0.9 s</span></div>
+            <div class="step">
+              <span class="station running"></span>
+              <span class="label">4 subagents<span class="detail">1 of 4 done</span></span>
+              <span class="time mono">48 s</span>
+              <div class="subagents">
+                <div class="sa-row">
+                  <span class="glyph"><i class="ph-bold ph-check"></i></span>
+                  <span class="task">Laptops under ৳80,000 on startech.com.bd with 16 GB RAM and 512 GB SSD</span>
+                  <span class="num mono">6/10</span>
+                  <span class="now"><b>Researcher 1</b>&nbsp; Done</span>
+                  <span class="num mono">$0.009</span>
+                </div>
+                <div class="sa-row">
+                  <span class="glyph"><span class="live-dot"></span></span>
+                  <span class="task">Same search on ryans.com, note EMI offers from bKash and City Bank</span>
+                  <span class="num mono">5/10</span>
+                  <span class="now"><b>Researcher 2</b>&nbsp; Reading ryans.com/asus-vivobook-15-x1504va</span>
+                  <span class="num mono">$0.012</span>
+                </div>
+                <div class="sa-row">
+                  <span class="glyph"><i class="ph-bold ph-hand-palm"></i></span>
+                  <span class="task">Same search on daraz.com.bd, official brand stores only</span>
+                  <span class="num mono">4/10</span>
+                  <span class="now attention"><b>Researcher 3</b>&nbsp; Waiting for you</span>
+                  <span class="num mono">$0.006</span>
+                </div>
+                <div class="sa-row">
+                  <span class="glyph"><i class="ph-bold ph-chat-circle"></i></span>
+                  <span class="task">Read the spec sheet and draft artifacts/laptop-guide.html in Bangla</span>
+                  <span class="num mono">2/10</span>
+                  <span class="now"><b>Writer</b>&nbsp; Asking the main agent</span>
+                  <span class="num mono">$0.004</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ask">
+            <div class="ask-title"><span>Researcher 3 asks for write_file</span><span class="mono">2:41</span></div>
+            <div class="reason">Save the 38 Daraz listings so the writer can read them.</div>
+            <div class="args mono">work/daraz.csv</div>
+            <div class="buttons"><div class="btn primary">Allow once</div><div class="btn">Allow for task</div><div class="btn">Deny</div></div>
+          </div>
+        </div>
+        <div class="strip">
+          <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+          <div class="pill"><span class="ring"></span><span class="mono">31%</span></div>
+          <div class="pill"><span class="mono">$0.044</span></div>
+          <div class="pill"><i class="ph ph-globe-simple"></i></div>
+        </div>
+        <div class="composer">
+          <div class="plus"><i class="ph ph-plus"></i></div>
+          <div class="field">Message</div>
+          <div class="send stop"><i class="ph-fill ph-stop"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cell-label">Late: done, skipped part, over budget, still running</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:08</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="chat-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title">Laptop for Nabila's CSE course</div>
+          <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+        </div>
+        <div class="transcript">
+          <div class="run">
+            <div class="run-head"><span class="working"><span class="live-dot"></span>Subagents working</span><span class="mono">2:03</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read document<span class="detail">inbox/cse-laptop-specs.pdf</span></span><span class="time mono">0.9 s</span></div>
+            <div class="step">
+              <span class="station running"></span>
+              <span class="label">4 subagents<span class="detail">3 of 4 done</span></span>
+              <span class="time mono">1:59</span>
+              <div class="subagents">
+                <div class="sa-row">
+                  <span class="glyph"><i class="ph-bold ph-check"></i></span>
+                  <span class="task">Laptops under ৳80,000 on startech.com.bd with 16 GB RAM and 512 GB SSD</span>
+                  <span class="num mono">6/10</span>
+                  <span class="now"><b>Researcher 1</b>&nbsp; Done</span>
+                  <span class="num mono">$0.009</span>
+                </div>
+                <div class="sa-row">
+                  <span class="glyph"><i class="ph-bold ph-warning"></i></span>
+                  <span class="task">Same search on ryans.com, note EMI offers from bKash and City Bank</span>
+                  <span class="num mono">9/10</span>
+                  <span class="now attention"><b>Researcher 2</b>&nbsp; Over budget</span>
+                  <span class="num mono strong">$0.100</span>
+                </div>
+                <div class="sa-row">
+                  <span class="glyph"><i class="ph-bold ph-check"></i></span>
+                  <span class="task">Same search on daraz.com.bd, official brand stores only</span>
+                  <span class="num mono">7/10</span>
+                  <span class="now"><b>Researcher 3</b>&nbsp; Done, 1 skipped</span>
+                  <span class="num mono">$0.014</span>
+                </div>
+                <div class="sa-row">
+                  <span class="glyph"><span class="live-dot"></span></span>
+                  <span class="task">Read the spec sheet and draft artifacts/laptop-guide.html in Bangla</span>
+                  <span class="num mono">5/10</span>
+                  <span class="now"><b>Writer</b>&nbsp; Writing artifacts/laptop-guide.html</span>
+                  <span class="num mono">$0.011</span>
+                </div>
+              </div>
+            </div>
+            <div class="step"><span class="station waiting"></span><span class="label">Compare and answer</span><span class="time"></span></div>
+          </div>
+          <div class="msg-agent">Star Tech and Daraz are in. Ryans hit its budget after 9 steps, so I have its first two models but not the EMI offers. I'll try those myself after the writer is done.</div>
+        </div>
+        <div class="strip">
+          <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+          <div class="pill"><span class="ring"></span><span class="mono">38%</span></div>
+          <div class="pill"><span class="mono">$0.151</span></div>
+          <div class="pill"><i class="ph ph-globe-simple"></i></div>
+        </div>
+        <div class="composer">
+          <div class="plus"><i class="ph ph-plus"></i></div>
+          <div class="field">Message</div>
+          <div class="send stop"><i class="ph-fill ph-stop"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>How it reads</h3>
+      <ul>
+        <li>No card per subagent. The rows share the run's border and hairlines, so four subagents take about the height of today's two cards.</li>
+        <li>Only a running subagent gets the glow dot. Done shows a check, a request shows a hand, asking the main agent shows a speech bubble, and a stop for a limit or failure shows a warning sign. All of them are in ink colour.</li>
+        <li>The second line turns full ink when the subagent needs a look ("Waiting for you", "Over budget"). That way, the rows that need a decision stand out without a second colour.</li>
+        <li>Failed, Timed out, Out of steps and Stopped use the same warning row as Over budget, with their own words.</li>
+      </ul>
+      <div class="verdict">I recommend A. It keeps every fact the user needs in one place: what each subagent was asked, what it is doing now, and its steps and cost against the 10 and $0.10 limits. It also adds no new surface to the chat. Tapping a row opens that subagent's page.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 1B ======================= -->
+<section class="direction">
+  <div class="direction-head">
+    <h2>1. The list while running, option B: a dock above the composer</h2>
+    <p>The run track keeps a single "4 subagents" station. A row of chips sits above the status strip while any subagent runs. Each chip has a short name, a status icon and its steps. The dock stays visible while the user scrolls the chat, and it goes away when the last subagent ends.</p>
+  </div>
+  <div class="phones">
+    <div>
+      <div class="cell-label">Early: same moment as A, left</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:06</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="chat-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title">Laptop for Nabila's CSE course</div>
+          <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+        </div>
+        <div class="transcript">
+          <div class="msg-user bn">আপুর জন্য ৮০,০০০ টাকার মধ্যে একটা laptop খুঁজে দাও। Star Tech, Ryans আর Daraz দেখো। Department এর spec sheet inbox এ আছে।</div>
+          <div class="run">
+            <div class="run-head"><span class="working"><span class="live-dot"></span>Subagents working</span><span class="mono">0:52</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read document<span class="detail">inbox/cse-laptop-specs.pdf</span></span><span class="time mono">0.9 s</span></div>
+            <div class="step"><span class="station running"></span><span class="label">4 subagents<span class="detail">1 of 4 done, $0.031</span></span><span class="time mono">48 s</span></div>
+          </div>
+          <div class="ask">
+            <div class="ask-title"><span>Researcher 3 asks for write_file</span><span class="mono">2:41</span></div>
+            <div class="reason">Save the 38 Daraz listings so the writer can read them.</div>
+            <div class="args mono">work/daraz.csv</div>
+            <div class="buttons"><div class="btn primary">Allow once</div><div class="btn">Allow for task</div><div class="btn">Deny</div></div>
+          </div>
+        </div>
+        <div class="dock">
+          <div class="dock-chip"><span class="live-dot"></span>Ryans<span class="mono">5/10</span></div>
+          <div class="dock-chip attention"><i class="ph-bold ph-hand-palm"></i>Daraz<span class="mono">4/10</span></div>
+          <div class="dock-chip"><i class="ph-bold ph-chat-circle"></i>Guide<span class="mono">2/10</span></div>
+          <div class="dock-chip quiet"><i class="ph-bold ph-check"></i>Star Tech<span class="mono">6/10</span></div>
+        </div>
+        <div class="strip">
+          <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+          <div class="pill"><span class="ring"></span><span class="mono">31%</span></div>
+          <div class="pill"><span class="mono">$0.044</span></div>
+          <div class="pill"><i class="ph ph-globe-simple"></i></div>
+        </div>
+        <div class="composer">
+          <div class="plus"><i class="ph ph-plus"></i></div>
+          <div class="field">Message</div>
+          <div class="send stop"><i class="ph-fill ph-stop"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cell-label">Late: chips sort by what needs a look</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:08</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="chat-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title">Laptop for Nabila's CSE course</div>
+          <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+        </div>
+        <div class="transcript">
+          <div class="msg-user bn">আপুর জন্য ৮০,০০০ টাকার মধ্যে একটা laptop খুঁজে দাও। Star Tech, Ryans আর Daraz দেখো। Department এর spec sheet inbox এ আছে।</div>
+          <div class="run">
+            <div class="run-head"><span class="working"><span class="live-dot"></span>Subagents working</span><span class="mono">2:03</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read document<span class="detail">inbox/cse-laptop-specs.pdf</span></span><span class="time mono">0.9 s</span></div>
+            <div class="step"><span class="station running"></span><span class="label">4 subagents<span class="detail">3 of 4 done, $0.134</span></span><span class="time mono">1:59</span></div>
+            <div class="step"><span class="station waiting"></span><span class="label">Compare and answer</span><span class="time"></span></div>
+          </div>
+          <div class="msg-agent">Star Tech and Daraz are in. Ryans hit its budget after 9 steps, so I have its first two models but not the EMI offers.</div>
+        </div>
+        <div class="dock">
+          <div class="dock-chip"><span class="live-dot"></span>Guide<span class="mono">5/10</span></div>
+          <div class="dock-chip attention"><i class="ph-bold ph-warning"></i>Ryans<span class="mono">$0.10</span></div>
+          <div class="dock-chip quiet"><i class="ph-bold ph-check"></i>Daraz<span class="mono">1 skipped</span></div>
+          <div class="dock-chip quiet"><i class="ph-bold ph-check"></i>Star Tech<span class="mono">6/10</span></div>
+        </div>
+        <div class="strip">
+          <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+          <div class="pill"><span class="ring"></span><span class="mono">38%</span></div>
+          <div class="pill"><span class="mono">$0.151</span></div>
+          <div class="pill"><i class="ph ph-globe-simple"></i></div>
+        </div>
+        <div class="composer">
+          <div class="plus"><i class="ph ph-plus"></i></div>
+          <div class="field">Message</div>
+          <div class="send stop"><i class="ph-fill ph-stop"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>How it reads</h3>
+      <ul>
+        <li>The dock is always in view, even when the run block has scrolled away under a long answer.</li>
+        <li>Chips order themselves: running first, then the ones that need a look, then the finished ones.</li>
+        <li>At 360 px only three chips fit; the fourth scrolls. The task does not fit at all, so each chip needs a short name ("Ryans", "Guide"). delegate has no such argument today, so the model would have to send a label or the app would have to guess one.</li>
+        <li>The dock also takes 44 px from the chat for the whole run, and the cost per subagent is hidden until a chip is opened.</li>
+      </ul>
+      <div class="verdict">B is weaker. It gives up the task text and the cost to stay in view. Staying in view matters less here because a request to the user already brings its own approval card into the chat.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 2 ======================= -->
+<section class="direction">
+  <div class="direction-head">
+    <h2>2. Opening a subagent: a full-screen page</h2>
+    <p>A tap on a row opens the subagent's own page. The page shows the whole task, steps and cost against the limits, the step track in the same station style as the main run, the answer, the files it wrote, and its skipped parts. The arrows in the top bar move to the next or previous subagent of the same call. While the subagent runs, a bar at the bottom holds a Stop for that subagent alone.</p>
+  </div>
+  <div class="phones">
+    <div>
+      <div class="cell-label">Running, dark</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:06</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="page-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title"><div class="name">Researcher 2</div><div class="sub">Gemini 3.8 Flash</div></div>
+          <div class="pager"><div class="icon-btn"><i class="ph ph-caret-left"></i></div><span class="mono">2/4</span><div class="icon-btn"><i class="ph ph-caret-right"></i></div></div>
+        </div>
+        <div class="page-body">
+          <div class="task-full">Same search on ryans.com: laptops under ৳80,000 with 16 GB RAM and 512 GB SSD. Note EMI offers from bKash and City Bank cards.</div>
+          <div class="facts">
+            <div class="meter"><div class="meter-label"><span>Steps</span><span class="mono">5 of 10</span></div><div class="bar"><span style="width:50%"></span></div></div>
+            <div class="meter"><div class="meter-label"><span>Cost</span><span class="mono">$0.012 of $0.10</span></div><div class="bar"><span style="width:12%"></span></div></div>
+          </div>
+          <div class="section-label"><span>Steps</span><span class="mono">0:48</span></div>
+          <div class="track">
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Web search<span class="detail">ryans laptop 16GB RAM 512GB SSD price</span></span><span class="time mono">1.6 s</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read page<span class="detail">ryans.com/category/laptop-all-laptop</span></span><span class="time mono">3.1 s</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read page<span class="detail">ryans.com/lenovo-ideapad-slim-3-15abr8</span></span><span class="time mono">2.2 s</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Note<span class="detail">Ryans prices include 5% VAT, Star Tech's don't</span></span><span class="time mono">0.1 s</span></div>
+            <div class="step"><span class="station running"></span><span class="label">Read page<span class="detail">ryans.com/asus-vivobook-15-x1504va</span></span><span class="time mono">4 s</span></div>
+          </div>
+          <div class="section-label"><span>Answer</span></div>
+          <div class="answer muted">Shows here when Researcher 2 is done.</div>
+        </div>
+        <div class="bottom-bar">
+          <span class="working"><span class="live-dot"></span>Working</span>
+          <div class="btn"><i class="ph-fill ph-stop"></i>Stop Researcher 2</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cell-label">Done with a skipped part, dark</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:08</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="page-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title"><div class="name">Researcher 3</div><div class="sub">Done in 1:52</div></div>
+          <div class="pager"><div class="icon-btn"><i class="ph ph-caret-left"></i></div><span class="mono">3/4</span><div class="icon-btn"><i class="ph ph-caret-right"></i></div></div>
+        </div>
+        <div class="page-body">
+          <div class="task-full">Same search on daraz.com.bd, official brand stores only (Lenovo, ASUS, HP). Ignore resellers.</div>
+          <div class="facts">
+            <div class="meter"><div class="meter-label"><span>Steps</span><span class="mono">7 of 10</span></div><div class="bar"><span style="width:70%"></span></div></div>
+            <div class="meter"><div class="meter-label"><span>Cost</span><span class="mono">$0.014 of $0.10</span></div><div class="bar"><span style="width:14%"></span></div></div>
+          </div>
+          <div class="folded"><span>7 steps</span><span><span class="mono">1:52</span>&nbsp; <i class="ph ph-caret-down"></i></span></div>
+          <div class="section-label"><span>Skipped</span></div>
+          <div class="skip-row" style="margin-top:-8px"><i class="ph ph-skip-forward"></i><span>write_file to work/daraz.csv<span class="why">No answer in 3 min. The listings are in the answer instead.</span></span></div>
+          <div class="section-label"><span>Answer</span></div>
+          <div class="answer" style="margin-top:-6px">
+            <p>Two models from official stores fit the budget.</p>
+            <ol>
+              <li>ASUS Vivobook 15 X1504VA, i5-1335U, 16 GB, 512 GB: ৳74,990 at the ASUS Official Store. <a>daraz.com.bd/products/asus-vivobook-15-x1504va…</a></li>
+              <li>HP 15-fc0xxx, Ryzen 5 7520U, 16 GB, 512 GB: ৳66,500 at HP Official. RAM is soldered. <a>daraz.com.bd/products/hp-15-fc…</a></li>
+            </ol>
+            <h4>Gaps</h4>
+            <p>Lenovo's store had no 16 GB model in stock.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cell-label">Done with files, light</div>
+      <div class="phone leaf light">
+        <div class="statusbar"><span>14:09</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="page-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title"><div class="name">Writer</div><div class="sub">Done in 2:31</div></div>
+          <div class="pager"><div class="icon-btn"><i class="ph ph-caret-left"></i></div><span class="mono">4/4</span><div class="icon-btn" style="opacity:.35"><i class="ph ph-caret-right"></i></div></div>
+        </div>
+        <div class="page-body">
+          <div class="task-full">Read inbox/cse-laptop-specs.pdf and draft artifacts/laptop-guide.html in Bangla for Ma: what the course needs and what each shop offers.</div>
+          <div class="facts">
+            <div class="meter"><div class="meter-label"><span>Steps</span><span class="mono">8 of 10</span></div><div class="bar"><span style="width:80%"></span></div></div>
+            <div class="meter"><div class="meter-label"><span>Cost</span><span class="mono">$0.019 of $0.10</span></div><div class="bar"><span style="width:19%"></span></div></div>
+          </div>
+          <div class="section-label"><span>Files</span></div>
+          <div style="margin-top:-8px">
+            <div class="file-row"><i class="ph ph-file-html"></i><span><span class="path">artifacts/laptop-guide.html</span><span class="meta mono">14 KB</span></span><span class="open">Open</span></div>
+            <div class="file-row"><i class="ph ph-file-text"></i><span><span class="path">work/specs.md</span><span class="meta mono">2 KB</span></span><span class="open">Open</span></div>
+          </div>
+          <div class="section-label"><span>Steps</span><span class="mono">2:31</span></div>
+          <div class="track">
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read document<span class="detail">inbox/cse-laptop-specs.pdf</span></span><span class="time mono">1.2 s</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-chat-circle"></i></span><span class="label">Asked the main agent<span class="detail">Bangla only, or English terms too?</span><span class="reply bn">Bangla, keep RAM and SSD in English.</span></span><span class="time mono">3.4 s</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Write file<span class="detail">work/specs.md</span></span><span class="time mono">0.2 s</span></div>
+            <div class="step"><span class="station done"><i class="ph-bold ph-check"></i></span><span class="label">Read notes<span class="detail">3 notes from the researchers</span></span><span class="time mono">0.1 s</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>Why a full screen</h3>
+      <ul>
+        <li>An answer can be 16 KB (D-060). That is too long for a sheet, and a page scrolls like any other screen.</li>
+        <li>Open on a file goes to the file viewer, and Back returns to this page and then to the chat at the same spot. With a sheet, the viewer would have to cover a sheet.</li>
+        <li>The arrows step through the four subagents without going back to the chat.</li>
+      </ul>
+      <h3>Order on the page</h3>
+      <ul>
+        <li>While running, the steps come first. When done, the steps fold to one line, and skipped parts, files and the answer move up, because those are what the user came to check.</li>
+        <li>The meters use ink, not the accent: a budget is not live work.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 3 ======================= -->
+<section class="direction">
+  <div class="direction-head">
+    <h2>3. Checking the work after the run</h2>
+    <p>When the run ends, the run block folds to one line as today. Under the answer, one row names the subagents and flags any that stopped early. The row opens a sheet with the same rows as option A. The sheet also links to the notes board and to every file the group wrote.</p>
+  </div>
+  <div class="phones">
+    <div>
+      <div class="cell-label">The finished answer</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:11</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="chat-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title">Laptop for Nabila's CSE course</div>
+          <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+        </div>
+        <div class="transcript">
+          <div class="msg-user bn">আপুর জন্য ৮০,০০০ টাকার মধ্যে একটা laptop খুঁজে দাও। Star Tech, Ryans আর Daraz দেখো। Department এর spec sheet inbox এ আছে।</div>
+          <div class="run-folded"><span><i class="ph ph-check"></i>Worked 4 min 12 s, 11 steps</span><span class="mono">$0.189 &nbsp;<i class="ph ph-caret-down"></i></span></div>
+          <div class="msg-agent bn">
+            <b>ASUS Vivobook 15 X1504VA</b> নাও। Daraz এর ASUS Official Store এ ৳৭৪,৯৯০, 16 GB RAM আর 512 GB SSD, department এর চাহিদা পূরণ করে।
+            <ul>
+              <li>সস্তা বিকল্প: HP 15-fc0xxx, ৳৬৬,৫০০। RAM পরে বাড়ানো যাবে না।</li>
+              <li>Star Tech এ একই Vivobook ৳৭৬,৫০০, VAT ছাড়া।</li>
+              <li>Ryans এর EMI rate পাইনি, City Bank এর page এ login লাগে।</li>
+            </ul>
+          </div>
+          <div class="artifact-row"><i class="ph ph-file-html"></i><span>laptop-guide.html<span class="meta">Bangla page for Ma, by Writer</span></span><span class="btn">Open</span></div>
+          <div class="work-row">
+            <span class="what">Work from 4 subagents</span>
+            <i class="ph ph-caret-right"></i>
+            <span class="sub">1 over budget, 1 part skipped, 6 notes</span>
+          </div>
+        </div>
+        <div class="strip">
+          <div class="pill model"><i class="ph ph-cpu"></i><span>DeepSeek V3.2</span></div>
+          <div class="pill"><span class="ring"></span><span class="mono">41%</span></div>
+          <div class="pill"><span class="mono">$0.189</span></div>
+          <div class="pill"><i class="ph ph-globe-simple"></i></div>
+        </div>
+        <div class="composer">
+          <div class="plus"><i class="ph ph-plus"></i></div>
+          <div class="field">Message</div>
+          <div class="send"><i class="ph-fill ph-paper-plane-right"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cell-label">The row opens the group sheet</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:11</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="chat-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title">Laptop for Nabila's CSE course</div>
+          <div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div>
+        </div>
+        <div class="transcript">
+          <div class="msg-user bn">আপুর জন্য ৮০,০০০ টাকার মধ্যে একটা laptop খুঁজে দাও। Star Tech, Ryans আর Daraz দেখো।</div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="handle"></div>
+          <div class="sheet-head"><span class="t">4 subagents</span><span class="mono">$0.134 of $0.189</span></div>
+          <div class="sa-row">
+            <span class="glyph"><i class="ph-bold ph-check"></i></span>
+            <span class="task">Laptops under ৳80,000 on startech.com.bd with 16 GB RAM and 512 GB SSD</span>
+            <span class="num mono">6/10</span>
+            <span class="now"><b>Researcher 1</b>&nbsp; Done in 0:41</span>
+            <span class="num mono">$0.009</span>
+          </div>
+          <div class="sa-row">
+            <span class="glyph"><i class="ph-bold ph-warning"></i></span>
+            <span class="task">Same search on ryans.com, note EMI offers from bKash and City Bank</span>
+            <span class="num mono">9/10</span>
+            <span class="now attention"><b>Researcher 2</b>&nbsp; Over budget</span>
+            <span class="num mono">$0.100</span>
+          </div>
+          <div class="sa-row">
+            <span class="glyph"><i class="ph-bold ph-check"></i></span>
+            <span class="task">Same search on daraz.com.bd, official brand stores only</span>
+            <span class="num mono">7/10</span>
+            <span class="now"><b>Researcher 3</b>&nbsp; Done, 1 skipped</span>
+            <span class="num mono">$0.014</span>
+          </div>
+          <div class="sa-row">
+            <span class="glyph"><i class="ph-bold ph-check"></i></span>
+            <span class="task">Read the spec sheet and draft artifacts/laptop-guide.html in Bangla</span>
+            <span class="num mono">8/10</span>
+            <span class="now"><b>Writer</b>&nbsp; Done, 2 files</span>
+            <span class="num mono">$0.019</span>
+          </div>
+          <div style="height:8px"></div>
+          <div class="sheet-link"><i class="ph ph-note"></i><span>Notes board</span><span class="meta">6 notes &nbsp;<i class="ph ph-caret-right"></i></span></div>
+          <div class="sheet-link"><i class="ph ph-files"></i><span>Files written</span><span class="meta">2 files &nbsp;<i class="ph ph-caret-right"></i></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cell-label">Notes board, in the file viewer</div>
+      <div class="phone leaf dark">
+        <div class="statusbar"><span>14:12</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+        <div class="page-top">
+          <div class="icon-btn"><i class="ph ph-arrow-left"></i></div>
+          <div class="title"><div class="name">Notes board</div><div class="sub">notes.md, 4 subagents</div></div>
+          <div class="icon-btn"><i class="ph ph-share-network"></i></div>
+        </div>
+        <div class="page-body" style="gap:0; padding-top:4px">
+          <div class="note"><div class="who"><b>Researcher 1</b><span class="mono">14:05:31</span></div><div class="text">Star Tech lists prices without VAT. The Vivobook 15 X1504VA is ৳76,500 before VAT.</div></div>
+          <div class="note"><div class="who"><b>Researcher 2</b><span class="mono">14:05:49</span></div><div class="text">Ryans prices include 5% VAT. Compare after adding VAT to Star Tech.</div></div>
+          <div class="note"><div class="who"><b>Writer</b><span class="mono">14:06:02</span></div><div class="text">Spec sheet asks for 16 GB RAM, 512 GB SSD, and a battery that lasts a 3-hour lab. Saved in work/specs.md.</div></div>
+          <div class="note"><div class="who"><b>Researcher 3</b><span class="mono">14:06:40</span></div><div class="text">Daraz resellers undercut the ASUS store by ৳3,000 but give no brand warranty. Skipping them.</div></div>
+          <div class="note"><div class="who"><b>Researcher 2</b><span class="mono">14:07:12</span></div><div class="text">City Bank EMI page needs a login. Did not get the rates.</div></div>
+          <div class="note"><div class="who"><b>Researcher 3</b><span class="mono">14:07:55</span></div><div class="text">HP 15-fc0xxx has soldered RAM. Worth a line in the guide.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h3>From the answer to the work</h3>
+      <ul>
+        <li>The "Work from 4 subagents" row lists only what went wrong and the note count. When everything is fine it reads "All done, 6 notes".</li>
+        <li>The sheet reuses the rows from option A in their final state. A tap opens the same subagent page as in section 2.</li>
+        <li>The notes board is notes.md from the delegate folder, shown in the file viewer with the author and time of each note. Here the user can see which numbers the researchers checked against each other.</li>
+        <li>A file a subagent wrote also gets its own Open row in the chat, labelled with the subagent's name (D-066).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
