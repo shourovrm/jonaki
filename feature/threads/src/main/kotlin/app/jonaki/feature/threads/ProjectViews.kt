@@ -1,5 +1,6 @@
 package app.jonaki.feature.threads
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -10,9 +11,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,17 +23,21 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -48,26 +56,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiTheme
 
-/** All, one chip per project, then "+ Project" (D-110). The row scrolls sideways. */
+/** The Incognito filter chip; shown while at least one incognito thread exists (D-123). */
+internal data class IncognitoChip(val selected: Boolean, val onSelect: () -> Unit)
+
+/**
+ * All, one chip per project, Incognito, then "+ Project" (D-110, D-123).
+ * The row scrolls sideways.
+ */
 @Composable
 internal fun ProjectChips(
     projects: List<ProjectUi>,
     selectedProjectId: String?,
     onSelect: (projectId: String?) -> Unit,
+    incognitoChip: IncognitoChip?,
     onNewProject: () -> Unit,
 ) {
+    val incognitoSelected = incognitoChip?.selected == true
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 6.dp),
     ) {
         FilterChip(
-            selected = selectedProjectId == null,
+            selected = selectedProjectId == null && !incognitoSelected,
             onClick = { onSelect(null) },
             label = { Text(stringResource(R.string.threads_all)) },
+            shape = ChipShape,
+            colors = filterChipColours(),
+            border = filterChipBorder(selectedProjectId == null && !incognitoSelected),
         )
         for (project in projects) {
             FilterChip(
@@ -75,16 +94,56 @@ internal fun ProjectChips(
                 onClick = { onSelect(project.id) },
                 // A long name keeps one line and ends in "…" (D-029); the header shows it whole.
                 label = { Text(project.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                shape = ChipShape,
+                colors = filterChipColours(),
+                border = filterChipBorder(project.id == selectedProjectId),
                 modifier = Modifier.widthIn(max = 180.dp),
+            )
+        }
+        if (incognitoChip != null) {
+            FilterChip(
+                selected = incognitoChip.selected,
+                onClick = incognitoChip.onSelect,
+                label = { Text(stringResource(R.string.threads_incognito)) },
+                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                shape = ChipShape,
+                colors = filterChipColours(),
+                border = filterChipBorder(incognitoChip.selected),
             )
         }
         AssistChip(
             onClick = onNewProject,
             label = { Text(stringResource(R.string.threads_project_chip)) },
-            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            shape = ChipShape,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            colors = AssistChipDefaults.assistChipColors(
+                labelColor = JonakiTheme.colors.inkSoft,
+                leadingIconContentColor = JonakiTheme.colors.inkSoft,
+            ),
         )
     }
 }
+
+private val ChipShape = RoundedCornerShape(16.dp)
+
+/** The selected chip is filled (ink at night, the accent by day); the others are outlined. */
+@Composable
+private fun filterChipColours(): SelectableChipColors = FilterChipDefaults.filterChipColors(
+    labelColor = JonakiTheme.colors.inkSoft,
+    iconColor = JonakiTheme.colors.inkSoft,
+    selectedContainerColor = JonakiTheme.colors.selectedChip,
+    selectedLabelColor = JonakiTheme.colors.onSelectedChip,
+    selectedLeadingIconColor = JonakiTheme.colors.onSelectedChip,
+)
+
+@Composable
+private fun filterChipBorder(selected: Boolean): BorderStroke? = FilterChipDefaults.filterChipBorder(
+    enabled = true,
+    selected = selected,
+    borderColor = MaterialTheme.colorScheme.outlineVariant,
+    selectedBorderColor = Color.Transparent,
+)
 
 /** The selected project's name, model and ⋮ menu, above its threads. */
 @Composable
@@ -92,7 +151,7 @@ internal fun ProjectHeader(project: ProjectUi, onEdit: () -> Unit, onDelete: () 
     var menuOpen by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 8.dp, top = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp),
     ) {
         Column(Modifier.weight(1f)) {
             Text(project.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)

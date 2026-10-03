@@ -36,6 +36,10 @@
     <string name="threads_project_preview">%1$s · %2$s</string>
     <string name="threads_move">Move to project</string>
     <string name="threads_no_project">No project</string>
+    <string name="threads_group_today">Today</string>
+    <string name="threads_group_yesterday">Yesterday</string>
+    <string name="threads_group_week">Last 7 days</string>
+    <string name="threads_group_older">Older</string>
     <string name="share_target_title">Add to thread</string>
     <string name="share_target_untitled">Untitled</string>
     <plurals name="share_target_files">
