@@ -1619,6 +1619,17 @@ rendered; a browse tool that clicks or fills forms stays later. Tests:
 RenderDecisionTest and WebFetchToolTest with a fake renderer; the
 WebView part runs only on a phone and was not checked there. Outcome:
 pending.
+Phone check (A059, 2026-10-03, DeepSeek V4.1 Flash): rendering runs page
+scripts; hn.algolia.com gave its search frame (114 to 2,165 characters
+against 37 without rendering), but its story list, loaded after the page,
+arrived in 1 of 4 runs, and the Pokédex list in none; desktop headless
+Chromium at the same width and user agent got the lists every time. A WebView
+never attached to a window drew about 35 frames in several seconds, the
+likely cause; the fix to try is attaching it, invisible, to the app's
+window while it renders. Changed after the check: the text must stay the
+same for 1.5 s and at least 2.5 s must pass before capture, and a list page
+whose Readability "article" is one item (under 1,500 characters and a
+quarter of the body) keeps its whole text (PageTextExtractorTest).
 
 ## D-132 · 2026-10-03 · Request-log times for the first streamed token — proposed
 The plan's budget "first streamed token shown: provider latency plus under

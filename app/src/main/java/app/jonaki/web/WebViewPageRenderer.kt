@@ -107,18 +107,28 @@ class WebViewPageRenderer(private val context: Context) : PageRenderer {
     }
 
     /**
-     * Scripts often fill the page after onPageFinished. The text counts as
-     * ready when its length is the same in two checks [SETTLE_STEP] apart.
+     * Scripts often fill the page after onPageFinished, and many first show an
+     * empty list ("0 results") while their data request is out. The text
+     * counts as ready once it has kept the same length for [STEADY_FOR] and at
+     * least [MINIMUM_WAIT] has passed; a check every [SETTLE_STEP] measures it.
+     * The phone check of 2026-10-03 caught hn.algolia.com and the Pokédex in
+     * that empty state with a 0.5 s rule.
      */
     private suspend fun waitForSteadyText(webView: WebView, client: RenderClient) {
         var previousLength = -1
+        var steadyChecks = 0
+        var checks = 0
+        val checksForSteady = (STEADY_FOR / SETTLE_STEP).toInt()
+        val minimumChecks = (MINIMUM_WAIT / SETTLE_STEP).toInt()
         while (client.failure == null) {
             delay(SETTLE_STEP)
+            checks += 1
             val length = evaluate(webView, TEXT_LENGTH_SCRIPT).toIntOrNull() ?: 0
-            if (length > 0 && length == previousLength) {
+            steadyChecks = if (length > 0 && length == previousLength) steadyChecks + 1 else 0
+            previousLength = length
+            if (steadyChecks >= checksForSteady && checks >= minimumChecks) {
                 return
             }
-            previousLength = length
         }
     }
 
@@ -143,6 +153,8 @@ class WebViewPageRenderer(private val context: Context) : PageRenderer {
 
     private companion object {
         val SETTLE_STEP = 500.milliseconds
+        val STEADY_FOR = 1_500.milliseconds
+        val MINIMUM_WAIT = 2_500.milliseconds
         val CAPTURE_ALLOWANCE = 3.seconds
         const val VIEWPORT_WIDTH = 1080
         const val VIEWPORT_HEIGHT = 2400
