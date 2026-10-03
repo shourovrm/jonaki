@@ -994,3 +994,17 @@ bytes is "13.5 MB", the add-on "7.9 MB"), as the user wrote them and as
 app stores show downloads; run_code's error text uses the same form.
 IncomingFiles.describeSize keeps binary megabytes for the 25 MB file cap.
 Code: UsageFormat.byteSize. Outcome: pending.
+
+## D-200 · 2026-10-03 · run_code reads the JavaScript reply's text fields as text — proposed
+On the phone, `console.log(fib.join(', '))` printed "0" instead of
+"0, 1, 1, 2, 3, 5, 8, 13, 21, 34". The runner (run-program.js) printed the
+whole line; the cut happened in `JavaScriptProgram.outcomeFrom`, which read
+every reply field with kotlinx.serialization's `longOrNull` first.
+`longOrNull` parses a leading number and stops at the first separator, so
+any printed text, result or error that began with a number followed by a
+comma or a space became that number. Every field is now read with
+`contentOrNull` (a JSON number's content is its digits, so
+droppedCharacters still parses). Python reads its fields with
+`contentOrNull` and gets stdout from the bridge as plain text, so it never
+had this bug. Test: JavaScriptProgramTest.printedTextThatStartsWithANumberIsKeptWhole.
+Outcome: pending.
