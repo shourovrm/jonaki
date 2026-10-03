@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
 import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +129,16 @@ class VisibleActivity {
                 }
             }
         }
+
+    /**
+     * Android's rationale flag for [permission]: true after one refusal, while
+     * its dialog can still be shown. Android reads it through an activity, so
+     * it is false when no Jonaki window is on screen.
+     */
+    suspend fun showsRationale(permission: String): Boolean = withContext(Dispatchers.Main) {
+        val current = activityOnScreen() ?: return@withContext false
+        ActivityCompat.shouldShowRequestPermissionRationale(current, permission)
+    }
 
     /** Whether a Jonaki window is on screen, for actions Android allows only then (reading the clipboard). */
     suspend fun isOnScreen(): Boolean = withContext(Dispatchers.Main) { activityOnScreen() != null }

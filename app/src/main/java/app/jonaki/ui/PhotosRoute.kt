@@ -25,6 +25,7 @@ import app.jonaki.feature.gallery.GallerySheet
 import app.jonaki.feature.gallery.PhotoAccess
 import app.jonaki.feature.gallery.PhotoGrant
 import app.jonaki.feature.gallery.PhotosAction
+import app.jonaki.feature.settings.PermissionStatuses
 
 /**
  * The composer's Photos choice (D-085, D-086). Returns what tapping Photos
@@ -47,8 +48,19 @@ fun rememberPhotosChoice(threadKey: String, application: JonakiApplication): () 
     val openSystemPicker = {
         systemPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
-    val permissionRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        application.settings.recordPermissionRequest(PhotoAccess.permissionsToAsk(Build.VERSION.SDK_INT))
+    // Read before the dialog opens, so that its answer can tell a refusal from Back (D-127).
+    var rationaleBefore by remember { mutableStateOf(emptyMap<String, Boolean>()) }
+    val permissionRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        val refused = grants.keys.filter { permission ->
+            PermissionStatuses.refusedNow(
+                granted = grants[permission] == true,
+                rationaleBefore = rationaleBefore[permission] == true,
+                rationaleAfter = showsRationale(context, permission),
+            )
+        }
+        if (refused.isNotEmpty()) {
+            application.settings.recordPermissionRefusal(refused)
+        }
         // The answer map does not tell Android 14's "Select photos" apart, so the grant is read again.
         grant = currentPhotoGrant(context)
         reloadKey += 1
@@ -62,7 +74,9 @@ fun rememberPhotosChoice(threadKey: String, application: JonakiApplication): () 
         }
     }
     val askPermission = {
-        permissionRequest.launch(PhotoAccess.permissionsToAsk(Build.VERSION.SDK_INT).toTypedArray())
+        val asked = PhotoAccess.permissionsToAsk(Build.VERSION.SDK_INT)
+        rationaleBefore = asked.associateWith { permission -> showsRationale(context, permission) }
+        permissionRequest.launch(asked.toTypedArray())
     }
 
     // Allow all goes through system settings; the grant is read again when Jonaki is back on screen.

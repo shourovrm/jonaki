@@ -1483,3 +1483,43 @@ adversarial string review was not run (this worker may not spawn
 subagents). Tests: SubagentRowsTest, ChatItemsTest, SubagentRunnerTest.
 Not checked: a device view; previews at 360 dp and font scale 1.3 exist but
 were not rendered. Outcome: pending.
+
+## D-127 · 2026-10-03 · Fixes from the first phone check of the revamp — proposed
+Thread list titles are NOT changed: D-029 (accepted) says a thread name
+wraps in full in the list. A one-line title was built and then held back,
+because changing an accepted decision needs the user's approval.
+Permissions (amends D-124): a dialog closed with Back showed "Denied" with
+"Open settings", because every shown dialog was recorded as a request.
+Now only a refusal is recorded (`refused_permissions`, a new key, so the
+old record with its Back presses is dropped). A closed dialog is a refusal
+when it granted nothing and Android's rationale flag
+(shouldShowRequestPermissionRationale) was true before or is true after
+it; Back leaves a false flag false. Status: granted is "Allowed"; flag true
+is "Denied" with "Allow" (Android shows the dialog again); recorded and
+flag false is "Denied" with "Open settings"; otherwise "Not asked" with
+"Allow". The photo row no longer reads D-086's refusal flag, since the
+composer sets it after Back too. The composer's photo request records the
+same way, and Settings sets D-086's photo refusal only on a recorded
+refusal. Test:
+PermissionStatusesTest. Limit: a permission refused for good on an older
+build and never asked since shows "Not asked", and "Allow" then shows no
+dialog.
+Markdown: a line of three or more '-', '*' or '_' (spaces between allowed,
+as "- - -") is a rule, drawn as a thin divider in the outline colour.
+Dashes directly under a text line are a rule as well, not CommonMark's
+setext heading, so a model's "Summary\n---" shows the text and a line.
+A table's separator row is read as a table first. Test:
+MarkdownParserTest.
+Step names: stepLabel turns a tool name into words by its first letter,
+so "mcp" read "Mcp"; two names now have fixed labels, "MCP" and "YouTube
+summary" (from youtube_summarize). Both stay in English letters in Bangla
+(D-125), so no string resource is added. Test: StepDurationTest.
+Time line: the thread list showed "[Saturday 3 October 2026, 10:43
+Asia/Dhaka]" (D-005's line for the model) in a running thread's preview.
+The summary query took the text from the newest row with text but the role
+from the newest row, which during a run is the assistant's tool call with
+no text, so the user's message was read as an answer and kept its line.
+Both now skip rows without text (ThreadListQueries.SUMMARIES). The three
+copies of the strip pattern (chat, list preview, thread name) became one,
+PromptBuilder.userTextOf, beside the code that writes the line. Tests:
+ThreadListQueriesTest, PromptBuilderTest. Outcome: pending.

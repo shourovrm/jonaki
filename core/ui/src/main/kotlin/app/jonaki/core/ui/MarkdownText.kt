@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
@@ -126,6 +127,10 @@ private fun MarkdownBlockView(
             caretContent = caretContent,
         )
         is MarkdownBlock.Table -> TableView(block, colors, showCaret, caretContent)
+        is MarkdownBlock.Rule -> HorizontalDivider(
+            modifier = Modifier.padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
     }
 }
 

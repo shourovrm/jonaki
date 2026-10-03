@@ -94,7 +94,7 @@ private fun statusText(status: PermissionStatus): Int = when (status) {
     PermissionStatus.ALLOWED -> R.string.settings_permissions_status_allowed
     PermissionStatus.SELECTED_PHOTOS -> R.string.settings_permissions_status_selected_photos
     PermissionStatus.NOT_ASKED -> R.string.settings_permissions_status_not_asked
-    PermissionStatus.DENIED -> R.string.settings_permissions_status_denied
+    PermissionStatus.DENIED, PermissionStatus.BLOCKED -> R.string.settings_permissions_status_denied
     PermissionStatus.OFF -> R.string.settings_permissions_status_off
 }
 
@@ -103,7 +103,7 @@ private fun statusText(status: PermissionStatus): Int = when (status) {
 private fun statusColor(status: PermissionStatus): Color = when (status) {
     PermissionStatus.ALLOWED, PermissionStatus.SELECTED_PHOTOS -> MaterialTheme.colorScheme.primary
     PermissionStatus.NOT_ASKED -> MaterialTheme.colorScheme.onSurfaceVariant
-    PermissionStatus.DENIED, PermissionStatus.OFF -> MaterialTheme.colorScheme.error
+    PermissionStatus.DENIED, PermissionStatus.BLOCKED, PermissionStatus.OFF -> MaterialTheme.colorScheme.error
 }
 
 /** Settings > About: the version, the developer and the GitHub link. */

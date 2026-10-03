@@ -11,11 +11,14 @@ enum class PermissionStatus {
     /** Android 14's "Select photos": only the photos the user picked. */
     SELECTED_PHOTOS,
 
-    /** Jonaki never asked, so Android's dialog can still be shown. */
+    /** The user never refused, so Android's dialog can still be shown. */
     NOT_ASKED,
 
-    /** Jonaki asked and the permission is not granted; only system settings can change it now. */
+    /** The user refused once; Android still shows its dialog when Jonaki asks again. */
     DENIED,
+
+    /** Refused for good ("Don't ask again", or twice from Android 11); only system settings can change it. */
+    BLOCKED,
 
     /** A special access switch (Alarms & reminders) that is off in system settings. */
     OFF,
@@ -95,36 +98,47 @@ enum class AlwaysOnRow(
 }
 
 /**
- * Turns what Android reports into a row's status. Android cannot tell a
- * permission that was never asked for from one that was refused, so the
- * app passes [requestedBefore] from its own record of requests.
+ * Turns what Android reports into a row's status. Android's rationale flag
+ * (shouldShowRequestPermissionRationale) is true after one refusal, but
+ * false both before any refusal and after a refusal for good, so the app
+ * passes [refusedBefore] from its own record of refusals (D-127).
  */
 object PermissionStatuses {
-    fun runtime(granted: Boolean, requestedBefore: Boolean): PermissionStatus = when {
+    fun runtime(granted: Boolean, refusedBefore: Boolean, showsRationale: Boolean): PermissionStatus = when {
         granted -> PermissionStatus.ALLOWED
-        requestedBefore -> PermissionStatus.DENIED
+        showsRationale -> PermissionStatus.DENIED
+        refusedBefore -> PermissionStatus.BLOCKED
         else -> PermissionStatus.NOT_ASKED
     }
+
+    /**
+     * Whether the dialog that just closed was a refusal. Back closes it
+     * without one and leaves the rationale false; a first refusal turns the
+     * rationale true, and a refusal for good turns a true rationale false.
+     */
+    fun refusedNow(granted: Boolean, rationaleBefore: Boolean, rationaleAfter: Boolean): Boolean =
+        !granted && (rationaleBefore || rationaleAfter)
 
     /** Below Android 13 there is no notification permission, only the app's switch in system settings. */
     fun notifications(
         sdkInt: Int,
         permissionGranted: Boolean,
         notificationsEnabled: Boolean,
-        requestedBefore: Boolean,
+        refusedBefore: Boolean,
+        showsRationale: Boolean,
     ): PermissionStatus {
         if (sdkInt >= Build.VERSION_CODES.TIRAMISU) {
-            return runtime(permissionGranted, requestedBefore)
+            return runtime(permissionGranted, refusedBefore, showsRationale)
         }
         if (notificationsEnabled) {
             return PermissionStatus.ALLOWED
         }
-        return PermissionStatus.DENIED
+        return PermissionStatus.BLOCKED
     }
 
     /** The calendar tools read and add events, so the row is allowed only with both. */
-    fun calendar(readGranted: Boolean, writeGranted: Boolean, requestedBefore: Boolean): PermissionStatus =
-        runtime(readGranted && writeGranted, requestedBefore)
+    fun calendar(readGranted: Boolean, writeGranted: Boolean, refusedBefore: Boolean, showsRationale: Boolean): PermissionStatus =
+        runtime(readGranted && writeGranted, refusedBefore, showsRationale)
 
     /** The same reading as the composer's gallery (D-086). */
     fun photos(
@@ -132,10 +146,11 @@ object PermissionStatuses {
         imagesGranted: Boolean,
         selectedPhotosGranted: Boolean,
         externalStorageGranted: Boolean,
-        requestedBefore: Boolean,
+        refusedBefore: Boolean,
+        showsRationale: Boolean,
     ): PermissionStatus {
         if (sdkInt < Build.VERSION_CODES.TIRAMISU) {
-            return runtime(externalStorageGranted, requestedBefore)
+            return runtime(externalStorageGranted, refusedBefore, showsRationale)
         }
         if (imagesGranted) {
             return PermissionStatus.ALLOWED
@@ -144,7 +159,7 @@ object PermissionStatuses {
         if (canSelectPhotos && selectedPhotosGranted) {
             return PermissionStatus.SELECTED_PHOTOS
         }
-        return runtime(granted = false, requestedBefore = requestedBefore)
+        return runtime(granted = false, refusedBefore = refusedBefore, showsRationale = showsRationale)
     }
 
     /** Exact alarms need "Alarms & reminders" from Android 12; before that every app may set them. */
@@ -159,8 +174,8 @@ object PermissionStatuses {
     }
 
     fun buttonFor(status: PermissionStatus): PermissionButton = when (status) {
-        PermissionStatus.NOT_ASKED -> PermissionButton.ALLOW
-        PermissionStatus.DENIED, PermissionStatus.OFF -> PermissionButton.OPEN_SETTINGS
+        PermissionStatus.NOT_ASKED, PermissionStatus.DENIED -> PermissionButton.ALLOW
+        PermissionStatus.BLOCKED, PermissionStatus.OFF -> PermissionButton.OPEN_SETTINGS
         PermissionStatus.ALLOWED, PermissionStatus.SELECTED_PHOTOS -> PermissionButton.NONE
     }
 }

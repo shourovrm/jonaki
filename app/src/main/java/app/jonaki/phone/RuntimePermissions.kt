@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import app.jonaki.feature.settings.PermissionStatuses
 import app.jonaki.files.VisibleActivity
 
 /**
@@ -17,8 +18,8 @@ import app.jonaki.files.VisibleActivity
 class RuntimePermissions(
     private val context: Context,
     private val visibleActivity: VisibleActivity,
-    /** Keeps the names of permissions whose dialog was shown, so Settings can tell "Not asked" from "Denied" (D-124). */
-    private val recordRequest: (permissions: List<String>) -> Unit,
+    /** Keeps the names of permissions the user refused, so Settings can tell "Not asked" from "Denied" (D-127). */
+    private val recordRefusal: (permissions: List<String>) -> Unit,
 ) {
     enum class Answer {
         GRANTED,
@@ -36,15 +37,34 @@ class RuntimePermissions(
         if (missing.isEmpty()) {
             return Answer.GRANTED
         }
+        val rationaleBefore = missing.associateWith { permission -> visibleActivity.showsRationale(permission) }
         val answer = visibleActivity.launchForResult(ActivityResultContracts.RequestMultiplePermissions(), missing.toTypedArray())
         return when (answer) {
             is VisibleActivity.Answer.Result -> {
-                recordRequest(missing)
+                recordRefusals(missing, answer.value, rationaleBefore)
                 val allGranted = missing.all { permission -> answer.value[permission] == true }
                 if (allGranted) Answer.GRANTED else Answer.DENIED
             }
             VisibleActivity.Answer.NotOnScreen -> Answer.NOT_ON_SCREEN
             VisibleActivity.Answer.NoAppToHandle -> Answer.DENIED
+        }
+    }
+
+    /** A dialog closed with Back also returns "not granted", but Android will show it again, so it is no refusal. */
+    private suspend fun recordRefusals(
+        asked: List<String>,
+        grants: Map<String, Boolean>,
+        rationaleBefore: Map<String, Boolean>,
+    ) {
+        val refused = asked.filter { permission ->
+            PermissionStatuses.refusedNow(
+                granted = grants[permission] == true,
+                rationaleBefore = rationaleBefore[permission] == true,
+                rationaleAfter = visibleActivity.showsRationale(permission),
+            )
+        }
+        if (refused.isNotEmpty()) {
+            recordRefusal(refused)
         }
     }
 

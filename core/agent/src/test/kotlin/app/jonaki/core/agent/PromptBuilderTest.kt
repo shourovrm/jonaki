@@ -77,4 +77,19 @@ class PromptBuilderTest {
 
         assertEquals("[Friday 2 October 2026, 14:44 Asia/Dhaka]\nWhat's on today?", message)
     }
+
+    @Test
+    fun userTextDropsTheTimeLineAgain() {
+        val now = ZonedDateTime.of(2026, 10, 3, 10, 43, 0, 0, ZoneId.of("Asia/Dhaka"))
+        val stored = builder.userMessageWithContext("What's on today?", now)
+
+        assertEquals("What's on today?", PromptBuilder.userTextOf(stored))
+    }
+
+    @Test
+    fun userTextKeepsABracketTheUserTypedOnTheFirstLine() {
+        // Only the line in front of the user's text is the app's; a bracket inside the text stays.
+        assertEquals("[draft] notes", PromptBuilder.userTextOf("[draft] notes"))
+        assertEquals("plain", PromptBuilder.userTextOf("plain"))
+    }
 }

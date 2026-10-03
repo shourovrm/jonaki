@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki Settings: one page per section</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0b0c0b; color: #d9dcd5; font-family: "Geist", system-ui, sans-serif; padding: 40px 32px 80px; }
+  .page-head { max-width: 1280px; margin: 0 auto 28px; }
+  .page-head h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-head p { margin-top: 8px; max-width: 80ch; color: #9aa094; line-height: 1.55; font-size: 14px; }
+  .row-of-phones { max-width: 1280px; margin: 0 auto 26px; display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-start; }
+  .cell { display: flex; flex-direction: column; gap: 10px; }
+  .cell-label { font-size: 13px; color: #9aa094; padding-left: 6px; }
+  .notes { max-width: 1280px; margin: 0 auto 50px; color: #b4b9ad; font-size: 13.5px; line-height: 1.6; columns: 2; column-gap: 40px; }
+  .notes p { break-inside: avoid; margin-bottom: 10px; }
+  .notes b { color: #e4e7df; font-weight: 600; }
+
+  .phone {
+    width: 360px; height: 760px; border-radius: 34px; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
+    font-family: "Geist", system-ui, sans-serif; box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080;
+  }
+  .dark  { --bg:#10130e; --ink:#e6e9e0; --ink-2:#c3c9b9; --muted:#8b927f; --line:#262b21; --field:#1a1e16; --accent:#c9e86b; --on-accent:#1f2a00; --glow:#d4f06a; --warn:#ffb4ab; --tint:#1a1e16; }
+  .light { --bg:#f3f6ef; --ink:#171b14; --ink-2:#3a4233; --muted:#5f6857; --line:#dde3d5; --field:#e7ece1; --accent:#3f5600; --on-accent:#f3f6ef; --glow:#729600; --warn:#ba1a1a; --tint:#e7ece1; }
+  .statusbar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; }
+  .statusbar i { font-size: 13px; margin-left: 4px; }
+  .top { height: 56px; display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+  .top .title { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; padding-left: 4px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; font-size: 21px; color: var(--ink); }
+  .scroll { flex: 1; overflow: hidden; padding-bottom: 20px; }
+  .mono { font-family: "Geist Mono", monospace; font-feature-settings: "tnum"; }
+
+  /* Root rows: icon, title, one-line live summary, chevron. Groups are separated by space, not labels. */
+  .nav-row { display: grid; grid-template-columns: 40px 1fr 18px; align-items: center; gap: 4px 12px; padding: 12px 20px; }
+  .nav-row .ico { width: 36px; height: 36px; border-radius: 12px; background: var(--tint); display: grid; place-items: center; font-size: 19px; color: var(--ink-2); }
+  .nav-row .t { font-size: 16px; font-weight: 500; }
+  .nav-row .s { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .nav-row .s.attention { color: var(--warn); }
+  .nav-row .chev { color: var(--muted); font-size: 16px; }
+  .gap { height: 14px; }
+  .search { margin: 4px 20px 10px; height: 44px; border-radius: 22px; background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--muted); font-size: 14.5px; }
+
+  /* Sub-page rows. */
+  .label { padding: 18px 20px 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .item { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 20px; align-items: center; border-bottom: 1px solid var(--line); }
+  .item:last-of-type { border-bottom: none; }
+  .item .t { font-size: 15.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .s { grid-column: 1; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .end { grid-row: 1 / span 2; grid-column: 2; font-size: 14px; color: var(--accent); font-weight: 600; }
+  .item .end.muted { color: var(--muted); font-weight: 400; }
+  .status { font-size: 12.5px; font-weight: 600; }
+  .ok { color: var(--accent); }
+  .bad { color: var(--warn); }
+  .switch { width: 44px; height: 26px; border-radius: 13px; background: var(--accent); position: relative; }
+  .switch::after { content: ""; position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--on-accent); }
+  .switch.off { background: var(--line); }
+  .switch.off::after { left: 3px; right: auto; background: var(--muted); }
+  .segmented { margin: 4px 20px 6px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .segmented span { text-align: center; padding: 9px 0; font-size: 14px; border-right: 1px solid var(--line); }
+  .segmented span:last-child { border-right: none; }
+  .segmented .on { background: var(--tint); font-weight: 600; }
+  .add { padding: 12px 20px; color: var(--accent); font-weight: 600; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+  .crumb { font-size: 12.5px; color: var(--muted); padding: 0 20px; margin-top: -6px; }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>Settings, one page per section</h1>
+  <p>Today Settings is one long page with 16 sections. Here the first page has 9 rows. Each row opens its own page and shows its current state on the second line, so most of the time you can read the state without opening it. Same Lantern layout and Leaf colours as the rest of the app.</p>
+</header>
+
+<template id="root">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Settings</div></div>
+    <div class="search"><i class="ph ph-magnifying-glass"></i>Search settings</div>
+    <div class="scroll">
+      <div class="nav-row"><div class="ico"><i class="ph ph-cpu"></i></div><div><div class="t">Models</div><div class="s">OpenRouter, 3 models · <span class="mono">$12.82</span> left</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-globe-simple"></i></div><div><div class="t">Web and YouTube</div><div class="s">Tavily, then Ollama</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-wrench"></i></div><div><div class="t">Tools and approvals</div><div class="s">12 of 12 tools on · Ask</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="gap"></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-chat-text"></i></div><div><div class="t">Answers</div><div class="s">Normal · no personas</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-brain"></i></div><div><div class="t">Memory and skills</div><div class="s">3 facts · 5 skills</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-folder-simple"></i></div><div><div class="t">Files and schedule</div><div class="s">Folder: Jonaki · 1 reminder</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="gap"></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-moon"></i></div><div><div class="t">Theme</div><div class="s">Follows the phone</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-shield-check"></i></div><div><div class="t">Permissions</div><div class="s attention">Calendar denied</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-info"></i></div><div><div class="t">About</div><div class="s">Version 1.0.0</div></div><i class="ph ph-caret-right chev"></i></div>
+    </div>
+  </div>
+</template>
+
+<div class="row-of-phones">
+  <div class="cell"><div class="cell-label">First page, dark</div><div class="slot" data-template="root" data-mode="dark"></div></div>
+
+  <div class="cell"><div class="cell-label">Models</div>
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Models</div></div>
+      <div class="scroll">
+        <div class="label">Chat services</div>
+        <div class="item"><div class="t">OpenRouter</div><div class="s">3 models · <span class="mono">$12.82</span> left, <span class="mono">$0.13</span> this month</div><i class="ph ph-caret-right end muted"></i></div>
+        <div class="item"><div class="t">DeepSeek</div><div class="s">No key</div><i class="ph ph-caret-right end muted"></i></div>
+        <div class="item"><div class="t">Qwen</div><div class="s">No key</div><i class="ph ph-caret-right end muted"></i></div>
+        <div class="add"><i class="ph ph-plus"></i>Add service</div>
+        <div class="label">Subagents</div>
+        <div class="item"><div class="t">Researcher</div><div class="s">Same as the thread</div><i class="ph ph-caret-down end muted"></i></div>
+        <div class="item"><div class="t">Scout</div><div class="s">Cheapest model</div><i class="ph ph-caret-down end muted"></i></div>
+        <div class="item"><div class="t">Writer</div><div class="s">Same as the thread</div><i class="ph ph-caret-down end muted"></i></div>
+        <div class="item"><div class="t">Worker</div><div class="s">Same as the thread</div><i class="ph ph-caret-down end muted"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell"><div class="cell-label">Tools and approvals</div>
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Tools and approvals</div></div>
+      <div class="scroll">
+        <div class="label">Approvals in new threads</div>
+        <div class="segmented"><span class="on">Ask</span><span>Auto</span><span>Bypass</span></div>
+        <div class="crumb">Ask before any change</div>
+        <div class="label">Tools</div>
+        <div class="item"><div class="t">Web</div><div class="s">Search the web and read pages</div><div class="end"><div class="switch"></div></div></div>
+        <div class="item"><div class="t">Phone</div><div class="s">Calendar, reminders, notifications, clipboard and apps</div><div class="end"><div class="switch"></div></div></div>
+        <div class="item"><div class="t">Schedule</div><div class="s">Run a prompt at a set time</div><div class="end"><div class="switch"></div></div></div>
+        <div class="item"><div class="t">Python</div><div class="s">Installed, <span class="mono">13.5 MB</span> · numpy, pandas</div><i class="ph ph-caret-right end muted"></i></div>
+        <div class="item"><div class="t">MCP servers</div><div class="s">deepwiki</div><i class="ph ph-caret-right end muted"></i></div>
+        <div class="item"><div class="t">All tools</div><div class="s">12 groups</div><i class="ph ph-caret-right end muted"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row-of-phones">
+  <div class="cell"><div class="cell-label">First page, light</div><div class="slot" data-template="root" data-mode="light"></div></div>
+
+  <div class="cell"><div class="cell-label">Answers</div>
+    <div class="phone light">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Answers</div></div>
+      <div class="scroll">
+        <div class="label">Answer style</div>
+        <div class="segmented"><span>Concise</span><span class="on">Normal</span><span>Detailed</span></div>
+        <div class="label">Instructions for every thread</div>
+        <div class="item"><div class="t">Custom instructions</div><div class="s">Reply in Bangla when I write in Bangla</div><i class="ph ph-caret-right end muted"></i></div>
+        <div class="label">Personas</div>
+        <div class="item"><div class="t">Thesis supervisor</div><div class="s">Strict, asks for sources, short replies</div><i class="ph ph-caret-right end muted"></i></div>
+        <div class="add"><i class="ph ph-plus"></i>Add persona</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell"><div class="cell-label">Permissions</div>
+    <div class="phone light">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Permissions</div></div>
+      <div class="scroll">
+        <div class="item"><div class="t">Notifications</div><div class="s">Reminders, results and running tasks</div><div class="end"><span class="status ok">Allowed</span></div></div>
+        <div class="item"><div class="t">Calendar</div><div class="s">Read and add events</div><div class="end">Open settings</div></div>
+        <div class="item"><div class="t">Photos</div><div class="s">Attach photos from the gallery</div><div class="end"><span class="status ok">Allowed</span></div></div>
+        <div class="item"><div class="t">Alarms &amp; reminders</div><div class="s">Reminders on the minute</div><div class="end"><span class="status ok">Allowed</span></div></div>
+        <div class="label">Always on</div>
+        <div class="item"><div class="t">Internet</div><div class="s">Models, web search and MCP servers</div></div>
+        <div class="item"><div class="t">Run in background</div><div class="s">Keep replies going when closed</div></div>
+        <div class="item"><div class="t">Start at boot</div><div class="s">Set reminders again after restart</div></div>
+        <div class="item"><div class="t">Network state</div><div class="s">Wait for a connection before runs</div></div>
+        <div class="item"><div class="t">Keep awake</div><div class="s">Finish scheduled tasks</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <p><b>Grouping.</b> Models covers chat services and subagent models. Web and YouTube covers search order and the Gemini key. Tools and approvals covers tool switches, Python, MCP servers and the default approval mode. Answers covers style, custom instructions and personas. Memory and skills covers both libraries. Files and schedule covers the linked folder, reminders and scheduled tasks. Theme, Permissions and About each get their own page.</p>
+  <p><b>Second lines are live.</b> Each row's second line shows the state you would otherwise open the page to see: balance, search order, how many tools are on, the default approval mode, the answer style, counts of facts and skills. Permissions turns red only when something is denied, so a problem shows on the first page.</p>
+  <p><b>Search settings.</b> One field at the top finds a setting by name ("Python", "persona", "Tavily") and opens its page. It is optional; the first page fits on one screen without it.</p>
+  <p><b>No cards, no labels over groups.</b> Three groups are separated only by space. Sub-pages use plain section labels and thin lines between rows, like the rest of the revamp. Back returns to the first page at the same place.</p>
+  <p><b>Links from elsewhere.</b> The chat's "Add one in Settings" errors and the permission rows open the right sub-page directly, not the first page.</p>
+</div>
+
+<script>
+  // The first page is shown twice, in dark and light, from one template.
+  for (const slot of document.querySelectorAll(".slot")) {
+    const phone = document.getElementById(slot.dataset.template).content.firstElementChild.cloneNode(true);
+    phone.classList.add(slot.dataset.mode);
+    slot.replaceWith(phone);
+  }
+</script>
+</body>
+</html>

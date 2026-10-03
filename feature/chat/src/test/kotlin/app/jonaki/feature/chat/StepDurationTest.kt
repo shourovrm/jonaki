@@ -51,4 +51,10 @@ class StepDurationTest {
         assertEquals("Run code", stepLabel("run_code"))
         assertEquals("Delegate", stepLabel("delegate"))
     }
+
+    @Test
+    fun stepLabelKeepsAcronymsAndBrandNamesInTheirOwnCase() {
+        assertEquals("MCP", stepLabel("mcp"))
+        assertEquals("YouTube summary", stepLabel("youtube_summarize"))
+    }
 }
