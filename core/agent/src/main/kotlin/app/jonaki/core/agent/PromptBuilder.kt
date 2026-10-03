@@ -63,7 +63,13 @@ class PromptBuilder(private val basePrompt: String) {
         return "[$formatted ${now.zone.id}]\n$text"
     }
 
-    private companion object {
-        val CONTEXT_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy, HH:mm", Locale.ENGLISH)
+    companion object {
+        private val CONTEXT_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy, HH:mm", Locale.ENGLISH)
+
+        /** The "[date, time zone]" line that [userMessageWithContext] puts in front. */
+        private val CONTEXT_LINE = Regex("""^\[[^\]\n]*]\n""")
+
+        /** What the user typed, without the time line meant for the model; for every place the user reads it. */
+        fun userTextOf(storedMessage: String): String = storedMessage.replaceFirst(CONTEXT_LINE, "")
     }
 }

@@ -16,15 +16,7 @@ interface ThreadDao {
     fun observeAll(): Flow<List<ThreadEntity>>
 
     /** Each thread with the text of its latest user, assistant or error row, for the thread list. */
-    @Query(
-        "SELECT threads.*, (SELECT messages.text FROM messages WHERE messages.threadId = threads.id " +
-            "AND messages.role NOT IN ('TOOL', 'BACKGROUND') AND messages.text != '' " +
-            "ORDER BY messages.position DESC LIMIT 1) AS lastText, " +
-            "(SELECT messages.role FROM messages WHERE messages.threadId = threads.id " +
-            "AND messages.role NOT IN ('TOOL', 'BACKGROUND') ORDER BY messages.position DESC LIMIT 1) AS lastRole, " +
-            "(SELECT SUM(messages.costUsd) FROM messages WHERE messages.threadId = threads.id) AS totalCostUsd " +
-            "FROM threads ORDER BY updatedAtMillis DESC",
-    )
+    @Query(ThreadListQueries.SUMMARIES)
     fun observeSummaries(): Flow<List<ThreadSummary>>
 
     @Query("UPDATE threads SET modelKey = :modelKey WHERE id = :threadId")

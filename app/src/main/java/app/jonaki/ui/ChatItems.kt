@@ -9,6 +9,7 @@ import app.jonaki.core.storage.StepEntity
 import app.jonaki.core.storage.StepStatus
 import app.jonaki.tools.runcode.InstallNeed
 import app.jonaki.tools.runcode.InstallNeeds
+import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.SubagentGate
 import app.jonaki.core.agent.SubagentLimits
 import app.jonaki.core.agent.SubagentRunner
@@ -34,9 +35,6 @@ import kotlinx.serialization.json.contentOrNull
 object ChatItems {
     /** Id of the working line shown at the end while a run is going (D-055). */
     const val WORKING_ID = "working"
-
-    /** The "[date, time zone]" line saved in front of each user message for the model. */
-    private val timeLine = Regex("""^\[[^\]\n]*]\n""")
 
     fun build(
         rows: List<MessageEntity>,
@@ -183,7 +181,7 @@ object ChatItems {
         val turnId = turn.first().id
         val userRow = turn.first().takeIf { it.role == Role.USER.name }
         if (userRow != null) {
-            items += ChatItem.UserMessage(userRow.id, userRow.text.replaceFirst(timeLine, ""))
+            items += ChatItem.UserMessage(userRow.id, PromptBuilder.userTextOf(userRow.text))
         }
         val turnSteps = turn
             .filter { row -> row.role == Role.ASSISTANT.name }

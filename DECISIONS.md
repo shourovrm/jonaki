@@ -1515,5 +1515,13 @@ MarkdownParserTest.
 Step names: stepLabel turns a tool name into words by its first letter,
 so "mcp" read "Mcp"; two names now have fixed labels, "MCP" and "YouTube
 summary" (from youtube_summarize). Both stay in English letters in Bangla
-(D-125), so no string resource is added. Test: StepDurationTest. Outcome:
-pending.
+(D-125), so no string resource is added. Test: StepDurationTest.
+Time line: the thread list showed "[Saturday 3 October 2026, 10:43
+Asia/Dhaka]" (D-005's line for the model) in a running thread's preview.
+The summary query took the text from the newest row with text but the role
+from the newest row, which during a run is the assistant's tool call with
+no text, so the user's message was read as an answer and kept its line.
+Both now skip rows without text (ThreadListQueries.SUMMARIES). The three
+copies of the strip pattern (chat, list preview, thread name) became one,
+PromptBuilder.userTextOf, beside the code that writes the line. Tests:
+ThreadListQueriesTest, PromptBuilderTest. Outcome: pending.

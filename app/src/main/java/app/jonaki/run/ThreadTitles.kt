@@ -1,15 +1,14 @@
 package app.jonaki.run
 
+import app.jonaki.core.agent.PromptBuilder
+
 /** A new thread's name, taken from its first message until the user renames it. */
 object ThreadTitles {
-    /** Long enough for a whole question; the list wraps it (D-029). */
+    /** Long enough for a whole question; the list cuts it to one line (D-127), the chat shows it whole. */
     private const val MAX_LENGTH = 100
 
-    /** The "[date, time zone]" line saved in front of each user message for the model. */
-    private val timeLine = Regex("""^\[[^\]\n]*]\n""")
-
     fun fromMessage(text: String): String {
-        val withoutTimeLine = text.replaceFirst(timeLine, "")
+        val withoutTimeLine = PromptBuilder.userTextOf(text)
         val firstLine = withoutTimeLine.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
         if (firstLine.length <= MAX_LENGTH) {
             return firstLine
