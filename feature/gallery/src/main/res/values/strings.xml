@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gallery_recent">Recent</string>
+    <string name="gallery_collections">Collections</string>
+    <string name="gallery_add">Add</string>
+    <string name="gallery_add_count">Add %1$d</string>
+    <string name="gallery_no_photos">No photos</string>
+    <plurals name="gallery_album_count">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
+    <string name="gallery_album_no_name">Unnamed</string>
+    <string name="gallery_back">Back</string>
+    <string name="gallery_photo">Photo</string>
+    <string name="gallery_some_access">Only photos you allowed</string>
+    <string name="gallery_select_more">Select more</string>
+    <string name="gallery_open_settings">Settings</string>
+    <string name="gallery_selected_number">Selected %1$d</string>
+</resources>

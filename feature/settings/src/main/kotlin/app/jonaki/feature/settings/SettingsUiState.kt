@@ -1,6 +1,7 @@
 package app.jonaki.feature.settings
 
 import app.jonaki.core.ui.AnswerStyleChoice
+import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.ui.ThinkingChoice
 
 import androidx.compose.runtime.Immutable
@@ -35,6 +36,12 @@ data class SettingsUiState(
     val customInstructions: String = "",
     /** Saved personas, sorted by name (D-STY-3). */
     val personas: List<PersonaRowUi> = emptyList(),
+    /** When tools ask first, in every thread without its own mode (D-058). */
+    val approvalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
+    /** The model each subagent type runs on (D-065). */
+    val subagentModels: List<SubagentModelRowUi> = emptyList(),
+    /** The user's scoped models, offered for each type. */
+    val subagentModelOptions: List<ModelOptionUi> = emptyList(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -143,6 +150,10 @@ class SettingsActions(
     val onOpenMemory: () -> Unit = {},
     /** Opens the skill library (M5). */
     val onOpenSkills: () -> Unit = {},
+    /** Opens Settings > Tools, the tool group switches (plan M8 step 3). */
+    val onOpenTools: () -> Unit = {},
+    /** Opens Settings > Python (plan M8 step 4). */
+    val onOpenPython: () -> Unit = {},
     /** Opens Android's folder picker; the app keeps the picked folder. */
     val onLinkFolder: () -> Unit = {},
     val onUnlinkFolder: () -> Unit = {},
@@ -168,6 +179,9 @@ class SettingsActions(
     val onOpenCustomInstructions: () -> Unit = {},
     /** Opens a persona's editor; null opens an empty one for a new persona. */
     val onOpenPersona: (personaId: String?) -> Unit = {},
+    val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
+    /** [modelKey] null returns the type to its default. */
+    val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

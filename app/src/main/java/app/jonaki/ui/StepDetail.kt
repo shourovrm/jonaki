@@ -1,6 +1,8 @@
 package app.jonaki.ui
 
+import app.jonaki.core.runtimeapi.CodeLanguage
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -22,6 +24,10 @@ data class StepDetail(
                 "phone" -> StepDetail(query = null, target = phoneTarget(arguments))
                 "schedule" -> StepDetail(query = null, target = scheduleTarget(arguments))
                 "mcp" -> mcpDetail(arguments)
+                "delegate" -> StepDetail(query = null, target = delegateTarget(arguments))
+                "request_tool" -> StepDetail(query = null, target = arguments.text("name"))
+                "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
+                "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
@@ -76,6 +82,27 @@ data class StepDetail(
             val tool = arguments.text("tool")
             val target = if (server == null) tool else "$server: ${tool.orEmpty()}"
             return StepDetail(query = null, target = target)
+        }
+
+        /** "Python · 12 lines": the code itself is too long for one line, and its sheet shows it (D-090). */
+        private fun runCodeTarget(arguments: JsonObject): String? {
+            val code = arguments.text("code") ?: return null
+            val lineCount = programLineCount(code)
+            val lines = if (lineCount == 1) "1 line" else "$lineCount lines"
+            val language = arguments.text("language")?.let(CodeLanguage::fromArgument) ?: return lines
+            return "${language.displayName} · $lines"
+        }
+
+        /** Trailing line breaks are not lines of the program; the code sheet counts the same way. */
+        fun programLineCount(code: String): Int = code.trimEnd('\n', '\r').lines().size
+
+        /** "researcher, scout" for parallel tasks, else the one agent type. */
+        private fun delegateTarget(arguments: JsonObject): String? {
+            val tasks = arguments["tasks"] as? JsonArray
+            if (tasks != null && tasks.isNotEmpty()) {
+                return tasks.mapNotNull { task -> (task as? JsonObject)?.text("agent") }.joinToString(", ")
+            }
+            return arguments.text("agent")
         }
 
         private fun parse(argumentsJson: String): JsonObject? =

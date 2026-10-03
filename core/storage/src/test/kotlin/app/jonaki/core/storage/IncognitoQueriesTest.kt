@@ -14,7 +14,7 @@ class IncognitoQueriesTest {
 
     @Before
     fun openDatabase() {
-        connection = databases.openVersion(9)
+        connection = databases.openVersion(8)
         insertThread("secret", incognito = true, createdAtMillis = 100)
         insertThread("regular", incognito = false, createdAtMillis = 100)
         insertThread("empty", incognito = true, createdAtMillis = 500)

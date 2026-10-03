@@ -5,21 +5,16 @@ import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.providerapi.ChatRequest
-import app.jonaki.core.providerapi.StreamEvent
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.providerapi.ToolDefinition
-import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
 
 data class AgentSettings(
     val model: String,
@@ -36,7 +31,8 @@ data class AgentSettings(
  * calls, send the results back, and repeat until it answers in text. Every
  * step goes to the [recorder] as it happens. Cancelling the calling coroutine
  * is the Stop button: the partial answer is recorded, then the cancellation
- * continues to the caller.
+ * continues to the caller. Read-only calls of one turn run side by side
+ * through a [ToolCallScheduler] (D-080).
  */
 class AgentLoop(
     private val provider: ChatProvider,
@@ -47,13 +43,17 @@ class AgentLoop(
     private val settings: AgentSettings,
     /** Adds images from the thread folder before each request; null sends text only (D-049). */
     private val imageMessages: ImageMessages? = null,
+    /** Spaces web searches that run side by side; tests pass a virtual clock. */
+    waitTimer: WaitTimer = WaitTimer.REAL,
 ) {
+    private val scheduler = ToolCallScheduler(waitTimer)
+
+    // Calls running side by side record at the same time; the recorder saves one event at a time.
+    private val recorderLock = Mutex()
+
     private val toolsByName: Map<String, Tool> = tools.associateBy { tool -> tool.name }
 
-    // Sorted like the system prompt, so the request bytes stay stable for the prompt cache.
-    private val toolDefinitions: List<ToolDefinition> = tools.sortedBy { tool -> tool.name }.map { tool ->
-        ToolDefinition(name = tool.name, description = tool.promptLine, parameterSchema = tool.parameterSchema)
-    }
+    private val toolDefinitions: List<ToolDefinition> = ToolDefinitions.of(tools)
 
     suspend fun run(history: List<Message>): RunOutcome {
         val conversation = history.toMutableList()
@@ -71,7 +71,7 @@ class AgentLoop(
             }
             val answered = turn as TurnResult.Answered
             conversation += answered.message
-            recorder.record(AgentEvent.AssistantMessage(answered.message, answered.usage))
+            record(AgentEvent.AssistantMessage(answered.message, answered.usage))
 
             if (budgetUsedUp) {
                 // Tool calls are ignored here: the model was offered no tools for this turn.
@@ -82,21 +82,13 @@ class AgentLoop(
             }
 
             toolTurnsUsed += 1
-            for (toolCall in answered.message.toolCalls) {
-                conversation += runToolCall(toolCall)
-            }
+            conversation += runToolCalls(answered.message.toolCalls)
         }
     }
 
     private suspend fun finish(outcome: RunOutcome): RunOutcome {
-        recorder.record(AgentEvent.RunFinished(outcome))
+        record(AgentEvent.RunFinished(outcome))
         return outcome
-    }
-
-    private sealed interface TurnResult {
-        data class Answered(val message: Message, val usage: Usage?) : TurnResult
-
-        data class Failed(val message: String, val retryable: Boolean) : TurnResult
     }
 
     private suspend fun streamOneTurn(conversation: List<Message>, tools: List<ToolDefinition>): TurnResult {
@@ -108,59 +100,60 @@ class AgentLoop(
             maxOutputTokens = settings.maxOutputTokens,
             thinkingLevel = settings.thinkingLevel,
         )
-        val text = StringBuilder()
-        val toolCalls = mutableListOf<ToolCall>()
-        var finished: StreamEvent.Finished? = null
-        var failed: StreamEvent.Failed? = null
+        val streamedText = StringBuilder()
         try {
-            provider.stream(request).collect { event ->
-                when (event) {
-                    is StreamEvent.TextDelta -> {
-                        text.append(event.text)
-                        recorder.record(AgentEvent.TextDelta(event.text))
-                    }
-                    is StreamEvent.ReasoningDelta -> recorder.record(AgentEvent.ReasoningDelta(event.text))
-                    is StreamEvent.ToolCallReady -> toolCalls += event.toolCall
-                    is StreamEvent.Finished -> finished = event
-                    is StreamEvent.Failed -> failed = event
-                }
-            }
+            return streamTurn(
+                provider = provider,
+                request = request,
+                onTextDelta = { delta ->
+                    streamedText.append(delta)
+                    record(AgentEvent.TextDelta(delta))
+                },
+                onReasoningDelta = { delta -> record(AgentEvent.ReasoningDelta(delta)) },
+            )
         } catch (cancellation: CancellationException) {
-            recordStop(text.toString())
+            recordStop(streamedText.toString())
             throw cancellation
         }
-
-        val failure = failed
-        if (failure != null) {
-            return TurnResult.Failed(failure.message, failure.retryable)
-        }
-        val finish = finished
-            ?: return TurnResult.Failed("the model's reply stopped before it finished", retryable = true)
-        val message = Message(role = Role.ASSISTANT, text = text.toString(), toolCalls = toolCalls.toList())
-        return TurnResult.Answered(message, finish.usage)
     }
 
     private suspend fun recordStop(partialText: String) {
         // The coroutine is already cancelled; NonCancellable lets the last saves finish.
         withContext(NonCancellable) {
             if (partialText.isNotEmpty()) {
-                recorder.record(AgentEvent.AssistantMessage(Message(Role.ASSISTANT, partialText), usage = null))
+                record(AgentEvent.AssistantMessage(Message(Role.ASSISTANT, partialText), usage = null))
             }
-            recorder.record(AgentEvent.RunFinished(RunOutcome.Stopped(partialText)))
+            record(AgentEvent.RunFinished(RunOutcome.Stopped(partialText)))
         }
     }
 
-    private suspend fun runToolCall(toolCall: ToolCall): Message {
-        recorder.record(AgentEvent.ToolStarted(toolCall))
-        val output = try {
-            outputFor(toolCall)
+    private suspend fun record(event: AgentEvent) {
+        recorderLock.withLock { recorder.record(event) }
+    }
+
+    /** Stop cancels every running call of the turn; the run's stop is recorded once. */
+    private suspend fun runToolCalls(toolCalls: List<ToolCall>): List<Message> {
+        val finishedCalls = try {
+            scheduler.runAll(
+                toolCalls = toolCalls,
+                runsAlongsideOthers = { toolCall -> ToolCallScheduler.readsOnly(toolsByName[toolCall.toolName], toolCall) },
+                run = ::runToolCall,
+                inCallOrder = { toolCall, finished -> record(AgentEvent.ToolFinished(toolCall, finished.output, finished.message)) },
+            )
         } catch (cancellation: CancellationException) {
             recordStop(partialText = "")
             throw cancellation
         }
+        return finishedCalls.map { finished -> finished.message }
+    }
+
+    private class FinishedCall(val output: ToolOutput, val message: Message)
+
+    private suspend fun runToolCall(toolCall: ToolCall): FinishedCall {
+        record(AgentEvent.ToolStarted(toolCall))
+        val output = outputFor(toolCall)
         val message = Message(role = Role.TOOL, text = output.text, toolCallId = toolCall.id)
-        recorder.record(AgentEvent.ToolFinished(toolCall, output, message))
-        return message
+        return FinishedCall(output, message)
     }
 
     private suspend fun outputFor(toolCall: ToolCall): ToolOutput {
@@ -169,7 +162,7 @@ class AgentLoop(
                 "there is no tool named ${toolCall.toolName}",
                 "Available tools: ${toolsByName.keys.sorted().joinToString(", ")}.",
             )
-        val arguments = parseArguments(toolCall.argumentsJson)
+        val arguments = parseToolArguments(toolCall.argumentsJson)
             ?: return ToolOutput.error(
                 "the arguments for ${tool.name} are not a JSON object",
                 "Call ${tool.name} again with arguments that match its schema.",
@@ -180,38 +173,7 @@ class AgentLoop(
                 "Do not retry it; continue without it or ask the user what to do instead.",
             )
         }
-        return runWithTimeLimit(tool, arguments)
-    }
-
-    private suspend fun runWithTimeLimit(tool: Tool, arguments: JsonObject): ToolOutput {
-        val output = try {
-            withTimeoutOrNull(tool.timeLimit) { tool.run(arguments, toolContext) }
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (exception: Exception) {
-            return ToolOutput.error(
-                "${tool.name} failed with ${exception::class.simpleName}: ${exception.message}",
-                "Check the arguments, or try a different approach.",
-            )
-        }
-        return output ?: ToolOutput.error(
-            "${tool.name} did not finish within its time limit of ${tool.timeLimit}",
-            "Try a smaller request, or a different tool.",
-        )
-    }
-
-    private fun parseArguments(argumentsJson: String): JsonObject? {
-        // Some models send an empty string for a call without arguments.
-        if (argumentsJson.isBlank()) {
-            return JsonObject(emptyMap())
-        }
-        return try {
-            Json.parseToJsonElement(argumentsJson).jsonObject
-        } catch (exception: SerializationException) {
-            null
-        } catch (exception: IllegalArgumentException) {
-            null
-        }
+        return runToolWithTimeLimit(tool, arguments, toolContext.forCall(toolCall.id))
     }
 
     private companion object {

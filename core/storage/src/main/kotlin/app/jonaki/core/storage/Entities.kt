@@ -28,6 +28,8 @@ data class ThreadEntity(
     val disabledSkills: String = "",
     /** This thread's thinking level as a ThinkingLevel name; null follows the model's setting (D-057). */
     val thinkingLevel: String? = null,
+    /** This thread's approval mode as an ApprovalMode name; null follows Settings (D-058). */
+    val approvalMode: String? = null,
     /** This thread's answer style as an AnswerStyle name; null follows Settings (D-STY-2). */
     val answerStyle: String? = null,
     /** The persona this thread uses, an id in personas; null for none (D-STY-3). */
@@ -134,6 +136,11 @@ data class StepEntity(
     val resultText: String?,
     val startedAtMillis: Long,
     val finishedAtMillis: Long?,
+    /**
+     * The subagent that made this call (M7); null for the thread's own agent.
+     * A subagent's steps are shown in its card, not in the run's track.
+     */
+    val subagentId: String? = null,
 )
 
 enum class StepStatus {
@@ -142,6 +149,60 @@ enum class StepStatus {
     DONE,
     FAILED,
     DENIED,
+    STOPPED,
+
+    /** A subagent's approval was not answered within 3 minutes (D-015). */
+    SKIPPED,
+}
+
+/**
+ * One subagent started by a delegate call (M7, D-015). Its tool calls are
+ * steps with [StepEntity.subagentId] set; the cost of its model calls is
+ * also saved as hidden BACKGROUND message rows, so that thread, month and
+ * usage totals include it, and summed here for its card.
+ */
+@Entity(
+    tableName = "subagents",
+    foreignKeys = [
+        ForeignKey(
+            entity = ThreadEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["threadId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("threadId"), Index("parentToolCallId")],
+)
+data class SubagentEntity(
+    @PrimaryKey val id: String,
+    val threadId: String,
+    /** The delegate step that started it. */
+    val parentToolCallId: String,
+    /** Its place among the tasks of one delegate call, from 0. */
+    val orderInCall: Int,
+    /** "researcher", "scout", "writer" or "worker". */
+    val agentType: String,
+    val task: String,
+    /** "service:modelId" it runs on. */
+    val model: String?,
+    /** A [SubagentStatus] name. */
+    val status: String,
+    /** The answer it returned to the thread's agent; null while it runs. */
+    val resultText: String?,
+    /** The start of the latest text it wrote, for its folded card; null until it writes. */
+    val latestText: String? = null,
+    val costUsd: Double?,
+    val startedAtMillis: Long,
+    val finishedAtMillis: Long?,
+)
+
+enum class SubagentStatus {
+    RUNNING,
+    DONE,
+    STEP_LIMIT,
+    COST_LIMIT,
+    TIME_LIMIT,
+    FAILED,
     STOPPED,
 }
 

@@ -2,6 +2,7 @@ package app.jonaki.core.storage
 
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
+import kotlin.math.ceil
 
 /**
  * Which messages a thread's summary covers and how the summary enters the
@@ -28,8 +29,22 @@ object CompactionPlan {
         if (lastInputTokens == null) {
             return false
         }
+        return lastInputTokens >= thresholdTokens(contextWindowTokens)
+    }
+
+    /** Input tokens of a run's last request from which the thread is summarised after the run. */
+    fun thresholdTokens(contextWindowTokens: Int?): Int {
         val window = contextWindowTokens ?: ASSUMED_WINDOW_TOKENS
-        return lastInputTokens >= window * COMPACT_FROM_SHARE
+        return ceil(window * COMPACT_FROM_SHARE).toInt()
+    }
+
+    /** The summary as it is sent, at the start of the first kept message. */
+    fun summaryBlock(summaryText: String): String = "$SUMMARY_HEADING\n${summaryText.trim()}\n\n$SUMMARY_END"
+
+    /** Messages the summary covers, as the chat shows them: user and assistant rows up to [upToPosition]. */
+    fun coveredMessageCount(rows: List<MessageEntity>, upToPosition: Long): Int = rows.count { row ->
+        val isShown = row.role == Role.USER.name || row.role == Role.ASSISTANT.name
+        isShown && row.position <= upToPosition
     }
 
     /**
@@ -61,7 +76,7 @@ object CompactionPlan {
             return HistoryMapper.toHistory(rows)
         }
         val history = HistoryMapper.toHistory(rows.filter { row -> row.position > upToPosition }).toMutableList()
-        val summaryBlock = "$SUMMARY_HEADING\n${summaryText.trim()}\n\n$SUMMARY_END"
+        val summaryBlock = summaryBlock(summaryText)
         val first = history.firstOrNull()
         if (first == null || first.role != Role.USER) {
             history.add(0, Message(Role.USER, summaryBlock))

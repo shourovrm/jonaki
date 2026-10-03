@@ -6,7 +6,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Runs Room's generated 8 to 9 migration (projects and incognito chat, D-PRJ-1 and D-PRJ-2). */
+/** Runs Room's generated 7 to 8 migration for projects and incognito chat (D-PRJ-1, D-PRJ-2). */
 class ProjectsAndIncognitoMigrationTest {
     private val databases = MigrationTestDatabases()
 
@@ -15,8 +15,8 @@ class ProjectsAndIncognitoMigrationTest {
         databases.closeAll()
     }
 
-    private fun openVersion8WithData(): SQLiteConnection {
-        val connection = databases.openVersion(8)
+    private fun openVersion7WithData(): SQLiteConnection {
+        val connection = databases.openVersion(7)
         MemorySearchIndex.create(connection)
         connection.execSQL(
             "INSERT INTO threads (id, title, createdAtMillis, updatedAtMillis, webSearchEnabled, toolsAllowedForThread, " +
@@ -28,9 +28,9 @@ class ProjectsAndIncognitoMigrationTest {
 
     @Test
     fun existingThreadsAreRegularAndWithoutAProject() {
-        val connection = openVersion8WithData()
+        val connection = openVersion7WithData()
 
-        JonakiDatabase_AutoMigration_8_9_Impl().migrate(connection)
+        JonakiDatabase_AutoMigration_7_8_Impl().migrate(connection)
 
         assertEquals(
             listOf("t1|HIGH|null|0"),
@@ -41,9 +41,9 @@ class ProjectsAndIncognitoMigrationTest {
 
     @Test
     fun upgradedDatabaseHasTheSameTablesAsAFreshOne() {
-        val upgraded = openVersion8WithData()
-        JonakiDatabase_AutoMigration_8_9_Impl().migrate(upgraded)
-        val fresh = databases.openVersion(9)
+        val upgraded = openVersion7WithData()
+        JonakiDatabase_AutoMigration_7_8_Impl().migrate(upgraded)
+        val fresh = databases.openVersion(8)
         MemorySearchIndex.create(fresh)
 
         assertEquals(databases.describeTables(fresh), databases.describeTables(upgraded))

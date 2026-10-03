@@ -25,6 +25,12 @@ import androidx.compose.ui.res.stringResource
 import app.jonaki.JonakiApplication
 import app.jonaki.R
 import app.jonaki.core.agent.ApprovalDecision
+import app.jonaki.core.agent.AgentTypes
+import app.jonaki.core.agent.ApprovalMode
+import app.jonaki.feature.settings.ModelOptionUi
+import app.jonaki.feature.settings.SubagentModelRowUi
+import app.jonaki.settings.SubagentModelChoice
+import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
@@ -42,6 +48,7 @@ import app.jonaki.files.CameraPhotos
 import app.jonaki.files.RefusedFile
 import app.jonaki.feature.chat.ChatScreen
 import app.jonaki.feature.chat.ChatStatusUi
+import app.jonaki.feature.chat.ContextUi
 import app.jonaki.feature.chat.ChatUiState
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
@@ -78,6 +85,7 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.ThemeChoice
+import app.jonaki.settings.ToolPicker
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
@@ -91,6 +99,8 @@ import kotlinx.coroutines.withContext
 private const val ROUTE_THREADS = "threads"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_STATUS_ICONS = "status-icons"
+private const val ROUTE_TOOLS = "tools"
+private const val ROUTE_PYTHON = "python"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
 private const val ROUTE_MEMORY = "memory"
@@ -143,6 +153,10 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             )
             return@JonakiTheme
         }
+        if (ToolPicker.shouldShow(settingsSnapshot.toolPickerSeenVersion)) {
+            ToolPickerRoute(application)
+            return@JonakiTheme
+        }
         when {
             route == ROUTE_SETTINGS -> {
                 BackHandler { route = ROUTE_THREADS }
@@ -153,6 +167,8 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
+                    onOpenTools = { route = ROUTE_TOOLS },
+                    onOpenPython = { route = ROUTE_PYTHON },
                     onOpenCustomInstructions = { route = ROUTE_CUSTOM_INSTRUCTIONS },
                     onOpenPersona = { personaId -> route = ROUTE_PERSONA_PREFIX + personaId.orEmpty() },
                 )
@@ -168,6 +184,14 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     personaId = route.removePrefix(ROUTE_PERSONA_PREFIX).ifEmpty { null },
                     onBack = { route = ROUTE_SETTINGS },
                 )
+            }
+            route == ROUTE_TOOLS -> {
+                BackHandler { route = ROUTE_SETTINGS }
+                ToolsRoute(application, onBack = { route = ROUTE_SETTINGS })
+            }
+            route == ROUTE_PYTHON -> {
+                BackHandler { route = ROUTE_SETTINGS }
+                PythonRoute(application, onBack = { route = ROUTE_SETTINGS })
             }
             route == ROUTE_SKILLS || route.startsWith(ROUTE_SKILLS_THREAD_PREFIX) -> {
                 val skillsThreadId = if (route == ROUTE_SKILLS) null else route.removePrefix(ROUTE_SKILLS_THREAD_PREFIX)
@@ -438,6 +462,9 @@ private fun ChatRoute(
     val lastInputTokens by remember(threadId) {
         if (isNew) flowOf(null) else database.messageDao().observeLastInputTokens(threadId)
     }.collectAsState(initial = null)
+    val subagents by remember(threadId) {
+        if (isNew) flowOf(emptyList()) else database.subagentDao().observeThread(threadId)
+    }.collectAsState(initial = emptyList())
     val modelUsage by remember(threadId) {
         if (isNew) flowOf(emptyList()) else database.messageDao().observeModelUsage(threadId)
     }.collectAsState(initial = emptyList())
@@ -464,6 +491,7 @@ private fun ChatRoute(
             photo.delete()
         }
     }
+    val pickPhotos = rememberPhotosChoice(threadId, application)
     LaunchedEffect(threadId, sharedTexts[threadId]) {
         val sharedText = application.incomingShares.takeText(threadId) ?: return@LaunchedEffect
         draft = if (draft.isBlank()) sharedText else draft.trimEnd() + "\n\n" + sharedText
@@ -476,6 +504,12 @@ private fun ChatRoute(
     // Style, persona and instructions picked before the first message, like the thinking level above.
     var styleForNewThread by rememberSaveable(threadId, stateSaver = ThreadStyleDraftSaver) { mutableStateOf(ThreadStyleDraft()) }
     var styleSheetOpen by rememberSaveable(threadId) { mutableStateOf(false) }
+    // Worked out each time the ring pill is tapped, so the sheet matches the thread at that moment (D-081).
+    var contextUi by remember(threadId) { mutableStateOf<ContextUi?>(null) }
+    // The run_code step whose code sheet is open (D-090); saved so the sheet survives rotation.
+    var openCodeStepId by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
+    val codeRun by codeRunOf(application, threadId, steps.firstOrNull { step -> step.toolCallId == openCodeStepId })
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     DisposableEffect(threadId) {
@@ -488,7 +522,13 @@ private fun ChatRoute(
     }
 
     val isRunning = threadId in running
-    val pending = approvals[threadId]
+    val pending = approvals[threadId].orEmpty()
+    val tryAgainText = stringResource(R.string.python_try_again_message)
+    val pythonCards = rememberPythonCardHooks(application, threadId) {
+        if (!isNew) {
+            runner.send(threadId, tryAgainText)
+        }
+    }
     val webSearchEnabled = thread?.webSearchEnabled ?: !settingsSnapshot.webSearchOffInNewThreads
     val modelKey = (if (isNew) modelForNewThread ?: newThreadProjectModel else null) ?: runner.modelKeyFor(thread)
     val modelInfo = modelKey?.let(catalog::find)
@@ -499,6 +539,7 @@ private fun ChatRoute(
             contextWindowTokens = modelInfo?.contextWindowTokens,
             contextUsedTokens = lastInputTokens ?: 0,
             costUsd = threadCost ?: 0.0,
+            bypassApprovals = !isNew && runner.approvalModeFor(thread) == ApprovalMode.BYPASS,
         )
     } else {
         null
@@ -511,8 +552,10 @@ private fun ChatRoute(
             rows = messages,
             steps = steps,
             isRunning = isRunning,
-            pendingApproval = pending?.toolCall,
+            pendingApprovals = pending,
             fallbackNote = stringResource(R.string.routing_fallback_note),
+            subagents = subagents,
+            pythonCard = pythonCards.cardFor,
         ),
         isRunning = isRunning,
         draft = draft,
@@ -528,7 +571,12 @@ private fun ChatRoute(
             thinkingChoiceOf(ThinkingLevel.entries.firstOrNull { level -> level.name == thread?.thinkingLevel })
         },
         incognito = if (isNew) isNewIncognito else thread?.incognito == true,
+        threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
+        defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
+        context = contextUi,
+        codeRun = codeRun.takeIf { openCodeStepId != null },
     )
+    val contextWindowTokens = modelInfo?.contextWindowTokens
     ChatScreen(
         state = state,
         onBack = onBack,
@@ -572,6 +620,17 @@ private fun ChatRoute(
             }
         },
         onStop = { runner.stop(threadId) },
+        onOpenContext = if (isNew || contextWindowTokens == null) {
+            null
+        } else {
+            {
+                contextUi = null
+                scope.launch {
+                    val breakdown = runner.contextBreakdown(threadId) ?: return@launch
+                    contextUi = ContextSheetState.of(breakdown, lastInputTokens, contextWindowTokens)
+                }
+            }
+        },
         onEditMessage = { messageId, text ->
             editingMessageId = messageId
             draft = text
@@ -583,11 +642,16 @@ private fun ChatRoute(
                 scope.launch { runner.setThreadThinking(threadId, thinkingLevelOf(choice)) }
             }
         },
+        onApprovalModeChange = { choice ->
+            if (!isNew) {
+                scope.launch { runner.setThreadApprovalMode(threadId, choice?.let(::approvalModeOf)) }
+            }
+        },
         onCancelEdit = {
             editingMessageId = null
             draft = ""
         },
-        onApprovalChoice = { _, choice -> runner.answerApproval(threadId, decisionOf(choice)) },
+        onApprovalChoice = { approvalId, choice -> runner.answerApproval(threadId, approvalId, decisionOf(choice)) },
         onRetry = { runner.retry(threadId) },
         onWebSearchChange = { enabled ->
             if (!isNew) {
@@ -608,6 +672,7 @@ private fun ChatRoute(
         onOpenArtifact = onOpenArtifact,
         focusMessageId = focusMessageId,
         onAttach = { filePicker.launch(arrayOf("*/*")) },
+        onPickPhotos = pickPhotos,
         onTakePhoto = {
             val photo = CameraPhotos.newFile(application)
             pendingPhotoPath = photo.path
@@ -618,10 +683,14 @@ private fun ChatRoute(
                 Toast.makeText(application, R.string.files_no_camera, Toast.LENGTH_LONG).show()
             }
         },
-        onKeepThread = { scope.launch { runner.keepIncognitoThread(threadId) } },
+        onOpenStep = { stepId -> openCodeStepId = stepId },
+        onCloseCodeRun = { openCodeStepId = null },
+        onOpenFile = { path -> openSavedFile(context, runner.threadFolder(threadId), path, onOpenArtifact) },
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
+        onPythonCard = pythonCards.onAction,
+        onKeepThread = { scope.launch { runner.keepIncognitoThread(threadId) } },
         onOpenStyle = { styleSheetOpen = true },
     )
     if (styleSheetOpen) {
@@ -711,6 +780,8 @@ private fun SettingsRoute(
     onOpenSkills: () -> Unit,
     onOpenCustomInstructions: () -> Unit,
     onOpenPersona: (personaId: String?) -> Unit,
+    onOpenTools: () -> Unit,
+    onOpenPython: () -> Unit,
 ) {
     val personas by remember { application.database.personaDao().observeAll() }.collectAsState(initial = emptyList())
     val settings = application.settings
@@ -770,6 +841,17 @@ private fun SettingsRoute(
         answerStyle = answerStyleChoiceOf(snapshot.answerStyle),
         customInstructions = snapshot.customInstructions,
         personas = personaRowsOf(personas),
+        approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
+        subagentModels = AgentTypes.ALL.map { type ->
+            SubagentModelRowUi(
+                agentType = type.name,
+                selectedKey = snapshot.subagentModels[type.name]?.takeIf { key -> key in snapshot.chatModels.allModelKeys },
+                defaultIsCheapest = type.name == SubagentModelChoice.SCOUT,
+            )
+        },
+        subagentModelOptions = snapshot.chatModels.allModelKeys.map { key ->
+            ModelOptionUi(key, application.catalog.find(key)?.displayName ?: ModelKey.modelOf(key))
+        },
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -786,6 +868,8 @@ private fun SettingsRoute(
         onOpenStatusIcons = onOpenStatusIcons,
         onOpenMemory = onOpenMemory,
         onOpenSkills = onOpenSkills,
+        onOpenTools = onOpenTools,
+        onOpenPython = onOpenPython,
         onLinkFolder = { folderPicker.launch(null) },
         onUnlinkFolder = { application.linkedFolder.unlink() },
         onCancelScheduled = { itemId -> cancelScheduled(application, itemId) },
@@ -811,6 +895,13 @@ private fun SettingsRoute(
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
         },
         onModelRemove = { modelKey -> settings.updateChatModels { models -> models.removeModel(modelKey) } },
+        onSubagentModelChange = { agentType, modelKey ->
+            settings.update { current ->
+                val choices = if (modelKey == null) current.subagentModels - agentType else current.subagentModels + (agentType to modelKey)
+                current.copy(subagentModels = choices)
+            }
+        },
+        onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },
         onModelThinkingChange = { modelKey, choice ->
             settings.update { current ->
                 val level = thinkingLevelOf(choice)
@@ -989,7 +1080,20 @@ private fun routingUiOf(routing: OpenRouterRouting): RoutingUi = when (routing) 
 private fun decisionOf(choice: ApprovalChoice): ApprovalDecision = when (choice) {
     ApprovalChoice.ALLOW_ONCE -> ApprovalDecision.ALLOW_ONCE
     ApprovalChoice.ALLOW_FOR_THREAD -> ApprovalDecision.ALLOW_FOR_THREAD
+    ApprovalChoice.ALLOW_FOR_TASK -> ApprovalDecision.ALLOW_FOR_TASK
     ApprovalChoice.DENY -> ApprovalDecision.DENY
+}
+
+private fun approvalChoiceOf(mode: ApprovalMode): ApprovalModeChoice = when (mode) {
+    ApprovalMode.ASK -> ApprovalModeChoice.ASK
+    ApprovalMode.AUTO -> ApprovalModeChoice.AUTO
+    ApprovalMode.BYPASS -> ApprovalModeChoice.BYPASS
+}
+
+private fun approvalModeOf(choice: ApprovalModeChoice): ApprovalMode = when (choice) {
+    ApprovalModeChoice.ASK -> ApprovalMode.ASK
+    ApprovalModeChoice.AUTO -> ApprovalMode.AUTO
+    ApprovalModeChoice.BYPASS -> ApprovalMode.BYPASS
 }
 
 private fun themeModeOf(choice: ThemeChoice): ThemeMode = when (choice) {

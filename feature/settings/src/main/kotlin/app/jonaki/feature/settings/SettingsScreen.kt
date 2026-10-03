@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.ApprovalModeOptions
 import app.jonaki.core.ui.ThemeMode
 import androidx.compose.ui.text.style.TextOverflow
 import app.jonaki.core.ui.MonospaceFamily
@@ -79,6 +80,26 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions, modifier: M
                 KeyField(stringResource(R.string.settings_gemini_key), state.geminiKey, actions)
             }
             SearchSection(state, actions)
+            SectionLabel(stringResource(R.string.settings_section_approvals))
+            Group {
+                ApprovalModeOptions(
+                    selected = state.approvalMode,
+                    onSelect = { choice -> if (choice != null) actions.onApprovalModeChange(choice) },
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
+            }
+            if (state.subagentModels.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.settings_section_subagents))
+                Group {
+                    SubagentModelRows(state.subagentModels, state.subagentModelOptions, actions.onSubagentModelChange)
+                }
+            }
+            SectionLabel(stringResource(R.string.settings_section_tools))
+            Group {
+                NavigationRow(stringResource(R.string.settings_tools), onClick = actions.onOpenTools)
+                GroupDivider()
+                NavigationRow(stringResource(R.string.settings_python), onClick = actions.onOpenPython)
+            }
             SectionLabel(stringResource(R.string.settings_section_memory))
             Group {
                 NavigationRow(stringResource(R.string.settings_memory_open), onClick = actions.onOpenMemory)

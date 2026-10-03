@@ -49,4 +49,16 @@ class StepDetailTest {
         assertEquals("deepwiki: ask_wiki_question", StepDetail.of("mcp", """{"action":"call","server":"deepwiki","tool":"ask_wiki_question"}""").target)
         assertEquals("wiki pages", StepDetail.of("mcp", """{"action":"search","query":"wiki pages"}""").query)
     }
+
+    @Test
+    fun runCodeShowsTheLanguageAndLineCount() {
+        val python = StepDetail.of("run_code", """{"language":"python","code":"import math\nprint(math.pi)\n"}""")
+        val oneLine = StepDetail.of("run_code", """{"language":"js","code":"6 * 7"}""")
+        val unknownLanguage = StepDetail.of("run_code", """{"language":"ruby","code":"puts 1\nputs 2"}""")
+
+        assertEquals("Python · 2 lines", python.target)
+        assertEquals("JavaScript · 1 line", oneLine.target)
+        assertEquals("2 lines", unknownLanguage.target)
+        assertEquals(null, StepDetail.of("run_code", """{"language":"python"}""").target)
+    }
 }

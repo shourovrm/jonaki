@@ -149,13 +149,19 @@ object JonakiTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalJonakiColors.current
+
+    val codeColors: CodeColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalCodeColors.current
 }
 
 @Composable
 fun JonakiTheme(themeMode: ThemeMode = ThemeMode.SYSTEM, content: @Composable () -> Unit) {
     val dark = resolvesToDark(themeMode)
     val extras = if (dark) darkExtras else lightExtras
-    CompositionLocalProvider(LocalJonakiColors provides extras) {
+    val codeColors = if (dark) darkCodeColors else lightCodeColors
+    CompositionLocalProvider(LocalJonakiColors provides extras, LocalCodeColors provides codeColors) {
         MaterialTheme(
             colorScheme = if (dark) darkScheme else lightScheme,
             shapes = jonakiShapes,

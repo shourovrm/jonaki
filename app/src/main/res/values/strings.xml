@@ -22,5 +22,8 @@
     <string name="scheduled_kind_daily">Daily</string>
     <string name="scheduled_kind_weekly">Weekly</string>
     <string name="scheduled_item_detail">%1$s · %2$s</string>
+    <string name="files_open_missing">File not found</string>
+    <string name="files_open_no_app">No app can open this file</string>
     <string name="routing_fallback_note">No private provider for this model; used the cheapest.</string>
+    <string name="python_try_again_message">Installed. Try again.</string>
 </resources>

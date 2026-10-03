@@ -15,6 +15,7 @@ sqlite-bundled = "2.5.2"
 pdfbox-android = "2.0.27.0"
 # WorkManager for scheduled tasks (plan M9); its AAR asks for compileSdk 35 at least.
 work = "2.10.5"
+javascriptengine = "1.1.1"
 
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
@@ -36,3 +37,4 @@ sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sql
 sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite-bundled" }
 pdfbox-android = { module = "com.tom-roush:pdfbox-android", version.ref = "pdfbox-android" }
 work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
+javascriptengine = { module = "androidx.javascriptengine:javascriptengine", version.ref = "javascriptengine" }

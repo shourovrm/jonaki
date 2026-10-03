@@ -5,6 +5,9 @@ import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.files.AndroidFileDestinations
 import app.jonaki.files.AttachmentDrafts
+import app.jonaki.files.MediaStorePhotoLibrary
+import app.jonaki.files.MediaThumbnails
+import app.jonaki.feature.gallery.GallerySource
 import app.jonaki.files.IncomingShares
 import app.jonaki.files.LinkedFolder
 import app.jonaki.files.VisibleActivity
@@ -19,6 +22,9 @@ import app.jonaki.schedule.ThreadTaskScheduler
 import app.jonaki.run.AgentRunner
 import app.jonaki.run.BackgroundModel
 import app.jonaki.run.ChatProviders
+import app.jonaki.run.CodeRuntimes
+import app.jonaki.run.PythonSetup
+import app.jonaki.runtimes.pyodide.PyodideInstaller
 import app.jonaki.run.ThreadCompactor
 import app.jonaki.run.ThreadTitles
 import app.jonaki.core.model.Role
@@ -102,6 +108,15 @@ class JonakiApplication : Application() {
     lateinit var scheduledTasks: ScheduledTasks
         private set
 
+    /** Installs and removes Python for Settings > Python, the tool picker and the chat's install card (M8). */
+    lateinit var python: PythonSetup
+        private set
+
+    /** The phone's photos for the composer's gallery sheet, with one thumbnail cache for the app's life (D-085). */
+    val gallerySource: GallerySource by lazy {
+        GallerySource(MediaStorePhotoLibrary(contentResolver), MediaThumbnails(contentResolver))
+    }
+
     override fun onCreate() {
         super.onCreate()
         // read_document's PDF reading needs PdfBox's font and glyph tables from the assets (D-051).
@@ -145,15 +160,22 @@ class JonakiApplication : Application() {
             threadCompactor,
             skillLibrary,
             AndroidFileDestinations(this, visibleActivity, linkedFolder),
+            backgroundModel,
             AndroidPhone(this, permissions, visibleActivity, reminders),
             taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, permissions) },
             mcpServers = mcpServers,
         )
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
+        val pythonFolder = CodeRuntimes.pythonFolder(this)
+        python = PythonSetup(pythonFolder, PyodideInstaller(pythonFolder, httpClient), applicationScope)
+        applicationScope.launch {
+            python.refresh()
+        }
         applicationScope.launch {
             // A run cannot survive a killed process; mark what it left half-done.
             database.messageDao().closeInterrupted()
             database.stepDao().stopInterrupted()
+            database.subagentDao().stopInterrupted()
         }
         applicationScope.launch {
             // Incognito threads go a day after their last message; the thread list checks again (D-PRJ-2).

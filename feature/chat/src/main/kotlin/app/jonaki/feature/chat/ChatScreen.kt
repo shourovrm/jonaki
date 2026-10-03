@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -26,10 +27,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -42,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -61,11 +65,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.ApprovalModeChoice
+import app.jonaki.core.ui.ApprovalModeOptions
 import app.jonaki.core.ui.JonakiIcons
+import app.jonaki.core.ui.approvalModeLabel
 import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MarkdownText
@@ -96,10 +104,12 @@ fun ChatScreen(
     onOpenArtifact: (path: String) -> Unit = {},
     /** A message to show first instead of the end, when opened from a memory fact's source. */
     focusMessageId: String? = null,
-    /** The paper clip: the app opens the system file picker. */
+    /** Files in the + sheet: the app opens the system file picker. */
     onAttach: () -> Unit = {},
-    /** The camera button: the app opens the system camera app. */
+    /** Camera in the + sheet: the app opens the system camera app. */
     onTakePhoto: () -> Unit = {},
+    /** Photos in the + sheet: the app opens its gallery, or the system photo picker without access (D-086). */
+    onPickPhotos: () -> Unit = {},
     /** The close mark on an attachment chip. */
     onRemoveAttachment: (attachmentId: String) -> Unit = {},
     /** Edit under a sent prompt: the app puts its text in the field and marks it as editing. */
@@ -112,6 +122,17 @@ fun ChatScreen(
     onOpenStyle: () -> Unit = {},
     /** Keep on the incognito banner: the thread becomes a regular one (D-PRJ-2). */
     onKeepThread: () -> Unit = {},
+    /** An approval mode picked for this thread in the menu; null follows Settings (D-058). */
+    onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
+    /** The ring pill: the app works out [ChatUiState.context] for the sheet; null leaves the pill without a tap. */
+    onOpenContext: (() -> Unit)? = null,
+    /** A run_code step was tapped: the app fills [ChatUiState.codeRun] for the code sheet (D-090). */
+    onOpenStep: (stepId: String) -> Unit = {},
+    onCloseCodeRun: () -> Unit = {},
+    /** A file the program saved was tapped in the code sheet. */
+    onOpenFile: (path: String) -> Unit = {},
+    /** A button on the Python install card (plan M8 step 4). */
+    onPythonCard: (card: ChatItem.PythonInstall, action: PythonCardAction) -> Unit = { _, _ -> },
 ) {
     // Which sheet is open is screen-local: it needs no data the app doesn't already pass in.
     var openSheet by rememberSaveable { mutableStateOf(ChatSheet.NONE) }
@@ -120,7 +141,16 @@ fun ChatScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             Column {
-                ChatTopBar(state, onBack, onWebSearchChange, onRename, onOpenMemory, onOpenSkills, onOpenStyle)
+                ChatTopBar(
+                    state = state,
+                    onBack = onBack,
+                    onWebSearchChange = onWebSearchChange,
+                    onRename = onRename,
+                    onOpenMemory = onOpenMemory,
+                    onOpenSkills = onOpenSkills,
+                    onOpenApprovals = { openSheet = ChatSheet.APPROVALS },
+                    onOpenStyle = onOpenStyle,
+                )
                 if (state.incognito) {
                     // A thread that has no message yet does not exist, so there is nothing to keep.
                     IncognitoBanner(onKeep = if (state.title.isNotBlank()) onKeepThread else null)
@@ -136,6 +166,12 @@ fun ChatScreen(
                         isRunning = state.isRunning,
                         onModelClick = { openSheet = ChatSheet.MODEL },
                         onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
+                        onContextClick = onOpenContext?.let { openContext ->
+                            {
+                                openSheet = ChatSheet.CONTEXT
+                                openContext()
+                            }
+                        },
                     )
                 }
                 if (state.attachments.isNotEmpty()) {
@@ -153,6 +189,7 @@ fun ChatScreen(
                     onStop = onStop,
                     onAttach = onAttach,
                     onTakePhoto = onTakePhoto,
+                    onPickPhotos = onPickPhotos,
                 )
             }
         },
@@ -165,11 +202,18 @@ fun ChatScreen(
                     onRetry = onRetry,
                     focusMessageId = focusMessageId,
                     onOpenArtifact = onOpenArtifact,
+                    onOpenStep = onOpenStep,
                     // Editing while the agent works would change the history under the run.
                     onEditMessage = if (state.isRunning) null else onEditMessage,
+                    onPythonCard = onPythonCard,
+                    canTryAgain = !state.isRunning,
                 )
             }
         }
+    }
+    val codeRun = state.codeRun
+    if (codeRun != null) {
+        CodeRunSheet(codeRun, onOpenFile = onOpenFile, onDismiss = onCloseCodeRun)
     }
     val usage = state.usage
     when {
@@ -189,6 +233,16 @@ fun ChatScreen(
             onDismiss = { openSheet = ChatSheet.NONE },
         )
         openSheet == ChatSheet.USAGE && usage != null -> UsageSheet(usage, onDismiss = { openSheet = ChatSheet.NONE })
+        openSheet == ChatSheet.CONTEXT -> ContextSheet(state.context, onDismiss = { openSheet = ChatSheet.NONE })
+        openSheet == ChatSheet.APPROVALS -> ApprovalModeDialog(
+            selected = state.threadApprovalMode,
+            defaultChoice = state.defaultApprovalMode,
+            onSelect = { choice ->
+                openSheet = ChatSheet.NONE
+                onApprovalModeChange(choice)
+            },
+            onDismiss = { openSheet = ChatSheet.NONE },
+        )
     }
 }
 
@@ -196,6 +250,28 @@ private enum class ChatSheet {
     NONE,
     MODEL,
     USAGE,
+    APPROVALS,
+    CONTEXT,
+}
+
+/** Follow Settings, or this thread's own mode (D-058). */
+@Composable
+private fun ApprovalModeDialog(
+    selected: ApprovalModeChoice?,
+    defaultChoice: ApprovalModeChoice,
+    onSelect: (ApprovalModeChoice?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.chat_approvals_title)) },
+        text = { ApprovalModeOptions(selected = selected, onSelect = onSelect, defaultChoice = defaultChoice) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.chat_approvals_close))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -207,6 +283,7 @@ private fun ChatTopBar(
     onRename: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenApprovals: () -> Unit,
     onOpenStyle: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -268,6 +345,20 @@ private fun ChatTopBar(
                                 onOpenSkills()
                             },
                         )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.chat_menu_approvals)) },
+                            trailingIcon = {
+                                Text(
+                                    approvalModeLabel(state.threadApprovalMode ?: state.defaultApprovalMode),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onOpenApprovals()
+                            },
+                        )
                     }
                     // Shown before the first message too, so a new thread can start with a persona.
                     DropdownMenuItem(
@@ -290,7 +381,10 @@ private fun MessageList(
     onRetry: (String) -> Unit,
     focusMessageId: String?,
     onOpenArtifact: (path: String) -> Unit,
+    onOpenStep: (stepId: String) -> Unit,
     onEditMessage: ((messageId: String, text: String) -> Unit)?,
+    onPythonCard: (ChatItem.PythonInstall, PythonCardAction) -> Unit,
+    canTryAgain: Boolean,
 ) {
     val listState = rememberLazyListState()
     // Follow the stream only while the user is at the bottom; scrolling up to
@@ -343,11 +437,13 @@ private fun MessageList(
                 }
                 is ChatItem.Reasoning -> ReasoningBlock(item)
                 is ChatItem.Working -> WorkingRow(item)
-                is ChatItem.Run -> RunBlock(item)
+                is ChatItem.Run -> RunBlock(item, onOpenStep)
+                is ChatItem.Subagent -> SubagentCard(item, onOpenStep)
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
+                is ChatItem.PythonInstall -> PythonInstallCard(item, canTryAgain, onPythonCard)
             }
         }
     }
@@ -361,6 +457,7 @@ private fun contentLength(item: ChatItem?): Int = when (item) {
     is ChatItem.AssistantMessage -> item.markdown.length
     is ChatItem.Reasoning -> item.text.length
     is ChatItem.Run -> item.steps.size
+    is ChatItem.Subagent -> item.steps.size + item.latestText.orEmpty().length
     else -> 0
 }
 
@@ -394,8 +491,14 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
+                val agentLabel = approval.agentLabel
+                val title = if (agentLabel == null) {
+                    stringResource(R.string.chat_approval_title, approval.toolName)
+                } else {
+                    stringResource(R.string.chat_approval_title_subagent, agentLabel.replaceFirstChar { it.uppercase() }, approval.toolName)
+                }
                 Text(
-                    stringResource(R.string.chat_approval_title, approval.toolName),
+                    title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -416,14 +519,18 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                 ) {
                     Text(stringResource(R.string.chat_approval_once))
                 }
+                // A subagent's allowance lasts for its task; the thread's own agent's for the thread (D-062).
+                val isSubagent = approval.agentLabel != null
                 FilledTonalButton(
-                    onClick = { onChoice(approval.id, ApprovalChoice.ALLOW_FOR_THREAD) },
+                    onClick = {
+                        onChoice(approval.id, if (isSubagent) ApprovalChoice.ALLOW_FOR_TASK else ApprovalChoice.ALLOW_FOR_THREAD)
+                    },
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = onContainer.copy(alpha = 0.12f),
                         contentColor = onContainer,
                     ),
                 ) {
-                    Text(stringResource(R.string.chat_approval_thread))
+                    Text(stringResource(if (isSubagent) R.string.chat_approval_task else R.string.chat_approval_thread))
                 }
                 TextButton(
                     onClick = { onChoice(approval.id, ApprovalChoice.DENY) },
@@ -504,24 +611,20 @@ private fun Composer(
     onStop: () -> Unit,
     onAttach: () -> Unit,
     onTakePhoto: () -> Unit,
+    onPickPhotos: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Local to the composer, like the sheet it opens: nothing outside needs to know it is open.
+    var addSheetOpen by rememberSaveable { mutableStateOf(false) }
     Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier) {
         Row(
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
         ) {
-            IconButton(onClick = onAttach, modifier = Modifier.size(52.dp)) {
+            IconButton(onClick = { addSheetOpen = true }, modifier = Modifier.size(52.dp)) {
                 Icon(
-                    JonakiIcons.AttachFile,
+                    Icons.Filled.Add,
                     contentDescription = stringResource(R.string.chat_attach),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onTakePhoto, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    JonakiIcons.PhotoCamera,
-                    contentDescription = stringResource(R.string.chat_take_photo),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -555,6 +658,72 @@ private fun Composer(
                     Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
                 }
             }
+        }
+    }
+    if (addSheetOpen) {
+        // Each choice closes the sheet first, so the picker or gallery it opens is not stacked under it.
+        AddSheet(
+            onCamera = {
+                addSheetOpen = false
+                onTakePhoto()
+            },
+            onPhotos = {
+                addSheetOpen = false
+                onPickPhotos()
+            },
+            onFiles = {
+                addSheetOpen = false
+                onAttach()
+            },
+            onDismiss = { addSheetOpen = false },
+        )
+    }
+}
+
+/** The + button's choices, like ChatGPT's: Camera, Photos and Files side by side (D-085). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddSheet(
+    onCamera: () -> Unit,
+    onPhotos: () -> Unit,
+    onFiles: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+        ) {
+            AddChoice(JonakiIcons.PhotoCamera, stringResource(R.string.chat_add_camera), onCamera, Modifier.weight(1f))
+            AddChoice(JonakiIcons.PhotoLibrary, stringResource(R.string.chat_add_photos), onPhotos, Modifier.weight(1f))
+            AddChoice(JonakiIcons.AttachFile, stringResource(R.string.chat_add_files), onFiles, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun AddChoice(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

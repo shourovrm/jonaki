@@ -48,6 +48,9 @@ interface ThreadDao {
     @Query("UPDATE threads SET thinkingLevel = :thinkingLevel WHERE id = :threadId")
     suspend fun setThinkingLevel(threadId: String, thinkingLevel: String?)
 
+    @Query("UPDATE threads SET approvalMode = :approvalMode WHERE id = :threadId")
+    suspend fun setApprovalMode(threadId: String, approvalMode: String?)
+
     @Query("UPDATE threads SET webSearchEnabled = :enabled WHERE id = :threadId")
     suspend fun setWebSearchEnabled(threadId: String, enabled: Boolean)
 
@@ -169,6 +172,10 @@ interface MessageDao {
     /** Source messages of memory facts, for the memory screen. */
     @Query("SELECT * FROM messages WHERE id IN (:messageIds)")
     suspend fun findAll(messageIds: List<String>): List<MessageEntity>
+
+    /** The full result the model got for one tool call; the step row keeps only a preview. */
+    @Query("SELECT * FROM messages WHERE toolCallId = :toolCallId AND role = 'TOOL' LIMIT 1")
+    suspend fun findToolResult(toolCallId: String): MessageEntity?
 }
 
 data class ModelUsageRow(
@@ -188,6 +195,9 @@ interface StepDao {
     @Query("SELECT * FROM steps WHERE toolCallId = :toolCallId")
     suspend fun find(toolCallId: String): StepEntity?
 
+    @Query("SELECT * FROM steps WHERE subagentId = :subagentId ORDER BY startedAtMillis")
+    suspend fun listOfSubagent(subagentId: String): List<StepEntity>
+
     @Upsert
     suspend fun upsert(step: StepEntity)
 
@@ -197,6 +207,38 @@ interface StepDao {
 
     @Query("DELETE FROM steps WHERE toolCallId IN (:toolCallIds)")
     suspend fun deleteAll(toolCallIds: List<String>)
+
+    /** The steps of the subagents that the delegate calls [parentToolCallIds] started. */
+    @Query(
+        "DELETE FROM steps WHERE subagentId IN " +
+            "(SELECT id FROM subagents WHERE parentToolCallId IN (:parentToolCallIds))",
+    )
+    suspend fun deleteOfSubagentsUnder(parentToolCallIds: List<String>)
+}
+
+@Dao
+interface SubagentDao {
+    @Query("SELECT * FROM subagents WHERE threadId = :threadId ORDER BY startedAtMillis, orderInCall")
+    fun observeThread(threadId: String): Flow<List<SubagentEntity>>
+
+    @Query("SELECT * FROM subagents WHERE id = :subagentId")
+    suspend fun find(subagentId: String): SubagentEntity?
+
+    @Upsert
+    suspend fun upsert(subagent: SubagentEntity)
+
+    @Query("UPDATE subagents SET latestText = :text WHERE id = :subagentId")
+    suspend fun setLatestText(subagentId: String, text: String)
+
+    @Query("UPDATE subagents SET costUsd = :costUsd WHERE id = :subagentId")
+    suspend fun setCost(subagentId: String, costUsd: Double?)
+
+    @Query("DELETE FROM subagents WHERE parentToolCallId IN (:parentToolCallIds)")
+    suspend fun deleteUnder(parentToolCallIds: List<String>)
+
+    /** Subagents left running when Android stopped the app. */
+    @Query("UPDATE subagents SET status = 'STOPPED' WHERE status = 'RUNNING'")
+    suspend fun stopInterrupted()
 }
 
 @Dao

@@ -1,5 +1,17 @@
 package app.jonaki
 
+import app.jonaki.core.runtimeapi.CodeJob
+import app.jonaki.core.runtimeapi.CodeLanguage
+import app.jonaki.core.runtimeapi.CodeRunOutcome
+import app.jonaki.core.runtimeapi.CodeRuntime
+import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentModelInfo
+import app.jonaki.core.toolapi.SubagentReport
+import app.jonaki.core.toolapi.SubagentTask
+import app.jonaki.core.toolapi.SubagentTypeInfo
+import app.jonaki.core.toolapi.ToolContext
+import app.jonaki.settings.ToolGroup
+import app.jonaki.settings.ToolGroups
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.searchapi.SearchOutcome
 import app.jonaki.core.searchapi.SearchQuery
@@ -88,6 +100,18 @@ class ToolRegistryTest {
         override suspend fun cancel(taskId: String): Boolean = false
     }
 
+    private class FakeRuntime(override val language: CodeLanguage) : CodeRuntime {
+        override suspend fun run(job: CodeJob): CodeRunOutcome = CodeRunOutcome.Unavailable("not used in this test")
+    }
+
+    private val launcher = object : SubagentLauncher {
+        override val agentTypes = emptyList<SubagentTypeInfo>()
+        override val models = emptyList<SubagentModelInfo>()
+        override val extraToolNames = emptyList<String>()
+
+        override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext) = emptyList<SubagentReport>()
+    }
+
     private val everything = ToolServices(
         searchBackends = listOf(searchBackend),
         videoSummarizer = { VideoAnswer.Success("summary", inputTokens = null) },
@@ -97,7 +121,11 @@ class ToolRegistryTest {
         modelAcceptsImages = true,
         phone = phone,
         taskScheduler = taskScheduler,
+        codeRuntimes = listOf(FakeRuntime(CodeLanguage.JAVASCRIPT), FakeRuntime(CodeLanguage.PYTHON)),
     )
+
+    private fun withGroupsOff(vararg groups: ToolGroup) =
+        everything.copy(enabledGroups = ToolGroups.enabled(groups.toSet()))
 
     private fun namesFor(services: ToolServices) = ToolRegistry.tools(services).map { tool -> tool.name }
 
@@ -113,7 +141,7 @@ class ToolRegistryTest {
             setOf(
                 "read_file", "write_file", "edit_file", "find_files", "search_files",
                 "web_search", "web_fetch", "youtube_summarize", "memory", "artifact", "share_file",
-                "read_document", "view_image", "phone", "schedule",
+                "read_document", "view_image", "phone", "schedule", "run_code",
             ),
             namesFor(everything).toSet(),
         )
@@ -172,5 +200,54 @@ class ToolRegistryTest {
         val server = McpServer(id = "a", name = "deepwiki", url = "https://mcp.deepwiki.com/mcp")
         assertEquals(false, "mcp" in namesFor(everything.copy(mcpToolListFolder = folder)))
         assertEquals(true, "mcp" in namesFor(everything.copy(mcpServers = listOf(server), mcpToolListFolder = folder)))
+    }
+
+    @Test
+    fun everyToolBelongsToAGroup() {
+        val names = namesFor(everything) + ToolRegistry.delegateTools(launcher, everything.enabledGroups).map { tool -> tool.name }
+        val grouped = ToolGroup.entries.flatMap { group -> group.toolNames }.toSet()
+
+        assertEquals(emptyList<String>(), names.filter { name -> name !in grouped })
+        assertEquals(true, "delegate" in names)
+    }
+
+    @Test
+    fun aSwitchedOffGroupLeavesItsToolsOut() {
+        val switchable = ToolGroup.entries.filter { group -> group.canSwitchOff && group.language == null }
+        for (group in switchable) {
+            val names = namesFor(withGroupsOff(group)).toSet()
+            assertEquals(group.name, emptySet<String>(), names.intersect(group.toolNames))
+            assertEquals(group.name, true, "read_file" in names)
+        }
+    }
+
+    @Test
+    fun filesCannotBeSwitchedOff() {
+        val names = namesFor(withGroupsOff(ToolGroup.FILES)).toSet()
+
+        assertEquals(true, ToolGroup.FILES.toolNames.all { name -> name in names })
+    }
+
+    @Test
+    fun runCodeOffersOnlyTheLanguagesThatAreOn() {
+        val pythonOff = ToolRegistry.tools(withGroupsOff(ToolGroup.PYTHON)).first { tool -> tool.name == "run_code" }
+        val javaScriptOff = ToolRegistry.tools(withGroupsOff(ToolGroup.JAVASCRIPT)).first { tool -> tool.name == "run_code" }
+
+        assertEquals(false, pythonOff.parameterSchema.toString().contains("python"))
+        assertEquals(false, javaScriptOff.parameterSchema.toString().contains("javascript"))
+    }
+
+    @Test
+    fun bothLanguagesOffLeaveRunCodeOut() {
+        val names = namesFor(withGroupsOff(ToolGroup.JAVASCRIPT, ToolGroup.PYTHON)).toSet()
+
+        assertEquals(false, "run_code" in names)
+    }
+
+    @Test
+    fun subagentsOffLeavesDelegateOut() {
+        val groups = ToolGroups.enabled(setOf(ToolGroup.SUBAGENTS))
+
+        assertEquals(emptyList<String>(), ToolRegistry.delegateTools(launcher, groups).map { tool -> tool.name })
     }
 }

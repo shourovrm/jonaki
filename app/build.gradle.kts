@@ -6,8 +6,8 @@ android {
     namespace = "app.jonaki"
     defaultConfig {
         applicationId = "app.jonaki"
-        versionCode = 7
-        versionName = "0.7.0"
+        versionCode = 8
+        versionName = "0.8.0"
     }
     packaging {
         resources {
@@ -40,6 +40,11 @@ dependencies {
     // Scheduled tasks (plan M9).
     implementation(libs.work.runtime)
     implementation(project(":tools:mcp"))
+    implementation(project(":tools:delegate"))
+    implementation(project(":tools:run-code"))
+    implementation(project(":core:runtime-api"))
+    implementation(project(":runtimes:javascript"))
+    implementation(project(":runtimes:pyodide"))
     // Only for PDFBoxResourceLoader.init at start; read_document does the reading (D-051).
     implementation(libs.pdfbox.android)
     implementation(project(":core:provider-api"))
@@ -62,6 +67,8 @@ dependencies {
     implementation(project(":tools:artifact"))
     implementation(project(":feature:memory"))
     implementation(project(":feature:skills"))
+    implementation(project(":feature:gallery"))
+    implementation(project(":feature:onboarding"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.compose.bom))
@@ -71,4 +78,6 @@ dependencies {
     implementation(libs.core.ktx)
 
     testImplementation(libs.junit)
+    // PythonSetupTest serves a fake Pyodide release, as the pyodide module's own tests do.
+    testImplementation(libs.okhttp.mockwebserver)
 }

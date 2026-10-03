@@ -33,6 +33,17 @@ object UsageFormat {
         else -> trimmedOneDecimal(tokens / 1_000_000.0) + "M"
     }
 
+    /**
+     * A download or storage size in decimal megabytes with one decimal, as
+     * download sizes are usually given: 13,532,188 bytes is "13.5 MB".
+     * Below one megabyte, whole kilobytes.
+     */
+    fun byteSize(bytes: Long): String = when {
+        bytes < 1_000 -> "$bytes B"
+        bytes < 1_000_000 -> "${(bytes / 1_000.0).roundToInt()} KB"
+        else -> String.format(Locale.ENGLISH, "%.1f MB", bytes / 1_000_000.0)
+    }
+
     /** An exact count with thousands separators, for the usage sheet. */
     fun exactTokens(tokens: Int): String = NumberFormat.getIntegerInstance(Locale.ENGLISH).format(tokens)
 

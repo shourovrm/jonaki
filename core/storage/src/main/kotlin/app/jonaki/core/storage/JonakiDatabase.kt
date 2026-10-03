@@ -17,10 +17,11 @@ import kotlinx.coroutines.Dispatchers
         StepEntity::class,
         MemoryEntity::class,
         CompactionEntity::class,
+        SubagentEntity::class,
         PersonaEntity::class,
         ProjectEntity::class,
     ],
-    version = 9,
+    version = 8,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
@@ -35,17 +36,13 @@ import kotlinx.coroutines.Dispatchers
         AutoMigration(from = 4, to = 5),
         // Version 6 adds the nullable threads.thinkingLevel column (D-057).
         AutoMigration(from = 5, to = 6),
-        // Version 7 is reserved for the v0.8.0 branch, which lands on main later
-        // (D-115). Until then 7 is a copy of 6 and this migration changes nothing;
-        // when v0.8.0 lands, its own 7.json replaces the copy.
+        // Version 7 adds the subagents table, the nullable steps.subagentId
+        // and threads.approvalMode columns (M7, D-058).
         AutoMigration(from = 6, to = 7),
-        // Version 8 adds the personas table, the nullable threads.answerStyle and
-        // threads.personaId, and threads.instructions, empty by default (D-107 to D-109).
+        // Version 8 adds the personas and projects tables and, on threads, the
+        // nullable answerStyle, personaId and projectId, instructions (empty by
+        // default) and incognito (0 by default) (D-107 to D-111).
         AutoMigration(from = 7, to = 8),
-        // Projects and incognito chat: version 9 adds the projects table, the
-        // nullable threads.projectId and threads.incognito (default 0)
-        // (D-110, D-111).
-        AutoMigration(from = 8, to = 9),
     ],
 )
 abstract class JonakiDatabase : RoomDatabase() {
@@ -58,6 +55,8 @@ abstract class JonakiDatabase : RoomDatabase() {
     abstract fun memoryDao(): MemoryDao
 
     abstract fun compactionDao(): CompactionDao
+
+    abstract fun subagentDao(): SubagentDao
 
     abstract fun personaDao(): PersonaDao
 
