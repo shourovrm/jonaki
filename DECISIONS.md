@@ -1487,7 +1487,8 @@ were not rendered. Outcome: pending.
 ## D-127 · 2026-10-03 · Fixes from the first phone check of the revamp — proposed
 Thread list titles are NOT changed: D-029 (accepted) says a thread name
 wraps in full in the list. A one-line title was built and then held back,
-because changing an accepted decision needs the user's approval.
+because changing an accepted decision needs the user's approval. The
+user chose to keep wrapping (2026-10-03).
 Permissions (amends D-124): a dialog closed with Back showed "Denied" with
 "Open settings", because every shown dialog was recorded as a request.
 Now only a refusal is recorded (`refused_permissions`, a new key, so the
