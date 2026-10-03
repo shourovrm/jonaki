@@ -1524,3 +1524,47 @@ Both now skip rows without text (ThreadListQueries.SUMMARIES). The three
 copies of the strip pattern (chat, list preview, thread name) became one,
 PromptBuilder.userTextOf, beside the code that writes the line. Tests:
 ThreadListQueriesTest, PromptBuilderTest. Outcome: pending.
+
+## D-128 · 2026-10-03 · Settings sub-pages and one word per intent — proposed
+Settings is a first page and nine sub-pages (mockup
+docs/mockups/settings-pages.html). The first page has "Search settings"
+and nine rows in three unlabelled groups: Models, Web and YouTube, Tools
+and approvals; Answers, Memory and skills, Files and schedule; Theme,
+Permissions, About. Each row has a Material or JonakiIcons icon (Folder,
+DarkMode, Lightbulb added as paths, no dependency), its title and a live
+one-line summary ending in "…": "OpenRouter, 3 models · $12.82 left" (the
+first service with a key or needing none; "No chat service" when none is
+added, "No key" when none has a key), "Tavily, then Ollama" or "Search
+off", plus " · No Gemini key"; "12 of 12 tools on · Ask"; "Normal · no
+personas"; "3 facts · 5 skills"; "Jonaki folder · 1 scheduled" or "No
+folder · nothing scheduled"; "Follows the phone"; "Calendar blocked", "2
+not allowed" or "All allowed"; "Version 1.0.0". Sub-pages hold today's
+sections unchanged in behaviour: Models (chat services, Subagents), Web
+(search order, off in new threads, Gemini key), Tools (approvals in new
+threads, All tools and Python rows opening their screens, MCP servers
+inline), Answers, Memory and skills (rows to both screens), Files and
+schedule, Theme (with Status icons), Permissions, About. Routes are
+"settings" and "settings:<page>"; the first page's scroll and search
+survive a sub-page; screens opened from a sub-page return to it; the
+chat's "Edit list" opens Models. The other links named in the task do not
+exist: "Add one in Settings" errors and the tool picker's line are text,
+and no permission prompt links to Jonaki's Settings. Search matches page
+and setting titles from string resources plus service names. Wording
+(adversarial Sonnet review): Delete for what the user made, Remove for
+what the user added; thread, never chat; key statuses "Added" and "No
+key"; "Needs approval", "No answer", "Damaged" everywhere; Bangla the same
+(মুছুন / সরান, থ্রেড, অনুমতি লাগবে, উত্তর নেই, নষ্ট); the Permissions row is
+"ফোনের অনুমতি" in Bangla so it differs from approvals (অনুমতি). Two
+reviewed strings were not added: the segmented approvals label and its
+help line, because the page keeps the radio options with their own help.
+Permissions (user ruling, amends D-124 and D-127): three statuses.
+"Allowed"; "Not allowed" with "Allow" when Android can still show its
+dialog (never asked, closed with Back, refused once with the rationale
+true); "Blocked" with "Open settings" for a recorded refusal with the
+rationale false. Alarms off, and notifications off below Android 13,
+show "Not allowed" with "Open settings". Bangla অনুমতি আছে / অনুমতি নেই /
+আটকানো. Only Blocked is red, on the page and in the summary. Tests:
+SettingsSummariesTest and SettingsSearchTest (read the English values
+files), PermissionStatusesTest, BanglaStringsTest. Limit: previews at 360
+dp and font scale 1.3 (dark, light, Bangla) were compiled, not rendered;
+nothing was checked on a phone. Outcome: pending.

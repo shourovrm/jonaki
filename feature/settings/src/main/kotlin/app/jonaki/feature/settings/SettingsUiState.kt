@@ -262,5 +262,24 @@ object SettingsSample {
         ),
         webSearchOffInNewThreads = false,
         themeMode = ThemeMode.SYSTEM,
+        // A 40-character folder name checks that the summary keeps one line (D-029).
+        linkedFolderName = "Thesis drafts and supervisor notes 2026",
+        scheduledItems = listOf(ScheduledItemUi("reminder:1", "Call Abba", "Daily · Sun 4 Oct, 08:00")),
+        personas = listOf(PersonaRowUi("1", "Thesis supervisor who asks for sources")),
+        subagentModels = listOf(
+            SubagentModelRowUi("researcher", selectedKey = null, defaultIsCheapest = false),
+            SubagentModelRowUi("scout", selectedKey = null, defaultIsCheapest = true),
+        ),
+        permissions = listOf(
+            PermissionRowUi(PermissionRow.NOTIFICATIONS, PermissionStatus.ALLOWED),
+            PermissionRowUi(PermissionRow.CALENDAR, PermissionStatus.BLOCKED),
+            PermissionRowUi(PermissionRow.PHOTOS, PermissionStatus.SELECTED_PHOTOS),
+            PermissionRowUi(PermissionRow.ALARMS, PermissionStatus.ALLOWED),
+        ),
+        appVersion = "1.0.0",
+        toolGroupsOn = 12,
+        toolGroupCount = 12,
+        factCount = 3,
+        skillCount = 5,
     )
 }
