@@ -1489,4 +1489,20 @@ Thread list: the title keeps one line and ends in "…", like the preview
 line under it. This reverses D-029's "Thread names wrap in full in the
 thread list" (and the matching line in AGENTS.md "Interface text") at the
 user's request after the phone check, where long titles took three lines;
-the chat's top bar still shows the name. Outcome: pending.
+the chat's top bar still shows the name.
+Permissions (amends D-124): a dialog closed with Back showed "Denied" with
+"Open settings", because every shown dialog was recorded as a request.
+Now only a refusal is recorded (`refused_permissions`, a new key, so the
+old record with its Back presses is dropped). A closed dialog is a refusal
+when it granted nothing and Android's rationale flag
+(shouldShowRequestPermissionRationale) was true before or is true after
+it; Back leaves a false flag false. Status: granted is "Allowed"; flag true
+is "Denied" with "Allow" (Android shows the dialog again); recorded and
+flag false is "Denied" with "Open settings"; otherwise "Not asked" with
+"Allow". The photo row no longer reads D-086's refusal flag, since the
+composer sets it after Back too. The composer's photo request records the
+same way, and Settings sets D-086's photo refusal only on a recorded
+refusal. Test:
+PermissionStatusesTest. Limit: a permission refused for good on an older
+build and never asked since shows "Not asked", and "Allow" then shows no
+dialog. Outcome: pending.

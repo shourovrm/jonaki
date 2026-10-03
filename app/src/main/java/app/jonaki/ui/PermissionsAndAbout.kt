@@ -1,14 +1,17 @@
 package app.jonaki.ui
 
 import android.Manifest
+import android.app.Activity
 import android.app.AlarmManager
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.jonaki.JonakiApplication
@@ -24,41 +27,64 @@ import app.jonaki.feature.settings.PermissionStatuses
 private const val GITHUB_URL = "https://github.com/shourovrm/jonaki"
 
 /**
- * Reads Settings > Permissions (D-124). [requestedPermissions] is the
- * app's record of the dialogs it has shown; Android alone cannot tell
- * "Not asked" from "Denied".
+ * Reads Settings > Permissions (D-124, D-127). [refusedPermissions] is the
+ * app's record of refusals; Android alone cannot tell "Not asked" from a
+ * refusal for good.
  */
-internal fun readPermissionRows(context: Context, requestedPermissions: Set<String>): List<PermissionRowUi> =
-    PermissionRow.entries.map { row -> PermissionRowUi(row, statusOf(row, context, requestedPermissions)) }
+internal fun readPermissionRows(context: Context, refusedPermissions: Set<String>): List<PermissionRowUi> =
+    PermissionRow.entries.map { row -> PermissionRowUi(row, statusOf(row, context, refusedPermissions)) }
 
-private fun statusOf(row: PermissionRow, context: Context, requestedPermissions: Set<String>): PermissionStatus {
+private fun statusOf(row: PermissionRow, context: Context, refusedPermissions: Set<String>): PermissionStatus {
     val sdkInt = Build.VERSION.SDK_INT
     val isGranted = { permission: String ->
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
     }
-    val requestedBefore = row.permissions.any { permission -> permission in requestedPermissions }
+    val refusedBefore = row.permissions.any { permission -> permission in refusedPermissions }
+    val showsRationale = showsRationaleForAny(context, row.permissions)
     return when (row) {
         PermissionRow.NOTIFICATIONS -> PermissionStatuses.notifications(
             sdkInt,
             permissionGranted = isGranted(Manifest.permission.POST_NOTIFICATIONS),
             notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
-            requestedBefore = requestedBefore,
+            refusedBefore = refusedBefore,
+            showsRationale = showsRationale,
         )
         PermissionRow.CALENDAR -> PermissionStatuses.calendar(
             readGranted = isGranted(Manifest.permission.READ_CALENDAR),
             writeGranted = isGranted(Manifest.permission.WRITE_CALENDAR),
-            requestedBefore = requestedBefore,
+            refusedBefore = refusedBefore,
+            showsRationale = showsRationale,
         )
         PermissionRow.PHOTOS -> PermissionStatuses.photos(
             sdkInt,
             imagesGranted = isGranted(Manifest.permission.READ_MEDIA_IMAGES),
             selectedPhotosGranted = isGranted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED),
             externalStorageGranted = isGranted(Manifest.permission.READ_EXTERNAL_STORAGE),
-            // Versions before the record kept only the composer's refusal (D-086).
-            requestedBefore = requestedBefore || PhotoRefusal.happened(context),
+            refusedBefore = refusedBefore,
+            showsRationale = showsRationale,
         )
         PermissionRow.ALARMS -> PermissionStatuses.alarms(sdkInt, canScheduleExactAlarms(context))
     }
+}
+
+private fun showsRationaleForAny(context: Context, permissions: List<String>): Boolean =
+    permissions.any { permission -> showsRationale(context, permission) }
+
+/** Android's flag for a dialog it can show again after one refusal. It is kept per activity; Jonaki's screens live in MainActivity. */
+internal fun showsRationale(context: Context, permission: String): Boolean {
+    val activity = context.findActivity() ?: return false
+    return ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+}
+
+private fun Context.findActivity(): Activity? {
+    var current: Context = this
+    while (current is ContextWrapper) {
+        if (current is Activity) {
+            return current
+        }
+        current = current.baseContext
+    }
+    return null
 }
 
 private fun canScheduleExactAlarms(context: Context): Boolean {
@@ -83,9 +109,11 @@ private suspend fun askFor(application: JonakiApplication, context: Context, row
         PermissionRow.NOTIFICATIONS -> permissions.requestNotifications()
         PermissionRow.CALENDAR -> permissions.request(listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR))
         PermissionRow.PHOTOS -> {
-            permissions.request(PhotoAccess.permissionsToAsk(Build.VERSION.SDK_INT))
-            // The composer never asks again after a refusal, wherever it happened (D-086).
-            if (currentPhotoGrant(context) == PhotoGrant.NONE) {
+            val asked = PhotoAccess.permissionsToAsk(Build.VERSION.SDK_INT)
+            permissions.request(asked)
+            // The composer never asks again after a refusal, wherever it happened (D-086); Back is no refusal (D-127).
+            val refused = application.settings.snapshot.value.refusedPermissions.any { permission -> permission in asked }
+            if (currentPhotoGrant(context) == PhotoGrant.NONE && refused) {
                 PhotoRefusal.remember(context)
             }
         }

@@ -49,11 +49,12 @@ data class SettingsSnapshot(
     /** The [ToolPicker] version the user last finished; 0 before the picker existed. */
     val toolPickerSeenVersion: Int = 0,
     /**
-     * Runtime permissions Jonaki has shown Android's dialog for. Android
-     * cannot tell "never asked" from "refused", so Settings > Permissions
-     * reads this record (D-124).
+     * Runtime permissions the user refused in Android's dialog; closing it
+     * with Back is not a refusal. Android cannot tell "never asked" from
+     * "refused for good", so Settings > Permissions reads this record (D-124,
+     * D-127).
      */
-    val requestedPermissions: Set<String> = emptySet(),
+    val refusedPermissions: Set<String> = emptySet(),
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -76,9 +77,9 @@ class AppSettings(
         state.value = updated
     }
 
-    /** Adds [permissions] to the record of permissions Jonaki has asked for (D-124). */
-    fun recordPermissionRequest(permissions: Collection<String>) {
-        update { current -> current.copy(requestedPermissions = current.requestedPermissions + permissions) }
+    /** Adds [permissions] to the record of permissions the user refused (D-127). */
+    fun recordPermissionRefusal(permissions: Collection<String>) {
+        update { current -> current.copy(refusedPermissions = current.refusedPermissions + permissions) }
     }
 
     /** Shorthand for the chat-model edits the settings screen makes. */
@@ -111,7 +112,7 @@ class AppSettings(
             subagentModels = SubagentModelChoice.fromText(preferences.getString(SUBAGENT_MODELS, "").orEmpty()),
             disabledToolGroups = ToolGroups.disabledFromText(preferences.getString(DISABLED_TOOL_GROUPS, "").orEmpty()),
             toolPickerSeenVersion = preferences.getInt(TOOL_PICKER_SEEN_VERSION, 0),
-            requestedPermissions = preferences.getStringSet(REQUESTED_PERMISSIONS, emptySet()).orEmpty().toSet(),
+            refusedPermissions = preferences.getStringSet(REFUSED_PERMISSIONS, emptySet()).orEmpty().toSet(),
         )
     }
 
@@ -163,7 +164,7 @@ class AppSettings(
         editor.putString(SUBAGENT_MODELS, SubagentModelChoice.toText(snapshot.subagentModels))
         editor.putString(DISABLED_TOOL_GROUPS, ToolGroups.disabledToText(snapshot.disabledToolGroups))
         editor.putInt(TOOL_PICKER_SEEN_VERSION, snapshot.toolPickerSeenVersion)
-        editor.putStringSet(REQUESTED_PERMISSIONS, snapshot.requestedPermissions)
+        editor.putStringSet(REFUSED_PERMISSIONS, snapshot.refusedPermissions)
         editor.apply()
     }
 
@@ -193,6 +194,7 @@ class AppSettings(
         const val SUBAGENT_MODELS = "subagent_models"
         const val DISABLED_TOOL_GROUPS = "disabled_tool_groups"
         const val TOOL_PICKER_SEEN_VERSION = "tool_picker_seen_version"
-        const val REQUESTED_PERMISSIONS = "requested_permissions"
+        // A new key: the old "requested_permissions" also counted dialogs closed with Back (D-127).
+        const val REFUSED_PERMISSIONS = "refused_permissions"
     }
 }

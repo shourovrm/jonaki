@@ -153,7 +153,7 @@ class JonakiApplication : Application() {
         )
         reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json")))
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
-        runtimePermissions = RuntimePermissions(this, visibleActivity, settings::recordPermissionRequest)
+        runtimePermissions = RuntimePermissions(this, visibleActivity, settings::recordPermissionRefusal)
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
         runner = AgentRunner(
             this,

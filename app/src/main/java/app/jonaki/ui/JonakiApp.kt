@@ -882,8 +882,8 @@ private fun SettingsRoute(
     // Bumped on every resume, so statuses are right after a visit to system settings (D-124).
     var permissionCheck by remember { mutableIntStateOf(0) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { permissionCheck += 1 }
-    val permissionRows = remember(permissionCheck, snapshot.requestedPermissions) {
-        readPermissionRows(context, snapshot.requestedPermissions)
+    val permissionRows = remember(permissionCheck, snapshot.refusedPermissions) {
+        readPermissionRows(context, snapshot.refusedPermissions)
     }
     val appVersion = remember { installedVersionName(context) }
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
