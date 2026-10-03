@@ -11,7 +11,20 @@ sealed interface MarkdownBlock {
     data class BulletList(val items: List<List<MarkdownInline>>) : MarkdownBlock
 
     data class OrderedList(val start: Int, val items: List<List<MarkdownInline>>) : MarkdownBlock
+
+    /**
+     * A GitHub-style table. Every row has exactly as many cells as [header];
+     * [source] is the table's Markdown as the model wrote it, for copying.
+     */
+    data class Table(
+        val alignments: List<TableAlignment>,
+        val header: List<List<MarkdownInline>>,
+        val rows: List<List<List<MarkdownInline>>>,
+        val source: String,
+    ) : MarkdownBlock
 }
+
+enum class TableAlignment { START, CENTER, END }
 
 sealed interface MarkdownInline {
     data class Text(val text: String) : MarkdownInline
@@ -52,6 +65,13 @@ object MarkdownParser {
                 }
                 builder.blocks += MarkdownBlock.CodeBlock(codeLines.joinToString("\n"), language)
                 index += 1
+                continue
+            }
+            val table = MarkdownTables.readAt(lines, index)
+            if (table != null) {
+                builder.flush()
+                builder.blocks += table.block
+                index = table.nextLineIndex
                 continue
             }
             builder.addLine(line)

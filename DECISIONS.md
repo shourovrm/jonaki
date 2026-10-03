@@ -1296,3 +1296,37 @@ about 1,000 to 1,600 tokens on every request. Rejected: a cut that moves
 every turn (breaks the cache at the cut on every new message); keeping
 only the current run's images (the model loses a photo the user is still
 asking about). Outcome: pending.
+## D-200 · 2026-10-03 · run_code reads the JavaScript reply's text fields as text — proposed
+On the phone, `console.log(fib.join(', '))` printed "0" instead of
+"0, 1, 1, 2, 3, 5, 8, 13, 21, 34". The runner (run-program.js) printed the
+whole line; the cut happened in `JavaScriptProgram.outcomeFrom`, which read
+every reply field with kotlinx.serialization's `longOrNull` first.
+`longOrNull` parses a leading number and stops at the first separator, so
+any printed text, result or error that began with a number followed by a
+comma or a space became that number. Every field is now read with
+`contentOrNull` (a JSON number's content is its digits, so
+droppedCharacters still parses). Python reads its fields with
+`contentOrNull` and gets stdout from the bridge as plain text, so it never
+had this bug. Test: JavaScriptProgramTest.printedTextThatStartsWithANumberIsKeptWhole.
+Outcome: pending.
+
+## D-201 · 2026-10-03 · Markdown tables in chat answers — proposed
+The phone check of 0.8.0 showed tables as raw pipes. The chat parser now
+reads GitHub-flavoured tables: a header line, then a separator such as
+`|---|:---:|--:|` with as many cells as the header (colons set start,
+centre or end alignment), then rows until a blank line or a line without a
+pipe. Outer pipes are optional; `\|` is a pipe inside a cell, also in code;
+short rows get empty cells and extra cells are dropped, as on GitHub. A
+table may follow a paragraph line directly. A line with a pipe and no
+separator under it stays text, so "a | b" in a sentence and a header that
+is still streaming are not tables. Deviation from GitHub: a pipe-less line
+ends the table instead of becoming a one-cell row, because models often
+put their next sentence right under a table. Cells hold bold, italics,
+code and links. Rendering: bodyMedium text, semibold header row, a 1 dp
+outlineVariant line under each row except the last, no vertical lines,
+cells padded 10 × 8 dp and top-aligned; each column is as wide as its
+widest cell on one line, within 56 to 240 dp, longer text wraps, and a
+table wider than the message scrolls sideways. A small copy button under
+the table copies its Markdown source ("Copy table"). Selection works as
+for the rest of the answer. Code: MarkdownTables, MarkdownText.TableView;
+test MarkdownTableParserTest (12). Outcome: pending.

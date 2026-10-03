@@ -18,6 +18,11 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.text.appendInlineContent
@@ -120,6 +125,7 @@ private fun MarkdownBlockView(
             showCaret = showCaret,
             caretContent = caretContent,
         )
+        is MarkdownBlock.Table -> TableView(block, colors, showCaret, caretContent)
     }
 }
 
@@ -130,6 +136,7 @@ private fun InlineText(
     colors: InlineColors,
     showCaret: Boolean,
     caretContent: Map<String, InlineTextContent>,
+    modifier: Modifier = Modifier,
 ) {
     val text = buildAnnotatedString {
         appendInlines(inlines, colors)
@@ -138,7 +145,7 @@ private fun InlineText(
             appendInlineContent(CARET_ID)
         }
     }
-    Text(text, style = style, inlineContent = caretContent)
+    Text(text, style = style, inlineContent = caretContent, modifier = modifier)
 }
 
 @Composable
@@ -192,6 +199,133 @@ private fun CodeBlockView(code: String, language: String?) {
                 softWrap = false,
                 modifier = Modifier.horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
             )
+        }
+    }
+}
+
+// A column is as wide as its widest cell on one line, within these bounds;
+// longer cells wrap, and a table wider than the message scrolls sideways.
+private val MIN_COLUMN_WIDTH = 56.dp
+private val MAX_COLUMN_WIDTH = 240.dp
+
+/** A table with a semibold header, thin lines between rows and a copy button under it. */
+@Composable
+private fun TableView(
+    table: MarkdownBlock.Table,
+    colors: InlineColors,
+    showCaret: Boolean,
+    caretContent: Map<String, InlineTextContent>,
+) {
+    val clipboard = LocalClipboardManager.current
+    val bodyStyle = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp)
+    val headerStyle = bodyStyle.copy(fontWeight = FontWeight.SemiBold)
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    val allRows = listOf(table.header) + table.rows
+    Column(modifier = Modifier.fillMaxWidth()) {
+        TableLayout(
+            columnCount = table.header.size,
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        ) {
+            allRows.forEachIndexed { rowIndex, row ->
+                val isHeader = rowIndex == 0
+                val isLastRow = rowIndex == allRows.lastIndex
+                row.forEachIndexed { column, cell ->
+                    TableCell(
+                        inlines = cell,
+                        style = if (isHeader) headerStyle else bodyStyle,
+                        alignment = table.alignments[column],
+                        lineColor = if (isLastRow) null else dividerColor,
+                        colors = colors,
+                        showCaret = showCaret && isLastRow && column == row.lastIndex,
+                        caretContent = caretContent,
+                    )
+                }
+            }
+        }
+        IconButton(
+            onClick = { clipboard.setText(AnnotatedString(table.source)) },
+            modifier = Modifier.align(Alignment.End).size(32.dp),
+        ) {
+            Icon(
+                JonakiIcons.ContentCopy,
+                contentDescription = stringResource(R.string.ui_copy_table),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+/** One cell, top-aligned, with a thin line along its bottom unless [lineColor] is null. */
+@Composable
+private fun TableCell(
+    inlines: List<MarkdownInline>,
+    style: TextStyle,
+    alignment: TableAlignment,
+    lineColor: Color?,
+    colors: InlineColors,
+    showCaret: Boolean,
+    caretContent: Map<String, InlineTextContent>,
+) {
+    val textAlign = when (alignment) {
+        TableAlignment.START -> TextAlign.Start
+        TableAlignment.CENTER -> TextAlign.Center
+        TableAlignment.END -> TextAlign.End
+    }
+    val lineModifier = if (lineColor == null) {
+        Modifier
+    } else {
+        Modifier.drawBehind {
+            val strokeWidth = 1.dp.toPx()
+            val lineY = size.height - strokeWidth / 2
+            drawLine(lineColor, Offset(0f, lineY), Offset(size.width, lineY), strokeWidth)
+        }
+    }
+    Box(lineModifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+        InlineText(
+            inlines = inlines,
+            style = style.copy(textAlign = textAlign),
+            colors = colors,
+            showCaret = showCaret,
+            caretContent = caretContent,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * Lays out cells given row by row so that every cell of a column has the
+ * column's width and every cell of a row has the row's height; the equal
+ * heights let each cell draw its own part of the row's bottom line.
+ */
+@Composable
+private fun TableLayout(columnCount: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Layout(content, modifier) { measurables, _ ->
+        val rows = measurables.chunked(columnCount)
+        val minimumWidth = MIN_COLUMN_WIDTH.roundToPx()
+        val maximumWidth = MAX_COLUMN_WIDTH.roundToPx()
+        val columnWidths = List(columnCount) { column ->
+            val widestCell = rows.maxOf { row -> row[column].maxIntrinsicWidth(Constraints.Infinity) }
+            widestCell.coerceIn(minimumWidth, maximumWidth)
+        }
+        val rowHeights = rows.map { row ->
+            row.indices.maxOf { column -> row[column].minIntrinsicHeight(columnWidths[column]) }
+        }
+        val placeables = rows.mapIndexed { rowIndex, row ->
+            row.mapIndexed { column, cell ->
+                cell.measure(Constraints.fixed(columnWidths[column], rowHeights[rowIndex]))
+            }
+        }
+        layout(columnWidths.sum(), rowHeights.sum()) {
+            var y = 0
+            placeables.forEachIndexed { rowIndex, row ->
+                var x = 0
+                row.forEachIndexed { column, placeable ->
+                    placeable.placeRelative(x, y)
+                    x += columnWidths[column]
+                }
+                y += rowHeights[rowIndex]
+            }
         }
     }
 }

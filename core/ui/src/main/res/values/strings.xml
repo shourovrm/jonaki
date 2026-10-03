@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ui_copy_code">Copy code</string>
+    <string name="ui_copy_table">Copy table</string>
     <string name="ui_thinking">Thinking</string>
     <string name="ui_thinking_default">Default</string>
     <string name="ui_thinking_off">Off</string>

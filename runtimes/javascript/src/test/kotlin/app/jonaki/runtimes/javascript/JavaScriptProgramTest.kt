@@ -57,4 +57,17 @@ class JavaScriptProgramTest {
         assertNull(outcome.resultValue)
         assertTrue(outcome.stdout, outcome.stdout.contains("12 more characters were dropped"))
     }
+
+    @Test
+    fun printedTextThatStartsWithANumberIsKeptWhole() {
+        // fib.join(', ') printed only "0" on the phone in 0.8.0.
+        val reply = """{"stdout":"0, 1, 1, 2, 3, 5, 8, 13, 21, 34\n","stderr":"7 warnings\n","droppedCharacters":0,
+            |"result":"42 apples","error":null,"written":{}}""".trimMargin()
+
+        val outcome = JavaScriptProgram.outcomeFrom(reply)
+
+        assertEquals("0, 1, 1, 2, 3, 5, 8, 13, 21, 34\n", outcome.stdout)
+        assertEquals("7 warnings\n", outcome.stderr)
+        assertEquals("42 apples", outcome.resultValue)
+    }
 }

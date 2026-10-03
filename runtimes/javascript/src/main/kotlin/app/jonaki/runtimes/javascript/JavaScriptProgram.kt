@@ -10,7 +10,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
@@ -69,6 +68,8 @@ internal object JavaScriptProgram {
             return null
         }
         val primitive = value as? JsonPrimitive ?: return value.toString()
-        return primitive.longOrNull?.toString() ?: primitive.contentOrNull
+        // Never longOrNull here: it reads a leading number and stops at the first
+        // separator, so a printed "0, 1, 1" became "0" (D-200).
+        return primitive.contentOrNull
     }
 }
