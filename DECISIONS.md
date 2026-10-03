@@ -1248,3 +1248,51 @@ Rejected: offering past messages to extraction on Keep (breaks that
 expectation); a periodic job (a check at start and list view is enough).
 Limit: a chat left open on screen past the day is deleted at the next list
 view or app start. Outcome: pending.
+## D-GAP-1 · 2026-10-03 · Attachment chips survive a process restart — proposed
+The staged copies move from `cache/incoming/` to `files/waiting-attachments/`
+(Android may clear the cache), and the chips waiting per thread key are
+saved after every change in `waiting-attachments/waiting.json` (thread key
+to a list of id and name; written through a temporary file). At start the
+app reads it before anything is staged, drops chips whose copy is gone and
+deletes staged folders no chip names (a share whose thread was never
+picked). Deleting a thread deletes its chips. This lifts D-042's limit.
+Why: STATUS known gap. Rejected: a Room table (a migration for a few
+lines of state); a file in the thread folder (a new thread has none until
+its first message). Outcome: pending.
+
+## D-GAP-2 · 2026-10-03 · Back from the skill editor asks before losing edits — proposed
+When the editor's text differs from the saved SKILL.md, Back (the arrow or
+the system gesture) asks "Discard changes?" with Discard and Keep editing;
+tapping outside keeps editing. Without changes Back leaves at once. A failed
+save counts as unsaved. feature/skills now uses activity-compose (already
+in the app) for BackHandler. Why: STATUS known gap; the smallest fix.
+Rejected: keeping a draft per skill (a stored second copy that can drift
+from the file). Not shared: the memory and rename dialogs hold a line or
+two and close only on Cancel or a tap outside. Outcome: pending.
+
+## D-GAP-3 · 2026-10-03 · Chat divider where the summary ends — proposed
+After compaction the chat shows a thin line, "Earlier messages summarised",
+before the first turn the newest summary does not cover; a tap opens the
+stored summary as Markdown under the line, a second tap folds it. Every
+original message stays visible above it (D-033). No divider when the
+summary covers no shown turn or all of them. The chat reads the summary
+through a new Flow query on `compactions` (no schema change). Why: lifts
+D-033's limit. Rejected: hiding the summarised messages (D-005 keeps them
+in view). Outcome: pending.
+
+## D-GAP-4 · 2026-10-03 · Only the newest user turns carry their images — proposed
+Before each request ImageMessages counts the user turns (the step-budget
+notice not counted) and sends images, attached or from view_image, only
+for turns from `firstTurnWithImages` on: 0 up to five turns, then 3 at six
+turns, 6 at nine and so on, so the newest 3 to 5 turns keep their images.
+An older image becomes a note in its place: "[inbox/photo0.jpg is not
+repeated; call view_image with path=inbox/photo0.jpg to see it again.]"
+(with page=N for a PDF page); it is never loaded. The cut moves only every
+third turn and only forward, and a note's words depend only on the image's
+path, so between two moves every earlier message keeps its bytes and the
+prompt cache holds (D-005, D-049). Tested in ImageMessagesTest and in both
+wire formats in ImageRequestsTest. Why: STATUS known gap; each image costs
+about 1,000 to 1,600 tokens on every request. Rejected: a cut that moves
+every turn (breaks the cache at the cut on every new message); keeping
+only the current run's images (the model loses a photo the user is still
+asking about). Outcome: pending.

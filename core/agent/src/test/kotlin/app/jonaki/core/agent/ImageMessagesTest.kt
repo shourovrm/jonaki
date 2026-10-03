@@ -103,4 +103,78 @@ class ImageMessagesTest {
         assertEquals(first, second)
         assertEquals(1, loadedSources.size)
     }
+
+    /** User turn [number] attaches photo[number].jpg and gets a short answer. */
+    private fun photoTurns(count: Int): List<Message> = (0 until count).flatMap { number ->
+        listOf(
+            Message(Role.USER, AttachmentLine.appendTo("Turn $number", listOf("inbox/photo$number.jpg"))),
+            Message(Role.ASSISTANT, "Answer $number"),
+        )
+    }
+
+    private fun imagesPerUserTurn(prepared: List<Message>): List<Int> =
+        prepared.filter { message -> message.role == Role.USER }.map { message -> message.images.size }
+
+    @Test
+    fun fiveTurnsKeepEveryImage() {
+        val prepared = ImageMessages(loader, modelAcceptsImages = true).prepare(photoTurns(5))
+
+        assertEquals(listOf(1, 1, 1, 1, 1), imagesPerUserTurn(prepared))
+    }
+
+    @Test
+    fun atSixTurnsTheOldestThreeLoseTheirImagesForANote() {
+        val prepared = ImageMessages(loader, modelAcceptsImages = true).prepare(photoTurns(6))
+
+        assertEquals(listOf(0, 0, 0, 1, 1, 1), imagesPerUserTurn(prepared))
+        assertEquals(
+            "Turn 0\n\nAttached: inbox/photo0.jpg\n" +
+                "[inbox/photo0.jpg is not repeated; call view_image with path=inbox/photo0.jpg to see it again.]",
+            prepared[0].text,
+        )
+        // Images left out are never read, so no time is spent shrinking them.
+        assertEquals(listOf("inbox/photo3.jpg", "inbox/photo4.jpg", "inbox/photo5.jpg"), loadedSources.map { it.path })
+    }
+
+    @Test
+    fun theCutMovesOnlyEveryThreeTurnsSoEarlierMessagesKeepTheirBytes() {
+        val imageMessages = ImageMessages(loader, modelAcceptsImages = true)
+        val atSix = imageMessages.prepare(photoTurns(6))
+        val atEight = imageMessages.prepare(photoTurns(8))
+        val atNine = imageMessages.prepare(photoTurns(9))
+
+        assertEquals(atSix, atEight.take(atSix.size))
+        assertEquals(listOf(0, 0, 0, 1, 1, 1, 1, 1), imagesPerUserTurn(atEight))
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 1, 1, 1), imagesPerUserTurn(atNine))
+        // What was left out stays left out with the same words.
+        assertEquals(atSix.take(6), atNine.take(6))
+    }
+
+    @Test
+    fun aViewedImageInAnOldTurnBecomesANoteNamingTheCall() {
+        val oldView = listOf(
+            Message(Role.USER, "Read the scan"),
+            Message(Role.ASSISTANT, "", toolCalls = listOf(ToolCall("c1", ViewedImages.TOOL_NAME, """{"path":"docs/scan.pdf","page":2}"""))),
+            Message(Role.TOOL, ViewedImages.resultText(ImageSource("docs/scan.pdf", 2)), toolCallId = "c1"),
+            Message(Role.ASSISTANT, "It says hello"),
+        )
+        val prepared = ImageMessages(loader, modelAcceptsImages = true).prepare(oldView + photoTurns(5))
+
+        val note = prepared[3]
+        assertEquals(Role.USER, note.role)
+        assertTrue(note.images.isEmpty())
+        assertEquals(
+            "[docs/scan.pdf#page=2 is not repeated; call view_image with path=docs/scan.pdf page=2 to see it again.]",
+            note.text,
+        )
+    }
+
+    @Test
+    fun theBudgetNoticeDoesNotCountAsATurn() {
+        val imageMessages = ImageMessages(loader, modelAcceptsImages = true)
+        val beforeNotice = imageMessages.prepare(photoTurns(5))
+        val withNotice = imageMessages.prepare(photoTurns(5) + Message(Role.USER, AgentLoop.BUDGET_NOTICE))
+
+        assertEquals(beforeNotice, withNotice.take(beforeNotice.size))
+    }
 }

@@ -212,6 +212,9 @@ sealed interface ChatItem {
         val downloadBytes: Long?,
         val state: PythonInstallState,
     ) : ChatItem
+
+    /** Where the summarised part of the thread ends; a tap shows the summary (D-033). */
+    data class SummaryDivider(override val id: String, val summaryMarkdown: String) : ChatItem
 }
 
 /** Where the install card's download stands. */

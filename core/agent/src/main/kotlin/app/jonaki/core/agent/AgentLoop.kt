@@ -176,7 +176,8 @@ class AgentLoop(
         return runToolWithTimeLimit(tool, arguments, toolContext.forCall(toolCall.id))
     }
 
-    private companion object {
+    // Internal, because ImageMessages must not count the notice as a user turn.
+    internal companion object {
         const val BUDGET_NOTICE =
             "[The step budget for this message is used up. Answer now with what you have found, " +
                 "without calling tools, and say what is still missing.]"

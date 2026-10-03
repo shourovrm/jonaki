@@ -1,5 +1,6 @@
 package app.jonaki.feature.skills
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +43,7 @@ fun SkillEditorScreen(state: SkillEditorUiState, actions: SkillEditorActions, mo
     var text by rememberSaveable(state.name) { mutableStateOf("") }
     var loadedText by rememberSaveable(state.name) { mutableStateOf<String?>(null) }
     var deleting by rememberSaveable { mutableStateOf(false) }
+    var confirmingDiscard by rememberSaveable { mutableStateOf(false) }
     // The saved text arrives after the file is read, and again after a reset.
     LaunchedEffect(state.savedText) {
         val saved = state.savedText
@@ -51,6 +53,15 @@ fun SkillEditorScreen(state: SkillEditorUiState, actions: SkillEditorActions, mo
         }
     }
     val hasChanges = loadedText != null && text != loadedText
+    // Composed after the app's own Back handler, so this one wins while there are unsaved edits.
+    BackHandler(enabled = hasChanges) { confirmingDiscard = true }
+    val onBackPressed = {
+        if (hasChanges) {
+            confirmingDiscard = true
+        } else {
+            actions.onBack()
+        }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -59,7 +70,7 @@ fun SkillEditorScreen(state: SkillEditorUiState, actions: SkillEditorActions, mo
                 // A view of one item wraps its name rather than cutting it (D-029).
                 title = { Text(state.name, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = actions.onBack) {
+                    IconButton(onClick = onBackPressed) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.skills_back))
                     }
                 },
@@ -94,6 +105,15 @@ fun SkillEditorScreen(state: SkillEditorUiState, actions: SkillEditorActions, mo
                 modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp, vertical = 8.dp),
             )
         }
+    }
+    if (confirmingDiscard) {
+        DiscardChangesDialog(
+            onDiscard = {
+                confirmingDiscard = false
+                actions.onBack()
+            },
+            onKeepEditing = { confirmingDiscard = false },
+        )
     }
     if (deleting) {
         DeleteSkillDialog(

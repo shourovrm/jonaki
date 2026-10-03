@@ -385,7 +385,13 @@ private fun ThreadsRoute(
         onNewThread = onNewThread,
         onOpenSettings = onOpenSettings,
         onRename = { threadId -> threadToRename = threadId },
-        onDelete = { threadId -> scope.launch { application.runner.deleteThread(threadId) } },
+        onDelete = { threadId ->
+            scope.launch {
+                application.runner.deleteThread(threadId)
+                // Saved chips would otherwise wait forever for a thread that is gone.
+                withContext(Dispatchers.IO) { application.attachmentDrafts.discardAll(threadId) }
+            }
+        },
         onNewIncognitoThread = onNewIncognitoThread,
         onProjectSelect = onProjectSelect,
         onSaveProject = { projectId, draft ->
@@ -465,6 +471,9 @@ private fun ChatRoute(
     val subagents by remember(threadId) {
         if (isNew) flowOf(emptyList()) else database.subagentDao().observeThread(threadId)
     }.collectAsState(initial = emptyList())
+    val compaction by remember(threadId) {
+        if (isNew) flowOf(null) else database.compactionDao().observeLatestForThread(threadId)
+    }.collectAsState(initial = null)
     val modelUsage by remember(threadId) {
         if (isNew) flowOf(emptyList()) else database.messageDao().observeModelUsage(threadId)
     }.collectAsState(initial = emptyList())
@@ -556,6 +565,7 @@ private fun ChatRoute(
             fallbackNote = stringResource(R.string.routing_fallback_note),
             subagents = subagents,
             pythonCard = pythonCards.cardFor,
+            compaction = compaction,
         ),
         isRunning = isRunning,
         draft = draft,

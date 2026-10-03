@@ -271,6 +271,8 @@ private fun LinkedFolderRow(folderName: String?, actions: SettingsActions) {
                 folderName,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         TextButton(onClick = actions.onUnlinkFolder) {

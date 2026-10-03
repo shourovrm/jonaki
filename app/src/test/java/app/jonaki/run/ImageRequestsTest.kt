@@ -74,4 +74,43 @@ class ImageRequestsTest {
         jsonObject["image_url"]!!.jsonObject["url"]!!.jsonPrimitive.content
 
     private fun kotlinx.serialization.json.JsonElement.parts() = jsonObject["parts"]!!.jsonArray
+
+    /** Six turns, each with a photo: the first three are sent as notes, the last three with their images (D-GAP-4). */
+    private fun longThread(): ChatRequest {
+        val turns = (0 until 6).flatMap { number ->
+            listOf(
+                Message(Role.USER, AttachmentLine.appendTo("Photo $number", listOf("inbox/photo$number.jpg"))),
+                Message(Role.ASSISTANT, "Seen $number"),
+            )
+        }
+        val imageMessages = ImageMessages({ source -> ImagePart("image/jpeg", "jpeg-of-" + source.path) }, modelAcceptsImages = true)
+        return ChatRequest("model", "system", imageMessages.prepare(turns))
+    }
+
+    private val oldPhotoNote =
+        "[inbox/photo0.jpg is not repeated; call view_image with path=inbox/photo0.jpg to see it again.]"
+
+    @Test
+    fun openAiFormatSendsOldImagesAsNotesAndRecentOnesAsDataUrls() {
+        val body = ChatCompletionRequestBody.build(longThread())
+        val messages = body["messages"]!!.jsonArray
+        val userMessages = messages.filter { it.jsonObject.role() == "user" }
+
+        // A user message without images stays a plain string.
+        assertTrue(userMessages[0].jsonObject["content"]!!.jsonPrimitive.content.endsWith(oldPhotoNote))
+        assertEquals("data:image/jpeg;base64,jpeg-of-inbox/photo3.jpg", userMessages[3].jsonObject["content"]!!.jsonArray[1].imageUrl())
+        assertEquals(3, body.toString().split("data:image/jpeg").size - 1)
+    }
+
+    @Test
+    fun geminiFormatSendsOldImagesAsNotesAndRecentOnesInline() {
+        val contents = GeminiRequestBody.build(longThread())["contents"]!!.jsonArray
+        val userContents = contents.filter { it.jsonObject.role() == "user" }
+
+        val oldParts = userContents[0].parts()
+        assertEquals(1, oldParts.size)
+        assertTrue(oldParts[0].jsonObject["text"]!!.jsonPrimitive.content.endsWith(oldPhotoNote))
+        assertEquals("jpeg-of-inbox/photo3.jpg", userContents[3].parts()[1].jsonObject["inlineData"]!!.jsonObject["data"]!!.jsonPrimitive.content)
+        assertEquals(3, contents.toString().split("inlineData").size - 1)
+    }
 }

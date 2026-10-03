@@ -1,6 +1,7 @@
 package app.jonaki.ui
 
 import app.jonaki.core.model.ToolCall
+import app.jonaki.core.storage.CompactionEntity
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.StepEntity
@@ -341,5 +342,45 @@ class ChatItemsTest {
         val items = ChatItems.build(rows, listOf(pythonStep), isRunning = false, pythonCard = noteCard)
 
         assertTrue(items.none { item -> item.id.startsWith("python-") })
+    }
+
+    private fun compaction(upToPosition: Long) =
+        CompactionEntity("s1", "t", upToPosition, "## Goal\nPlan a trip", createdAtMillis = 0, model = null, costUsd = null)
+
+    @Test
+    fun aSummaryDividerSitsWhereTheSummarisedPartEnds() {
+        val rows = listOf(
+            row("u1", "USER", "one"),
+            row("a1", "ASSISTANT", "first answer"),
+            row("u2", "USER", "two"),
+            row("a2", "ASSISTANT", "second answer"),
+            row("u3", "USER", "three"),
+            row("a3", "ASSISTANT", "third answer"),
+        )
+
+        // Positions 0 to 1 are summarised; the kept part starts with u2.
+        val items = ChatItems.build(rows, emptyList(), isRunning = false, compaction = compaction(upToPosition = 1))
+
+        assertEquals(listOf("u1", "a1", "summary-s1", "u2", "a2", "u3", "a3"), items.map { it.id })
+        assertEquals(ChatItem.SummaryDivider("summary-s1", "## Goal\nPlan a trip"), items[2])
+    }
+
+    @Test
+    fun noDividerWithoutASummary() {
+        val rows = listOf(row("u1", "USER", "one"), row("a1", "ASSISTANT", "answer"))
+
+        val items = ChatItems.build(rows, emptyList(), isRunning = false, compaction = null)
+
+        assertTrue(items.none { item -> item is ChatItem.SummaryDivider })
+    }
+
+    @Test
+    fun noDividerWhenTheSummaryCoversEveryShownMessage() {
+        // After an edit deletes the kept turns, nothing follows the summarised part.
+        val rows = listOf(row("u1", "USER", "one"), row("a1", "ASSISTANT", "answer"))
+
+        val items = ChatItems.build(rows, emptyList(), isRunning = false, compaction = compaction(upToPosition = 1))
+
+        assertTrue(items.none { item -> item is ChatItem.SummaryDivider })
     }
 }

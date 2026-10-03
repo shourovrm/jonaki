@@ -8,4 +8,6 @@ android {
 
 dependencies {
     implementation(project(":core:ui"))
+    // BackHandler, so Back can ask before unsaved edits are lost; the app already ships this library.
+    implementation(libs.activity.compose)
 }

@@ -444,6 +444,7 @@ private fun MessageList(
                 is ChatItem.Note -> NoteRow(item)
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
                 is ChatItem.PythonInstall -> PythonInstallCard(item, canTryAgain, onPythonCard)
+                is ChatItem.SummaryDivider -> SummaryDividerRow(item)
             }
         }
     }
