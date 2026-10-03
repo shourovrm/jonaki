@@ -1710,3 +1710,25 @@ none); a change mid-download fails the hash and deletes the file. Tests:
 38 in core:local-models with recorded responses in testdata/huggingface/,
 LocalModelsRowsTest, summary and search tests. Not checked: anything on a
 phone; previews at 360 dp and 1.3 compiled, not rendered. Outcome: pending.
+
+## D-134 · 2026-10-03 · Reddit skill reads threads from Arctic Shift — proposed
+The built-in reddit skill searches through Reddit's RSS feed and reads a
+thread's comments from Arctic Shift, a third-party archive of Reddit
+(`arctic-shift.photon-reddit.com/api/comments/search?link_id=<id>&limit=100
+&sort=asc&fields=id,parent_id,author,body`), with Reddit's own thread feed
+as the fallback after two failures. Why: Reddit's feeds answer one request
+per window of up to about a minute (`x-ratelimit-remaining: 0` after each
+request, HTTP 429 inside the window), so a search followed by 2 to 4 thread
+feeds could not work. Measured from a PC with curl and the app's
+User-Agent, not on the phone: search feed 59 KB without `limit`, 17 KB
+with `limit=10`; Arctic Shift, 100 comments with the four fields, 14 KB,
+each with the id of the comment it answers; a post made about an hour
+earlier was already there; 3 of 11 Arctic Shift requests failed (HTTP 525
+twice, one timeout) and worked on a retry. The skill passes `max_length`
+20000 for these fetches. Rejected: Arctic Shift's `comments/tree` (95 KB
+for 58 comments, no `fields` parameter); PullPush as a third source (it
+ignores `fields`: 190 KB for 100 comments); comment scores (the search
+endpoint's scores are from the time of archiving: at most 5 where the tree
+shows 196). No code, dependency or permission changes: one asset file,
+which reaches installed copies through D-038 unless the user edited the
+skill. Limit: it depends on a volunteer-run archive. Outcome: pending.
