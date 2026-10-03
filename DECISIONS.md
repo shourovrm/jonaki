@@ -1883,3 +1883,10 @@ name) were compiled, not rendered. Outcome: pending.
 Strings reviewed by the main session (2026-10-03): kept as written, except
 the card warning, which became a plural ("Over 1 subagent", "Over 5
 subagents").
+Phone check (A059, 2026-10-03): the Subagents row reads "2 without asking ·
+no custom"; raising Start without asking to 6 lifted Warn above to 6, and
+both went back to 2 and 5; "Price Checker" became price-checker and the
+tool list had no delegate or memory; a DeepSeek thread delegated to
+price-checker, whose row showed "Out of steps 10/10 $0.0037"; asking for
+three scouts showed "3 subagents in this message" with only Allow once and
+Deny (denied).
