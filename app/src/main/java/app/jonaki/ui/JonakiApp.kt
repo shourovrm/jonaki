@@ -4,6 +4,7 @@ import app.jonaki.core.modelcatalog.ThinkingSupport
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.ui.ThinkingChoice
 import android.net.Uri
+import android.os.SystemClock
 import android.content.ActivityNotFoundException
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -38,6 +39,7 @@ import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.storage.HistoryMapper
+import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.ModelUsageRow
 import app.jonaki.core.storage.ThreadSummary
 import app.jonaki.core.ui.JonakiTheme
@@ -577,6 +579,8 @@ private fun ChatRoute(
     val codeRun by codeRunOf(application, threadId, steps.firstOrNull { step -> step.toolCallId == openCodeStepId })
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Answers whose first draw was already sent to the request log; the draw pass may report one several times.
+    val answersReportedDrawn = remember(threadId) { mutableSetOf<String>() }
 
     DisposableEffect(threadId) {
         // Leaving a thread is one of the two moments memory extraction runs (D-009).
@@ -636,7 +640,7 @@ private fun ChatRoute(
         status = status,
         modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application),
         selectedModelKey = modelKey,
-        usage = usageOf(modelUsage, catalog, threadCost),
+        usage = usageOf(modelUsage, catalog, threadCost, messages),
         attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name) },
         editingMessageId = editingMessageId,
         threadThinking = if (isNew) {
@@ -775,6 +779,13 @@ private fun ChatRoute(
         openSubagentId = openSubagentId,
         onOpenSubagent = onOpenSubagent,
         onStopSubagent = { subagentId -> runner.stopSubagent(threadId, subagentId) },
+        onAnswerDrawn = { messageId ->
+            // Read in the draw pass itself; the save may run a moment later.
+            val drawnElapsedMillis = SystemClock.elapsedRealtime()
+            if (answersReportedDrawn.add(messageId)) {
+                scope.launch { database.messageDao().markFirstShown(messageId, drawnElapsedMillis) }
+            }
+        },
         listState = listState,
     )
     if (styleSheetOpen) {
@@ -861,7 +872,7 @@ private fun thinkingChoiceOf(level: ThinkingLevel?): ThinkingChoice = when (leve
     ThinkingLevel.HIGH -> ThinkingChoice.HIGH
 }
 
-private fun usageOf(rows: List<ModelUsageRow>, catalog: ModelCatalog, totalCost: Double?): UsageUi? {
+private fun usageOf(rows: List<ModelUsageRow>, catalog: ModelCatalog, totalCost: Double?, messages: List<MessageEntity>): UsageUi? {
     if (rows.isEmpty()) {
         return null
     }
@@ -877,6 +888,7 @@ private fun usageOf(rows: List<ModelUsageRow>, catalog: ModelCatalog, totalCost:
                 costUsd = row.costUsd ?: 0.0,
             )
         },
+        requests = RequestLogRows.build(messages),
     )
 }
 

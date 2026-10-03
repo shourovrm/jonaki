@@ -135,6 +135,21 @@ data class UsageUi(
     val cachedTokens: Int,
     val outputTokens: Int,
     val perModel: List<ModelUsageUi>,
+    /** The latest model requests with their times, newest first (D-132). */
+    val requests: List<RequestTimeUi> = emptyList(),
+)
+
+/**
+ * One model request in the usage sheet's request log (D-132). [providerWaitMillis]
+ * runs from sending to the first visible text; [shownAfterMillis] from that text
+ * to the chat's first draw of it. Null when the request had no such moment.
+ */
+@Immutable
+data class RequestTimeUi(
+    /** Wall-clock time it was sent, already formatted. */
+    val sentAt: String,
+    val providerWaitMillis: Long?,
+    val shownAfterMillis: Long?,
 )
 
 @Immutable
@@ -150,7 +165,13 @@ sealed interface ChatItem {
 
     data class UserMessage(override val id: String, val text: String) : ChatItem
 
-    data class AssistantMessage(override val id: String, val markdown: String, val isStreaming: Boolean) : ChatItem
+    data class AssistantMessage(
+        override val id: String,
+        val markdown: String,
+        val isStreaming: Boolean,
+        /** True until the chat reports its first draw of this answer to the request log (D-132). */
+        val awaitsFirstDraw: Boolean = false,
+    ) : ChatItem
 
     /** The tool steps of one agent turn, drawn as a track with one station per step. */
     data class Run(

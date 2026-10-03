@@ -29,6 +29,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.MonospaceFamily
@@ -141,7 +142,13 @@ private fun ModelPrices(choice: ModelChoiceUi) {
 @Composable
 internal fun UsageSheet(usage: UsageUi, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
+        Column(
+            Modifier
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
             SheetTitle(stringResource(R.string.chat_usage_sheet_title))
             Text(
                 UsageFormat.cost(usage.totalCostUsd),
@@ -164,8 +171,62 @@ internal fun UsageSheet(usage: UsageUi, onDismiss: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp),
             )
+            if (usage.requests.isNotEmpty()) {
+                RequestLog(usage.requests)
+            }
         }
     }
+}
+
+/** The latest requests' times, newest first (D-132); a table, so each figure sits under its label. */
+@Composable
+private fun RequestLog(requests: List<RequestTimeUi>) {
+    Text(
+        stringResource(R.string.chat_requests_title),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(top = 20.dp, bottom = 6.dp),
+    )
+    RequestLogRow(
+        sentAt = stringResource(R.string.chat_requests_sent),
+        providerWait = stringResource(R.string.chat_requests_provider_wait),
+        shownAfter = stringResource(R.string.chat_requests_shown_after),
+        isHeader = true,
+    )
+    for (request in requests) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        RequestLogRow(
+            sentAt = request.sentAt,
+            providerWait = millisText(request.providerWaitMillis),
+            shownAfter = millisText(request.shownAfterMillis),
+            isHeader = false,
+        )
+    }
+}
+
+@Composable
+private fun RequestLogRow(sentAt: String, providerWait: String, shownAfter: String, isHeader: Boolean) {
+    val style = if (isHeader) {
+        MaterialTheme.typography.labelSmall
+    } else {
+        MaterialTheme.typography.bodySmall.copy(fontFamily = MonospaceFamily)
+    }
+    val color = if (isHeader) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        // Labels may wrap at large font sizes; the figures are short and keep one line.
+        Text(sentAt, style = style, color = color, modifier = Modifier.weight(1f))
+        Text(providerWait, style = style, color = color, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+        Text(shownAfter, style = style, color = color, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+    }
+}
+
+/** A dash when the request had no such moment, for example a turn that only called tools. */
+@Composable
+private fun millisText(millis: Long?): String {
+    if (millis == null) {
+        return "–"
+    }
+    return stringResource(R.string.chat_requests_millis, millis.toInt())
 }
 
 @Composable

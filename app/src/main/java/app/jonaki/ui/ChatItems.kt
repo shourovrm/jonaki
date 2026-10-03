@@ -240,7 +240,9 @@ object ChatItems {
             items += ChatItem.Reasoning("reasoning-${row.id}", reasoning.trim(), isStreaming = isStillThinking)
         }
         if (row.text.isNotBlank()) {
-            items += ChatItem.AssistantMessage(row.id, row.text, isStreaming = isStreaming)
+            // Rows from before version 9, subagents and background calls have no first-text time to measure from.
+            val awaitsFirstDraw = row.firstTextElapsedMillis != null && row.firstShownElapsedMillis == null
+            items += ChatItem.AssistantMessage(row.id, row.text, isStreaming = isStreaming, awaitsFirstDraw = awaitsFirstDraw)
         }
         return items
     }

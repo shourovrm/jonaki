@@ -92,6 +92,11 @@
     <string name="chat_context_no_request">আনুমানিক। এখনো কোনো রিকোয়েস্ট হয়নি।</string>
     <string name="chat_context_compact_at">%1$d%% (%2$s টোকেন) হলে পুরনো মেসেজের সারাংশ হয়।</string>
     <string name="chat_usage_footnote">OpenRouter খরচ জানায়; বাকিগুলোর দাম টোকেন গুনে হিসাব করা।</string>
+    <string name="chat_requests_title">রিকোয়েস্ট</string>
+    <string name="chat_requests_sent">পাঠানো</string>
+    <string name="chat_requests_provider_wait">সার্ভিসের অপেক্ষা</string>
+    <string name="chat_requests_shown_after">দেখাতে লাগল</string>
+    <string name="chat_requests_millis">%1$d ms</string>
     <string name="chat_artifact_open">খুলুন</string>
     <string name="chat_working_thinking">ভাবছে…</string>
     <string name="chat_working_writing">লিখছে…</string>

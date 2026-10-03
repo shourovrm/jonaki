@@ -182,6 +182,21 @@ class ChatItemsTest {
     }
 
     @Test
+    fun onlyAnAnswerWithAFirstTextTimeAndNoDrawTimeAwaitsItsFirstDraw() {
+        val rows = listOf(
+            row("u1", "USER", "hi"),
+            row("a1", "ASSISTANT", "Old answer"),
+            row("a2", "ASSISTANT", "Drawn").copy(firstTextElapsedMillis = 100, firstShownElapsedMillis = 120),
+            row("a3", "ASSISTANT", "Not yet drawn", complete = false).copy(firstTextElapsedMillis = 200),
+        )
+
+        val items = ChatItems.build(rows, emptyList(), isRunning = true, stepWords = englishStepWords)
+
+        val awaiting = items.filterIsInstance<ChatItem.AssistantMessage>().associate { item -> item.id to item.awaitsFirstDraw }
+        assertEquals(mapOf("a1" to false, "a2" to false, "a3" to true), awaiting)
+    }
+
+    @Test
     fun aFinishedRunShowsTheCostOfItsTurn() {
         val rows = listOf(
             row("u1", "USER", "weather?"),
