@@ -17,7 +17,7 @@ class ProjectSectionTest {
         assertEquals("Project \"Thesis\" instructions:\nCite sources with year.\nBritish spelling.", section)
     }
 
-    /** The project part sits inside the user instructions, so it goes before skills and memory (D-114). */
+    /** The project part sits inside the user instructions, so it goes before skills and memory (D-118). */
     @Test
     fun projectSectionGoesBeforeSkillsAndMemory() {
         val builder = PromptBuilder("Base.")

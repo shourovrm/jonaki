@@ -7,7 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
-/** The incognito statements of D-PRJ-2, run on the version 7 schema. */
+/** The incognito statements of D-111, run on the version 7 schema. */
 class IncognitoQueriesTest {
     private val databases = MigrationTestDatabases()
     private lateinit var connection: SQLiteConnection

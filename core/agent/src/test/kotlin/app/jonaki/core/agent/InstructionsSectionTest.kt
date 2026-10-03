@@ -48,7 +48,7 @@ class InstructionsSectionTest {
         )
     }
 
-    /** Most specific last: general, project, persona, thread (D-114). */
+    /** Most specific last: general, project, persona, thread (D-118). */
     @Test
     fun theProjectComesAfterGeneralAndBeforePersonaAndThread() {
         val section = InstructionsSection.build(

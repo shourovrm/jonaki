@@ -19,7 +19,7 @@ data class Reminder(
 
 /**
  * The reminders waiting to fire, in a file, because Android forgets every
- * alarm when the phone restarts (D-M9-2). One instance serves the whole app.
+ * alarm when the phone restarts (D-097). One instance serves the whole app.
  */
 class ReminderBook(file: File) {
     private val storage = JsonListFile(file)

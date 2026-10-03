@@ -28,7 +28,7 @@ interface Tool {
     /**
      * The cost of one call. A tool whose actions differ overrides this, so
      * that reading the calendar runs at once while adding to it asks, and
-     * the mcp tool's search runs at once while its call asks (D-096, D-113);
+     * the mcp tool's search runs at once while its call asks (D-096, D-117);
      * [sideEffect] stays the tool's highest cost.
      */
     fun sideEffectOf(arguments: JsonObject): SideEffect = sideEffect

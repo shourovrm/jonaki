@@ -3,7 +3,7 @@ package app.jonaki.run
 import app.jonaki.core.storage.IncognitoThreadActivity
 
 /**
- * Deletes incognito threads one day after their last message (D-PRJ-2).
+ * Deletes incognito threads one day after their last message (D-111).
  * The app calls [deleteExpired] at start and whenever the thread list
  * shows, so no background job is needed.
  */

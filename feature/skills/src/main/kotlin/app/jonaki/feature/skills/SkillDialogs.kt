@@ -120,7 +120,7 @@ internal fun DeleteSkillDialog(name: String, onConfirm: () -> Unit, onDismiss: (
     )
 }
 
-/** Asked on Back when the editor holds text that was not saved (D-GAP-2). */
+/** Asked on Back when the editor holds text that was not saved (D-113). */
 @Composable
 internal fun DiscardChangesDialog(onDiscard: () -> Unit, onKeepEditing: () -> Unit) {
     AlertDialog(

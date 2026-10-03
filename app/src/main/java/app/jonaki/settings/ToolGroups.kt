@@ -71,6 +71,7 @@ object ToolGroups {
  * when a later version adds a group worth a look.
  */
 object ToolPicker {
+    // 2 adds the Phone, Schedule and MCP groups (D-120).
     const val CURRENT = 2
 
     fun shouldShow(seenVersion: Int): Boolean = seenVersion < CURRENT

@@ -50,9 +50,9 @@ data class ToolServices(
     val phone: Phone? = null,
     /** The thread's scheduled tasks on WorkManager; null leaves the schedule tool out. */
     val taskScheduler: TaskScheduler? = null,
-    /** Servers from Settings; none leaves the mcp tool out (D-MCP-3). */
+    /** Servers from Settings; none leaves the mcp tool out (D-103). */
     val mcpServers: List<McpServer> = emptyList(),
-    /** Where the mcp tool caches tool lists (D-MCP-2). */
+    /** Where the mcp tool caches tool lists (D-102). */
     val mcpToolListFolder: File? = null,
     /** One engine per language for run_code; empty leaves run_code out. */
     val codeRuntimes: List<CodeRuntime> = emptyList(),

@@ -68,7 +68,7 @@ class SecretStore(context: Context) {
 
     /**
      * Secrets whose names are made at run time, such as the header of each
-     * MCP server (D-MCP-4). They are encrypted like the API keys but are not
+     * MCP server (D-104). They are encrypted like the API keys but are not
      * part of [names] or [previews].
      */
     fun readRuntimeSecret(name: String): String? =

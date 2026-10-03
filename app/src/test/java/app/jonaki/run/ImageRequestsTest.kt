@@ -75,7 +75,7 @@ class ImageRequestsTest {
 
     private fun kotlinx.serialization.json.JsonElement.parts() = jsonObject["parts"]!!.jsonArray
 
-    /** Six turns, each with a photo: the first three are sent as notes, the last three with their images (D-GAP-4). */
+    /** Six turns, each with a photo: the first three are sent as notes, the last three with their images (D-115). */
     private fun longThread(): ChatRequest {
         val turns = (0 until 6).flatMap { number ->
             listOf(

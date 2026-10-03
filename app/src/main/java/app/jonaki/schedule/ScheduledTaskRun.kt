@@ -17,7 +17,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * Runs a scheduled task's prompt as a new message in its thread, through the
  * same runner and foreground service as a typed message, and posts the
- * answer as a notification (D-M9-5).
+ * answer as a notification (D-100).
  */
 class ScheduledTaskRun(
     private val context: Context,

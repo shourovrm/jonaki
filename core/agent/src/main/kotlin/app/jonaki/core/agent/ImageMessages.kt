@@ -22,7 +22,7 @@ fun interface ImageLoader {
  * results, which get a user message with the images after them. The same
  * conversation always gives the same messages.
  *
- * Only the newest user turns carry their images (D-GAP-4); older images
+ * Only the newest user turns carry their images (D-115); older images
  * become a note that names the view_image call, so the model can look
  * again. The cut moves in steps of [KEPT_IMAGE_TURNS] turns, so between two
  * steps every earlier message keeps its bytes and the prompt cache holds.

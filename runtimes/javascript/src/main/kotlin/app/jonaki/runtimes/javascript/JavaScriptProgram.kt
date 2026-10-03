@@ -69,7 +69,7 @@ internal object JavaScriptProgram {
         }
         val primitive = value as? JsonPrimitive ?: return value.toString()
         // Never longOrNull here: it reads a leading number and stops at the first
-        // separator, so a printed "0, 1, 1" became "0" (D-200).
+        // separator, so a printed "0, 1, 1" became "0" (D-121).
         return primitive.contentOrNull
     }
 }

@@ -1,24 +1,24 @@
 package app.jonaki.core.agent
 
-/** How long answers should be: a global default in Settings, changed per thread (D-STY-2). */
+/** How long answers should be: a global default in Settings, changed per thread (D-108). */
 enum class AnswerStyle {
     CONCISE,
     NORMAL,
     DETAILED,
 }
 
-/** A saved persona as the prompt shows it (D-STY-3). */
+/** A saved persona as the prompt shows it (D-109). */
 data class PromptPersona(
     val name: String,
     val instructions: String,
 )
 
 /**
- * Builds the user's part of the system prompt (D-STY-1): the answer style,
+ * Builds the user's part of the system prompt (D-107): the answer style,
  * the general instructions from Settings, the thread's project
  * (from [ProjectSection.build]), the thread's persona and the thread's own
  * instructions, in that order, so that a later, more specific part wins over
- * an earlier one (D-114). Every part changes only when the user edits
+ * an earlier one (D-118). Every part changes only when the user edits
  * it, so the prompt stays byte-identical between requests (D-005). With
  * nothing set the section is empty and the prompt is the same as without it.
  */

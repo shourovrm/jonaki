@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.AnswerStyleChoice
 import app.jonaki.core.ui.AnswerStyleChoiceRow
 
-/** One saved persona in the Settings list (D-STY-3). */
+/** One saved persona in the Settings list (D-109). */
 @Immutable
 data class PersonaRowUi(
     val id: String,

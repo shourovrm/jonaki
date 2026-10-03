@@ -12,7 +12,7 @@ import okhttp3.Request
  * Model lists for the model picker and prices for the cost display (D-027).
  * OpenRouter's list is downloaded and cached in a file for a day. Other
  * services use [BuiltInModels], joined by the ids their own GET /models
- * answered when the service has one (D-MCP-5).
+ * answered when the service has one (D-105).
  */
 class ModelCatalog(
     private val cacheFile: File,

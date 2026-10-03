@@ -7,7 +7,7 @@ import app.jonaki.JonakiApplication
 
 /**
  * One planned run of a scheduled task. It plans the next run first, then
- * sends the prompt to the task's thread and posts the answer (D-M9-5).
+ * sends the prompt to the task's thread and posts the answer (D-100).
  */
 class ScheduledTaskWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {

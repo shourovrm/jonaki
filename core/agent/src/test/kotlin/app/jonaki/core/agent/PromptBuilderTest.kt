@@ -30,7 +30,7 @@ class PromptBuilderTest {
 
     /**
      * With no answer style, instructions, persona or project set, the prompt
-     * is exactly the bytes 0.7.0 sent, so updating breaks no prompt cache (D-114).
+     * is exactly the bytes 0.7.0 sent, so updating breaks no prompt cache (D-118).
      */
     @Test
     fun nothingSetGivesTheSamePromptAsVersion070() {

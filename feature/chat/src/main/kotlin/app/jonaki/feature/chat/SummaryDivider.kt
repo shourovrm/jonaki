@@ -27,7 +27,7 @@ import app.jonaki.core.ui.MarkdownText
 
 /**
  * A thin line where the summarised part of the thread ends (D-033,
- * D-GAP-3). The model sees the summary instead of the messages above it;
+ * D-114). The model sees the summary instead of the messages above it;
  * a tap shows that summary under the line.
  */
 @Composable

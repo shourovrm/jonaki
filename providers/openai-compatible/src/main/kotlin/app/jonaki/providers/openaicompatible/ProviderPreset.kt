@@ -14,7 +14,7 @@ data class ProviderPreset(
     val reportsCost: Boolean = false,
     /** Where this service takes the thinking level; NONE means it offers no such setting (D-057). */
     val thinkingField: ThinkingField = ThinkingField.NONE,
-    /** The service answers GET <baseUrl>/models in the OpenAI format, so the model picker can list its ids (D-MCP-5). */
+    /** The service answers GET <baseUrl>/models in the OpenAI format, so the model picker can list its ids (D-105). */
     val listsModels: Boolean = false,
 )
 
@@ -46,7 +46,7 @@ object ProviderPresets {
     )
 
     // Base URLs below were checked against each service's documentation on
-    // 2026-10-03 (sources in D-MCP-6). Z.ai documents no model list.
+    // 2026-10-03 (sources in D-106). Z.ai documents no model list.
     val glm = ProviderPreset(
         key = "glm",
         displayName = "GLM (Z.ai)",

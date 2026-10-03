@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Style and persona of one thread (D-STY-1 to D-STY-3). -->
+    <!-- Style and persona of one thread (D-107 to D-109). -->
     <string name="chat_menu_style">Style and persona</string>
     <string name="chat_style_title">Style and persona</string>
     <string name="chat_style_answer">Answer style</string>

@@ -25,7 +25,7 @@ import okhttp3.Response
 
 /**
  * One session with one server over MCP Streamable HTTP, written on OkHttp
- * because the official Kotlin SDK needs a newer Kotlin (D-MCP-1). A tool call
+ * because the official Kotlin SDK needs a newer Kotlin (D-101). A tool call
  * opens a connection, uses it and closes it, so nothing outlives the call.
  *
  * Every message is a POST of one JSON-RPC 2.0 object. The server answers

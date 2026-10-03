@@ -20,7 +20,7 @@ data class StoredTask(
     val title: String,
     val prompt: String,
     val repeat: Repeat,
-    /** The local wall-clock time the task keeps (D-M9-4). */
+    /** The local wall-clock time the task keeps (D-099). */
     val anchor: LocalDateTime,
     val nextRunAtMillis: Long,
 ) {
@@ -33,7 +33,7 @@ data class StoredTask(
     fun isPlannedFor(runAtMillis: Long): Boolean = nextRunAtMillis == runAtMillis
 }
 
-/** Scheduled tasks in a file, so that Settings and the schedule tool can list them (D-M9-3). */
+/** Scheduled tasks in a file, so that Settings and the schedule tool can list them (D-098). */
 class ScheduleBook(file: File) {
     private val storage = JsonListFile(file)
     private val current = MutableStateFlow(load())

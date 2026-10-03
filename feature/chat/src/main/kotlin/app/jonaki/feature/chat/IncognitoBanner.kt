@@ -21,7 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 /**
- * Stays under the top bar while a thread is incognito (D-PRJ-2). [onKeep]
+ * Stays under the top bar while a thread is incognito (D-111). [onKeep]
  * is null before the first message, when there is no thread to keep yet.
  */
 @Composable

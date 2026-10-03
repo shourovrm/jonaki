@@ -26,14 +26,14 @@ data class SavedMcpServer(
 )
 
 /**
- * The user's MCP servers (D-MCP-4): names, addresses and header names in app
+ * The user's MCP servers (D-104): names, addresses and header names in app
  * preferences, header values encrypted in [SecretStore], tool lists cached
  * in [toolListFolder] by the mcp tool.
  */
 class McpServerStore(
     context: Context,
     private val secrets: SecretStore,
-    /** Where the mcp tool caches each server's tool list (D-MCP-2). */
+    /** Where the mcp tool caches each server's tool list (D-102). */
     val toolListFolder: File,
 ) {
     private val preferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)

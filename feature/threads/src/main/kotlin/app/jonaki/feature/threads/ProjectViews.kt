@@ -48,7 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiTheme
 
-/** All, one chip per project, then "+ Project" (D-PRJ-1). The row scrolls sideways. */
+/** All, one chip per project, then "+ Project" (D-110). The row scrolls sideways. */
 @Composable
 internal fun ProjectChips(
     projects: List<ProjectUi>,

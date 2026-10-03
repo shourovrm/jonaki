@@ -84,7 +84,7 @@ class JonakiApplication : Application() {
     /** The activity on screen, for pickers and the share sheet that share_file opens (D-045). */
     val visibleActivity = VisibleActivity()
 
-    /** MCP servers from Settings, for the mcp tool (D-MCP-4). */
+    /** MCP servers from Settings, for the mcp tool (D-104). */
     lateinit var mcpServers: McpServerStore
         private set
 
@@ -100,11 +100,11 @@ class JonakiApplication : Application() {
     lateinit var incomingShares: IncomingShares
         private set
 
-    /** Reminders the phone tool set, kept in a file until they fire (D-M9-2). */
+    /** Reminders the phone tool set, kept in a file until they fire (D-097). */
     lateinit var reminders: Reminders
         private set
 
-    /** Tasks the schedule tool made, on WorkManager (D-M9-3). */
+    /** Tasks the schedule tool made, on WorkManager (D-098). */
     lateinit var scheduledTasks: ScheduledTasks
         private set
 
@@ -133,7 +133,7 @@ class JonakiApplication : Application() {
             .build()
         mcpServers = McpServerStore(this, secrets, File(filesDir, "mcp-tools"))
         linkedFolder = LinkedFolder(this)
-        // In files/, not the cache, because Android may clear the cache while chips wait (D-GAP-1).
+        // In files/, not the cache, because Android may clear the cache while chips wait (D-112).
         attachmentDrafts = AttachmentDrafts(File(filesDir, "waiting-attachments"))
         // Read before anything is staged, so a share arriving now is not taken for a leftover.
         val leftoverAttachments = attachmentDrafts.restore()
@@ -181,7 +181,7 @@ class JonakiApplication : Application() {
             database.subagentDao().stopInterrupted()
         }
         applicationScope.launch {
-            // Incognito threads go a day after their last message; the thread list checks again (D-PRJ-2).
+            // Incognito threads go a day after their last message; the thread list checks again (D-111).
             runner.deleteExpiredIncognitoThreads()
         }
         applicationScope.launch {

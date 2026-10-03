@@ -39,7 +39,7 @@ private const val PERSONA_NAME_MAX_CHARACTERS = 60
 
 /**
  * Edits the general custom instructions ([initialName] null) or one persona
- * (D-STY-1, D-STY-3). [onDelete] null hides Delete, as for a new persona.
+ * (D-107, D-109). [onDelete] null hides Delete, as for a new persona.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

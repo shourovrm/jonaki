@@ -26,7 +26,7 @@ import okhttp3.OkHttpClient
  * One proxy tool for every MCP server the user added (D-014): search finds
  * tools by keyword, describe shows one tool's arguments, call runs it. Only
  * call can change something outside the app, so only call asks for approval
- * (D-MCP-3). Tool lists are cached in files (D-MCP-2); each run of this tool
+ * (D-103). Tool lists are cached in files (D-102); each run of this tool
  * opens its own session and closes it again.
  */
 class McpTool(
@@ -87,7 +87,7 @@ class McpTool(
     // A call waits on someone else's server, which may itself ask a model.
     override val timeLimit: Duration = 120.seconds
 
-    // search and describe read the cached tool lists; only call reaches into another service (D-113).
+    // search and describe read the cached tool lists; only call reaches into another service (D-117).
     override fun sideEffectOf(arguments: JsonObject): SideEffect {
         val action = arguments.stringArgument("action")
         if (action == ACTION_SEARCH || action == ACTION_DESCRIBE) {

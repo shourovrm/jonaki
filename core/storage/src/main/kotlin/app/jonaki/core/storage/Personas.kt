@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * A saved persona: a name and the instructions that give it its voice
- * (D-STY-3). A thread points at one through threads.personaId.
+ * (D-109). A thread points at one through threads.personaId.
  */
 @Entity(tableName = "personas")
 data class PersonaEntity(

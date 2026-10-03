@@ -4,7 +4,7 @@ import app.jonaki.core.storage.ThreadEntity
 import app.jonaki.tools.memory.MemoryStore
 
 /**
- * Whether a thread uses memory (D-PRJ-2). An incognito thread neither reads
+ * Whether a thread uses memory (D-111). An incognito thread neither reads
  * nor writes facts: no memory tool, no Memory section in its prompt and no
  * background extraction of its messages.
  */

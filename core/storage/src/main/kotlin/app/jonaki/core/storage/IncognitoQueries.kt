@@ -1,7 +1,7 @@
 package app.jonaki.core.storage
 
 /**
- * The SQL behind incognito threads (D-PRJ-2), kept as constants so the
+ * The SQL behind incognito threads (D-111), kept as constants so the
  * migration tests can run the same statements on the JVM.
  */
 object IncognitoQueries {

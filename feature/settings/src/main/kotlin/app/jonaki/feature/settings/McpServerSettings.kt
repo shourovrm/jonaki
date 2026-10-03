@@ -34,7 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** One MCP server in Settings (D-MCP-4). The header's value never comes back to the screen. */
+/** One MCP server in Settings (D-104). The header's value never comes back to the screen. */
 @Immutable
 data class McpServerUi(
     val id: String,

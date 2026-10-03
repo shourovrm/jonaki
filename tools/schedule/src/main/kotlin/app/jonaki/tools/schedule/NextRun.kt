@@ -23,7 +23,7 @@ enum class Repeat(val argument: String) {
  * every day"), so a daylight-saving change or a trip to another time zone
  * moves the run with the local clock. WorkManager timing is inexact, so each
  * run is scheduled on its own from the anchor, and late runs never add up
- * into drift (D-M9-4).
+ * into drift (D-099).
  */
 object NextRun {
     /**

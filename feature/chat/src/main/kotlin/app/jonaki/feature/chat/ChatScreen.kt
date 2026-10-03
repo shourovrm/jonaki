@@ -118,9 +118,9 @@ fun ChatScreen(
     onCancelEdit: () -> Unit = {},
     /** A thinking level picked for this thread in the model sheet (D-057). */
     onThinkingChange: (ThinkingChoice) -> Unit = {},
-    /** Style and persona in the overflow menu: the app shows [ThreadStyleSheet] (D-STY-1 to D-STY-3). */
+    /** Style and persona in the overflow menu: the app shows [ThreadStyleSheet] (D-107 to D-109). */
     onOpenStyle: () -> Unit = {},
-    /** Keep on the incognito banner: the thread becomes a regular one (D-PRJ-2). */
+    /** Keep on the incognito banner: the thread becomes a regular one (D-111). */
     onKeepThread: () -> Unit = {},
     /** An approval mode picked for this thread in the menu; null follows Settings (D-058). */
     onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
@@ -328,7 +328,7 @@ private fun ChatTopBar(
                                 onRename()
                             },
                         )
-                        // An incognito thread uses no memory (D-PRJ-2).
+                        // An incognito thread uses no memory (D-111).
                         if (!state.incognito) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.chat_menu_memory)) },

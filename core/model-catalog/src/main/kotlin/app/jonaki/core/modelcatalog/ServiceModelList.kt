@@ -9,7 +9,7 @@ import kotlinx.serialization.json.contentOrNull
 /**
  * Reads a service's own model list in the OpenAI format (GET /models:
  * `{"data": [{"id": "gpt-6-luna"}, …]}`), which OpenAI, MiniMax, Qwen and
- * Ollama answer (D-MCP-5). The list carries ids only, no prices.
+ * Ollama answer (D-105). The list carries ids only, no prices.
  */
 object ServiceModelList {
     /**

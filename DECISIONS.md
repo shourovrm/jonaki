@@ -995,7 +995,7 @@ app stores show downloads; run_code's error text uses the same form.
 IncomingFiles.describeSize keeps binary megabytes for the 25 MB file cap.
 Code: UsageFormat.byteSize. Outcome: pending.
 
-## D-M9-1 · 2026-10-03 · Cost per call for tools with mixed actions — proposed
+## D-096 · 2026-10-03 · Cost per call for tools with mixed actions — proposed
 `Tool.sideEffectOf(arguments)` returns the cost of one call and defaults to
 `sideEffect`; the permission broker asks only when that cost is CHANGES.
 phone: calendar_list and clipboard_read run at once; calendar_add,
@@ -1008,7 +1008,7 @@ approval, and D-014 keeps one tool per feature. share_file keeps its one
 cost (D-044). Rejected: separate read tools (more tools, against D-014).
 Outcome: pending.
 
-## D-M9-2 · 2026-10-03 · Reminders: an alarm plus a file — proposed
+## D-097 · 2026-10-03 · Reminders: an alarm plus a file — proposed
 phone reminder saves id, text and time in files/reminders.json and sets
 an AlarmManager `setExactAndAllowWhileIdle` alarm. Without "Alarms &
 reminders" (SCHEDULE_EXACT_ALARM, off by default for new installs on
@@ -1027,7 +1027,7 @@ Rejected: a Room table (a schema version that would collide with the
 M7 and M8 branches, for a few rows); USE_EXACT_ALARM (not approved, meant
 for alarm-clock apps). Outcome: pending.
 
-## D-M9-3 · 2026-10-03 · Scheduled tasks in a file, runs on WorkManager — proposed
+## D-098 · 2026-10-03 · Scheduled tasks in a file, runs on WorkManager — proposed
 files/scheduled-tasks.json holds each task's id (8 hex characters),
 thread, title, prompt, repeat (none, daily or weekly), anchor (local
 date and time) and next run. Each run is one WorkManager
@@ -1037,10 +1037,10 @@ tagged work. A task whose thread was deleted is removed at its next run.
 Settings > Scheduled lists reminders and tasks, soonest first, each with
 Cancel. WorkManager 2.10.5 adds WAKE_LOCK and ACCESS_NETWORK_STATE to the
 manifest. Why: plan M9 step 2 and 3. Rejected: a Room table (as in
-D-M9-2); PeriodicWorkRequest (it drifts and cannot keep a clock time).
+D-097); PeriodicWorkRequest (it drifts and cannot keep a clock time).
 Outcome: pending.
 
-## D-M9-4 · 2026-10-03 · A task keeps its clock time; each run plans the next — proposed
+## D-099 · 2026-10-03 · A task keeps its clock time; each run plans the next — proposed
 A daily task at 08:00 stays at 08:00 local time across daylight-saving
 changes and time zones; weekly keeps the anchor's weekday. Each worker
 first plans the next run, counted from the later of its planned time and
@@ -1051,7 +1051,7 @@ planned time and does nothing. Why: WorkManager timing is inexact; a
 chain of delays would drift. Tested in NextRunTest and ScheduleBookTest.
 Outcome: pending.
 
-## D-M9-5 · 2026-10-03 · A scheduled run is a message in its thread — proposed
+## D-100 · 2026-10-03 · A scheduled run is a message in its thread — proposed
 The worker waits while the thread is busy, then sends `Scheduled task
 "<title>": <prompt>` through AgentRunner, so the run uses the thread's
 model, tools, approvals and history like a typed message. When the run
@@ -1066,7 +1066,7 @@ path for runs. Rejected: a separate background loop (a second code path);
 setForeground on the worker (more manifest work for the same limit).
 Outcome: pending.
 
-## D-MCP-1 · 2026-10-03 · MCP client on OkHttp, one session per tool run — proposed
+## D-101 · 2026-10-03 · MCP client on OkHttp, one session per tool run — proposed
 `tools/mcp` speaks MCP Streamable HTTP itself on OkHttp and
 kotlinx.serialization; the official Kotlin SDK would force a Kotlin upgrade.
 Each POST carries one JSON-RPC 2.0 message with `Accept: application/json,
@@ -1085,7 +1085,7 @@ https://mcp.deepwiki.com/mcp search found read_wiki_structure, describe showed
 repoName, and the call returned square/okhttp's page list in 5.7 s; DeepWiki
 answers as an event stream and gives no session id. Outcome: pending.
 
-## D-MCP-2 · 2026-10-03 · MCP tool lists cached in files for a day — proposed
+## D-102 · 2026-10-03 · MCP tool lists cached in files for a day — proposed
 Each server's tools/list answer is saved as `files/mcp-tools/<server id>.json`
 with its address and fetch time. search and describe read it while it is
 under 24 hours old and from the same address; otherwise they fetch it again.
@@ -1096,14 +1096,14 @@ still exists. Saving or removing a server in Settings deletes its file. Why:
 search should not cost a connection per server on every use. Rejected: a
 Room table (schema change for data that is only a cache). Outcome: pending.
 
-## D-MCP-3 · 2026-10-03 · mcp tool: read-only search and describe, approved call — proposed
+## D-103 · 2026-10-03 · mcp tool: read-only search and describe, approved call — proposed
 One tool `mcp` with action search (keywords over every server's tools; a word
 in the name counts 3, in the description 1; blank lists all; default 10
 results, at most 50), describe (full description and input schema) and call
 (arguments as a JSON object, or JSON text). Results over 30,000 characters
 go through OutputLimiter; images and audio become "[image/png image, not
 shown]". The tool declares `SideEffect.CHANGES` and overrides
-`Tool.sideEffectOf(arguments)` (D-M9-1) to return READ_ONLY for search and
+`Tool.sideEffectOf(arguments)` (D-096) to return READ_ONLY for search and
 describe, so the permission broker runs them without a card, while call
 shows the existing card with "server: tool". "Allow in thread" then covers every
 mcp call in that thread. For the coming approval modes, mcp counts as
@@ -1111,7 +1111,7 @@ leaving the app: Auto asks, only Bypass skips the card. The tool is offered
 only when at least one server exists; its prompt line names the servers.
 Changes D-034's "one tool has one cost" for this tool. Outcome: pending.
 
-## D-MCP-4 · 2026-10-03 · MCP servers in Settings — proposed
+## D-104 · 2026-10-03 · MCP servers in Settings — proposed
 Settings has an "MCP servers" group between Skills and Files: one row per
 server (name on one line, URL up to two lines), and "Add server". A dialog
 takes Name, URL, Header (optional) and Header value; it checks for a name,
@@ -1122,7 +1122,7 @@ Keystore key (`SecretStore` run-time secrets) and never shown again; the
 value field then says "Saved" and empty keeps it. A value with no header
 name is sent as Authorization. Outcome: pending.
 
-## D-MCP-5 · 2026-10-03 · Model lists from each service's GET /models — proposed
+## D-105 · 2026-10-03 · Model lists from each service's GET /models — proposed
 A preset with `listsModels` (OpenAI, MiniMax, Qwen, Xiaomi MiMo, Ollama Cloud,
 Ollama on the network) is asked for `<base URL>/models` with the saved key
 each time its Add models screen opens; listing is free. The OpenAI-format
@@ -1136,7 +1136,7 @@ undocumented: GET /v1/models answers 401 without a key where an unknown path
 answers 404 (curl, 2026-10-03); the same check holds for Qwen. Tested with
 MockWebServer only (no keys for these services). Outcome: pending.
 
-## D-MCP-6 · 2026-10-03 · Presets and prices for GLM, MiMo, OpenAI, MiniMax and Qwen — proposed
+## D-106 · 2026-10-03 · Presets and prices for GLM, MiMo, OpenAI, MiniMax and Qwen — proposed
 New services MiniMax (`https://api.minimax.io/v1`, default MiniMax-M3) and
 Qwen (Alibaba Model Studio, Singapore, OpenAI-compatible mode,
 `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`, default
@@ -1170,7 +1170,7 @@ priced too low (Qwen3.7 Flash costs 0.10/0.40 from 32K to 256K); Qwen
 serves the Singapore region only. Thinking levels stay off for MiniMax and
 Qwen. Outcome: pending.
 
-## D-STY-1 · 2026-10-03 · Custom instructions, global and per thread — proposed
+## D-107 · 2026-10-03 · Custom instructions, global and per thread — proposed
 The user writes general instructions in Settings (Answers, "Custom
 instructions") and a thread's own instructions in the chat's ⋮ menu ("Style
 and persona"). Both go into one "User instructions" section of the system
@@ -1186,7 +1186,7 @@ threads.instructions (Room version 7). Rejected: thread text replacing the
 general text (the user would copy shared rules into every thread).
 Mockups: docs/mockups/style-and-personas.html. Outcome: pending.
 
-## D-STY-2 · 2026-10-03 · Answer style in the system prompt — proposed
+## D-108 · 2026-10-03 · Answer style in the system prompt — proposed
 Concise, Normal and Detailed. Settings holds the default (Normal); the
 chat's "Style and persona" sheet adds Default, which follows Settings, as
 the thinking level does (D-057). Normal adds no line; Concise and Detailed
@@ -1198,7 +1198,7 @@ and leave stale styles in older messages. Stored as settings.answer_style
 and threads.answerStyle (null follows Settings). Rejected: more presets
 (no clear use yet; the instructions cover the rest). Outcome: pending.
 
-## D-STY-3 · 2026-10-03 · Personas as saved, named instructions — proposed
+## D-109 · 2026-10-03 · Personas as saved, named instructions — proposed
 A persona is a name (at most 60 characters) and instructions; its voice is
 part of the instructions. Settings lists personas under Personas, with
 "Add persona"; each opens an editor with Save and Delete (asks first). A
@@ -1212,10 +1212,10 @@ AutoMigration 6 to 7). Rejected: a persona replacing the general
 instructions (language and unit rules would be lost); a default persona
 for new threads (not asked for). Outcome: pending.
 
-## D-PRJ-1 · 2026-10-03 · Projects group threads — proposed
+## D-110 · 2026-10-03 · Projects group threads — proposed
 A project has a name, optional instructions and an optional model for new
 threads; nothing else is shared. Table `projects` and nullable
-`threads.projectId` (Room version 7, one AutoMigration with D-PRJ-2), with
+`threads.projectId` (Room version 7, one AutoMigration with D-111), with
 no foreign key: deleting a project first clears `projectId` on its threads,
 so threads are never deleted with it. The thread list shows chips under the
 search field (All, each project by name, "+ Project"); a selected project
@@ -1231,7 +1231,7 @@ for now: shared project memory and shared files (both need new scopes in
 the memory tool and the file tools). Mockups:
 docs/mockups/projects-and-incognito.html. Outcome: pending.
 
-## D-PRJ-2 · 2026-10-03 · Incognito chat — proposed
+## D-111 · 2026-10-03 · Incognito chat — proposed
 The lock in the thread list's bar starts an incognito chat
 (`threads.incognito`, default 0, Room version 7). It neither reads nor
 writes memory: no memory tool, no Memory section in its prompt (so no
@@ -1248,7 +1248,7 @@ Rejected: offering past messages to extraction on Keep (breaks that
 expectation); a periodic job (a check at start and list view is enough).
 Limit: a chat left open on screen past the day is deleted at the next list
 view or app start. Outcome: pending.
-## D-GAP-1 · 2026-10-03 · Attachment chips survive a process restart — proposed
+## D-112 · 2026-10-03 · Attachment chips survive a process restart — proposed
 The staged copies move from `cache/incoming/` to `files/waiting-attachments/`
 (Android may clear the cache), and the chips waiting per thread key are
 saved after every change in `waiting-attachments/waiting.json` (thread key
@@ -1260,7 +1260,7 @@ Why: STATUS known gap. Rejected: a Room table (a migration for a few
 lines of state); a file in the thread folder (a new thread has none until
 its first message). Outcome: pending.
 
-## D-GAP-2 · 2026-10-03 · Back from the skill editor asks before losing edits — proposed
+## D-113 · 2026-10-03 · Back from the skill editor asks before losing edits — proposed
 When the editor's text differs from the saved SKILL.md, Back (the arrow or
 the system gesture) asks "Discard changes?" with Discard and Keep editing;
 tapping outside keeps editing. Without changes Back leaves at once. A failed
@@ -1270,7 +1270,7 @@ Rejected: keeping a draft per skill (a stored second copy that can drift
 from the file). Not shared: the memory and rename dialogs hold a line or
 two and close only on Cancel or a tap outside. Outcome: pending.
 
-## D-GAP-3 · 2026-10-03 · Chat divider where the summary ends — proposed
+## D-114 · 2026-10-03 · Chat divider where the summary ends — proposed
 After compaction the chat shows a thin line, "Earlier messages summarised",
 before the first turn the newest summary does not cover; a tap opens the
 stored summary as Markdown under the line, a second tap folds it. Every
@@ -1280,7 +1280,7 @@ through a new Flow query on `compactions` (no schema change). Why: lifts
 D-033's limit. Rejected: hiding the summarised messages (D-005 keeps them
 in view). Outcome: pending.
 
-## D-GAP-4 · 2026-10-03 · Only the newest user turns carry their images — proposed
+## D-115 · 2026-10-03 · Only the newest user turns carry their images — proposed
 Before each request ImageMessages counts the user turns (the step-budget
 notice not counted) and sends images, attached or from view_image, only
 for turns from `firstTurnWithImages` on: 0 up to five turns, then 3 at six
@@ -1296,7 +1296,45 @@ about 1,000 to 1,600 tokens on every request. Rejected: a cut that moves
 every turn (breaks the cache at the cut on every new message); keeping
 only the current run's images (the model loses a photo the user is still
 asking about). Outcome: pending.
-## D-200 · 2026-10-03 · run_code reads the JavaScript reply's text fields as text — proposed
+## D-116 · 2026-10-03 · WorkManager's own permissions — proposed
+WorkManager 2.10.5 (approved for M9) merges WAKE_LOCK and
+ACCESS_NETWORK_STATE into the manifest. Both are install-time permissions:
+Android grants them without a dialog. They come with the approved
+dependency, so no separate approval was asked. Outcome: pending.
+
+## D-117 · 2026-10-03 · Per-call cost runs through the approval modes — proposed
+M9 (D-096) and MCP each added a per-call cost; only `Tool.sideEffectOf
+(arguments)` stays. `PermissionBroker.runsWithoutAsking(tool, call)` reads
+that call's cost and then applies the thread's mode (D-058), so phone
+calendar_list and mcp search run at once, while calendar_add, schedule
+create and mcp call ask in Ask and Auto and run in Bypass. Subagents'
+request checks go through the same function. Outcome: pending.
+
+## D-118 · 2026-10-03 · Order of the user's instructions in the prompt — proposed
+After the tools, one "User instructions" section joins, in this order:
+answer style, general instructions, project instructions, persona, this
+thread's instructions; the section says the later part wins, so the most
+specific text comes last. Skills and memory follow (incognito threads have
+no memory section). With nothing set the prompt is byte-identical to 0.7.0
+(PromptBuilderTest). The context sheet counts this section with the system
+prompt. Outcome: pending.
+
+## D-119 · 2026-10-03 · One migration from 7 to 8 for personas and projects — proposed
+Version 7 is v0.8.0's (subagents, approval mode). Personas (D-109) and
+projects with incognito (D-110, D-111) were built as separate versions on
+branches; they now share AutoMigration(7, 8): the personas and projects
+tables, and on threads answerStyle, personaId, projectId (nullable),
+instructions ('' by default) and incognito (0 by default). Tested by
+PersonasMigrationTest and ProjectsAndIncognitoMigrationTest. Outcome:
+pending.
+
+## D-120 · 2026-10-03 · Phone, Schedule and MCP tool groups — proposed
+Three groups join the tool picker and Settings > Tools: Phone (phone),
+Schedule (schedule) and MCP (mcp), each on by default and switchable.
+ToolPicker.CURRENT goes from 1 to 2, so the picker shows once more to
+installs that saw the first version. Outcome: pending.
+
+## D-121 · 2026-10-03 · run_code reads the JavaScript reply's text fields as text — proposed
 On the phone, `console.log(fib.join(', '))` printed "0" instead of
 "0, 1, 1, 2, 3, 5, 8, 13, 21, 34". The runner (run-program.js) printed the
 whole line; the cut happened in `JavaScriptProgram.outcomeFrom`, which read
@@ -1310,7 +1348,7 @@ droppedCharacters still parses). Python reads its fields with
 had this bug. Test: JavaScriptProgramTest.printedTextThatStartsWithANumberIsKeptWhole.
 Outcome: pending.
 
-## D-201 · 2026-10-03 · Markdown tables in chat answers — proposed
+## D-122 · 2026-10-03 · Markdown tables in chat answers — proposed
 The phone check of 0.8.0 showed tables as raw pipes. The chat parser now
 reads GitHub-flavoured tables: a header line, then a separator such as
 `|---|:---:|--:|` with as many cells as the header (colons set start,

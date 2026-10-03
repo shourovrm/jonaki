@@ -30,25 +30,25 @@ data class ThreadEntity(
     val thinkingLevel: String? = null,
     /** This thread's approval mode as an ApprovalMode name; null follows Settings (D-058). */
     val approvalMode: String? = null,
-    /** This thread's answer style as an AnswerStyle name; null follows Settings (D-STY-2). */
+    /** This thread's answer style as an AnswerStyle name; null follows Settings (D-108). */
     val answerStyle: String? = null,
-    /** The persona this thread uses, an id in personas; null for none (D-STY-3). */
+    /** The persona this thread uses, an id in personas; null for none (D-109). */
     val personaId: String? = null,
-    /** The user's own instructions for this thread, added after the general ones (D-STY-1). */
+    /** The user's own instructions for this thread, added after the general ones (D-107). */
     @ColumnInfo(defaultValue = "")
     val instructions: String = "",
-    /** The project the thread belongs to; null when it has none (D-PRJ-1). */
+    /** The project the thread belongs to; null when it has none (D-110). */
     val projectId: String? = null,
     /**
      * An incognito thread uses no memory and is deleted a day after its last
-     * message, unless the user keeps it as a regular thread (D-PRJ-2).
+     * message, unless the user keeps it as a regular thread (D-111).
      */
     @ColumnInfo(defaultValue = "0")
     val incognito: Boolean = false,
 )
 
 /**
- * A group of threads (D-PRJ-1). Threads point to it with projectId; there is
+ * A group of threads (D-110). Threads point to it with projectId; there is
  * no foreign key, so deleting a project clears that column instead of
  * deleting threads.
  */

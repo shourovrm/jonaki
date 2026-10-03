@@ -82,9 +82,9 @@ fun ThreadListScreen(
     onRename: (threadId: String) -> Unit = {},
     /** Called after the user confirms deletion. */
     onDelete: (threadId: String) -> Unit = {},
-    /** The lock in the top bar: a new incognito chat (D-PRJ-2). */
+    /** The lock in the top bar: a new incognito chat (D-111). */
     onNewIncognitoThread: () -> Unit = {},
-    /** A project chip was tapped; null is All (D-PRJ-1). */
+    /** A project chip was tapped; null is All (D-110). */
     onProjectSelect: (projectId: String?) -> Unit = {},
     /** The project dialog was saved; [projectId] is null for a new project. */
     onSaveProject: (projectId: String?, draft: ProjectDraft) -> Unit = { _, _ -> },
@@ -338,7 +338,7 @@ private fun ThreadRowView(
                 .padding(start = 4.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
         ) {
             if (thread.incognito && thread.runState !is ThreadRunState.Running) {
-                // The lock stands where the dot is, so the row keeps its shape (D-PRJ-2).
+                // The lock stands where the dot is, so the row keeps its shape (D-111).
                 Icon(
                     Icons.Filled.Lock,
                     contentDescription = stringResource(R.string.threads_incognito),

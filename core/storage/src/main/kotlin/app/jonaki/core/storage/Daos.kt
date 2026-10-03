@@ -74,7 +74,7 @@ interface ThreadDao {
 
     @Query("UPDATE threads SET instructions = :instructions WHERE id = :threadId")
     suspend fun setInstructions(threadId: String, instructions: String)
-    /** Moves a thread into a project, or out of every project with null (D-PRJ-1). */
+    /** Moves a thread into a project, or out of every project with null (D-110). */
     @Query("UPDATE threads SET projectId = :projectId WHERE id = :threadId")
     suspend fun setProject(threadId: String, projectId: String?)
 
@@ -82,16 +82,16 @@ interface ThreadDao {
     @Query("UPDATE threads SET projectId = NULL WHERE projectId = :projectId")
     suspend fun clearProject(projectId: String)
 
-    /** Incognito threads with their last message time, for the deletion a day later (D-PRJ-2). */
+    /** Incognito threads with their last message time, for the deletion a day later (D-111). */
     @Query(IncognitoQueries.ACTIVITY)
     suspend fun listIncognitoActivity(): List<IncognitoThreadActivity>
 
-    /** "Keep as a regular thread": stops the deletion; past messages stay out of memory (D-PRJ-2). */
+    /** "Keep as a regular thread": stops the deletion; past messages stay out of memory (D-111). */
     @Query(IncognitoQueries.KEEP)
     suspend fun keepIncognito(threadId: String)
 }
 
-/** Projects that group threads (D-PRJ-1). */
+/** Projects that group threads (D-110). */
 @Dao
 interface ProjectDao {
     @Query("SELECT * FROM projects ORDER BY name COLLATE NOCASE, createdAtMillis")

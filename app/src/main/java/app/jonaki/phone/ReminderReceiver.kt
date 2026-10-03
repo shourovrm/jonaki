@@ -29,7 +29,7 @@ class ReminderReceiver : BroadcastReceiver() {
 /**
  * Sets the reminders' alarms again after a restart or an app update, which
  * clear them, and after the user allows exact alarms, so the next ones fire
- * on time (D-M9-2). WorkManager restores scheduled tasks by itself.
+ * on time (D-097). WorkManager restores scheduled tasks by itself.
  */
 class RescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

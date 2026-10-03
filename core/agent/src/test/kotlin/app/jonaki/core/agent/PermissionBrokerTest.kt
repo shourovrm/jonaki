@@ -158,7 +158,7 @@ class PermissionBrokerTest {
         }
     }
 
-    /** Like the phone tool: reading the calendar runs at once, adding to it asks (D-M9-1). */
+    /** Like the phone tool: reading the calendar runs at once, adding to it asks (D-096). */
     private class ActionTool : Tool by FakeTool("phone", sideEffect = SideEffect.CHANGES) {
         override fun sideEffectOf(arguments: JsonObject): SideEffect =
             if (arguments.stringArgument("action") == "calendar_list") SideEffect.READ_ONLY else SideEffect.CHANGES

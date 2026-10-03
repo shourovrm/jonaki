@@ -16,7 +16,7 @@ import kotlinx.serialization.json.putJsonArray
 
 /**
  * Each server's tool list in `<folder>/<server id>.json`, so search and
- * describe need no connection while the list is fresh (D-MCP-2). The file
+ * describe need no connection while the list is fresh (D-102). The file
  * records the address it came from; a server whose address was edited
  * gets a new list.
  */

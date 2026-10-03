@@ -1,7 +1,7 @@
 package app.jonaki.core.agent
 
 /**
- * Builds the project part of the system prompt (D-PRJ-1): the instructions
+ * Builds the project part of the system prompt (D-110): the instructions
  * the user wrote for the project a thread belongs to. It changes only when
  * the user edits them or moves the thread, so the prompt cache holds (D-005).
  */

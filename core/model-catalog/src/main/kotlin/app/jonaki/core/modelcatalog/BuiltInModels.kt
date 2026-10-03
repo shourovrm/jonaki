@@ -3,10 +3,10 @@ package app.jonaki.core.modelcatalog
 /**
  * Models offered for services that have no public price list the app reads.
  * The user can still type any model id, and services with their own model
- * list add their ids without a price (D-MCP-5).
+ * list add their ids without a price (D-105).
  *
  * Rows made with [official] carry the service's own pay-as-you-go prices,
- * read from its price page on 2026-10-03 (sources in D-MCP-6); the context
+ * read from its price page on 2026-10-03 (sources in D-106); the context
  * window and image input come from OpenRouter's list of the same day when
  * the service's page does not state them. Rows made with [estimate] copy
  * OpenRouter's price for the same model on 2026-10-02. Where a service

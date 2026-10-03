@@ -109,7 +109,7 @@ private const val ROUTE_SKILLS = "skills"
 private const val ROUTE_SKILLS_THREAD_PREFIX = "skills:"
 private const val ROUTE_CUSTOM_INSTRUCTIONS = "custom-instructions"
 
-/** "persona:<id>", the id empty for a new persona (D-STY-3). */
+/** "persona:<id>", the id empty for a new persona (D-109). */
 private const val ROUTE_PERSONA_PREFIX = "persona:"
 
 /** "artifact:<thread id>@<path relative to the thread folder>" (D-047). */
@@ -124,7 +124,7 @@ private const val FOCUS_SEPARATOR = '@'
 /** A thread is only created on its first message, so backing out leaves no empty thread. */
 private const val NEW_THREAD = "new"
 
-/** Like [NEW_THREAD], for an incognito chat (D-PRJ-2). */
+/** Like [NEW_THREAD], for an incognito chat (D-111). */
 private const val NEW_INCOGNITO_THREAD = "new-incognito"
 
 @Composable
@@ -135,7 +135,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
     LaunchedEffect(isDark) { onDarkThemeChange(isDark) }
     JonakiTheme(themeMode = themeMode) {
         var route by rememberSaveable { mutableStateOf(ROUTE_THREADS) }
-        // The project chip picked in the thread list; kept here so it survives opening a chat (D-PRJ-1).
+        // The project chip picked in the thread list; kept here so it survives opening a chat (D-110).
         var selectedProjectId by rememberSaveable { mutableStateOf<String?>(null) }
         RefusedFilesMessage(application)
         val pendingShare by application.incomingShares.pending.collectAsState()
@@ -340,7 +340,7 @@ private fun ThreadsRoute(
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
-        // The list is one of the two moments incognito threads a day old are deleted (D-PRJ-2).
+        // The list is one of the two moments incognito threads a day old are deleted (D-111).
         application.runner.deleteExpiredIncognitoThreads()
     }
     LaunchedEffect(Unit) {
@@ -439,7 +439,7 @@ private fun ChatRoute(
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenArtifact: (path: String) -> Unit,
-    /** The project a new regular thread joins: the one selected in the thread list (D-PRJ-1). */
+    /** The project a new regular thread joins: the one selected in the thread list (D-110). */
     newThreadProjectId: String?,
 ) {
     val database = application.database
@@ -1010,7 +1010,7 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
     val alreadyAdded = snapshot.chatModels.modelsByService[service].orEmpty().toSet()
     var models by remember(serviceKey) { mutableStateOf(application.catalog.models(serviceKey)) }
     LaunchedEffect(serviceKey) {
-        // Services with their own list add the ids they serve today; listing is free (D-MCP-5).
+        // Services with their own list add the ids they serve today; listing is free (D-105).
         refreshServiceModels(application, service)
         models = application.catalog.models(serviceKey)
     }

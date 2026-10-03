@@ -8,7 +8,7 @@ import app.jonaki.feature.threads.ProjectDraft
 import app.jonaki.feature.threads.ProjectUi
 import java.util.UUID
 
-/** Saving and deleting projects for the thread list (D-PRJ-1). */
+/** Saving and deleting projects for the thread list (D-110). */
 internal object Projects {
     fun uiOf(project: ProjectEntity, catalog: ModelCatalog): ProjectUi = ProjectUi(
         id = project.id,

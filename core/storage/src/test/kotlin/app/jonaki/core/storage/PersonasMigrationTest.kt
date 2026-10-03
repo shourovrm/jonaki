@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * Runs Room's generated 7 to 8 migration: the personas table and the
- * thread's answer style, persona and instructions (D-STY-1 to D-STY-3).
+ * thread's answer style, persona and instructions (D-107 to D-109).
  */
 class PersonasMigrationTest {
     private val databases = MigrationTestDatabases()

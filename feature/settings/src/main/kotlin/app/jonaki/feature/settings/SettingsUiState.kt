@@ -28,13 +28,13 @@ data class SettingsUiState(
     val linkedFolderName: String? = null,
     /** Reminders and scheduled tasks, soonest first (plan M9). */
     val scheduledItems: List<ScheduledItemUi> = emptyList(),
-    /** Remote MCP servers the mcp tool reaches (D-MCP-4). */
+    /** Remote MCP servers the mcp tool reaches (D-104). */
     val mcpServers: List<McpServerUi> = emptyList(),
-    /** Answer style of every thread that has not picked its own (D-STY-2); never DEFAULT here. */
+    /** Answer style of every thread that has not picked its own (D-108); never DEFAULT here. */
     val answerStyle: AnswerStyleChoice = AnswerStyleChoice.NORMAL,
-    /** The general custom instructions (D-STY-1); the row shows their first line. */
+    /** The general custom instructions (D-107); the row shows their first line. */
     val customInstructions: String = "",
-    /** Saved personas, sorted by name (D-STY-3). */
+    /** Saved personas, sorted by name (D-109). */
     val personas: List<PersonaRowUi> = emptyList(),
     /** When tools ask first, in every thread without its own mode (D-058). */
     val approvalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,

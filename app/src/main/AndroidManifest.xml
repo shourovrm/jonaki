@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- Reminders' alarms are set again after a restart (D-M9-2). -->
+    <!-- Reminders' alarms are set again after a restart (D-097). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- open_app sees only apps with a launcher icon; QUERY_ALL_PACKAGES is not used (plan M9). -->

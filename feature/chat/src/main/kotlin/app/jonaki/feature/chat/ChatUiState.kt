@@ -28,7 +28,7 @@ data class ChatUiState(
     val editingMessageId: String? = null,
     /** This thread's thinking level; DEFAULT follows the model's setting (D-057). */
     val threadThinking: ThinkingChoice = ThinkingChoice.DEFAULT,
-    /** An incognito thread shows a banner with Keep and has no Memory item (D-PRJ-2). */
+    /** An incognito thread shows a banner with Keep and has no Memory item (D-111). */
     val incognito: Boolean = false,
     /** This thread's own approval mode; null follows [defaultApprovalMode] from Settings (D-058). */
     val threadApprovalMode: ApprovalModeChoice? = null,

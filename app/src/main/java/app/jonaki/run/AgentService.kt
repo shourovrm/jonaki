@@ -80,7 +80,7 @@ class AgentService : Service() {
                 context.startForegroundServiceCompat(Intent(context, AgentService::class.java))
             } catch (notAllowed: IllegalStateException) {
                 // Android 12 and later refuse a foreground service started from the background, as a
-                // scheduled task's worker is; that worker keeps the process alive for the run (D-M9-5).
+                // scheduled task's worker is; that worker keeps the process alive for the run (D-100).
             }
         }
     }

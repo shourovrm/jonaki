@@ -6,7 +6,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Runs Room's generated 7 to 8 migration for projects and incognito chat (D-PRJ-1, D-PRJ-2). */
+/** Runs Room's generated 7 to 8 migration for projects and incognito chat (D-110, D-111). */
 class ProjectsAndIncognitoMigrationTest {
     private val databases = MigrationTestDatabases()
 

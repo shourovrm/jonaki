@@ -12,7 +12,7 @@ import java.util.UUID
 /**
  * Reminders as alarms that post a notification (plan M9 step 1). The book
  * keeps every reminder until it fires, so a restart can set the alarms
- * again (D-M9-2).
+ * again (D-097).
  */
 class Reminders(
     private val context: Context,

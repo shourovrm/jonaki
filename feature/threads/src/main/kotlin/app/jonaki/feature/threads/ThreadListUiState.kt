@@ -13,7 +13,7 @@ data class ThreadListUiState(
     val searchQuery: String = "",
     /** Spent across all threads this calendar month (D-027); null hides the line. */
     val monthCostUsd: Double? = null,
-    /** Projects for the filter chips, in name order (D-PRJ-1). */
+    /** Projects for the filter chips, in name order (D-110). */
     val projects: List<ProjectUi> = emptyList(),
     /** The project whose threads show; null shows all threads. */
     val selectedProjectId: String? = null,
@@ -34,11 +34,11 @@ data class ThreadRow(
     val projectId: String? = null,
     /** Shown before the last line when all threads show. */
     val projectName: String? = null,
-    /** Marked with a lock; deleted a day after its last message (D-PRJ-2). */
+    /** Marked with a lock; deleted a day after its last message (D-111). */
     val incognito: Boolean = false,
 )
 
-/** A project that groups threads (D-PRJ-1). */
+/** A project that groups threads (D-110). */
 @Immutable
 data class ProjectUi(
     val id: String,

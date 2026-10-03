@@ -28,7 +28,7 @@ import kotlinx.serialization.json.putJsonObject
 /**
  * Calendar, reminders, notifications, the clipboard and opening apps (D-020).
  * Reading the calendar and the clipboard runs at once; every other action
- * changes something outside the app and asks the user first (D-M9-1).
+ * changes something outside the app and asks the user first (D-096).
  */
 class PhoneTool(
     private val phone: Phone,

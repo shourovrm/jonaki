@@ -19,7 +19,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * The answer style the user picks in Settings or for one thread (D-STY-2).
+ * The answer style the user picks in Settings or for one thread (D-108).
  * DEFAULT is offered only in a thread, where it follows Settings.
  */
 enum class AnswerStyleChoice {
@@ -62,7 +62,7 @@ fun AnswerStyleChoiceRow(
 
 /**
  * Longest text one instructions field takes: about 2,000 tokens at 4
- * characters per token, sent with every request of a thread (D-STY-1).
+ * characters per token, sent with every request of a thread (D-107).
  */
 const val INSTRUCTIONS_MAX_CHARACTERS = 8_000
 

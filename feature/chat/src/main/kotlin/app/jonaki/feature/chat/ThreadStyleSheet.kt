@@ -34,7 +34,7 @@ import app.jonaki.core.ui.AnswerStyleChoice
 import app.jonaki.core.ui.AnswerStyleChoiceRow
 import app.jonaki.core.ui.InstructionsField
 
-/** What the Style and persona sheet shows for one thread (D-STY-1 to D-STY-3). */
+/** What the Style and persona sheet shows for one thread (D-107 to D-109). */
 @Immutable
 data class ThreadStyleUi(
     /** DEFAULT follows the answer style in Settings. */

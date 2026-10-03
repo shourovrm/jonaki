@@ -2,7 +2,7 @@ package app.jonaki.settings
 
 import app.jonaki.core.agent.AnswerStyle
 
-/** Reads stored answer styles and picks the one a run uses (D-STY-2). */
+/** Reads stored answer styles and picks the one a run uses (D-108). */
 object AnswerStyles {
     /** Null for a missing name or one this version does not know. */
     fun fromName(name: String?): AnswerStyle? = AnswerStyle.entries.firstOrNull { style -> style.name == name }

@@ -23,7 +23,7 @@ import kotlinx.serialization.json.putJsonObject
 /**
  * Runs a prompt later in this thread, once, daily or weekly, and posts a
  * notification with the answer (plan M9 step 2). Creating and cancelling
- * need the user's approval; listing does not (D-M9-1).
+ * need the user's approval; listing does not (D-096).
  */
 class ScheduleTool(
     private val scheduler: TaskScheduler,

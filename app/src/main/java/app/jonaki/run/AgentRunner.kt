@@ -143,7 +143,7 @@ class AgentRunner(
 
     /**
      * Creates a thread and returns its id. A thread made inside a project
-     * starts with the project's model when it has one (D-PRJ-1).
+     * starts with the project's model when it has one (D-110).
      */
     suspend fun createThread(projectId: String? = null, incognito: Boolean = false): String {
         val now = System.currentTimeMillis()
@@ -249,12 +249,12 @@ class AgentRunner(
         clock = System::currentTimeMillis,
     )
 
-    /** Deletes incognito threads whose last message is a day old (D-PRJ-2). */
+    /** Deletes incognito threads whose last message is a day old (D-111). */
     suspend fun deleteExpiredIncognitoThreads() {
         incognitoCleanup.deleteExpired()
     }
 
-    /** "Keep as a regular thread": the thread stays, and only later messages reach memory (D-PRJ-2). */
+    /** "Keep as a regular thread": the thread stays, and only later messages reach memory (D-111). */
     suspend fun keepIncognitoThread(threadId: String) {
         database.threadDao().keepIncognito(threadId)
     }
@@ -542,7 +542,7 @@ class AgentRunner(
         val modelAcceptsImages = modelKey?.let { key -> catalog.find(key)?.acceptsImages } == true
         val toolServices = toolServicesFor(thread, modelAcceptsImages)
         val tools = ToolRegistry.tools(toolServices) + ToolRegistry.delegateTools(PromptOnlySubagents, toolServices.enabledGroups)
-        // An incognito thread sends no Memory section (D-PRJ-2).
+        // An incognito thread sends no Memory section (D-111).
         val facts = if (ThreadMemory.isOn(thread)) promptFactsOf(threadId) else emptyList()
         val memory = MemorySection.build(facts)
         val skills = enabledSkillsOf(thread)
@@ -645,7 +645,7 @@ class AgentRunner(
             )
         }
 
-    /** The instructions of the thread's project, read once per run like the skills (D-PRJ-1). */
+    /** The instructions of the thread's project, read once per run like the skills (D-110). */
     private suspend fun projectSectionFor(thread: ThreadEntity): String {
         val projectId = thread.projectId ?: return ""
         val project = database.projectDao().find(projectId) ?: return ""
@@ -667,7 +667,7 @@ class AgentRunner(
     /**
      * The answer style, the general, project and thread instructions and the
      * thread's persona, read once per run so every request of the run sends the same
-     * bytes (D-005, D-STY-1). A persona deleted meanwhile counts as none.
+     * bytes (D-005, D-107). A persona deleted meanwhile counts as none.
      */
     private suspend fun instructionsSectionFor(thread: ThreadEntity, snapshot: SettingsSnapshot): String {
         val persona = thread.personaId?.let { personaId -> database.personaDao().find(personaId) }

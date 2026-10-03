@@ -27,7 +27,7 @@ import java.util.UUID
 import kotlinx.coroutines.launch
 
 /**
- * A thread's answer style, persona and instructions (D-STY-1 to D-STY-3).
+ * A thread's answer style, persona and instructions (D-107 to D-109).
  * A new thread keeps them here until its first message creates the row.
  */
 data class ThreadStyleDraft(

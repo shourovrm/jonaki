@@ -36,9 +36,9 @@ data class SettingsSnapshot(
     val reviewExtractedMemories: Boolean = false,
     /** Thinking level per model key; a model without an entry keeps its own default (D-057). */
     val thinkingLevels: Map<String, ThinkingLevel> = emptyMap(),
-    /** The user's general instructions for every thread (D-STY-1). */
+    /** The user's general instructions for every thread (D-107). */
     val customInstructions: String = "",
-    /** Answer style of every thread that has not picked its own (D-STY-2). */
+    /** Answer style of every thread that has not picked its own (D-108). */
     val answerStyle: AnswerStyle = AnswerStyle.NORMAL,
     /** When tools ask before a change, in every thread without its own mode (D-058). */
     val defaultApprovalMode: ApprovalMode = ApprovalMode.ASK,
