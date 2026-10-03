@@ -125,7 +125,10 @@ class AgentLoopTest {
 
         val kinds = recorder.events.map { event -> event::class.simpleName }
         assertEquals(
-            listOf("AssistantMessage", "ToolStarted", "ToolFinished", "TextDelta", "AssistantMessage", "RunFinished"),
+            listOf(
+                "RequestSent", "AssistantMessage", "ToolStarted", "ToolFinished",
+                "RequestSent", "TextDelta", "AssistantMessage", "RunFinished",
+            ),
             kinds,
         )
     }

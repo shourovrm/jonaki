@@ -1,5 +1,6 @@
 package app.jonaki.run
 
+import android.os.SystemClock
 import app.jonaki.R
 import app.jonaki.core.providerapi.ThinkingLevel
 
@@ -428,6 +429,7 @@ class AgentRunner(
             threadId = threadId,
             database = database,
             clock = System::currentTimeMillis,
+            elapsedClock = SystemClock::elapsedRealtime,
             onApprovalNeeded = ::addApproval,
             onApprovalWithdrawn = ::withdrawApproval,
             onStepStarted = {

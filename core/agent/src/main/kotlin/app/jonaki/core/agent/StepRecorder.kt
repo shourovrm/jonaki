@@ -7,6 +7,9 @@ import app.jonaki.core.toolapi.ToolOutput
 
 /** One thing that happened during a run, in the order it happened. */
 sealed interface AgentEvent {
+    /** A model request is about to go out; the request log times the reply from here (D-132). */
+    data object RequestSent : AgentEvent
+
     /** A streamed piece of the answer; saved as it arrives so nothing is lost. */
     data class TextDelta(val text: String) : AgentEvent
 

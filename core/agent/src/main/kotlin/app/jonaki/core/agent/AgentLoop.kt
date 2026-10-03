@@ -101,6 +101,7 @@ class AgentLoop(
             thinkingLevel = settings.thinkingLevel,
         )
         val streamedText = StringBuilder()
+        record(AgentEvent.RequestSent)
         try {
             return streamTurn(
                 provider = provider,

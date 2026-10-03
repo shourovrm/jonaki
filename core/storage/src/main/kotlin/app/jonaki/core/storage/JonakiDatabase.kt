@@ -21,7 +21,7 @@ import kotlinx.coroutines.Dispatchers
         PersonaEntity::class,
         ProjectEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
@@ -43,6 +43,8 @@ import kotlinx.coroutines.Dispatchers
         // nullable answerStyle, personaId and projectId, instructions (empty by
         // default) and incognito (0 by default) (D-107 to D-111).
         AutoMigration(from = 7, to = 8),
+        // Version 9 adds four nullable request-log time columns to messages (D-132).
+        AutoMigration(from = 8, to = 9),
     ],
 )
 abstract class JonakiDatabase : RoomDatabase() {

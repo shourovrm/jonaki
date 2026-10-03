@@ -111,6 +111,15 @@ data class MessageEntity(
      * the folded "Thinking" block and never sent back to the model (D-054).
      */
     val reasoningText: String? = null,
+    // Request-log times of the call that produced an assistant message (D-132); null on other
+    // rows and on rows saved before version 9. Elapsed times are SystemClock.elapsedRealtime().
+    /** Wall-clock time the request was sent, for display. */
+    val requestSentAtMillis: Long? = null,
+    val requestSentElapsedMillis: Long? = null,
+    /** When the first visible answer text arrived from the provider. */
+    val firstTextElapsedMillis: Long? = null,
+    /** When the chat first drew that text; written by the chat screen. */
+    val firstShownElapsedMillis: Long? = null,
 )
 
 /** One tool call as the user sees it in the step track. */
