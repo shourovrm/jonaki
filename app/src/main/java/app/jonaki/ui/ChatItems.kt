@@ -51,6 +51,8 @@ object ChatItems {
         pythonCard: (toolCallId: String, need: InstallNeed) -> ChatItem? = { _, _ -> null },
         /** The thread's newest summary; a divider marks where the part it covers ends. */
         compaction: CompactionEntity? = null,
+        /** Labels for the step track and approval cards, in the app's language. */
+        stepWords: StepDetail.Words,
     ): List<ChatItem> {
         // Background usage rows only carry a cost; they would add it to a run's cost line.
         val visibleRows = rows.filter { row -> row.role != HistoryMapper.BACKGROUND_ROLE }
@@ -65,10 +67,10 @@ object ChatItems {
             if (compaction != null && index == firstKeptTurn) {
                 items += ChatItem.SummaryDivider("summary-${compaction.id}", compaction.summaryText)
             }
-            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentsByParent, subagentSteps)
+            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentsByParent, subagentSteps, stepWords)
             if (isLastTurn) {
                 items += pythonCardFor(turn, stepsById, pythonCard)
-                items += pendingApprovals.map(::approvalCard)
+                items += pendingApprovals.map { pending -> approvalCard(pending, stepWords) }
             }
         }
         val withRetry = markRetryableError(items, visibleRows, isRunning)
@@ -102,13 +104,13 @@ object ChatItems {
     }
 
     /** A subagent's request_tool card names the tool it wants and says why; other cards say what the call will do. */
-    private fun approvalCard(pending: PendingApproval): ChatItem.Approval {
+    private fun approvalCard(pending: PendingApproval, stepWords: StepDetail.Words): ChatItem.Approval {
         val subagent = pending.subagent
         val reason = subagent?.reason
         val description = if (reason != null) {
             reason
         } else {
-            StepDetail.of(pending.toolCall.toolName, pending.toolCall.argumentsJson).target.orEmpty()
+            StepDetail.of(pending.toolCall.toolName, pending.toolCall.argumentsJson, stepWords).target.orEmpty()
         }
         return ChatItem.Approval(pending.toolCall.id, pending.toolName, description, agentLabel = subagent?.agentLabel)
     }
@@ -155,6 +157,7 @@ object ChatItems {
         fallbackNote: String,
         subagentsByParent: Map<String, List<SubagentEntity>>,
         subagentSteps: Map<String?, List<StepEntity>>,
+        stepWords: StepDetail.Words,
     ): List<ChatItem> {
         val items = mutableListOf<ChatItem>()
         val turnId = turn.first().id
@@ -171,10 +174,10 @@ object ChatItems {
         if (turnSteps.isNotEmpty()) {
             // The turn's cost is only final once the run has ended.
             val turnCost = if (isActiveTurn) null else costOf(turn, turnSubagents)
-            items += ChatItem.Run("run-$turnId", turnSteps.map(::stepUi), isActive = isActiveTurn, costUsd = turnCost)
+            items += ChatItem.Run("run-$turnId", turnSteps.map { step -> stepUi(step, stepWords) }, isActive = isActiveTurn, costUsd = turnCost)
         }
         for (subagent in turnSubagents) {
-            items += subagentCard(subagent, subagentSteps[subagent.id].orEmpty(), turnSubagents)
+            items += subagentCard(subagent, subagentSteps[subagent.id].orEmpty(), turnSubagents, stepWords)
         }
         // A writer subagent's artifacts open from the chat like the thread agent's own.
         val stepsOfTurn = turnSteps + turnSubagents.flatMap { subagent -> subagentSteps[subagent.id].orEmpty() }
@@ -232,7 +235,12 @@ object ChatItems {
         return if (costs.isEmpty()) null else costs.sum()
     }
 
-    private fun subagentCard(subagent: SubagentEntity, steps: List<StepEntity>, sameCall: List<SubagentEntity>): ChatItem.Subagent {
+    private fun subagentCard(
+        subagent: SubagentEntity,
+        steps: List<StepEntity>,
+        sameCall: List<SubagentEntity>,
+        stepWords: StepDetail.Words,
+    ): ChatItem.Subagent {
         val siblings = sameCall.count { other -> other.parentToolCallId == subagent.parentToolCallId }
         // The same names the delegate result uses: "researcher", or "researcher 2" among several.
         val label = if (siblings > 1) "${subagent.agentType} ${subagent.orderInCall + 1}" else subagent.agentType
@@ -241,15 +249,16 @@ object ChatItems {
             label = label,
             task = subagent.task,
             status = SubagentUiStatus.entries.firstOrNull { it.name == subagent.status } ?: SubagentUiStatus.STOPPED,
-            steps = steps.sortedBy { step -> step.startedAtMillis }.map(::stepUi),
+            steps = steps.sortedBy { step -> step.startedAtMillis }.map { step -> stepUi(step, stepWords) },
             costUsd = subagent.costUsd,
             latestText = subagent.latestText,
             answer = subagent.resultText,
         )
     }
 
-    private fun stepUi(step: StepEntity): StepUi {
-        val detail = StepDetail.of(step.toolName, step.argumentsJson)
+    private fun stepUi(step: StepEntity, stepWords: StepDetail.Words): StepUi {
+        val detail = StepDetail.of(step.toolName, step.argumentsJson, stepWords)
+
         val status = StepUiStatus.entries.firstOrNull { it.name == step.status } ?: StepUiStatus.STOPPED
         val finished = step.finishedAtMillis
         return StepUi(

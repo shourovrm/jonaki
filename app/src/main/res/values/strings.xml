@@ -26,4 +26,24 @@
     <string name="files_open_no_app">No app can open this file</string>
     <string name="routing_fallback_note">No private provider for this model; used the cheapest.</string>
     <string name="python_try_again_message">Installed. Try again.</string>
+    <string name="error_no_model">No model. Add one in Settings.</string>
+    <string name="error_no_api_key">No %1$s API key. Add one in Settings.</string>
+    <string name="service_ollama_local">Ollama on this network</string>
+    <!-- Approval card and step track lines: what a phone, schedule or share_file call does. -->
+    <string name="step_read_calendar">Read calendar</string>
+    <string name="step_add_to_calendar">Add to calendar</string>
+    <string name="step_reminder">Reminder</string>
+    <string name="step_notify">Notify</string>
+    <string name="step_read_clipboard">Read clipboard</string>
+    <string name="step_copy_to_clipboard">Copy to clipboard</string>
+    <string name="step_open_app">Open app</string>
+    <string name="step_schedule">Schedule</string>
+    <string name="step_cancel_task">Cancel task</string>
+    <string name="step_list_tasks">List tasks</string>
+    <string name="step_to_downloads">To Downloads</string>
+    <string name="step_save_as">Save as</string>
+    <string name="step_share">Share</string>
+    <string name="step_to_linked_folder">To linked folder</string>
+    <string name="step_list_linked_folder">List linked folder</string>
+    <string name="step_from_linked_folder">From linked folder</string>
 </resources>

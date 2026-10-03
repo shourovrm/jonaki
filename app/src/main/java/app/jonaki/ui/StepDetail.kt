@@ -13,55 +13,76 @@ data class StepDetail(
     /** A path, link or site the step works on. */
     val target: String?,
 ) {
+    /** The labels the approval card and step track show, from string resources so they follow the app's language. */
+    class Words(
+        val readCalendar: String,
+        val addToCalendar: String,
+        val reminder: String,
+        val notify: String,
+        val readClipboard: String,
+        val copyToClipboard: String,
+        val openApp: String,
+        val schedule: String,
+        val cancelTask: String,
+        val listTasks: String,
+        val toDownloads: String,
+        val saveAs: String,
+        val share: String,
+        val toLinkedFolder: String,
+        val listLinkedFolder: String,
+        val fromLinkedFolder: String,
+        val lineCount: (lines: Int) -> String,
+    )
+
     companion object {
-        fun of(toolName: String, argumentsJson: String): StepDetail {
+        fun of(toolName: String, argumentsJson: String, words: Words): StepDetail {
             val arguments = parse(argumentsJson) ?: return StepDetail(query = null, target = null)
             return when (toolName) {
                 "web_search" -> StepDetail(query = arguments.text("query"), target = arguments.text("site"))
                 "web_fetch", "youtube_summarize" -> StepDetail(query = null, target = arguments.text("url")?.let(::withoutScheme))
                 "find_files", "search_files" -> StepDetail(query = null, target = arguments.text("pattern") ?: arguments.text("path"))
-                "share_file" -> StepDetail(query = null, target = shareFileTarget(arguments.text("action"), arguments.text("path")))
-                "phone" -> StepDetail(query = null, target = phoneTarget(arguments))
-                "schedule" -> StepDetail(query = null, target = scheduleTarget(arguments))
+                "share_file" -> StepDetail(query = null, target = shareFileTarget(arguments.text("action"), arguments.text("path"), words))
+                "phone" -> StepDetail(query = null, target = phoneTarget(arguments, words))
+                "schedule" -> StepDetail(query = null, target = scheduleTarget(arguments, words))
                 "mcp" -> mcpDetail(arguments)
                 "delegate" -> StepDetail(query = null, target = delegateTarget(arguments))
                 "request_tool" -> StepDetail(query = null, target = arguments.text("name"))
                 "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
-                "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments))
+                "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments, words))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
 
         /** The approval card names what the phone action does and to what (plan M9). */
-        private fun phoneTarget(arguments: JsonObject): String? = when (arguments.text("action")) {
-            "calendar_list" -> "Read calendar"
-            "calendar_add" -> labelled("Add to calendar", arguments.text("title"))
-            "reminder" -> labelled("Reminder", arguments.text("text"))
-            "notify" -> labelled("Notify", arguments.text("title") ?: arguments.text("text"))
-            "clipboard_read" -> "Read clipboard"
-            "clipboard_write" -> "Copy to clipboard"
-            "open_app" -> labelled("Open app", arguments.text("app"))
+        private fun phoneTarget(arguments: JsonObject, words: Words): String? = when (arguments.text("action")) {
+            "calendar_list" -> words.readCalendar
+            "calendar_add" -> labelled(words.addToCalendar, arguments.text("title"))
+            "reminder" -> labelled(words.reminder, arguments.text("text"))
+            "notify" -> labelled(words.notify, arguments.text("title") ?: arguments.text("text"))
+            "clipboard_read" -> words.readClipboard
+            "clipboard_write" -> words.copyToClipboard
+            "open_app" -> labelled(words.openApp, arguments.text("app"))
             else -> null
         }
 
-        private fun scheduleTarget(arguments: JsonObject): String? = when (arguments.text("action")) {
-            "create" -> labelled("Schedule", arguments.text("title") ?: arguments.text("prompt"))
-            "cancel" -> labelled("Cancel task", arguments.text("id"))
-            "list" -> "List tasks"
+        private fun scheduleTarget(arguments: JsonObject, words: Words): String? = when (arguments.text("action")) {
+            "create" -> labelled(words.schedule, arguments.text("title") ?: arguments.text("prompt"))
+            "cancel" -> labelled(words.cancelTask, arguments.text("id"))
+            "list" -> words.listTasks
             else -> null
         }
 
         private fun labelled(label: String, subject: String?): String = if (subject == null) label else "$label: $subject"
 
         /** The approval card must say where the file goes, not only which file (D-044). */
-        private fun shareFileTarget(action: String?, path: String?): String? {
+        private fun shareFileTarget(action: String?, path: String?, words: Words): String? {
             val where = when (action) {
-                "downloads" -> "To Downloads"
-                "save_as" -> "Save as"
-                "share" -> "Share"
-                "linked_folder" -> "To linked folder"
-                "list_linked" -> "List linked folder"
-                "import_linked" -> "From linked folder"
+                "downloads" -> words.toDownloads
+                "save_as" -> words.saveAs
+                "share" -> words.share
+                "linked_folder" -> words.toLinkedFolder
+                "list_linked" -> words.listLinkedFolder
+                "import_linked" -> words.fromLinkedFolder
                 else -> null
             }
             if (where == null) {
@@ -85,10 +106,9 @@ data class StepDetail(
         }
 
         /** "Python · 12 lines": the code itself is too long for one line, and its sheet shows it (D-090). */
-        private fun runCodeTarget(arguments: JsonObject): String? {
+        private fun runCodeTarget(arguments: JsonObject, words: Words): String? {
             val code = arguments.text("code") ?: return null
-            val lineCount = programLineCount(code)
-            val lines = if (lineCount == 1) "1 line" else "$lineCount lines"
+            val lines = words.lineCount(programLineCount(code))
             val language = arguments.text("language")?.let(CodeLanguage::fromArgument) ?: return lines
             return "${language.displayName} · $lines"
         }

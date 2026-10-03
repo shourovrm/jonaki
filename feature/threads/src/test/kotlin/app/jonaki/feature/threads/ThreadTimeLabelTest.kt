@@ -2,6 +2,7 @@ package app.jonaki.feature.threads
 
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -30,6 +31,14 @@ class ThreadTimeLabelTest {
     @Test
     fun olderShowsDayAndMonth() {
         assertEquals(ThreadTimeLabel.Text("24 Sep"), ThreadTimeLabel.of(at(2026, 9, 24, 10, 0), now, zone))
+    }
+
+    @Test
+    fun banglaNamesTheWeekdayAndMonthInBanglaWithAsciiDigits() {
+        val bangla = Locale.forLanguageTag("bn")
+
+        assertEquals(ThreadTimeLabel.Text("মঙ্গল"), ThreadTimeLabel.of(at(2026, 9, 29, 10, 0), now, zone, bangla))
+        assertEquals(ThreadTimeLabel.Text("24 সেপ"), ThreadTimeLabel.of(at(2026, 9, 24, 10, 0), now, zone, bangla))
     }
 
     @Test

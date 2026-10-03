@@ -379,7 +379,7 @@ private fun ThreadsRoute(
             monthCostUsd = monthCost,
             projects = projects.map { project -> Projects.uiOf(project, application.catalog) },
             selectedProjectId = selectedProjectId,
-            projectModelOptions = modelChoices(settingsSnapshot.chatModels, application.catalog)
+            projectModelOptions = modelChoices(settingsSnapshot.chatModels, application.catalog, application)
                 .map { choice -> ProjectModelOption(choice.key, choice.name) },
         ),
         nowMillis = nowMillis,
@@ -569,11 +569,12 @@ private fun ChatRoute(
             subagents = subagents,
             pythonCard = pythonCards.cardFor,
             compaction = compaction,
+            stepWords = stepDetailWords(),
         ),
         isRunning = isRunning,
         draft = draft,
         status = status,
-        modelChoices = modelChoices(settingsSnapshot.chatModels, catalog),
+        modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application),
         selectedModelKey = modelKey,
         usage = usageOf(modelUsage, catalog, threadCost),
         attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name) },
@@ -733,13 +734,39 @@ private fun ChatRoute(
     }
 }
 
-private fun modelChoices(chatModels: ChatModels, catalog: ModelCatalog): List<ModelChoiceUi> =
+/** The step track's labels in the app's language (M11). */
+@Composable
+private fun stepDetailWords(): StepDetail.Words {
+    val resources = LocalContext.current.resources
+    return StepDetail.Words(
+        readCalendar = stringResource(R.string.step_read_calendar),
+        addToCalendar = stringResource(R.string.step_add_to_calendar),
+        reminder = stringResource(R.string.step_reminder),
+        notify = stringResource(R.string.step_notify),
+        readClipboard = stringResource(R.string.step_read_clipboard),
+        copyToClipboard = stringResource(R.string.step_copy_to_clipboard),
+        openApp = stringResource(R.string.step_open_app),
+        schedule = stringResource(R.string.step_schedule),
+        cancelTask = stringResource(R.string.step_cancel_task),
+        listTasks = stringResource(R.string.step_list_tasks),
+        toDownloads = stringResource(R.string.step_to_downloads),
+        saveAs = stringResource(R.string.step_save_as),
+        share = stringResource(R.string.step_share),
+        toLinkedFolder = stringResource(R.string.step_to_linked_folder),
+        listLinkedFolder = stringResource(R.string.step_list_linked_folder),
+        fromLinkedFolder = stringResource(R.string.step_from_linked_folder),
+        lineCount = { lines -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_code_lines, lines, lines) },
+    )
+}
+
+private fun modelChoices(
+chatModels: ChatModels, catalog: ModelCatalog, application: JonakiApplication): List<ModelChoiceUi> =
     chatModels.allModelKeys.map { key ->
         val info = catalog.find(key)
         ModelChoiceUi(
             key = key,
             name = info?.displayName ?: ModelKey.modelOf(key),
-            serviceName = ChatService.byKey(ModelKey.serviceOf(key))?.displayName.orEmpty(),
+            serviceName = ChatService.byKey(ModelKey.serviceOf(key))?.let { service -> serviceNameOf(service, application) }.orEmpty(),
             inputPricePerMillion = info?.inputUsdPerMillion,
             outputPricePerMillion = info?.outputUsdPerMillion,
             cachedInputPricePerMillion = info?.cachedInputUsdPerMillion,
@@ -844,10 +871,10 @@ private fun SettingsRoute(
     )
 
     val state = SettingsUiState(
-        chatServices = serviceCards(snapshot, application.catalog, ::slotFor, ::accountFor),
+        chatServices = serviceCards(snapshot, application, ::slotFor, ::accountFor),
         addableServices = ChatService.entries
             .filter { service -> service !in snapshot.chatModels.addedServices }
-            .map { service -> AddableServiceUi(service.key, service.displayName, hintFor(service)) },
+            .map { service -> AddableServiceUi(service.key, serviceNameOf(service, application), hintFor(service)) },
         geminiKey = slotFor(SecretName.GEMINI),
         searchServices = snapshot.searchOrder.map { service ->
             SearchServiceRow(service.name, displayNameOf(service), slotFor(service.secret))
@@ -980,16 +1007,17 @@ private fun linkFolder(application: JonakiApplication, treeUri: Uri) {
 
 private fun serviceCards(
     snapshot: SettingsSnapshot,
-    catalog: ModelCatalog,
+    application: JonakiApplication,
     slotFor: (SecretName) -> KeySlot,
     accountFor: (ChatService) -> AccountLineUi?,
 ): List<ChatServiceCardUi> {
+    val catalog = application.catalog
     val chatModels = snapshot.chatModels
     return chatModels.addedServices.map { service ->
         val isOpenRouter = service == ChatService.OPENROUTER
         ChatServiceCardUi(
             serviceKey = service.key,
-            displayName = service.displayName,
+            displayName = serviceNameOf(service, application),
             apiKey = service.secret?.let(slotFor),
             routing = if (isOpenRouter) routingUiOf(snapshot.routing.openRouter) else null,
             account = accountFor(service),
@@ -1038,7 +1066,7 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
     }
     AddModelsScreen(
         state = AddModelsUiState(
-            serviceDisplayName = service.displayName,
+            serviceDisplayName = serviceNameOf(service, application),
             models = models.map { info ->
                 AddableModelUi(
                     id = info.modelId,
@@ -1076,6 +1104,14 @@ private suspend fun refreshServiceModels(application: JonakiApplication, service
         return
     }
     application.catalog.refreshServiceModels(service.key, preset.baseUrl, apiKey)
+}
+
+/** "Ollama on this network" is a phrase rather than a brand, so it follows the app's language. */
+private fun serviceNameOf(service: ChatService, application: JonakiApplication): String {
+    if (service == ChatService.OLLAMA_LOCAL) {
+        return application.getString(R.string.service_ollama_local)
+    }
+    return service.displayName
 }
 
 private fun hintFor(service: ChatService): String = when (service) {
