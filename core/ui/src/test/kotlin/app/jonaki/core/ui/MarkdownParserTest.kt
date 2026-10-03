@@ -5,12 +5,15 @@ import app.jonaki.core.ui.MarkdownBlock.CodeBlock
 import app.jonaki.core.ui.MarkdownBlock.Heading
 import app.jonaki.core.ui.MarkdownBlock.OrderedList
 import app.jonaki.core.ui.MarkdownBlock.Paragraph
+import app.jonaki.core.ui.MarkdownBlock.Rule
+import app.jonaki.core.ui.MarkdownBlock.Table
 import app.jonaki.core.ui.MarkdownInline.Code
 import app.jonaki.core.ui.MarkdownInline.Emphasis
 import app.jonaki.core.ui.MarkdownInline.Link
 import app.jonaki.core.ui.MarkdownInline.Strong
 import app.jonaki.core.ui.MarkdownInline.Text
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MarkdownParserTest {
@@ -122,6 +125,52 @@ class MarkdownParserTest {
             ),
             blocks,
         )
+    }
+
+    @Test
+    fun threeDashesStarsOrUnderscoresBetweenParagraphsAreARule() {
+        for (marker in listOf("---", "***", "___", "- - -", "*****")) {
+            val blocks = MarkdownParser.parse("above\n\n$marker\n\nbelow")
+
+            assertEquals(marker, listOf(Paragraph(listOf(Text("above"))), Rule, Paragraph(listOf(Text("below")))), blocks)
+        }
+    }
+
+    @Test
+    fun dashesDirectlyUnderTextAreARuleNotAHeading() {
+        // CommonMark reads this as a setext heading; Jonaki keeps the text and draws a rule under it.
+        val blocks = MarkdownParser.parse("Summary\n---\nmore")
+
+        assertEquals(listOf(Paragraph(listOf(Text("Summary"))), Rule, Paragraph(listOf(Text("more")))), blocks)
+    }
+
+    @Test
+    fun twoDashesAreNotARule() {
+        val blocks = MarkdownParser.parse("--")
+
+        assertEquals(listOf(Paragraph(listOf(Text("--")))), blocks)
+    }
+
+    @Test
+    fun ruleEndsAList() {
+        val blocks = MarkdownParser.parse("- one\n---")
+
+        assertEquals(listOf(BulletList(listOf(listOf(Text("one")))), Rule), blocks)
+    }
+
+    @Test
+    fun dashesInATableSeparatorStayATable() {
+        val blocks = MarkdownParser.parse("a | b\n---|---\n1 | 2")
+
+        assertEquals(1, blocks.size)
+        assertTrue(blocks.single() is Table)
+    }
+
+    @Test
+    fun ruleInsideACodeBlockStaysCode() {
+        val blocks = MarkdownParser.parse("```\n---\n```")
+
+        assertEquals(listOf(CodeBlock("---", null)), blocks)
     }
 
     @Test

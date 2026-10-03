@@ -13,6 +13,13 @@ sealed interface MarkdownBlock {
     data class OrderedList(val start: Int, val items: List<List<MarkdownInline>>) : MarkdownBlock
 
     /**
+     * A thematic break: three or more '-', '*' or '_' alone on a line. Dashes
+     * directly under a text line are a rule too, not a setext heading as in
+     * CommonMark; the text above stays a paragraph.
+     */
+    data object Rule : MarkdownBlock
+
+    /**
      * A GitHub-style table. Every row has exactly as many cells as [header];
      * [source] is the table's Markdown as the model wrote it, for copying.
      */
@@ -47,6 +54,9 @@ object MarkdownParser {
     private val headingPattern = Regex("^(#{1,6})\\s+(.*)$")
     private val bulletPattern = Regex("^\\s*[-*+]\\s+(.*)$")
     private val orderedPattern = Regex("^\\s*(\\d{1,9})[.)]\\s+(.*)$")
+
+    /** CommonMark's thematic break; "- - -" would otherwise read as a bullet. */
+    private val rulePattern = Regex("^ {0,3}([-*_])(?:[ \\t]*\\1){2,}[ \\t]*$")
 
     fun parse(markdown: String): List<MarkdownBlock> {
         val builder = BlockBuilder()
@@ -97,6 +107,11 @@ object MarkdownParser {
             if (heading != null) {
                 flush()
                 blocks += MarkdownBlock.Heading(heading.groupValues[1].length, parseInline(heading.groupValues[2].trim()))
+                return
+            }
+            if (rulePattern.matches(line)) {
+                flush()
+                blocks += MarkdownBlock.Rule
                 return
             }
             val bullet = bulletPattern.matchEntire(line)

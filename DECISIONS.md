@@ -1505,4 +1505,10 @@ same way, and Settings sets D-086's photo refusal only on a recorded
 refusal. Test:
 PermissionStatusesTest. Limit: a permission refused for good on an older
 build and never asked since shows "Not asked", and "Allow" then shows no
-dialog. Outcome: pending.
+dialog.
+Markdown: a line of three or more '-', '*' or '_' (spaces between allowed,
+as "- - -") is a rule, drawn as a thin divider in the outline colour.
+Dashes directly under a text line are a rule as well, not CommonMark's
+setext heading, so a model's "Summary\n---" shows the text and a line.
+A table's separator row is read as a table first. Test:
+MarkdownParserTest. Outcome: pending.
