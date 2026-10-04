@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_section_reminders">রিমাইন্ডার</string>
+    <string name="settings_reminders_interval">পুনরাবৃত্তির বিরতি</string>
+    <string name="settings_reminders_minutes">%1$d মিনিট</string>
+    <string name="settings_reminders_repeats">পুনরাবৃত্তি</string>
+    <string name="settings_reminders_repeats_zero">0 হলে একবার বাজবে</string>
+</resources>

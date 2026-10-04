@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
@@ -64,6 +65,7 @@ private fun statusOf(row: PermissionRow, context: Context, refusedPermissions: S
             showsRationale = showsRationale,
         )
         PermissionRow.ALARMS -> PermissionStatuses.alarms(sdkInt, canScheduleExactAlarms(context))
+        PermissionRow.BATTERY -> PermissionStatuses.battery(isIgnoringBatteryOptimisation(context))
     }
 }
 
@@ -94,6 +96,9 @@ private fun canScheduleExactAlarms(context: Context): Boolean {
     return context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
 }
 
+private fun isIgnoringBatteryOptimisation(context: Context): Boolean =
+    context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
+
 /** "Allow" shows Android's dialog; every other tap opens the system page where the user can change the permission. */
 internal suspend fun onPermissionTapped(application: JonakiApplication, context: Context, item: PermissionRowUi) {
     if (PermissionStatuses.buttonFor(item.status) == PermissionButton.ALLOW) {
@@ -118,11 +123,15 @@ private suspend fun askFor(application: JonakiApplication, context: Context, row
             }
         }
         // A special access switch has no dialog; it is never "Not asked".
-        PermissionRow.ALARMS -> openSystemPageFor(context, row)
+        PermissionRow.ALARMS, PermissionRow.BATTERY -> openSystemPageFor(context, row)
     }
 }
 
 private fun openSystemPageFor(context: Context, row: PermissionRow) {
+    if (row == PermissionRow.BATTERY) {
+        openBatteryOptimisationList(context)
+        return
+    }
     if (row == PermissionRow.ALARMS && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.fromParts("package", context.packageName, null))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -134,6 +143,21 @@ private fun openSystemPageFor(context: Context, row: PermissionRow) {
         }
     }
     openAppSettings(context)
+}
+
+/**
+ * Android's list of apps with battery optimisation. The request that jumps
+ * straight to a "Let Jonaki ignore" dialog needs its own manifest
+ * permission, so the user picks Jonaki from this list instead.
+ */
+private fun openBatteryOptimisationList(context: Context) {
+    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (missing: ActivityNotFoundException) {
+        // Some phones leave this list out; Jonaki's own page in system settings has a battery entry.
+        openAppSettings(context)
+    }
 }
 
 /** The installed version name, read from the package so the build needs no BuildConfig. */

@@ -170,6 +170,7 @@ private fun FilesAndSchedulePage(state: SettingsUiState, actions: SettingsAction
     Group {
         LinkedFolderRow(state.linkedFolderName, actions)
     }
+    ReminderSettingsSection(state.reminders, actions)
     ScheduledSection(state.scheduledItems, actions.onCancelScheduled)
 }
 

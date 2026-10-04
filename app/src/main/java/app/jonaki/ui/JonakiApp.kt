@@ -32,6 +32,8 @@ import app.jonaki.core.agent.ApprovalDecision
 import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.feature.settings.CustomSubagentRowUi
+import app.jonaki.feature.settings.ReminderSettingsUi
+import app.jonaki.phone.ReminderPolicy
 import app.jonaki.feature.settings.SubagentModelRowUi
 import app.jonaki.settings.SubagentModelChoice
 import app.jonaki.core.ui.ApprovalModeChoice
@@ -1050,6 +1052,12 @@ private fun SettingsRoute(
         showStatusStrip = snapshot.showStatusStrip,
         linkedFolderName = linkedFolder?.name,
         scheduledItems = ScheduledItems.of(application, reminders, scheduledTasks),
+        reminders = ReminderSettingsUi(
+            intervalMinutes = snapshot.reminderPolicy.intervalMinutes,
+            intervalOptions = ReminderPolicy.INTERVAL_OPTIONS,
+            maxRepeats = snapshot.reminderPolicy.maxRepeats,
+            maxRepeatsLimit = ReminderPolicy.MAX_REPEATS_LIMIT,
+        ),
         mcpServers = mcpServers.map { server ->
             McpServerUi(server.id, server.name, server.url, server.headerName, application.mcpServers.hasHeaderValue(server.id))
         },
@@ -1135,6 +1143,12 @@ private fun SettingsRoute(
             settings.update { current ->
                 current.copy(subagentLimits = SubagentLimitRows.budgetChanged(current.subagentLimits, agentType, limit, value))
             }
+        },
+        onReminderIntervalChange = { minutes ->
+            settings.update { current -> current.copy(reminderPolicy = current.reminderPolicy.copy(intervalMinutes = minutes).withinBounds()) }
+        },
+        onReminderMaxRepeatsChange = { repeats ->
+            settings.update { current -> current.copy(reminderPolicy = current.reminderPolicy.copy(maxRepeats = repeats).withinBounds()) }
         },
         onOpenCustomSubagent = onOpenCustomSubagent,
         onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },
@@ -1360,7 +1374,7 @@ private fun approvalModeOf(choice: ApprovalModeChoice): ApprovalMode = when (cho
     ApprovalModeChoice.BYPASS -> ApprovalMode.BYPASS
 }
 
-private fun themeModeOf(choice: ThemeChoice): ThemeMode = when (choice) {
+internal fun themeModeOf(choice: ThemeChoice): ThemeMode = when (choice) {
     ThemeChoice.SYSTEM -> ThemeMode.SYSTEM
     ThemeChoice.LIGHT -> ThemeMode.LIGHT
     ThemeChoice.DARK -> ThemeMode.DARK

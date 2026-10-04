@@ -59,6 +59,14 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+        <!-- The notification's "Later…" button; its own task, so it does not pull the chat to the front. -->
+        <activity
+            android:name=".phone.ReminderLaterActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Jonaki.Translucent" />
         <!-- Lends one thread file at a time to the app the user shares to; not a permission (D-044). -->
         <provider
             android:name="androidx.core.content.FileProvider"

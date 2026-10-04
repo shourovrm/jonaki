@@ -13,6 +13,15 @@
     <string name="files_no_camera">ক্যামেরা অ্যাপ নেই</string>
     <string name="reminders_channel_name">রিমাইন্ডার</string>
     <string name="reminder_notification_title">রিমাইন্ডার</string>
+    <string name="reminder_action_done">সম্পন্ন</string>
+    <string name="reminder_action_ten_minutes">10 মিনিট</string>
+    <string name="reminder_action_later">পরে…</string>
+    <string name="reminder_later_title">আবার মনে করান</string>
+    <string name="reminder_later_hour">1 ঘণ্টা</string>
+    <string name="reminder_later_day">1 দিন</string>
+    <string name="reminder_later_pick">তারিখ ও সময় বাছুন</string>
+    <string name="reminder_later_past">ভবিষ্যতের সময় বাছুন</string>
+    <string name="scheduled_waiting_for_done">সম্পন্নের অপেক্ষায়</string>
     <string name="scheduled_tasks_channel_name">নির্ধারিত কাজ</string>
     <string name="scheduled_task_needs_approval">অনুমতি লাগবে</string>
     <string name="scheduled_task_failed">ব্যর্থ: %1$s</string>

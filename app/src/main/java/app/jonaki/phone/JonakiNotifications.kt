@@ -21,7 +21,16 @@ object JonakiNotifications {
      * [notificationId] replaces an earlier notification. Android drops it
      * silently when notifications are off, so callers check first.
      */
-    fun post(context: Context, channel: Channel, notificationId: Int, title: String, text: String) {
+    fun post(
+        context: Context,
+        channel: Channel,
+        notificationId: Int,
+        title: String,
+        text: String,
+        actions: List<Notification.Action> = emptyList(),
+        /** True keeps the notification on screen after a tap, for one that only a button may remove. */
+        staysAfterTap: Boolean = false,
+    ) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(channel.id, context.getString(channel.nameResource), channel.importance))
         val openApp = PendingIntent.getActivity(
@@ -30,14 +39,16 @@ object JonakiNotifications {
             Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = Notification.Builder(context, channel.id)
+        val builder = Notification.Builder(context, channel.id)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setContentIntent(openApp)
-            .setAutoCancel(true)
-            .build()
-        manager.notify(notificationId, notification)
+            .setAutoCancel(!staysAfterTap)
+        for (action in actions) {
+            builder.addAction(action)
+        }
+        manager.notify(notificationId, builder.build())
     }
 }

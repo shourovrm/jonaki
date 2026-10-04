@@ -178,6 +178,17 @@ class PermissionStatusesTest {
     }
 
     @Test
+    fun batteryIsAllowedWhenJonakiIsExemptFromOptimisation() {
+        assertEquals(PermissionStatus.ALLOWED, PermissionStatuses.battery(isIgnoringOptimisation = true))
+        assertEquals(PermissionStatus.OFF, PermissionStatuses.battery(isIgnoringOptimisation = false))
+    }
+
+    @Test
+    fun theBatteryRowHoldsNoManifestPermission() {
+        assertEquals(emptyList<String>(), PermissionRow.BATTERY.permissions)
+    }
+
+    @Test
     fun aDialogAndroidStillShowsOffersAllowAndOtherwiseSettings() {
         assertEquals(PermissionButton.ALLOW, PermissionStatuses.buttonFor(PermissionStatus.NOT_ALLOWED))
         assertEquals(PermissionButton.OPEN_SETTINGS, PermissionStatuses.buttonFor(PermissionStatus.BLOCKED))

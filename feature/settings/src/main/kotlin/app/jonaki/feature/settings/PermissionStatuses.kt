@@ -67,6 +67,16 @@ enum class PermissionRow(
         R.string.settings_permissions_alarms_purpose,
         listOf(Manifest.permission.SCHEDULE_EXACT_ALARM),
     ),
+
+    /**
+     * Not a manifest permission: Android's battery optimisation list is a
+     * setting the user changes, and opening it needs no permission.
+     */
+    BATTERY(
+        R.string.settings_permissions_battery,
+        R.string.settings_permissions_battery_purpose,
+        emptyList(),
+    ),
 }
 
 /** A permission Android grants at install without a dialog; listed so the user sees every one. */
@@ -177,6 +187,10 @@ object PermissionStatuses {
         }
         return PermissionStatus.OFF
     }
+
+    /** "Unrestricted" is Android's name for an app that battery optimisation leaves alone. */
+    fun battery(isIgnoringOptimisation: Boolean): PermissionStatus =
+        if (isIgnoringOptimisation) PermissionStatus.ALLOWED else PermissionStatus.OFF
 
     fun buttonFor(status: PermissionStatus): PermissionButton = when (status) {
         PermissionStatus.NOT_ALLOWED -> PermissionButton.ALLOW
