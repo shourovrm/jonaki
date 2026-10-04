@@ -477,7 +477,7 @@ private fun MessageList(
         items(items, key = { item -> item.id }) { item ->
             when (item) {
                 is ChatItem.UserMessage -> Column {
-                    UserBubble(item.text)
+                    UserMessageWithImages(item.text)
                     MessageActions(item.text, alignEnd = true, onEdit = onEditMessage?.let { edit -> { edit(item.id, item.text) } })
                 }
                 is ChatItem.AssistantMessage -> Column(Modifier.reportDraw(item.awaitsFirstDraw) { onAnswerDrawn(item.id) }) {
@@ -529,7 +529,7 @@ private fun contentLength(item: ChatItem?): Int = when (item) {
 }
 
 @Composable
-private fun UserBubble(text: String) {
+internal fun UserBubble(text: String) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Surface(
             color = JonakiTheme.colors.userBubble,
@@ -835,6 +835,10 @@ private fun AttachmentChips(attachments: List<AttachmentUi>, onRemove: (String) 
             .padding(start = 16.dp, end = 16.dp, top = 8.dp),
     ) {
         for (attachment in attachments) {
+            if (attachment.previewPath != null) {
+                DraftImageChip(attachment, onRemove)
+                continue
+            }
             InputChip(
                 selected = false,
                 onClick = { onRemove(attachment.id) },
