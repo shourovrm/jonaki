@@ -253,41 +253,70 @@ interface SubagentDao {
 @Dao
 interface MemoryDao {
     /** Global facts, pinned first, then newest; facts waiting for review included (the screen marks them). */
-    @Query("SELECT * FROM memories WHERE threadId IS NULL AND projectId IS NULL ORDER BY pinned DESC, updatedAtMillis DESC")
+    @Query(
+        "SELECT * FROM memories WHERE threadId IS NULL AND projectId IS NULL AND supersededAtMillis IS NULL " +
+            "ORDER BY pinned DESC, updatedAtMillis DESC",
+    )
     fun observeGlobal(): Flow<List<MemoryEntity>>
 
     /** One project's facts, pinned first, then newest (D-135). */
-    @Query("SELECT * FROM memories WHERE projectId = :projectId ORDER BY pinned DESC, updatedAtMillis DESC")
+    @Query("SELECT * FROM memories WHERE projectId = :projectId AND supersededAtMillis IS NULL ORDER BY pinned DESC, updatedAtMillis DESC")
     fun observeProject(projectId: String): Flow<List<MemoryEntity>>
 
-    @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY pinned DESC, updatedAtMillis DESC")
+    @Query("SELECT * FROM memories WHERE threadId = :threadId AND supersededAtMillis IS NULL ORDER BY pinned DESC, updatedAtMillis DESC")
     fun observeThread(threadId: String): Flow<List<MemoryEntity>>
 
     /** Extracted facts of every thread that wait for the user's approval (review mode). */
-    @Query("SELECT * FROM memories WHERE pendingReview = 1 ORDER BY createdAtMillis DESC")
+    @Query("SELECT * FROM memories WHERE pendingReview = 1 AND supersededAtMillis IS NULL ORDER BY createdAtMillis DESC")
     fun observePendingReview(): Flow<List<MemoryEntity>>
+
+    /** Replaced or removed global facts, newest first, for the memory screen's folded section. */
+    @Query(
+        "SELECT * FROM memories WHERE threadId IS NULL AND projectId IS NULL AND supersededAtMillis IS NOT NULL " +
+            "ORDER BY supersededAtMillis DESC, id DESC",
+    )
+    fun observeSupersededGlobal(): Flow<List<MemoryEntity>>
+
+    @Query("SELECT * FROM memories WHERE projectId = :projectId AND supersededAtMillis IS NOT NULL ORDER BY supersededAtMillis DESC, id DESC")
+    fun observeSupersededProject(projectId: String): Flow<List<MemoryEntity>>
+
+    @Query("SELECT * FROM memories WHERE threadId = :threadId AND supersededAtMillis IS NOT NULL ORDER BY supersededAtMillis DESC, id DESC")
+    fun observeSupersededThread(threadId: String): Flow<List<MemoryEntity>>
 
     /**
      * Facts the model may see in one thread: global, the thread's project's
      * (none when [projectId] is null) and the thread's own, without those
-     * waiting for review, in the order injection picks them.
+     * waiting for review or superseded, in the order injection picks them.
      */
     @Query(
-        "SELECT * FROM memories WHERE pendingReview = 0 AND (" + MemorySearchIndex.VISIBLE_FROM_THREAD + ") " +
+        "SELECT * FROM memories WHERE pendingReview = 0 AND supersededAtMillis IS NULL AND (" +
+            MemorySearchIndex.VISIBLE_FROM_THREAD + ") " +
             "ORDER BY pinned DESC, lastUsedAtMillis DESC, id DESC",
     )
     suspend fun listVisibleFrom(threadId: String, projectId: String?): List<MemoryEntity>
 
-    /** A thread's facts, including those waiting for review, for background extraction. */
-    @Query("SELECT * FROM memories WHERE threadId = :threadId ORDER BY id")
+    /** A thread's facts, including those waiting for review but not superseded ones, for background extraction. */
+    @Query("SELECT * FROM memories WHERE threadId = :threadId AND supersededAtMillis IS NULL ORDER BY id")
     suspend fun listThread(threadId: String): List<MemoryEntity>
 
-    @Query("SELECT * FROM memories WHERE threadId IS NULL AND projectId IS NULL ORDER BY id")
+    @Query("SELECT * FROM memories WHERE threadId IS NULL AND projectId IS NULL AND supersededAtMillis IS NULL ORDER BY id")
     suspend fun listGlobal(): List<MemoryEntity>
 
-    /** A project's facts, including those waiting for review, for background extraction. */
-    @Query("SELECT * FROM memories WHERE projectId = :projectId ORDER BY id")
+    /** A project's facts, including those waiting for review but not superseded ones, for background extraction. */
+    @Query("SELECT * FROM memories WHERE projectId = :projectId AND supersededAtMillis IS NULL ORDER BY id")
     suspend fun listProject(projectId: String): List<MemoryEntity>
+
+    /** Background extraction replaced or removed the fact; it leaves the prompt, recall and duplicate checks. */
+    @Query("UPDATE memories SET supersededAtMillis = :supersededAtMillis WHERE id = :memoryId")
+    suspend fun supersede(memoryId: Long, supersededAtMillis: Long)
+
+    /** Puts a superseded fact back in use. */
+    @Query("UPDATE memories SET supersededAtMillis = NULL, updatedAtMillis = :updatedAtMillis WHERE id = :memoryId")
+    suspend fun restore(memoryId: Long, updatedAtMillis: Long)
+
+    /** Deletes superseded facts replaced before [cutoffMillis]; returns how many. */
+    @Query("DELETE FROM memories WHERE supersededAtMillis IS NOT NULL AND supersededAtMillis < :cutoffMillis")
+    suspend fun deleteSupersededBefore(cutoffMillis: Long): Int
 
     /** Keeps a deleted project's facts as global ones (D-135). */
     @Query("UPDATE memories SET projectId = NULL, scope = 'global' WHERE projectId = :projectId")
@@ -311,11 +340,11 @@ interface MemoryDao {
     @Query("UPDATE memories SET lastUsedAtMillis = :usedAtMillis WHERE id IN (:memoryIds)")
     suspend fun markUsed(memoryIds: List<Long>, usedAtMillis: Long)
 
-    /** Full-text search with the FTS5 trigram index; [phrase] comes from [MemorySearchIndex.matchPhrase]. */
+    /** Full-text search with the FTS5 trigram index; [match] comes from [FtsQuery.anyWordOf]. Best match first. */
     // Room checks queries against its own tables at build time and cannot see the FTS5 table.
     @SkipQueryVerification
     @Query(MemorySearchIndex.MATCH_SEARCH)
-    suspend fun searchByMatch(phrase: String, threadId: String, projectId: String?, limit: Int): List<MemoryEntity>
+    suspend fun searchByMatch(match: String, threadId: String, projectId: String?, limit: Int): List<MemoryEntity>
 
     /** For queries under three characters; [pattern] comes from [MemorySearchIndex.likePattern]. */
     @Query(MemorySearchIndex.LIKE_SEARCH)

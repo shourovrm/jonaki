@@ -68,19 +68,25 @@ class MemoryMigrationTest {
         if ("projectId" !in columns) {
             connection.execSQL("ALTER TABLE memories ADD COLUMN projectId TEXT")
         }
+        // The searches also name the version 12 columns and rank with the index that covers keywords.
+        if ("keywords" !in columns) {
+            connection.execSQL("ALTER TABLE memories ADD COLUMN keywords TEXT NOT NULL DEFAULT ''")
+            connection.execSQL("ALTER TABLE memories ADD COLUMN supersededAtMillis INTEGER")
+            MemorySearchIndex.upgradeToKeywords(connection)
+        }
     }
 
     private fun matchIds(connection: SQLiteConnection, query: String, threadId: String): List<String> {
         addProjectColumn(connection)
         val sql = MemorySearchIndex.MATCH_SEARCH
-            .replace(":phrase", "?").replace(":threadId", "?").replace(":projectId", "NULL").replace(":limit", "50")
-        return queryStrings(connection, "SELECT id FROM ($sql)", MemorySearchIndex.matchPhrase(query), threadId)
+            .replace(":match", "?").replace(":threadId", "?").replace(":projectId", "NULL").replace(":limit", "50")
+        return queryStrings(connection, "SELECT id FROM ($sql)", FtsQuery.quoted(query), threadId)
     }
 
     private fun likeIds(connection: SQLiteConnection, query: String, threadId: String): List<String> {
         addProjectColumn(connection)
         val sql = MemorySearchIndex.LIKE_SEARCH
-            .replace(":pattern", "?").replace(":threadId", "?").replace(":projectId", "NULL").replace(":limit", "50")
+            .replace(":pattern", "?1").replace(":threadId", "?").replace(":projectId", "NULL").replace(":limit", "50")
         return queryStrings(connection, "SELECT id FROM ($sql)", MemorySearchIndex.likePattern(query), threadId)
     }
 
