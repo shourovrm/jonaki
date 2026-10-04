@@ -15,7 +15,10 @@ import androidx.compose.ui.platform.LocalContext
 import app.jonaki.JonakiApplication
 import app.jonaki.core.skills.SaveResult
 import app.jonaki.core.skills.SkillEntry
+import app.jonaki.core.skills.SkillProposal
 import app.jonaki.feature.skills.ImportUi
+import app.jonaki.feature.skills.ProposalDetailUi
+import app.jonaki.feature.skills.ProposalRowUi
 import app.jonaki.feature.skills.SkillEditorActions
 import app.jonaki.feature.skills.SkillEditorScreen
 import app.jonaki.feature.skills.SkillEditorUiState
@@ -24,6 +27,7 @@ import app.jonaki.feature.skills.SkillsActions
 import app.jonaki.feature.skills.SkillsScreen
 import app.jonaki.feature.skills.SkillsUiState
 import app.jonaki.skills.ImportOutcome
+import app.jonaki.skills.ProposalAddOutcome
 import app.jonaki.skills.PickedFiles
 import app.jonaki.skills.ThreadSkills
 import kotlinx.coroutines.Dispatchers
@@ -48,12 +52,16 @@ internal fun SkillsRoute(
     val contentResolver = LocalContext.current.contentResolver
     var entries by remember { mutableStateOf<List<SkillEntry>>(emptyList()) }
     var deletedBuiltIns by remember { mutableStateOf<List<String>>(emptyList()) }
+    var proposals by remember { mutableStateOf<List<SkillProposal>>(emptyList()) }
+    var openProposalName by remember { mutableStateOf<String?>(null) }
+    var proposalError by remember { mutableStateOf<String?>(null) }
     // The library is plain files with no change feed, so the list is read again after each change.
     var reloadCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(reloadCount) {
         withContext(Dispatchers.IO) {
             entries = library.list()
             deletedBuiltIns = library.deletedBuiltIns()
+            proposals = application.skillProposals.list()
         }
     }
     val thread by remember(threadId) {
@@ -106,6 +114,15 @@ internal fun SkillsRoute(
         },
         canRestoreBuiltIns = deletedBuiltIns.isNotEmpty(),
         import = importUi,
+        proposals = proposals.map { proposal -> ProposalRowUi(proposal.name, proposal.description, proposal.replaces) },
+        openProposal = proposals.firstOrNull { proposal -> proposal.name == openProposalName }?.let { proposal ->
+            ProposalDetailUi(
+                name = proposal.name,
+                replaces = proposal.replaces,
+                skillText = application.skillProposals.skillMarkdownOf(proposal),
+                error = proposalError,
+            )
+        },
     )
     val actions = SkillsActions(
         onBack = onBack,
@@ -138,6 +155,29 @@ internal fun SkillsRoute(
             val files = filesWaitingForReplace
             if (files != null) {
                 scope.launch { show(importer.replace(files)) }
+            }
+        },
+        onOpenProposal = { name ->
+            proposalError = null
+            openProposalName = name
+        },
+        onCloseProposal = { openProposalName = null },
+        onAddProposal = { name ->
+            scope.launch {
+                when (val outcome = withContext(Dispatchers.IO) { application.skillProposalReview.add(name) }) {
+                    is ProposalAddOutcome.Added -> {
+                        openProposalName = null
+                        reloadCount++
+                    }
+                    is ProposalAddOutcome.Failed -> proposalError = outcome.reason
+                }
+            }
+        },
+        onDiscardProposal = { name ->
+            scope.launch {
+                withContext(Dispatchers.IO) { application.skillProposalReview.discard(name) }
+                openProposalName = null
+                reloadCount++
             }
         },
     )

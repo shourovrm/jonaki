@@ -11,6 +11,10 @@ data class SkillsUiState(
     /** Built-in skills the user deleted exist, so "Restore built-in skills" is offered. */
     val canRestoreBuiltIns: Boolean,
     val import: ImportUi,
+    /** Skills the agent proposed and the user has not yet added or discarded; shown first. */
+    val proposals: List<ProposalRowUi> = emptyList(),
+    /** The proposal opened for reading, or null. */
+    val openProposal: ProposalDetailUi? = null,
 ) {
     val isThreadView: Boolean
         get() = threadTitle != null
@@ -26,6 +30,22 @@ data class SkillRowUi(
     val isEdited: Boolean,
     /** On in the thread; only shown in the thread view. */
     val enabledInThread: Boolean,
+)
+
+data class ProposalRowUi(
+    val name: String,
+    val description: String,
+    /** The skill this proposal would change; null for a new skill. */
+    val replaces: String?,
+)
+
+/** A proposal opened read-only: its whole SKILL.md as it would be written. */
+data class ProposalDetailUi(
+    val name: String,
+    val replaces: String?,
+    val skillText: String,
+    /** Why the last Add failed; null otherwise. */
+    val error: String? = null,
 )
 
 /** The add-skill dialog: closed, open, working, failed or asking to replace. */
@@ -47,6 +67,10 @@ class SkillsActions(
     val onImportLink: (link: String) -> Unit,
     val onChooseFile: () -> Unit,
     val onConfirmReplace: () -> Unit,
+    val onOpenProposal: (name: String) -> Unit = {},
+    val onCloseProposal: () -> Unit = {},
+    val onAddProposal: (name: String) -> Unit = {},
+    val onDiscardProposal: (name: String) -> Unit = {},
 )
 
 /** The skill editor: SKILL.md as text. */

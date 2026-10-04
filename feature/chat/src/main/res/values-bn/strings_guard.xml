@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_guard_title">জেভ গার্ড</string>
+    <string name="chat_guard_on">চালু</string>
+    <string name="chat_guard_off">বন্ধ</string>
+    <string name="chat_guard_no_key">চালু, OpenRouter কী নেই</string>
+</resources>

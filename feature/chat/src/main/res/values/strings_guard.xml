@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_guard_title">Jev guard</string>
+    <string name="chat_guard_on">On</string>
+    <string name="chat_guard_off">Off</string>
+    <string name="chat_guard_no_key">On, no OpenRouter key</string>
+</resources>

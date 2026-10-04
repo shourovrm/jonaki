@@ -34,8 +34,10 @@ import app.jonaki.core.model.Role
 import app.jonaki.core.skills.BuiltInSkill
 import app.jonaki.core.skills.SkillLibrary
 import app.jonaki.core.skills.SkillDownloader
+import app.jonaki.core.skills.SkillProposals
 import app.jonaki.skills.AssetSkills
 import app.jonaki.skills.SkillImporter
+import app.jonaki.skills.SkillProposalReview
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.LocalModelTools
@@ -86,6 +88,14 @@ class JonakiApplication : Application() {
 
     /** The skill library in files/skills/, which read_file can read as /skills/ (D-037). */
     lateinit var skillLibrary: SkillLibrary
+        private set
+
+    /** Skills the agent proposed, waiting for the user to add or discard them; kept outside the library. */
+    lateinit var skillProposals: SkillProposals
+        private set
+
+    /** What the user's Add and Discard do to a proposal. */
+    lateinit var skillProposalReview: SkillProposalReview
         private set
 
     /** Adds skills from links and picked files (D-041). */
@@ -161,6 +171,8 @@ class JonakiApplication : Application() {
         // Read before anything is staged, so a share arriving now is not taken for a leftover.
         val leftoverAttachments = attachmentDrafts.restore()
         incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
+        skillProposals = SkillProposals(File(filesDir, "skill-proposals"), skillExists = { name -> skillLibrary.readText(name) != null })
+        skillProposalReview = SkillProposalReview(skillLibrary, skillProposals)
         skillImporter = SkillImporter(skillLibrary, SkillDownloader(httpClient))
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
         localModels = LocalModels(this, httpClient, applicationScope)
@@ -197,6 +209,8 @@ class JonakiApplication : Application() {
             taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, runtimePermissions) },
             mcpServers = mcpServers,
             localRuntime = localModelRuntime,
+            skillProposals = skillProposals,
+            isSkillProposalOn = { settings.snapshot.value.suggestSkills },
         )
         localModelTools = LocalModelTools(settings, runner::toolsForLocalPromptCosts)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))

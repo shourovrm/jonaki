@@ -18,6 +18,8 @@ import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.MemoryTool
 import app.jonaki.tools.phone.Phone
 import app.jonaki.tools.phone.PhoneTool
+import app.jonaki.tools.proposeskill.ProposeSkillTool
+import app.jonaki.tools.proposeskill.SkillProposalSink
 import app.jonaki.tools.readdocument.ReadDocumentTool
 import app.jonaki.tools.readfile.ReadFileTool
 import app.jonaki.tools.runcode.RunCodeTool
@@ -73,6 +75,8 @@ data class ToolServices(
     val projectName: String? = null,
     /** Earlier chat messages for search_chats; null leaves the tool out (incognito threads have none). */
     val chatSearchStore: ChatSearchStore? = null,
+    /** Where propose_skill saves a proposal; null leaves the tool out (off in Settings, incognito, subagents' lists). */
+    val skillProposals: SkillProposalSink? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -104,6 +108,9 @@ object ToolRegistry {
         }
         if (services.chatSearchStore != null) {
             tools += SearchChatsTool(services.chatSearchStore)
+        }
+        if (services.skillProposals != null) {
+            tools += ProposeSkillTool(services.skillProposals)
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)

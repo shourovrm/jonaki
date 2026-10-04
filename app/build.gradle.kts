@@ -36,6 +36,7 @@ dependencies {
     implementation(project(":tools:youtube-summarize"))
     implementation(project(":tools:memory"))
     implementation(project(":tools:search-chats"))
+    implementation(project(":tools:propose-skill"))
     implementation(project(":tools:share-file"))
     implementation(project(":tools:export-pdf"))
     implementation(project(":tools:view-image"))

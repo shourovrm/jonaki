@@ -1,6 +1,8 @@
 package app.jonaki.run
 
 import app.jonaki.guard.GuardFactory
+import app.jonaki.guard.GuardRecorder
+import app.jonaki.guard.RecordingGuard
 import android.os.SystemClock
 import app.jonaki.R
 import app.jonaki.core.providerapi.ThinkingLevel
@@ -60,6 +62,7 @@ import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.skills.SkillLibrary
+import app.jonaki.core.skills.SkillProposals
 import app.jonaki.core.storage.CompactionPlan
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
@@ -86,6 +89,7 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
 import app.jonaki.files.ModelImageLoader
+import app.jonaki.skills.LibrarySkillProposalSink
 import app.jonaki.skills.ThreadSkills
 import app.jonaki.tools.phone.Phone
 import app.jonaki.tools.schedule.TaskScheduler
@@ -138,6 +142,10 @@ class AgentRunner(
     private val mcpServers: McpServerStore,
     /** GGUF models on the phone and their one provider (D-133). */
     private val localRuntime: LocalModelRuntime,
+    /** Where the agent's skill proposals wait for the user; null leaves propose_skill out. */
+    private val skillProposals: SkillProposals? = null,
+    /** Read for every run: false leaves propose_skill out, so a Settings switch applies from the next message. */
+    private val isSkillProposalOn: () -> Boolean = { true },
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -641,7 +649,11 @@ class AgentRunner(
         }
         threadApprovalStates[threadId] = approvalState
         // Made per run, so switching the Jev guard on or off applies to the next message.
-        val guard = GuardFactory(settings, secrets, httpClient).create()
+        val guard = RecordingGuard.around(
+            GuardFactory(settings, secrets, httpClient).create(),
+            // Saves each answer as a note on the step and each call's cost as a hidden usage row.
+            GuardRecorder(threadId, database.stepDao()::appendGuardNote, backgroundModel::saveUsage),
+        )
         val permissionBroker = PermissionBroker(
             approvalRequester = session,
             threadState = approvalState,
@@ -773,6 +785,8 @@ class AgentRunner(
         projectName = project?.name,
         // Like memory, earlier chats are not searched from an incognito thread (D-111).
         chatSearchStore = if (ThreadMemory.isOn(thread)) RoomChatSearchStore(database, thread.id) else null,
+        // Never in an incognito thread: a proposal outlives the thread and would carry its content into the library.
+        skillProposals = if (thread.incognito || !isSkillProposalOn()) null else skillProposals?.let(::LibrarySkillProposalSink),
         fileDestinations = fileDestinations,
         modelAcceptsImages = modelAcceptsImages,
         phone = phone,

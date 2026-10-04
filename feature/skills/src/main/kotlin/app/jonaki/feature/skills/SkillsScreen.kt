@@ -87,7 +87,20 @@ fun SkillsScreen(state: SkillsUiState, actions: SkillsActions, modifier: Modifie
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            if (state.skills.isEmpty()) {
+            if (state.proposals.isNotEmpty()) {
+                item(key = "proposed-header") {
+                    Text(
+                        stringResource(R.string.skills_proposed),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                    )
+                }
+                items(state.proposals, key = { proposal -> "proposal-" + proposal.name }) { proposal ->
+                    ProposalRow(proposal, onOpen = { actions.onOpenProposal(proposal.name) })
+                }
+            }
+            if (state.skills.isEmpty() && state.proposals.isEmpty()) {
                 item(key = "empty") {
                     Text(
                         stringResource(R.string.skills_empty),
@@ -104,6 +117,10 @@ fun SkillsScreen(state: SkillsUiState, actions: SkillsActions, modifier: Modifie
     }
     if (state.import.isOpen) {
         ImportDialog(state.import, actions)
+    }
+    val openProposal = state.openProposal
+    if (openProposal != null) {
+        ProposalDialog(openProposal, actions)
     }
     val replaceName = state.import.replaceName
     if (replaceName != null) {

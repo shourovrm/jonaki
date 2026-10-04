@@ -1,5 +1,7 @@
 package app.jonaki.core.guardapi
 
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -32,9 +34,37 @@ sealed interface ActionVerdict {
     /** The cost of the call in US dollars; null when unknown or when no call was made. */
     val costUsd: Double?
 
-    data class MayRunWithoutCard(override val reason: String, override val costUsd: Double? = null) : ActionVerdict
+    /** The tokens the call used, when the guard knows them. */
+    val usage: GuardUsage?
 
-    data class ShowCard(override val reason: String, override val costUsd: Double? = null) : ActionVerdict
+    /** One short line for the step's detail view, or null when the guard has nothing to show. */
+    val note: String?
+
+    data class MayRunWithoutCard(
+        override val reason: String,
+        override val costUsd: Double? = null,
+        override val usage: GuardUsage? = null,
+        override val note: String? = null,
+    ) : ActionVerdict
+
+    data class ShowCard(
+        override val reason: String,
+        override val costUsd: Double? = null,
+        override val usage: GuardUsage? = null,
+        override val note: String? = null,
+    ) : ActionVerdict
+}
+
+/** The tokens one guard call (or the calls for one text) used, as the guard's service reported them. */
+data class GuardUsage(val inputTokens: Int, val outputTokens: Int)
+
+/**
+ * Tells which tool call a guard question belongs to. The agent loop puts it
+ * into the coroutine context of each call, so that a guard can be asked
+ * without a call id and a decorator can still attach the answer to the step.
+ */
+class GuardCallContext(val toolCallId: String) : AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<GuardCallContext>
 }
 
 /**
@@ -46,6 +76,9 @@ data class ResultVerdict(
     val injectionProbability: Double?,
     val reason: String,
     val costUsd: Double? = null,
+    val usage: GuardUsage? = null,
+    /** One short line for the step's detail view, or null when the guard has nothing to show. */
+    val note: String? = null,
 )
 
 /** Used while the guard is off: every action gets its card and no result is flagged. */
