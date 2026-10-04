@@ -113,6 +113,20 @@ abstract class JonakiDatabase : RoomDatabase() {
         }
     }
 
+    /**
+     * The message search index lives outside Room's versioning (see [MessageSearchIndex]), so
+     * it is made, and rebuilt when it is missing, every time the database is created or opened.
+     */
+    private class EnsureMessageSearchIndex : Callback() {
+        override fun onCreate(connection: SQLiteConnection) {
+            MessageSearchIndex.ensure(connection)
+        }
+
+        override fun onOpen(connection: SQLiteConnection) {
+            MessageSearchIndex.ensure(connection)
+        }
+    }
+
     companion object {
         /**
          * The bundled driver ships its own SQLite 3.46 with FTS5 trigram search,
@@ -123,6 +137,7 @@ abstract class JonakiDatabase : RoomDatabase() {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .addCallback(CreateMemorySearchIndex())
+                .addCallback(EnsureMessageSearchIndex())
                 .build()
     }
 }

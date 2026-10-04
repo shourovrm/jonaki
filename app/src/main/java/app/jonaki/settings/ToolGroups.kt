@@ -22,7 +22,7 @@ enum class ToolGroup(
     ),
     WEB(setOf("web_search", "web_fetch")),
     YOUTUBE(setOf("youtube_summarize")),
-    MEMORY(setOf("memory")),
+    MEMORY(setOf("memory", "search_chats")),
     SUBAGENTS(setOf("delegate")),
     REPORTS(setOf("artifact", "export_pdf")),
     SHARE(setOf("share_file")),

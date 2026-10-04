@@ -53,6 +53,7 @@ import app.jonaki.memory.MemoryExtractor
 import app.jonaki.memory.PromptFacts
 import app.jonaki.memory.RoomMemoryStore
 import app.jonaki.memory.ThreadMemory
+import app.jonaki.search.RoomChatSearchStore
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
@@ -762,6 +763,8 @@ class AgentRunner(
         webAccessEnabled = thread.webSearchEnabled,
         memoryStore = ThreadMemory.storeFor(thread) { RoomMemoryStore(database, thread.id, project?.id, System::currentTimeMillis) },
         projectName = project?.name,
+        // Like memory, earlier chats are not searched from an incognito thread (D-111).
+        chatSearchStore = if (ThreadMemory.isOn(thread)) RoomChatSearchStore(database, thread.id) else null,
         fileDestinations = fileDestinations,
         modelAcceptsImages = modelAcceptsImages,
         phone = phone,

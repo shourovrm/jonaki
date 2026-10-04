@@ -29,6 +29,8 @@ import app.jonaki.tools.phone.NewCalendarEvent
 import app.jonaki.tools.phone.Phone
 import app.jonaki.tools.phone.PhoneAnswer
 import app.jonaki.tools.phone.ReminderTiming
+import app.jonaki.tools.searchchats.ChatSearchResult
+import app.jonaki.tools.searchchats.ChatSearchStore
 import app.jonaki.tools.schedule.ScheduledTask
 import app.jonaki.tools.schedule.TaskCreated
 import app.jonaki.tools.schedule.TaskRequest
@@ -50,6 +52,10 @@ class ToolRegistryTest {
         override val name = "Fake"
 
         override suspend fun search(query: SearchQuery) = SearchOutcome.Success(emptyList())
+    }
+
+    private val chatSearchStore = object : ChatSearchStore {
+        override suspend fun search(words: String, thisThreadOnly: Boolean, limit: Int) = ChatSearchResult(emptyList(), 0)
     }
 
     private val memoryStore = object : MemoryStore {
@@ -134,6 +140,7 @@ class ToolRegistryTest {
         videoSummarizer = { VideoAnswer.Success("summary", inputTokens = null) },
         webAccessEnabled = true,
         memoryStore = memoryStore,
+        chatSearchStore = chatSearchStore,
         fileDestinations = fileDestinations,
         modelAcceptsImages = true,
         phone = phone,
@@ -158,7 +165,7 @@ class ToolRegistryTest {
         assertEquals(
             setOf(
                 "read_file", "write_file", "edit_file", "find_files", "search_files",
-                "web_search", "web_fetch", "youtube_summarize", "memory", "artifact", "share_file",
+                "web_search", "web_fetch", "youtube_summarize", "memory", "search_chats", "artifact", "share_file",
                 "read_document", "view_image", "phone", "schedule", "run_code", "export_pdf",
             ),
             namesFor(everything).toSet(),
@@ -190,6 +197,24 @@ class ToolRegistryTest {
     fun memoryNeedsAStore() {
         val names = namesFor(everything.copy(memoryStore = null)).toSet()
         assertEquals(false, "memory" in names)
+    }
+
+    @Test
+    fun searchChatsNeedsAStoreSoIncognitoThreadsHaveNone() {
+        val names = namesFor(everything.copy(chatSearchStore = null)).toSet()
+        assertEquals(false, "search_chats" in names)
+    }
+
+    @Test
+    fun searchChatsFollowsTheMemoryGroupSwitch() {
+        assertEquals(false, "search_chats" in namesFor(withGroupsOff(ToolGroup.MEMORY)).toSet())
+        assertEquals(true, "search_chats" in namesFor(withGroupsOff(ToolGroup.WEB)).toSet())
+    }
+
+    @Test
+    fun aLocalModelNeverGetsSearchChatsEvenWhenSavedInItsList() {
+        val saved = LocalModelToolList.DEFAULT + "search_chats"
+        assertEquals(LocalModelToolList.DEFAULT, localNames(forLocalModel(everything, saved)))
     }
 
     @Test
