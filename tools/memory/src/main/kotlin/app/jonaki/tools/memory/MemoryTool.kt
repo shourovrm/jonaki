@@ -36,7 +36,7 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
             "This thread is in the project \"$name\": use scope project for facts about the project's work that its other threads need."
         },
         "When you remember a fact, give keywords: up to 6 search words that the fact's text lacks, mainly its key words in the other script " +
-            "(English words for a Bangla fact, Bangla words for an English one) and Bangla in Latin letters when the user writes that way.",
+            "(English words for a Bangla fact, Bangla words in Bangla script for an English one) and Bangla in Latin letters when the user writes that way.",
         "Facts under Memory in this prompt are already known. Recall takes several words, finds facts holding any of the words, best match first; " +
             "it matches letters, not meaning. When it finds nothing, try a second query with other words or the same words in the other script.",
         "Forget a fact by its id when the user asks or it turned out wrong. Never remember keys, passwords or card numbers.",
