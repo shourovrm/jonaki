@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="skills_proposed">Proposed</string>
+    <string name="skills_proposal_new">New</string>
+    <string name="skills_proposal_changes">Changes %1$s</string>
+    <string name="skills_proposal_add">Add</string>
+    <string name="skills_proposal_discard">Discard</string>
+    <string name="skills_proposal_failed">Not added: %1$s</string>
+</resources>

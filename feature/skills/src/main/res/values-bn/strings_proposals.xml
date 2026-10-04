@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="skills_proposed">প্রস্তাবিত</string>
+    <string name="skills_proposal_new">নতুন</string>
+    <string name="skills_proposal_changes">%1$s বদলায়</string>
+    <string name="skills_proposal_add">যোগ করুন</string>
+    <string name="skills_proposal_discard">বাদ দিন</string>
+    <string name="skills_proposal_failed">যোগ হয়নি: %1$s</string>
+</resources>

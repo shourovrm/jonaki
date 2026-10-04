@@ -18,6 +18,8 @@ import app.jonaki.tools.memory.MemoryStore
 import app.jonaki.tools.memory.MemoryTool
 import app.jonaki.tools.phone.Phone
 import app.jonaki.tools.phone.PhoneTool
+import app.jonaki.tools.proposeskill.ProposeSkillTool
+import app.jonaki.tools.proposeskill.SkillProposalSink
 import app.jonaki.tools.readdocument.ReadDocumentTool
 import app.jonaki.tools.readfile.ReadFileTool
 import app.jonaki.tools.runcode.RunCodeTool
@@ -69,6 +71,8 @@ data class ToolServices(
     val onlyTools: Set<String>? = null,
     /** The thread's project, so the memory tool offers the project scope (D-135); null without one. */
     val projectName: String? = null,
+    /** Where propose_skill saves a proposal; null leaves the tool out (off in Settings, incognito, subagents' lists). */
+    val skillProposals: SkillProposalSink? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -97,6 +101,9 @@ object ToolRegistry {
         }
         if (services.memoryStore != null) {
             tools += MemoryTool(services.memoryStore, services.projectName)
+        }
+        if (services.skillProposals != null) {
+            tools += ProposeSkillTool(services.skillProposals)
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)

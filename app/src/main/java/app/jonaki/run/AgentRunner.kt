@@ -63,6 +63,7 @@ import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.skills.SkillLibrary
+import app.jonaki.core.skills.SkillProposals
 import app.jonaki.core.storage.CompactionPlan
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
@@ -89,6 +90,7 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
 import app.jonaki.files.ModelImageLoader
+import app.jonaki.skills.LibrarySkillProposalSink
 import app.jonaki.skills.ThreadSkills
 import app.jonaki.tools.phone.Phone
 import app.jonaki.tools.schedule.TaskScheduler
@@ -140,6 +142,10 @@ class AgentRunner(
     private val mcpServers: McpServerStore,
     /** GGUF models on the phone and their one provider (D-133). */
     private val localRuntime: LocalModelRuntime,
+    /** Where the agent's skill proposals wait for the user; null leaves propose_skill out. */
+    private val skillProposals: SkillProposals? = null,
+    /** Read for every run: false leaves propose_skill out, so a Settings switch applies from the next message. */
+    private val isSkillProposalOn: () -> Boolean = { true },
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -768,6 +774,8 @@ class AgentRunner(
         webAccessEnabled = thread.webSearchEnabled,
         memoryStore = ThreadMemory.storeFor(thread) { RoomMemoryStore(database, thread.id, project?.id, System::currentTimeMillis) },
         projectName = project?.name,
+        // Never in an incognito thread: a proposal outlives the thread and would carry its content into the library.
+        skillProposals = if (thread.incognito || !isSkillProposalOn()) null else skillProposals?.let(::LibrarySkillProposalSink),
         fileDestinations = fileDestinations,
         modelAcceptsImages = modelAcceptsImages,
         phone = phone,
