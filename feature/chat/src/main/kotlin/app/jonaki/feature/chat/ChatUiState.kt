@@ -10,9 +10,11 @@ data class ChatUiState(
     val title: String,
     val webSearchEnabled: Boolean,
     val items: List<ChatItem>,
-    /** True while the agent works on this thread; the Send button becomes Stop. */
+    /** True while the agent works on this thread; Stop shows beside Send, and Send queues the message. */
     val isRunning: Boolean,
     val draft: String,
+    /** Messages sent during the run, oldest first, shown above the field until the agent takes them. */
+    val queuedMessages: List<QueuedMessageUi> = emptyList(),
     /** The strip above the message field (D-027); null hides it. */
     val status: ChatStatusUi? = null,
     /** The scoped models offered in the model sheet, in the user's order. */
@@ -36,6 +38,10 @@ data class ChatUiState(
     /** The run_code step opened from its card; null when no code sheet is open (D-090). */
     val codeRun: CodeRunUi? = null,
 )
+
+/** One message waiting in the thread's queue. */
+@Immutable
+data class QueuedMessageUi(val id: String, val text: String)
 
 /** One run_code call for the code sheet: the program and what came out of it (D-090). */
 @Immutable

@@ -197,3 +197,33 @@ internal fun EditingBanner(onCancel: () -> Unit) {
         }
     }
 }
+
+/** A message sent during a run, waiting for the agent's next safe point; one line, ending in "…" (D-029). */
+@Composable
+internal fun QueuedMessageRow(message: QueuedMessageUi, onCancel: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 4.dp)) {
+            Text(
+                stringResource(R.string.chat_queued),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                message.text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onCancel) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.chat_queued_cancel),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
+    }
+}
