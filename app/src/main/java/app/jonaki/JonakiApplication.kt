@@ -171,6 +171,8 @@ class JonakiApplication : Application() {
             backgroundModel = backgroundModel,
             reviewMode = { settings.snapshot.value.reviewExtractedMemories },
             clock = System::currentTimeMillis,
+            proposeGlobalFacts = { settings.snapshot.value.suggestFactsForAllThreads },
+            holdFactsAfterOutsideContent = { settings.snapshot.value.holdFactsAfterOutsideContent },
         )
         reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json"))) { settings.snapshot.value.reminderPolicy }
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))

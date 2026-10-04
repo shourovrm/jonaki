@@ -761,7 +761,15 @@ class AgentRunner(
         searchBackends = searchBackends(settings.snapshot.value.searchOrder),
         videoSummarizer = videoSummarizer(),
         webAccessEnabled = thread.webSearchEnabled,
-        memoryStore = ThreadMemory.storeFor(thread) { RoomMemoryStore(database, thread.id, project?.id, System::currentTimeMillis) },
+        memoryStore = ThreadMemory.storeFor(thread) {
+            RoomMemoryStore(
+                database = database,
+                threadId = thread.id,
+                projectId = project?.id,
+                clock = System::currentTimeMillis,
+                holdFactsAfterOutsideContent = { settings.snapshot.value.holdFactsAfterOutsideContent },
+            )
+        },
         projectName = project?.name,
         // Like memory, earlier chats are not searched from an incognito thread (D-111).
         chatSearchStore = if (ThreadMemory.isOn(thread)) RoomChatSearchStore(database, thread.id) else null,

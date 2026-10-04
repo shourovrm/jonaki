@@ -35,8 +35,8 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
         projectName?.let { name ->
             "This thread is in the project \"$name\": use scope project for facts about the project's work that its other threads need."
         },
-        "When you remember a fact, give keywords: up to 6 search words that the fact's text lacks, mainly its key words in the other script " +
-            "(English words for a Bangla fact, Bangla words in Bangla script for an English one) and Bangla in Latin letters when the user writes that way.",
+        "When you remember a fact, give keywords in both scripts whatever language the fact is in: its 2 to 4 key words in English, " +
+            "then the same words in Bangla script, so that a search in either script finds it.",
         "Facts under Memory in this prompt are already known. Recall takes several words, finds facts holding any of the words, best match first; " +
             "it matches letters, not meaning. When it finds nothing, try a second query with other words or the same words in the other script.",
         "Forget a fact by its id when the user asks or it turned out wrong. Never remember keys, passwords or card numbers.",
@@ -59,7 +59,7 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
             }
             putJsonObject("keywords") {
                 put("type", "string")
-                put("description", "remember: up to 6 search words the text lacks, mainly its key words in the other script, separated by spaces")
+                put("description", "remember: the fact's 2 to 4 key words in English, then the same words in Bangla script, separated by spaces")
             }
             putJsonObject("scope") {
                 put("type", "string")

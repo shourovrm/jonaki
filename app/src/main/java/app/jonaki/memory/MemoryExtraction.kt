@@ -92,7 +92,7 @@ Rules:
 - Add only lasting facts: the user's goals, preferences, decisions, names, dates, constraints and plans. Not questions, small talk or what an answer explained.
 - Write each fact as one short sentence that makes sense alone, in the language the user wrote in. Turn relative dates into dates using the time in brackets.
 - source is the label of the message the fact comes from.
-- Give keywords for every add and update: up to 6 search words that the fact's text lacks, mainly its key words in the other script, so that a search in one script finds a fact written in the other. A fact in Bangla script gets English words, a fact in English gets Bangla words in Bangla script, and Bangla written in Latin letters gets both. Never repeat the text's own words. Examples: "আমার বোনের বিয়ে জানুয়ারিতে" gets "keywords":"sister wedding marriage January"; "I work at a bank in Dhaka" gets "keywords":"ব্যাংক চাকরি ঢাকা".
+- Give keywords for every add and update, always in both scripts whatever language the fact is in: the fact's 2 to 4 key words in English, then the same words in Bangla script, so that a search in either script finds it. Examples: "আমার বোনের বিয়ে জানুয়ারিতে" gets "keywords":"sister wedding January বোন বিয়ে জানুয়ারি"; "I work at a bank in Dhaka" gets "keywords":"bank job Dhaka ব্যাংক চাকরি ঢাকা".
 - Update a thread fact when the new messages change it; delete one the user says is wrong or no longer true.
 - Never add what the thread facts or global facts already say. Global facts cannot be changed here.
 - Never store keys, passwords or card numbers.
@@ -105,7 +105,7 @@ Rules:
      * Added to [SYSTEM_PROMPT] when the user allows global proposals. The fact reaches
      * every thread, so the app holds it for the user's review whatever the review mode is.
      */
-    private const val GLOBAL_RULE = """- Add "scope":"global" to a new fact that is a lasting fact about the user and holds in every thread (name, language, where they live, standing preferences). Facts about one thread's work get no scope. The user approves a global fact before it is used."""
+    private const val GLOBAL_RULE = """- Add "scope":"global" only to a new fact about the user as a person that every later chat needs: their name, the languages they use, where they live, their work, and how they want answers written. A deadline, a plan, a purchase, a device or anything about one task gets no scope. When unsure, give no scope. The user approves a global fact before it is used."""
 
     /**
      * The instructions for one thread: [SYSTEM_PROMPT], plus the project rule when the thread

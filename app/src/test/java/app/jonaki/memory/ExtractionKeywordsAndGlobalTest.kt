@@ -86,8 +86,8 @@ class ExtractionKeywordsAndGlobalTest {
         val prompt = MemoryExtraction.systemPrompt(inProject = false, allowGlobalFacts = false)
 
         assertTrue(prompt.contains("\"keywords\""))
-        assertTrue(prompt.contains("up to 6"))
-        assertTrue(prompt.contains("other script"))
+        assertTrue(prompt.contains("2 to 4 key words"))
+        assertTrue(prompt.contains("always in both scripts"))
     }
 
     @Test
