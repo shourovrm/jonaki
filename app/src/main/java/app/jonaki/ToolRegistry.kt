@@ -23,6 +23,8 @@ import app.jonaki.tools.readfile.ReadFileTool
 import app.jonaki.tools.runcode.RunCodeTool
 import app.jonaki.tools.schedule.ScheduleTool
 import app.jonaki.tools.schedule.TaskScheduler
+import app.jonaki.tools.searchchats.ChatSearchStore
+import app.jonaki.tools.searchchats.SearchChatsTool
 import app.jonaki.tools.searchfiles.SearchFilesTool
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.ShareFileTool
@@ -69,6 +71,8 @@ data class ToolServices(
     val onlyTools: Set<String>? = null,
     /** The thread's project, so the memory tool offers the project scope (D-135); null without one. */
     val projectName: String? = null,
+    /** Earlier chat messages for search_chats; null leaves the tool out (incognito threads have none). */
+    val chatSearchStore: ChatSearchStore? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -97,6 +101,9 @@ object ToolRegistry {
         }
         if (services.memoryStore != null) {
             tools += MemoryTool(services.memoryStore, services.projectName)
+        }
+        if (services.chatSearchStore != null) {
+            tools += SearchChatsTool(services.chatSearchStore)
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)

@@ -94,6 +94,7 @@ private fun activityLabel(activity: WorkingActivity): String = when (activity) {
         "read_file", "read_document", "find_files", "search_files" -> stringResource(R.string.chat_working_reading_files)
         "write_file", "edit_file" -> stringResource(R.string.chat_working_writing_file)
         "memory" -> stringResource(R.string.chat_working_memory)
+        "search_chats" -> stringResource(R.string.chat_working_search_chats)
         "delegate" -> stringResource(R.string.chat_working_subagents)
         else -> stringResource(R.string.chat_working_tool, activity.toolName)
     }

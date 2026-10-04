@@ -26,9 +26,10 @@ object LocalModelToolList {
     /**
      * Never offered to a local model: delegate and mcp lead to long chains
      * of calls, run_code and artifact need long precise output, and no local
-     * model is marked as taking images, which view_image needs.
+     * model is marked as taking images, which view_image needs. search_chats stays out to keep the
+     * small tool list small.
      */
-    val NEVER: Set<String> = setOf("delegate", "mcp", "run_code", "view_image", "artifact")
+    val NEVER: Set<String> = setOf("delegate", "mcp", "run_code", "view_image", "artifact", "search_chats")
 
     /** What the Local models page lists, defaults first. */
     val CHOOSABLE: List<String> = DEFAULT.toList() + OPTIONAL.toList()
