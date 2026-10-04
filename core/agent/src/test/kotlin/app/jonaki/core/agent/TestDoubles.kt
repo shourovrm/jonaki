@@ -55,6 +55,13 @@ class FakeTool(
     override val name: String,
     override val sideEffect: SideEffect = SideEffect.READ_ONLY,
     override val timeLimit: Duration = 5.seconds,
+    /** Per-call cost, like the phone tool's; null gives every call [sideEffect]. */
+    private val sideEffectOfCall: ((JsonObject) -> SideEffect)? = null,
+    private val veryRisky: Boolean = false,
+    /** Null keeps the default: a call sends out when it is [SideEffect.CHANGES]. */
+    private val sendsOut: Boolean? = null,
+    /** Null for a tool whose results are Jonaki's own; else the source label of its outside content. */
+    private val outsideSource: String? = null,
     private val behaviour: suspend (JsonObject) -> ToolOutput = { arguments ->
         ToolOutput.success("$name got $arguments")
     },
@@ -65,6 +72,14 @@ class FakeTool(
     override val guidelines: List<String> = listOf("Use $name only in tests.")
     override val parameterSchema: JsonObject = buildJsonObject { put("type", "object") }
     override val requiredCapabilities: Set<Capability> = emptySet()
+
+    override fun sideEffectOf(arguments: JsonObject): SideEffect = sideEffectOfCall?.invoke(arguments) ?: sideEffect
+
+    override fun isVeryRiskyOf(arguments: JsonObject): Boolean = veryRisky
+
+    override fun sendsOutOf(arguments: JsonObject): Boolean = sendsOut ?: super.sendsOutOf(arguments)
+
+    override fun outsideContentSourceOf(arguments: JsonObject): String? = outsideSource
 
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput {
         receivedArguments += arguments

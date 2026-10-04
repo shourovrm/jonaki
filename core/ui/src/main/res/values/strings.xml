@@ -12,9 +12,9 @@
     <string name="ui_approval_ask">Ask</string>
     <string name="ui_approval_auto">Auto</string>
     <string name="ui_approval_bypass">Bypass</string>
-    <string name="ui_approval_ask_help">Ask before any change</string>
-    <string name="ui_approval_auto_help">Ask before changes outside the thread\'s folder</string>
-    <string name="ui_approval_bypass_help">Never ask, including subagents</string>
+    <string name="ui_approval_ask_help">Every change asks</string>
+    <string name="ui_approval_auto_help">Only changes that leave the app ask</string>
+    <string name="ui_approval_bypass_help">Nothing asks</string>
     <string name="ui_approval_default">Default (%1$s)</string>
     <string name="ui_tools_files">Files</string>
     <string name="ui_tools_files_help">Read, write and search files and images</string>

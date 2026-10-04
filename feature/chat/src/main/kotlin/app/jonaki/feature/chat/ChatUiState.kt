@@ -33,6 +33,8 @@ data class ChatUiState(
     /** This thread's own approval mode; null follows [defaultApprovalMode] from Settings (D-058). */
     val threadApprovalMode: ApprovalModeChoice? = null,
     val defaultApprovalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
+    /** "Allow all in this thread" is on: the approval chip shows a mark and offers to withdraw it. */
+    val allowAllInThread: Boolean = false,
     /** What the context sheet shows; null while it is being worked out (D-081). */
     val context: ContextUi? = null,
     /** The run_code step opened from its card; null when no code sheet is open (D-090). */
@@ -93,8 +95,6 @@ data class ChatStatusUi(
     /** Input tokens of the latest request, which is what the next request starts from. */
     val contextUsedTokens: Int,
     val costUsd: Double,
-    /** The thread runs in Bypass mode: no tool asks first, so the strip shows a marker (D-058). */
-    val bypassApprovals: Boolean = false,
 )
 
 /** How the context window is used, like Claude Code's /context (D-081). */
@@ -205,10 +205,10 @@ sealed interface ChatItem {
         val toolName: String,
         /** What the tool will do, for example "Create work/notes.md (2.3 KB)". */
         val description: String,
-        /** The subagent that asks, for example "researcher 2"; null for the thread's own agent (D-062). */
-        val agentLabel: String? = null,
-        /** When a subagent's card is withdrawn unanswered (D-062's 3 minutes); null when it waits without limit. */
-        val waitEndsAtMillis: Long? = null,
+        /** False for a call that always asks: the card then offers only Allow once and Deny. */
+        val offersThreadAllowance: Boolean = true,
+        /** True when the thread read outside content and this call sends data out; the card says so. */
+        val afterOutsideContent: Boolean = false,
         /**
          * A delegate card beyond the automatic limit (D-137): the subagents
          * this message will have started; the card then offers no thread
@@ -307,7 +307,7 @@ enum class StepUiStatus {
     DENIED,
     STOPPED,
 
-    /** A subagent's approval went unanswered for 3 minutes (D-062). */
+    /** Only in steps saved by older versions, when a subagent's approval could go unanswered (D-062). */
     SKIPPED,
 }
 
@@ -323,10 +323,9 @@ enum class SubagentUiStatus {
 
 enum class ApprovalChoice {
     ALLOW_ONCE,
-    ALLOW_FOR_THREAD,
 
-    /** On a subagent's card: until that subagent ends. */
-    ALLOW_FOR_TASK,
+    /** Every tool runs without a card in this thread from now on, except the calls that always ask. */
+    ALLOW_ALL_IN_THREAD,
     DENY,
 }
 
@@ -355,12 +354,6 @@ fun formatStepDuration(durationMillis: Long): String {
     }
     val totalSeconds = durationMillis / 1000
     return String.format(Locale.ENGLISH, "%d:%02d", totalSeconds / 60, totalSeconds % 60)
-}
-
-/** Time left on a subagent's approval card, "2:41"; a part second counts as a whole one, so 0:00 means gone. */
-fun formatCountdown(millisLeft: Long): String {
-    val secondsLeft = (millisLeft.coerceAtLeast(0) + 999) / 1000
-    return String.format(Locale.ENGLISH, "%d:%02d", secondsLeft / 60, secondsLeft % 60)
 }
 
 /** Time the steps took together: steps that ran side by side count once (D-080). */

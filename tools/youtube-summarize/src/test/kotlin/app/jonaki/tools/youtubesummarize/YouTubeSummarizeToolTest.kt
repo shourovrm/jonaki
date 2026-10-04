@@ -112,4 +112,9 @@ class YouTubeSummarizeToolTest {
         assertTrue(output.isError)
         assertTrue(output.text.contains("again"))
     }
+
+    @Test
+    fun theResultIsOutsideContentFromTheLinksHost() {
+        assertEquals("youtu.be", tool.outsideContentSourceOf(arguments("""{"url":"https://youtu.be/iG9CE55wbtY"}""")))
+    }
 }

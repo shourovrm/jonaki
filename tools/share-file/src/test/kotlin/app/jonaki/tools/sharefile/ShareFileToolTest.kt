@@ -248,4 +248,48 @@ class ShareFileToolTest {
         assertTrue(output.text.length < 10_000)
         assertTrue(output.text.contains("read_file"))
     }
+
+    private fun costOf(action: String) = tool.sideEffectOf(JsonObject(mapOf("action" to JsonPrimitive(action))))
+
+    private fun callOf(action: String) = JsonObject(mapOf("action" to JsonPrimitive(action)))
+
+    @Test
+    fun savingToDownloadsIsReversibleAndTheOtherActionsAskAsChanges() {
+        assertEquals(SideEffect.CHANGES_REVERSIBLE, costOf("downloads"))
+        for (action in listOf("save_as", "share", "linked_folder", "list_linked", "import_linked")) {
+            assertEquals(action, SideEffect.CHANGES, costOf(action))
+        }
+    }
+
+    @Test
+    fun onlySharingAndTheLinkedFolderAreVeryRisky() {
+        val veryRisky = listOf("downloads", "save_as", "share", "linked_folder", "list_linked", "import_linked")
+            .filter { action -> tool.isVeryRiskyOf(callOf(action)) }
+
+        assertEquals(listOf("share", "linked_folder"), veryRisky)
+    }
+
+    @Test
+    fun theActionsThatSendDataOutAreSaveAsShareAndTheLinkedFolder() {
+        val sendingOut = listOf("downloads", "save_as", "share", "linked_folder", "list_linked", "import_linked")
+            .filter { action -> tool.sendsOutOf(callOf(action)) }
+
+        assertEquals(listOf("save_as", "share", "linked_folder"), sendingOut)
+    }
+
+    @Test
+    fun anUnknownActionCountsAsSendingOut() {
+        assertTrue(tool.sendsOutOf(JsonObject(emptyMap())))
+    }
+
+    @Test
+    fun everyActionCanBeNamedByARule() {
+        assertEquals(listOf("downloads", "save_as", "share", "linked_folder", "list_linked", "import_linked"), tool.ruleActions)
+        assertEquals("share", tool.actionOf(callOf("share")))
+    }
+
+    @Test
+    fun theResultIsNotOutsideContent() {
+        assertEquals(null, tool.outsideContentSourceOf(callOf("downloads")))
+    }
 }

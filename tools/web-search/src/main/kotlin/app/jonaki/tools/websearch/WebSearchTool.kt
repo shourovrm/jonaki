@@ -77,6 +77,9 @@ class WebSearchTool(private val backends: List<SearchBackend>) : Tool {
     }
 
     override val sideEffect: SideEffect = SideEffect.READ_ONLY
+
+    // Result snippets come from many sites, so the wrapper names the tool only.
+    override fun outsideContentSourceOf(arguments: JsonObject): String = ""
     override val requiredCapabilities: Set<Capability> = emptySet()
     override val timeLimit: Duration = 30.seconds
 

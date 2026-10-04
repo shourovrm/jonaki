@@ -31,8 +31,7 @@ internal class RequestTool : Tool {
     override val name: String = NAME
     override val promptLine: String = "request_tool: ask for one of the thread's tools you were not given, with a reason"
     override val guidelines: List<String> = listOf(
-        "A tool that changes something may need the user's approval; if nobody answers within 3 minutes the request " +
-            "is skipped. Then continue with the other parts of the task, or stop and report what you have.",
+        "A requested tool is granted at once. Its actions that leave the app are never available to subagents.",
     )
     override val parameterSchema: JsonObject = buildJsonObject {
         put("type", "object")
@@ -43,7 +42,7 @@ internal class RequestTool : Tool {
             }
             putJsonObject("reason") {
                 put("type", "string")
-                put("description", "One sentence the user sees on the approval card.")
+                put("description", "One sentence on why you need it.")
             }
         }
         putJsonArray("required") {

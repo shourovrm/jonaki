@@ -12,9 +12,9 @@
     <string name="ui_approval_ask">জিজ্ঞেস</string>
     <string name="ui_approval_auto">অটো</string>
     <string name="ui_approval_bypass">বাইপাস</string>
-    <string name="ui_approval_ask_help">যেকোনো পরিবর্তনের আগে জিজ্ঞেস করবে</string>
-    <string name="ui_approval_auto_help">থ্রেডের ফোল্ডারের বাইরে পরিবর্তনের আগে জিজ্ঞেস করবে</string>
-    <string name="ui_approval_bypass_help">কখনো জিজ্ঞেস করবে না, সাবএজেন্টকেও না</string>
+    <string name="ui_approval_ask_help">প্রতিটি পরিবর্তনে জিজ্ঞেস করবে</string>
+    <string name="ui_approval_auto_help">শুধু অ্যাপের বাইরে যাওয়া পরিবর্তনে জিজ্ঞেস করবে</string>
+    <string name="ui_approval_bypass_help">কিছুতেই জিজ্ঞেস করবে না</string>
     <string name="ui_approval_default">ডিফল্ট (%1$s)</string>
     <string name="ui_tools_files">ফাইল</string>
     <string name="ui_tools_files_help">ফাইল ও ছবি পড়া, লেখা ও খোঁজা</string>

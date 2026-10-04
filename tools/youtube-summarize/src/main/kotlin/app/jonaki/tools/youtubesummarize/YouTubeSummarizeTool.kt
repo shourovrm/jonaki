@@ -1,5 +1,6 @@
 package app.jonaki.tools.youtubesummarize
 
+import app.jonaki.core.toolapi.OutsideSources
 import app.jonaki.core.toolapi.Capability
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
@@ -61,6 +62,8 @@ class YouTubeSummarizeTool(private val summarizer: VideoSummarizer) : Tool {
     }
 
     override val sideEffect: SideEffect = SideEffect.READ_ONLY
+
+    override fun outsideContentSourceOf(arguments: JsonObject): String = OutsideSources.hostOf(arguments.text("url"))
     override val requiredCapabilities: Set<Capability> = emptySet()
 
     /** Spike S-3 measured 14 to 21 seconds for a 19-minute video. */

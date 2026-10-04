@@ -1,5 +1,6 @@
 package app.jonaki.tools.readdocument
 
+import app.jonaki.core.toolapi.OutsideSources
 import app.jonaki.core.toolapi.Capability
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
@@ -51,6 +52,9 @@ class ReadDocumentTool : Tool {
         putJsonArray("required") { add(JsonPrimitive("path")) }
     }
     override val sideEffect: SideEffect = SideEffect.READ_ONLY
+
+    override fun outsideContentSourceOf(arguments: JsonObject): String =
+        OutsideSources.fileNameOf(arguments.stringArgument("path"))
     override val requiredCapabilities: Set<Capability> = emptySet()
     override val timeLimit: Duration = 60.seconds
 

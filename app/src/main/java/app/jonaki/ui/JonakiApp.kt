@@ -1,5 +1,10 @@
 package app.jonaki.ui
 
+import app.jonaki.feature.settings.ApprovalRuleUi
+import app.jonaki.feature.settings.ApprovalRuleChoiceUi
+import app.jonaki.settings.ApprovalRules
+import app.jonaki.core.agent.ApprovalRule
+import androidx.compose.runtime.produceState
 import app.jonaki.core.modelcatalog.ThinkingSupport
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.ui.ThinkingChoice
@@ -671,7 +676,6 @@ private fun ChatRoute(
             contextWindowTokens = modelInfo?.contextWindowTokens,
             contextUsedTokens = lastInputTokens ?: 0,
             costUsd = threadCost ?: 0.0,
-            bypassApprovals = !isNew && runner.approvalModeFor(thread) == ApprovalMode.BYPASS,
         )
     } else {
         null
@@ -710,6 +714,7 @@ private fun ChatRoute(
         incognito = if (isNew) isNewIncognito else thread?.incognito == true,
         threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
         defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
+        allowAllInThread = !isNew && thread?.allowAllInThread == true,
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
     )
@@ -798,6 +803,11 @@ private fun ChatRoute(
         onCancelEdit = {
             editingMessageId = null
             draft = ""
+        },
+        onWithdrawAllowAll = {
+            if (!isNew) {
+                scope.launch { runner.withdrawAllowAll(threadId) }
+            }
         },
         onApprovalChoice = { approvalId, choice -> runner.answerApproval(threadId, approvalId, decisionOf(choice)) },
         onRetry = { runner.retry(threadId) },
@@ -1007,6 +1017,10 @@ private fun SettingsRoute(
     val reminders by application.reminders.book.reminders.collectAsState()
     val scheduledTasks by application.scheduledTasks.book.tasks.collectAsState()
     val mcpServers by application.mcpServers.servers.collectAsState()
+    // Builds every tool to read its declared actions, which reads saved keys; again when the servers change.
+    val approvalRuleChoices by produceState(emptyList<ApprovalRuleChoiceUi>(), mcpServers) {
+        value = withContext(Dispatchers.IO) { application.runner.approvalRuleChoices() }
+    }
     val globalFacts by remember { application.database.memoryDao().observeGlobal() }.collectAsState(initial = emptyList())
     var skillCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
@@ -1077,6 +1091,8 @@ private fun SettingsRoute(
         // The two enums have the same three names; the screen's module does not see the agent's.
         zoneInMessages = ZoneChoice.valueOf(snapshot.zoneInMessages.name),
         jevGuardAvailable = SecretName.OPENROUTER in savedKeys,
+        approvalRules = snapshot.approvalRules.map { rule -> ApprovalRuleUi(rule.toolName, rule.action, rule.detail) },
+        approvalRuleChoices = approvalRuleChoices,
         subagentModels = AgentTypes.ALL.map { type ->
             SubagentModelRowUi(
                 agentType = type.name,
@@ -1168,6 +1184,16 @@ private fun SettingsRoute(
         },
         onOpenCustomSubagent = onOpenCustomSubagent,
         onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },
+        onApprovalRuleAdd = { rule ->
+            settings.update { current ->
+                current.copy(approvalRules = ApprovalRules.added(current.approvalRules, ApprovalRule(rule.toolName, rule.action, rule.detail)))
+            }
+        },
+        onApprovalRuleRemove = { rule ->
+            settings.update { current ->
+                current.copy(approvalRules = current.approvalRules - ApprovalRule(rule.toolName, rule.action, rule.detail))
+            }
+        },
         onModelThinkingChange = { modelKey, choice ->
             settings.update { current ->
                 val level = thinkingLevelOf(choice)
@@ -1373,8 +1399,7 @@ private fun routingUiOf(routing: OpenRouterRouting): RoutingUi = when (routing) 
 
 private fun decisionOf(choice: ApprovalChoice): ApprovalDecision = when (choice) {
     ApprovalChoice.ALLOW_ONCE -> ApprovalDecision.ALLOW_ONCE
-    ApprovalChoice.ALLOW_FOR_THREAD -> ApprovalDecision.ALLOW_FOR_THREAD
-    ApprovalChoice.ALLOW_FOR_TASK -> ApprovalDecision.ALLOW_FOR_TASK
+    ApprovalChoice.ALLOW_ALL_IN_THREAD -> ApprovalDecision.ALLOW_ALL_IN_THREAD
     ApprovalChoice.DENY -> ApprovalDecision.DENY
 }
 

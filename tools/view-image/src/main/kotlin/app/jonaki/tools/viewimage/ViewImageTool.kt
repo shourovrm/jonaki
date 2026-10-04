@@ -1,5 +1,6 @@
 package app.jonaki.tools.viewimage
 
+import app.jonaki.core.toolapi.OutsideSources
 import app.jonaki.core.toolapi.Capability
 import app.jonaki.core.toolapi.ImageSource
 import app.jonaki.core.toolapi.SideEffect
@@ -48,6 +49,15 @@ class ViewImageTool : Tool {
         putJsonArray("required") { add(JsonPrimitive("path")) }
     }
     override val sideEffect: SideEffect = SideEffect.READ_ONLY
+
+    /** Only a file of the inbox came from outside; the thread's own images are Jonaki's. */
+    override fun outsideContentSourceOf(arguments: JsonObject): String? {
+        val path = arguments.stringArgument("path")?.trim().orEmpty().removePrefix("./")
+        if (!path.startsWith(INBOX_PREFIX)) {
+            return null
+        }
+        return OutsideSources.fileNameOf(path)
+    }
     override val requiredCapabilities: Set<Capability> = emptySet()
     override val timeLimit: Duration = 10.seconds
 
@@ -74,5 +84,9 @@ class ViewImageTool : Tool {
             "$path is not an image",
             "view_image shows ${ViewedImages.IMAGE_EXTENSIONS.sorted().joinToString(", ")} files and PDF pages.",
         )
+    }
+
+    private companion object {
+        const val INBOX_PREFIX = "inbox/"
     }
 }

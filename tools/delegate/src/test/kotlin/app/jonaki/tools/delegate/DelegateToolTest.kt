@@ -280,4 +280,10 @@ class DelegateToolTest {
             }
         }
     }
+
+    @Test
+    fun theAnswersAreOutsideContentAndTheGuidelinesNameTheBlockersRoute() {
+        assertEquals("subagent answers", tool.outsideContentSourceOf(JsonObject(emptyMap())))
+        assertTrue(tool.guidelines.any { line -> line.contains("never share files") && line.contains("Blockers") })
+    }
 }

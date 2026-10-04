@@ -38,7 +38,7 @@ fun approvalModeLabel(choice: ApprovalModeChoice): String = stringResource(
 )
 
 @Composable
-private fun approvalModeHelp(choice: ApprovalModeChoice): String = stringResource(
+fun approvalModeHelp(choice: ApprovalModeChoice): String = stringResource(
     when (choice) {
         ApprovalModeChoice.ASK -> R.string.ui_approval_ask_help
         ApprovalModeChoice.AUTO -> R.string.ui_approval_auto_help

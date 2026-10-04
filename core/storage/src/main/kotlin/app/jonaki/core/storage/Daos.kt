@@ -49,8 +49,11 @@ interface ThreadDao {
     @Query("UPDATE threads SET memoryExtractedUpToPosition = :position WHERE id = :threadId")
     suspend fun setMemoryExtractedUpTo(threadId: String, position: Long)
 
-    @Query("UPDATE threads SET toolsAllowedForThread = :toolNames WHERE id = :threadId")
-    suspend fun setToolsAllowedForThread(threadId: String, toolNames: String)
+    @Query("UPDATE threads SET allowAllInThread = :allowAll WHERE id = :threadId")
+    suspend fun setAllowAllInThread(threadId: String, allowAll: Boolean)
+
+    @Query("UPDATE threads SET allowAllInThread = :allowAll, readOutsideContent = :readOutsideContent WHERE id = :threadId")
+    suspend fun setApprovalState(threadId: String, allowAll: Boolean, readOutsideContent: Boolean)
 
     @Query("UPDATE threads SET disabledSkills = :skillNames WHERE id = :threadId")
     suspend fun setDisabledSkills(threadId: String, skillNames: String)

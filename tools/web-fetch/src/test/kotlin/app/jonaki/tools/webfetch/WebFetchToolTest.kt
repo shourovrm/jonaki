@@ -291,4 +291,13 @@ class WebFetchToolTest {
         assertTrue("render" in withRenderer)
         assertNull(withoutRenderer["render"])
     }
+
+    @Test
+    fun theResultIsOutsideContentFromTheLinksHost() {
+        val arguments = kotlinx.serialization.json.JsonObject(
+            mapOf("url" to kotlinx.serialization.json.JsonPrimitive("https://shop.example/laptops?id=3")),
+        )
+
+        assertEquals("shop.example", tool.outsideContentSourceOf(arguments))
+    }
 }

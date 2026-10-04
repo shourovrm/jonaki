@@ -26,8 +26,9 @@ import kotlinx.serialization.json.putJsonObject
  * D-015). A subagent sees only its task, never this conversation, and its
  * answer comes back as this tool's result.
  *
- * The tool itself changes nothing; each subagent's own calls go through the
- * permission broker, so it is declared read-only, up to the subagents a run
+ * The tool itself changes nothing, and its subagents never ask the user:
+ * approving this call is their consent, and they cannot take actions that
+ * leave the app. So it is declared read-only, up to the subagents a run
  * may start without asking. A call that would start more waits for the
  * user in every approval mode (D-137). The numbers are the user's limits,
  * read once when the tool is built for a run (D-138).
@@ -50,6 +51,8 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
         "Subagent types: " + launcher.agentTypes.joinToString("; ") { type -> "${type.name}: ${type.description}" },
         "Name a model in delegate only when the user asks for one; otherwise each type uses the model set for it.",
         "A subagent's answer is its own work; check it before you rely on it.",
+        "Subagents never share files, change the phone, schedule or call MCP tools. If a task needs that, it comes back " +
+            "under Blockers and you ask the user once.",
         stepBudgetGuideline(),
         approvalGuideline(),
         messageCapGuideline(),
@@ -133,6 +136,10 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
         val needsUser = startedAfter > limits.startedWithoutAsking || startedAfter > limits.maxPerMessage
         return if (needsUser) SideEffect.NEEDS_USER else SideEffect.READ_ONLY
     }
+
+    // The answers are other agents' text, which may repeat a web page's instructions.
+    override fun outsideContentSourceOf(arguments: JsonObject): String = "subagent answers"
+
     override val requiredCapabilities: Set<Capability> = emptySet()
 
     // One minute longer than the longest limit of the types a task may name, so that a subagent at its limit

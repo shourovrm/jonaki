@@ -42,6 +42,7 @@ import app.jonaki.core.agent.PromptFactScope
 import app.jonaki.core.storage.MemoryEntity
 import app.jonaki.tools.memory.FactScope
 import app.jonaki.core.agent.PermissionBroker
+import app.jonaki.core.agent.ThreadApprovalState
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.agent.SkillSection
@@ -73,7 +74,9 @@ import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
+import app.jonaki.feature.settings.ApprovalRuleChoiceUi
 import app.jonaki.settings.AppSettings
+import app.jonaki.settings.ApprovalRuleChoices
 import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.CustomSubagents
@@ -185,6 +188,13 @@ class AgentRunner(
      * in the chat during a run applies from the next call (D-058).
      */
     private val threadApprovalModes = ConcurrentHashMap<String, String>()
+
+    /**
+     * The "Allow all in this thread" answer and the outside-content fact of each
+     * running thread. The broker reads and writes them during a run, and the chat's
+     * approval chip withdraws the answer through the same object.
+     */
+    private val threadApprovalStates = ConcurrentHashMap<String, ThreadApprovalState>()
 
     /**
      * Creates a thread and returns its id. A thread made inside a project
@@ -390,6 +400,19 @@ class AgentRunner(
     }
 
     /** The mode a thread's tools ask with: its own, else the default from Settings. */
+    /**
+     * The chip's "withdraw" row: every tool asks again by the mode, from the next call. A
+     * running thread's state is changed in place; an idle thread's row is written directly.
+     */
+    suspend fun withdrawAllowAll(threadId: String) {
+        val liveState = threadApprovalStates[threadId]
+        if (liveState != null) {
+            liveState.withdrawAllowAll()
+            return
+        }
+        database.threadDao().setAllowAllInThread(threadId, false)
+    }
+
     fun approvalModeFor(thread: ThreadEntity?): ApprovalMode =
         ApprovalModes.effective(thread?.approvalMode, settings.snapshot.value.defaultApprovalMode)
 
@@ -603,9 +626,18 @@ class AgentRunner(
         val project = projectOf(thread)
         val toolServices = toolServicesFor(thread, modelAcceptsImages, project, threadFolder)
         val threadTools = ToolRegistry.tools(toolServices)
-        val allowedForThread = thread.toolsAllowedForThread.split(",").filter { it.isNotBlank() }.toSet()
         threadApprovalModes[threadId] = thread.approvalMode.orEmpty()
-        val permissionBroker = PermissionBroker(session, allowedForThread, approvalMode = { currentApprovalMode(threadId) })
+        val approvalState = ThreadApprovalState(thread.allowAllInThread, thread.readOutsideContent) { allowAll, readOutsideContent ->
+            database.threadDao().setApprovalState(threadId, allowAll, readOutsideContent)
+        }
+        threadApprovalStates[threadId] = approvalState
+        val permissionBroker = PermissionBroker(
+            approvalRequester = session,
+            threadState = approvalState,
+            approvalMode = { currentApprovalMode(threadId) },
+            // Read before every call, so a rule added or removed in Settings applies at once.
+            settingsRules = { settings.snapshot.value.approvalRules },
+        )
         val memorySection = ThreadMemory.sectionFor(thread) { memorySectionFor(thread, project) }
         val skillSection = skillSectionFor(thread)
         val instructionsSection = instructionsSectionFor(thread, snapshot)
@@ -622,7 +654,6 @@ class AgentRunner(
         val subagents = SubagentRunner(
             // As a vision model sees them: each subagent keeps view_image only if its own model takes images.
             threadTools = ToolRegistry.tools(toolServices.copy(modelAcceptsImages = true)),
-            broker = permissionBroker,
             subagentModels = AppSubagentModels(
                 snapshot = snapshot,
                 catalog = catalog,
@@ -678,7 +709,7 @@ class AgentRunner(
         try {
             return loop.run(history)
         } finally {
-            database.threadDao().setToolsAllowedForThread(threadId, permissionBroker.toolsAllowedForThread.joinToString(","))
+            threadApprovalStates.remove(threadId)
         }
     }
 
@@ -746,6 +777,27 @@ class AgentRunner(
             onlyTools = LocalModelToolList.CHOOSABLE.toSet(),
         )
         return ToolRegistry.tools(services)
+    }
+
+    /**
+     * Every tool the app can offer, built only to read the actions each declares for
+     * the Settings page of "always allow" rules; none of them runs. Reads saved keys,
+     * so call it off the main thread.
+     */
+    fun approvalRuleChoices(): List<ApprovalRuleChoiceUi> {
+        val services = ToolServices(
+            searchBackends = searchBackends(settings.snapshot.value.searchOrder),
+            videoSummarizer = videoSummarizer(),
+            webAccessEnabled = true,
+            memoryStore = RoomMemoryStore(database, NO_THREAD, null, System::currentTimeMillis),
+            fileDestinations = fileDestinations,
+            phone = phone,
+            taskScheduler = taskSchedulerFor?.invoke(NO_THREAD),
+            mcpServers = mcpServers.forTools(),
+            mcpToolListFolder = mcpServers.toolListFolder,
+            codeRuntimes = CodeRuntimes.forApp(context),
+        )
+        return ApprovalRuleChoices.of(ToolRegistry.tools(services))
     }
 
     /**

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings > Tools > Approvals: the always-allow rules. -->
+<resources>
+    <string name="settings_approvals_always">সবসময় অনুমতি</string>
+    <string name="settings_approvals_add">নিয়ম যোগ করুন</string>
+    <string name="settings_approvals_confirm">যোগ করুন</string>
+    <string name="settings_approvals_remove">নিয়ম সরান</string>
+    <string name="settings_approvals_server">সার্ভার</string>
+    <string name="settings_approvals_tool">টুল</string>
+</resources>

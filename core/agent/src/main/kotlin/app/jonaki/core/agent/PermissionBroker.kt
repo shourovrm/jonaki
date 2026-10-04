@@ -1,34 +1,26 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.model.ToolCall
-import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
-import java.util.Collections
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
 /** What the user answered on an approval card. */
 enum class ApprovalDecision {
     ALLOW_ONCE,
-    ALLOW_FOR_THREAD,
 
-    /** A subagent's card: the tool runs without asking until that subagent ends (D-015). */
-    ALLOW_FOR_TASK,
+    /** Every tool runs without a card in this thread from now on, except the calls that always ask. */
+    ALLOW_ALL_IN_THREAD,
     DENY,
 }
 
 data class ApprovalRequest(
     val toolName: String,
     val toolCall: ToolCall,
-    /** Set when a subagent asks: the card names it and offers "Allow for this task" (D-015). */
-    val subagent: SubagentAsk? = null,
-)
-
-data class SubagentAsk(
-    /** "researcher", or "researcher 2" when one delegate call started several. */
-    val agentLabel: String,
-    /** The subagent's reason, from request_tool; null for a call it makes. */
-    val reason: String?,
+    /** False for a call that always asks: the card then offers only Allow once and Deny. */
+    val offersThreadAllowance: Boolean = true,
+    /** True when the card is there because the thread read outside content and this call sends data out. */
+    val afterOutsideContent: Boolean = false,
 )
 
 /**
@@ -40,64 +32,72 @@ fun interface ApprovalRequester {
 }
 
 /**
- * Decides whether a tool call may run. Read-only tools and tools that change
- * only the app's own records always run; tools that change something else
- * need the user's approval, as far as the thread's [ApprovalMode] asks for
- * it. One broker serves one thread.
+ * Decides whether a call of the thread's agent may run, by [ApprovalPolicy]:
+ * the call's own cost (a tool with mixed actions answers per call), the
+ * thread's approval mode, its "Allow all in this thread" answer, the rules
+ * from Settings and the fixed rule about outside content. Subagents never
+ * ask through the broker; see [SubagentPermissions]. One broker serves one
+ * thread.
  *
- * @param toolsAllowedForThread allowances saved earlier for this thread.
  * @param approvalMode read before every call, so a mode changed during a run
  *   applies from the next tool call.
+ * @param settingsRules read before every call; only Settings creates them.
  */
 class PermissionBroker(
     private val approvalRequester: ApprovalRequester,
-    toolsAllowedForThread: Set<String> = emptySet(),
+    val threadState: ThreadApprovalState = ThreadApprovalState(),
     private val approvalMode: () -> ApprovalMode = { ApprovalMode.ASK },
+    private val settingsRules: () -> List<ApprovalRule> = { emptyList() },
 ) {
-    // Parallel subagents ask through the same broker, so the set is shared between coroutines.
-    private val allowedTools: MutableSet<String> = Collections.synchronizedSet(toolsAllowedForThread.toMutableSet())
-
-    /** Tool names the user allowed for the whole thread; the caller persists them. */
-    val toolsAllowedForThread: Set<String>
-        get() = synchronized(allowedTools) { allowedTools.toSet() }
-
-    /**
-     * True when this call of [tool] may run without an approval card: by the
-     * call's own cost (a tool with mixed actions answers per call), the mode
-     * or an allowance.
-     */
-    fun runsWithoutAsking(tool: Tool, toolCall: ToolCall): Boolean {
-        val cost = tool.sideEffectOf(argumentsOf(toolCall))
-        if (!ApprovalMode.needsApproval(cost, approvalMode())) {
-            return true
-        }
-        // An allowance never covers what the user decides each time (D-137).
-        return cost != SideEffect.NEEDS_USER && tool.name in allowedTools
-    }
-
-    /** Shows a subagent's card; [SubagentGate] decides what the answer means and how long to wait. */
-    suspend fun askForSubagent(request: ApprovalRequest): ApprovalDecision =
-        approvalRequester.requestApproval(request)
-
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
-        if (runsWithoutAsking(tool, toolCall)) {
+        val arguments = argumentsOf(toolCall)
+        val verdict = ApprovalPolicy.decide(
+            facts = factsOf(tool, arguments),
+            mode = approvalMode(),
+            allowAllInThread = threadState.allowAllInThread,
+            threadHasReadOutsideContent = threadState.readOutsideContent,
+        )
+        if (verdict !is ApprovalVerdict.Asks) {
             return true
         }
-        val decision = approvalRequester.requestApproval(ApprovalRequest(tool.name, toolCall))
-        return when (decision) {
+        // Only a call that may be allowed for the whole thread can be let through here: the calls that
+        // always ask (very risky, after outside content, over the subagent cap) never are.
+        if (verdict.offersThreadAllowance && guardLetsCallRunInsteadOfAsking(tool, toolCall)) {
+            return true
+        }
+        val request = ApprovalRequest(tool.name, toolCall, verdict.offersThreadAllowance, verdict.afterOutsideContent)
+        return when (approvalRequester.requestApproval(request)) {
             ApprovalDecision.ALLOW_ONCE -> true
-            ApprovalDecision.ALLOW_FOR_THREAD -> {
-                // The card offers no thread allowance for such calls; should one arrive, it counts as once.
-                if (tool.sideEffectOf(argumentsOf(toolCall)) != SideEffect.NEEDS_USER) {
-                    allowedTools += tool.name
+            ApprovalDecision.ALLOW_ALL_IN_THREAD -> {
+                // A card that did not offer it cannot grant it; should the answer arrive, it counts as once.
+                if (verdict.offersThreadAllowance) {
+                    threadState.grantAllowAll()
                 }
                 true
             }
-            // Only a subagent's card offers this; for the main agent it means once.
-            ApprovalDecision.ALLOW_FOR_TASK -> true
             ApprovalDecision.DENY -> false
         }
     }
+
+    /** The loop calls this when a result was outside content, so that later send-outs ask. */
+    suspend fun outsideContentWasRead() {
+        threadState.markOutsideContentRead()
+    }
+
+    /**
+     * The seam for the later guard: the one place where a card is about to
+     * be shown for a call that is not very risky and not caught by the
+     * outside-content rule. A suspending check can return true here to let
+     * the call run instead. Until then it never does.
+     */
+    private suspend fun guardLetsCallRunInsteadOfAsking(tool: Tool, toolCall: ToolCall): Boolean = false
+
+    private fun factsOf(tool: Tool, arguments: JsonObject): CallFacts = CallFacts(
+        sideEffect = tool.sideEffectOf(arguments),
+        isVeryRisky = tool.isVeryRiskyOf(arguments),
+        sendsOut = tool.sendsOutOf(arguments),
+        matchesSettingsRule = settingsRules().any { rule -> rule.matches(tool, arguments) },
+    )
 
     /** The loop checked that the arguments are a JSON object before asking; an empty object is a safe fallback. */
     private fun argumentsOf(toolCall: ToolCall): JsonObject =

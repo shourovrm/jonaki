@@ -42,29 +42,3 @@ class VirtualClock : WaitTimer {
     val pendingWaits: Int
         get() = synchronized(waiters) { waiters.size }
 }
-
-/** Shows cards that nobody answers until the test calls [answer]; counts withdrawn cards. */
-class WaitingApprover : ApprovalRequester {
-    val requests = mutableListOf<ApprovalRequest>()
-    private val answers = mutableListOf<CompletableDeferred<ApprovalDecision>>()
-    var withdrawnCards = 0
-        private set
-
-    override suspend fun requestApproval(request: ApprovalRequest): ApprovalDecision {
-        val answer = CompletableDeferred<ApprovalDecision>()
-        synchronized(answers) {
-            requests += request
-            answers += answer
-        }
-        try {
-            return answer.await()
-        } catch (cancelled: kotlinx.coroutines.CancellationException) {
-            withdrawnCards += 1
-            throw cancelled
-        }
-    }
-
-    fun answer(decision: ApprovalDecision) {
-        synchronized(answers) { answers.last() }.complete(decision)
-    }
-}

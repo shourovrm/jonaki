@@ -1,5 +1,6 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.model.ToolCall
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.stringArgument
@@ -11,15 +12,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PermissionBrokerTest {
-    private val writer = FakeTool("write_file", sideEffect = SideEffect.CHANGES)
+    private val writer = FakeTool("write_file", sideEffect = SideEffect.CHANGES_THREAD_FOLDER)
     private val reader = FakeTool("read_file", sideEffect = SideEffect.READ_ONLY)
-    private val threadFolderWriter = FakeTool("edit_file", sideEffect = SideEffect.CHANGES_THREAD_FOLDER)
     private val sharer = FakeTool("share_file", sideEffect = SideEffect.CHANGES)
+
+    /** Like the phone tool: per-call costs, one very risky action, one reversible action. */
+    private class PhoneLikeTool : Tool by FakeTool("phone", sideEffect = SideEffect.CHANGES) {
+        override fun sideEffectOf(arguments: JsonObject): SideEffect = when (arguments.stringArgument("action")) {
+            "calendar_list" -> SideEffect.READ_ONLY
+            "reminder" -> SideEffect.CHANGES_REVERSIBLE
+            else -> SideEffect.CHANGES
+        }
+
+        override fun isVeryRiskyOf(arguments: JsonObject): Boolean = arguments.stringArgument("action") == "calendar_delete"
+
+        override fun sendsOutOf(arguments: JsonObject): Boolean = arguments.stringArgument("action") == "calendar_add"
+
+        override fun actionOf(arguments: JsonObject): String? = arguments.stringArgument("action")
+    }
 
     /** D-137: what the user decides each time asks in every mode, and no allowance covers it. */
     @Test
-    fun aCallThatNeedsTheUserAsksEvenInBypassAndAfterAllowInThread() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.ALLOW_FOR_THREAD)
+    fun aCallThatNeedsTheUserAsksEvenInBypassAndAfterAllowAll() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_ALL_IN_THREAD)
         val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.BYPASS })
         val delegate = FakeTool("delegate", sideEffect = SideEffect.NEEDS_USER)
 
@@ -27,7 +42,8 @@ class PermissionBrokerTest {
         assertTrue(broker.mayRun(delegate, call("2", "delegate")))
 
         assertEquals(2, approver.requests.size)
-        assertTrue(broker.toolsAllowedForThread.isEmpty())
+        assertFalse(approver.requests.first().offersThreadAllowance)
+        assertFalse("the answer to a card that offered no allowance grants none", broker.threadState.allowAllInThread)
     }
 
     @Test
@@ -47,21 +63,16 @@ class PermissionBrokerTest {
 
         assertTrue(broker.mayRun(memory, call("1", "memory")))
         assertTrue(approver.requests.isEmpty())
-        assertTrue(broker.toolsAllowedForThread.isEmpty())
     }
 
     @Test
-    fun aReadOnlyCallOfAChangingToolRunsWithoutAsking() = runBlocking {
+    fun aReadOnlyActionOfAChangingToolRunsWithoutAsking() = runBlocking {
         val approver = FixedApprover(ApprovalDecision.DENY)
         val broker = PermissionBroker(approver)
-        val proxy = object : Tool by FakeTool("mcp", sideEffect = SideEffect.CHANGES) {
-            override fun sideEffectOf(arguments: JsonObject): SideEffect =
-                if (arguments.stringArgument("action") == "search") SideEffect.READ_ONLY else SideEffect.CHANGES
-        }
 
-        assertTrue(broker.mayRun(proxy, call("1", "mcp", "action" to "search")))
+        assertTrue(broker.mayRun(PhoneLikeTool(), call("1", "phone", "action" to "calendar_list")))
         assertTrue(approver.requests.isEmpty())
-        assertFalse(broker.mayRun(proxy, call("2", "mcp", "action" to "call")))
+        assertFalse(broker.mayRun(PhoneLikeTool(), call("2", "phone", "action" to "calendar_add")))
         assertEquals(1, approver.requests.size)
     }
 
@@ -74,17 +85,7 @@ class PermissionBrokerTest {
         assertTrue(broker.mayRun(writer, call("2", "write_file", "path" to "b.md")))
         assertEquals(2, approver.requests.size)
         assertEquals("write_file", approver.requests.first().toolCall.toolName)
-    }
-
-    @Test
-    fun allowForThreadIsRememberedForThatTool() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.ALLOW_FOR_THREAD)
-        val broker = PermissionBroker(approver)
-
-        assertTrue(broker.mayRun(writer, call("1", "write_file")))
-        assertTrue(broker.mayRun(writer, call("2", "write_file")))
-        assertEquals(1, approver.requests.size)
-        assertEquals(setOf("write_file"), broker.toolsAllowedForThread)
+        assertTrue(approver.requests.first().offersThreadAllowance)
     }
 
     @Test
@@ -95,52 +96,17 @@ class PermissionBrokerTest {
     }
 
     @Test
-    fun allowancesCanBeRestoredForAThread() = runBlocking {
+    fun theReminderRunsInAutoWithoutACardAndAsksInAsk() = runBlocking {
         val approver = FixedApprover(ApprovalDecision.DENY)
-        val broker = PermissionBroker(approver, toolsAllowedForThread = setOf("write_file"))
+        var mode = ApprovalMode.AUTO
+        val broker = PermissionBroker(approver, approvalMode = { mode })
+        val reminder = call("1", "phone", "action" to "reminder")
 
-        assertTrue(broker.mayRun(writer, call("1", "write_file")))
+        assertTrue(broker.mayRun(PhoneLikeTool(), reminder))
         assertTrue(approver.requests.isEmpty())
-    }
-
-    @Test
-    fun askModeAsksForThreadFolderAndOutsideChanges() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.ALLOW_ONCE)
-        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.ASK })
-
-        assertTrue(broker.mayRun(threadFolderWriter, call("1", "edit_file")))
-        assertTrue(broker.mayRun(sharer, call("2", "share_file")))
-        assertEquals(listOf("edit_file", "share_file"), approver.requests.map { it.toolName })
-    }
-
-    @Test
-    fun autoModeRunsThreadFolderChangesWithoutAsking() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.DENY)
-        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.AUTO })
-
-        assertTrue(broker.mayRun(threadFolderWriter, call("1", "edit_file")))
-        assertTrue(approver.requests.isEmpty())
-    }
-
-    @Test
-    fun autoModeStillAsksForChangesOutsideTheApp() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.DENY)
-        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.AUTO })
-
-        assertFalse(broker.mayRun(sharer, call("1", "share_file")))
+        mode = ApprovalMode.ASK
+        assertFalse(broker.mayRun(PhoneLikeTool(), reminder))
         assertEquals(1, approver.requests.size)
-    }
-
-    @Test
-    fun bypassModeNeverAsks() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.DENY)
-        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.BYPASS })
-
-        assertTrue(broker.mayRun(sharer, call("1", "share_file")))
-        assertTrue(broker.mayRun(threadFolderWriter, call("2", "edit_file")))
-        assertTrue(approver.requests.isEmpty())
-        // Bypass is not an allowance: switching back to Ask asks again.
-        assertTrue(broker.toolsAllowedForThread.isEmpty())
     }
 
     @Test
@@ -149,19 +115,175 @@ class PermissionBrokerTest {
         var mode = ApprovalMode.ASK
         val broker = PermissionBroker(approver, approvalMode = { mode })
 
-        assertFalse(broker.mayRun(threadFolderWriter, call("1", "edit_file")))
+        assertFalse(broker.mayRun(writer, call("1", "write_file")))
         mode = ApprovalMode.AUTO
-        assertTrue(broker.mayRun(threadFolderWriter, call("2", "edit_file")))
+        assertTrue(broker.mayRun(writer, call("2", "write_file")))
         assertEquals(1, approver.requests.size)
     }
 
     @Test
-    fun allowanceForThreadStillSkipsTheCardInAutoMode() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.DENY)
-        val broker = PermissionBroker(approver, toolsAllowedForThread = setOf("share_file"), approvalMode = { ApprovalMode.AUTO })
+    fun allowAllInThreadAnswersOnceAndThenEveryOrdinaryToolRunsWithoutACard() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_ALL_IN_THREAD)
+        val saved = mutableListOf<Pair<Boolean, Boolean>>()
+        val state = ThreadApprovalState(save = { allowAll, readOutside -> saved += allowAll to readOutside })
+        val broker = PermissionBroker(approver, state)
 
-        assertTrue(broker.mayRun(sharer, call("1", "share_file")))
+        assertTrue(broker.mayRun(writer, call("1", "write_file")))
+        assertTrue(broker.mayRun(PhoneLikeTool(), call("2", "phone", "action" to "calendar_add")))
+        assertTrue(broker.mayRun(writer, call("3", "write_file")))
+
+        assertEquals(1, approver.requests.size)
+        assertTrue(state.allowAllInThread)
+        assertEquals("saved once, so it survives a restart", listOf(true to false), saved)
+    }
+
+    @Test
+    fun allowAllRestoredFromStorageSkipsCardsFromTheFirstCall() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, ThreadApprovalState(allowAllInThread = true))
+
+        assertTrue(broker.mayRun(writer, call("1", "write_file")))
         assertTrue(approver.requests.isEmpty())
+    }
+
+    @Test
+    fun withdrawingTheAllowanceMakesTheNextCallAskAgain() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val state = ThreadApprovalState(allowAllInThread = true)
+        val broker = PermissionBroker(approver, state)
+
+        assertTrue(broker.mayRun(writer, call("1", "write_file")))
+        state.withdrawAllowAll()
+        assertFalse(broker.mayRun(writer, call("2", "write_file")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun aVeryRiskyCallAsksEvenWithAllowAllAndItsCardOffersOnlyOnceAndDeny() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_ONCE)
+        val broker = PermissionBroker(approver, ThreadApprovalState(allowAllInThread = true))
+        val deleteEvents = call("1", "phone", "action" to "calendar_delete")
+
+        assertTrue(broker.mayRun(PhoneLikeTool(), deleteEvents))
+
+        val request = approver.requests.single()
+        assertFalse(request.offersThreadAllowance)
+        assertFalse(request.afterOutsideContent)
+    }
+
+    @Test
+    fun anAnswerAllowAllOnAVeryRiskyCardCountsAsOnce() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_ALL_IN_THREAD)
+        val broker = PermissionBroker(approver)
+
+        assertTrue(broker.mayRun(PhoneLikeTool(), call("1", "phone", "action" to "calendar_delete")))
+        assertFalse(broker.threadState.allowAllInThread)
+    }
+
+    @Test
+    fun sharingToAnotherAppAsksEvenWithAllowAll() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val share = FakeTool("share_file", sideEffect = SideEffect.CHANGES, veryRisky = true)
+        val broker = PermissionBroker(approver, ThreadApprovalState(allowAllInThread = true))
+
+        assertFalse(broker.mayRun(share, call("1", "share_file")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun aSendOutAsksInBypassOnceTheThreadHasReadOutsideContent() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.BYPASS })
+        val addEvent = call("1", "phone", "action" to "calendar_add")
+
+        assertTrue("before outside content, bypass runs it", broker.mayRun(PhoneLikeTool(), addEvent))
+        broker.outsideContentWasRead()
+        assertFalse("after outside content it asks", broker.mayRun(PhoneLikeTool(), addEvent))
+
+        val request = approver.requests.single()
+        assertTrue(request.afterOutsideContent)
+        assertFalse(request.offersThreadAllowance)
+    }
+
+    @Test
+    fun theOutsideContentFactIsSavedOnceAndRestoredWithTheThread() = runBlocking {
+        val saved = mutableListOf<Pair<Boolean, Boolean>>()
+        val state = ThreadApprovalState(save = { allowAll, readOutside -> saved += allowAll to readOutside })
+        val broker = PermissionBroker(FixedApprover(ApprovalDecision.ALLOW_ONCE), state)
+
+        broker.outsideContentWasRead()
+        broker.outsideContentWasRead()
+
+        assertEquals(listOf(false to true), saved)
+        val restored = ThreadApprovalState(readOutsideContent = true)
+        assertTrue(restored.readOutsideContent)
+    }
+
+    @Test
+    fun aSettingsRuleLetsOneActionRunButNotTheNextActionOfTheSameTool() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val rules = listOf(ApprovalRule("phone", action = "calendar_add"))
+        val broker = PermissionBroker(approver, settingsRules = { rules })
+
+        assertTrue(broker.mayRun(PhoneLikeTool(), call("1", "phone", "action" to "calendar_add")))
+        assertFalse(broker.mayRun(PhoneLikeTool(), call("2", "phone", "action" to "notify")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun aSettingsRuleNamingAnotherToolDoesNotMatch() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, settingsRules = { listOf(ApprovalRule("schedule", action = "calendar_add")) })
+
+        assertFalse(broker.mayRun(PhoneLikeTool(), call("1", "phone", "action" to "calendar_add")))
+    }
+
+    @Test
+    fun aSettingsRuleNeverOverridesTheOutsideContentRule() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val rules = listOf(ApprovalRule("phone", action = "calendar_add"))
+        val broker = PermissionBroker(approver, ThreadApprovalState(readOutsideContent = true), settingsRules = { rules })
+
+        assertFalse(broker.mayRun(PhoneLikeTool(), call("1", "phone", "action" to "calendar_add")))
+        assertTrue(approver.requests.single().afterOutsideContent)
+    }
+
+    @Test
+    fun aSettingsRuleNeverOverridesTheSubagentCap() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val delegate = FakeTool("delegate", sideEffect = SideEffect.NEEDS_USER)
+        val broker = PermissionBroker(approver, settingsRules = { listOf(ApprovalRule("delegate")) })
+
+        assertFalse(broker.mayRun(delegate, call("1", "delegate")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun rulesAreReadBeforeEveryCallSoSettingsChangesApplyAtOnce() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        var rules = emptyList<ApprovalRule>()
+        val broker = PermissionBroker(approver, settingsRules = { rules })
+
+        assertFalse(broker.mayRun(writer, call("1", "write_file")))
+        rules = listOf(ApprovalRule("write_file"))
+        assertTrue(broker.mayRun(writer, call("2", "write_file")))
+    }
+
+    @Test
+    fun aRuleForAnMcpCallNamesTheServerAndTheTool() = runBlocking {
+        val mcp = object : Tool by FakeTool("mcp", sideEffect = SideEffect.CHANGES) {
+            override fun actionOf(arguments: JsonObject): String? = arguments.stringArgument("action")
+
+            override fun ruleDetailOf(arguments: JsonObject): String =
+                "${arguments.stringArgument("server")}/${arguments.stringArgument("tool")}"
+        }
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val rules = listOf(ApprovalRule("mcp", action = "call", detail = "notes/add"))
+        val broker = PermissionBroker(approver, settingsRules = { rules })
+
+        assertTrue(broker.mayRun(mcp, call("1", "mcp", "action" to "call", "server" to "notes", "tool" to "add")))
+        assertFalse(broker.mayRun(mcp, call("2", "mcp", "action" to "call", "server" to "notes", "tool" to "delete")))
+        assertFalse(broker.mayRun(mcp, call("3", "mcp", "action" to "call", "server" to "mail", "tool" to "add")))
     }
 
     @Test
@@ -172,36 +294,11 @@ class PermissionBrokerTest {
         }
     }
 
-    /** Like the phone tool: reading the calendar runs at once, adding to it asks (D-096). */
-    private class ActionTool : Tool by FakeTool("phone", sideEffect = SideEffect.CHANGES) {
-        override fun sideEffectOf(arguments: JsonObject): SideEffect =
-            if (arguments.stringArgument("action") == "calendar_list") SideEffect.READ_ONLY else SideEffect.CHANGES
-    }
-
     @Test
-    fun aReadOnlyActionOfAToolThatChangesThingsRunsWithoutAsking() = runBlocking {
+    fun anUnreadableArgumentStringStillGetsAnAnswer() = runBlocking {
         val approver = FixedApprover(ApprovalDecision.DENY)
         val broker = PermissionBroker(approver)
 
-        assertTrue(broker.mayRun(ActionTool(), call("1", "phone", "action" to "calendar_list")))
-        assertTrue(approver.requests.isEmpty())
-    }
-
-    @Test
-    fun aChangingActionOfTheSameToolAsks() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.DENY)
-        val broker = PermissionBroker(approver)
-
-        assertFalse(broker.mayRun(ActionTool(), call("1", "phone", "action" to "calendar_add")))
-        assertEquals(1, approver.requests.size)
-    }
-
-    @Test
-    fun aChangingActionOutsideTheAppStillAsksInAutoMode() = runBlocking {
-        val approver = FixedApprover(ApprovalDecision.DENY)
-        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.AUTO })
-
-        assertFalse(broker.mayRun(ActionTool(), call("1", "phone", "action" to "calendar_add")))
-        assertEquals(1, approver.requests.size)
+        assertFalse(broker.mayRun(sharer, ToolCall("1", "share_file", "not json")))
     }
 }

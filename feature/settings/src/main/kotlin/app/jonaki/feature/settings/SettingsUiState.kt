@@ -43,6 +43,10 @@ data class SettingsUiState(
     val jevGuardAvailable: Boolean = false,
     /** How much of the time zone each message tells the model. */
     val zoneInMessages: ZoneChoice = ZoneChoice.NONE,
+    /** The "always allow" rules; only this page creates or removes them. */
+    val approvalRules: List<ApprovalRuleUi> = emptyList(),
+    /** The actions the tools declare, which a rule can name. */
+    val approvalRuleChoices: List<ApprovalRuleChoiceUi> = emptyList(),
     /** The model each subagent type runs on (D-065). */
     val subagentModels: List<SubagentModelRowUi> = emptyList(),
     /** The user's scoped models, offered for each type. */
@@ -210,6 +214,8 @@ class SettingsActions(
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
     val onJevGuardChange: (Boolean) -> Unit = {},
     val onZoneInMessagesChange: (ZoneChoice) -> Unit = {},
+    val onApprovalRuleAdd: (ApprovalRuleUi) -> Unit = {},
+    val onApprovalRuleRemove: (ApprovalRuleUi) -> Unit = {},
     /** [modelKey] null returns the type to its default. */
     val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
     /** A limit's new value, one step from the old; the app keeps it in range (D-138). */

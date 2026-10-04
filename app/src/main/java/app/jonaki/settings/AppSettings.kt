@@ -4,6 +4,7 @@ import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.AnswerStyle
 import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.agent.ZoneInMessages
+import app.jonaki.core.agent.ApprovalRule
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
@@ -72,6 +73,8 @@ data class SettingsSnapshot(
     val customSubagents: List<CustomSubagent> = emptyList(),
     /** Settings > Files and schedule: how an unanswered reminder rings again. */
     val reminderPolicy: ReminderPolicy = ReminderPolicy(),
+    /** "Always allow" rules of Settings > Approvals; each names one action of one tool and applies in every thread. */
+    val approvalRules: List<ApprovalRule> = emptyList(),
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -141,6 +144,7 @@ class AppSettings(
             ).withinBounds(),
             jevGuardOn = preferences.getBoolean(JEV_GUARD_ON, false),
             zoneInMessages = enumOrDefault(preferences.getString(ZONE_IN_MESSAGES, null), ZoneInMessages.NONE),
+            approvalRules = ApprovalRules.fromText(preferences.getString(APPROVAL_RULES, "").orEmpty()),
         )
     }
 
@@ -243,6 +247,7 @@ class AppSettings(
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
         editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
         editor.putInt(REMINDER_MAX_REPEATS, snapshot.reminderPolicy.maxRepeats)
+        editor.putString(APPROVAL_RULES, ApprovalRules.toText(snapshot.approvalRules))
         editor.apply()
     }
 
@@ -290,5 +295,6 @@ class AppSettings(
         const val REMINDER_MAX_REPEATS = "reminder_max_repeats"
         const val JEV_GUARD_ON = "jev_guard_on"
         const val ZONE_IN_MESSAGES = "zone_in_messages"
+        const val APPROVAL_RULES = "approval_rules"
     }
 }

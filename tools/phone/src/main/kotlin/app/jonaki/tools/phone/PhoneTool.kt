@@ -96,8 +96,26 @@ class PhoneTool(
         if (action == Action.CALENDAR_LIST || action == Action.CLIPBOARD_READ) {
             return SideEffect.READ_ONLY
         }
+        // The user sees a reminder in the notification and can cancel it.
+        if (action == Action.REMINDER) {
+            return SideEffect.CHANGES_REVERSIBLE
+        }
         return SideEffect.CHANGES
     }
+
+    /**
+     * A calendar event may sync to an account and the clipboard is readable
+     * by every app; a notification and opening an app send no data anywhere.
+     */
+    override fun sendsOutOf(arguments: JsonObject): Boolean {
+        val action = Action.fromArgument(arguments.stringArgument("action"))
+        return action == Action.CALENDAR_ADD || action == Action.CLIPBOARD_WRITE
+    }
+
+    override fun actionOf(arguments: JsonObject): String? = arguments.stringArgument("action")
+
+    override val ruleActions: List<String> =
+        listOf("calendar_add", "reminder", "notify", "clipboard_write", "open_app")
 
     override val requiredCapabilities: Set<Capability> = emptySet()
 

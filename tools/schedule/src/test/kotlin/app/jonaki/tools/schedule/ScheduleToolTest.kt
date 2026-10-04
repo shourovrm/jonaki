@@ -136,4 +136,16 @@ class ScheduleToolTest {
         assertEquals(SideEffect.CHANGES, costOf("create"))
         assertEquals(SideEffect.CHANGES, costOf("cancel"))
     }
+
+    private fun callOf(action: String) = JsonObject(mapOf("action" to JsonPrimitive(action)))
+
+    @Test
+    fun createAndCancelAreRuleActionsAndNothingLeavesTheApp() {
+        assertEquals(listOf("create", "cancel"), tool.ruleActions)
+        assertEquals("create", tool.actionOf(callOf("create")))
+        for (action in listOf("create", "list", "cancel")) {
+            assertFalse(action, tool.sendsOutOf(callOf(action)))
+            assertFalse(action, tool.isVeryRiskyOf(callOf(action)))
+        }
+    }
 }

@@ -309,7 +309,6 @@ class ParallelToolCallsTest {
         }
         return SubagentRunner(
             threadTools = tools,
-            broker = PermissionBroker(FixedApprover(ApprovalDecision.ALLOW_ONCE)),
             subagentModels = models,
             recorder = RecordingSubagents(),
             parentAsker = ParentAsker { _, _, _ -> ParentAnswer.Answered("") },

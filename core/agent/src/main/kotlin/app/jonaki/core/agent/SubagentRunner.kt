@@ -38,7 +38,6 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 class SubagentRunner(
     private val threadTools: List<Tool>,
-    private val broker: PermissionBroker,
     private val subagentModels: SubagentModels,
     private val recorder: SubagentRecorder,
     private val parentAsker: ParentAsker,
@@ -245,7 +244,6 @@ class SubagentRunner(
                 context.skillLibraryFolder,
                 projectFolder = context.projectFolder,
             ),
-            gate = SubagentGate(broker, label, timer),
             recorder = recorder,
             limits = limits,
             progress = progress,

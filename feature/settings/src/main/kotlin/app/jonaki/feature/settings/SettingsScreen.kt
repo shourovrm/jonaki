@@ -132,6 +132,10 @@ private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
         GroupDivider()
         JevGuardRow(state.jevGuardOn, state.jevGuardAvailable, actions.onJevGuardChange)
     }
+    SectionLabel(stringResource(R.string.settings_approvals_always))
+    Group {
+        ApprovalRuleRows(state.approvalRules, state.approvalRuleChoices, actions)
+    }
     SectionLabel(stringResource(R.string.settings_section_tools))
     Group {
         NavigationRow(

@@ -41,8 +41,8 @@ internal class SubagentToolbox(startTools: List<Tool>, requestableTools: List<To
 
 /**
  * Runs one subagent's task to its answer (M7): like the thread's agent loop,
- * but within its step and cost budget, with the 3-minute approval rule
- * through its [SubagentGate], and with request_tool answered here. Its
+ * but within its step and cost budget, with no approval cards (see
+ * [SubagentPermissions]), and with request_tool answered here. Its
  * read-only calls of one turn run side by side, like the thread agent's
  * (D-080). Everything it does goes into [progress] as it happens, so a
  * subagent stopped from outside still has its partial work.
@@ -54,7 +54,6 @@ internal class SubagentLoop(
     private val systemPrompt: String,
     private val toolbox: SubagentToolbox,
     private val toolContext: ToolContext,
-    private val gate: SubagentGate,
     private val recorder: SubagentRecorder,
     private val limits: SubagentLimits,
     private val progress: SubagentProgress,
@@ -181,7 +180,7 @@ internal class SubagentLoop(
         recorder.stepFinished(subagentId, stepCall, result.output, result.status)
         progress.addToolResult(toolCall.toolName, result.output.text)
         // The model keeps its own id, so the result matches its call.
-        return Message(Role.TOOL, result.output.text, toolCallId = toolCall.id)
+        return Message(Role.TOOL, result.textForModel, toolCallId = toolCall.id)
     }
 
     /**
@@ -203,7 +202,12 @@ internal class SubagentLoop(
         ),
     )
 
-    private class StepResult(val output: ToolOutput, val status: SubagentStepStatus)
+    /** [output] is what the card and the progress show; [textForModel] is the same text, wrapped when it is outside content. */
+    private class StepResult(
+        val output: ToolOutput,
+        val status: SubagentStepStatus,
+        val textForModel: String = output.text,
+    )
 
     private suspend fun resultOf(toolCall: ToolCall, stepCall: ToolCall): StepResult {
         val arguments = parseToolArguments(toolCall.argumentsJson)
@@ -214,7 +218,7 @@ internal class SubagentLoop(
                 ),
             )
         if (toolCall.toolName == RequestTool.NAME) {
-            return requestTool(arguments, stepCall)
+            return requestTool(arguments)
         }
         val tool = toolbox.active(toolCall.toolName)
             ?: return failed(
@@ -224,22 +228,26 @@ internal class SubagentLoop(
                         "${toolbox.requestableNames.joinToString(", ").ifEmpty { "nothing" }}.",
                 ),
             )
-        return when (gate.check(tool, stepCall)) {
-            GateAnswer.ALLOWED -> {
-                val output = runToolWithTimeLimit(tool, arguments, toolContext.forCall(stepCall.id))
-                StepResult(output, if (output.isError) SubagentStepStatus.FAILED else SubagentStepStatus.DONE)
-            }
-            GateAnswer.DENIED -> StepResult(
-                ToolOutput.error("the user denied ${tool.name}", "Do not retry it; continue without it, or stop and report."),
-                SubagentStepStatus.DENIED,
-            )
-            GateAnswer.SKIPPED -> skipped("${tool.name}: ${describeCall(arguments)}")
+        if (!SubagentPermissions.mayRun(tool, arguments)) {
+            return failed(SubagentPermissions.notAvailable(tool.name))
         }
+        val output = runToolWithTimeLimit(tool, arguments, toolContext.forCall(stepCall.id))
+        // The wrapper keeps a web page's own instructions from reading as the subagent's task.
+        val wrapped = OutsideContent.wrapResult(tool, arguments, output)
+        return StepResult(
+            output,
+            if (output.isError) SubagentStepStatus.FAILED else SubagentStepStatus.DONE,
+            textForModel = wrapped.textForModel,
+        )
     }
 
-    private suspend fun requestTool(arguments: JsonObject, stepCall: ToolCall): StepResult {
+    /**
+     * request_tool: every tool of the thread may be added without a card,
+     * because the consent is the delegate call. The tool's calls that leave
+     * the app are still refused one by one when they come.
+     */
+    private fun requestTool(arguments: JsonObject): StepResult {
         val name = arguments.stringArgument("name")?.trim().orEmpty()
-        val reason = arguments.stringArgument("reason")?.trim().orEmpty()
         if (name.isEmpty()) {
             return failed(ToolOutput.error("request_tool needs a name", "Call it again with name and reason."))
         }
@@ -253,49 +261,17 @@ internal class SubagentLoop(
                     "Tools you can request: ${toolbox.requestableNames.joinToString(", ").ifEmpty { "none" }}.",
                 ),
             )
-        return when (gate.grant(tool, stepCall, reason)) {
-            GateAnswer.ALLOWED -> {
-                toolbox.activate(tool)
-                StepResult(ToolOutput.success("Granted: $name is one of your tools from your next step."), SubagentStepStatus.DONE)
-            }
-            GateAnswer.DENIED -> StepResult(
-                ToolOutput.error("the user refused $name", "Continue without it, or stop and report what you could not do."),
-                SubagentStepStatus.DENIED,
-            )
-            GateAnswer.SKIPPED -> skipped("request_tool $name: $reason")
-        }
-    }
-
-    private fun skipped(part: String): StepResult {
-        progress.addSkipped(part)
-        val output = ToolOutput.error(
-            "nobody answered the approval within 3 minutes, so this part is skipped",
-            "Continue with the other parts of the task, or stop and report what you have. " +
-                "The skipped part is listed in your result.",
-        )
-        return StepResult(output, SubagentStepStatus.SKIPPED)
+        toolbox.activate(tool)
+        return StepResult(ToolOutput.success("Granted: $name is one of your tools from your next step."), SubagentStepStatus.DONE)
     }
 
     private fun failed(output: ToolOutput): StepResult = StepResult(output, SubagentStepStatus.FAILED)
-
-    /** A short name for a skipped call: its path, link or query, else its arguments. */
-    private fun describeCall(arguments: JsonObject): String {
-        for (key in listOf("path", "url", "query", "action")) {
-            val value = arguments.stringArgument(key)?.trim()
-            if (!value.isNullOrEmpty()) {
-                return value
-            }
-        }
-        return arguments.toString().take(DESCRIPTION_CHARACTERS)
-    }
 
     private fun stepLimitNotice(): String =
         "[Your step limit of ${limits.maxToolSteps} tool steps is used up. Answer now with what you have, " +
             "without calling tools, and say what is still missing.]"
 
     private companion object {
-        const val DESCRIPTION_CHARACTERS = 80
-
         const val ROUNDING_TOLERANCE_USD = 1e-9
     }
 }

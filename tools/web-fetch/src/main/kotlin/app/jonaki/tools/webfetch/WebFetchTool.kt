@@ -1,5 +1,6 @@
 package app.jonaki.tools.webfetch
 
+import app.jonaki.core.toolapi.OutsideSources
 import app.jonaki.core.toolapi.Capability
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
@@ -69,6 +70,9 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
     }
 
     override val sideEffect: SideEffect = SideEffect.READ_ONLY
+
+    override fun outsideContentSourceOf(arguments: JsonObject): String =
+        OutsideSources.hostOf((arguments["url"] as? JsonPrimitive)?.contentOrNull)
     override val requiredCapabilities: Set<Capability> = emptySet()
     /** A plain download (about 20 s at worst) plus a render ([RENDER_TIME_LIMIT]) must fit. */
     override val timeLimit: Duration = 60.seconds

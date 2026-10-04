@@ -27,13 +27,15 @@ internal object SubagentPrompt {
 Paths are relative to the thread's folder: inbox/ holds the user's files, work/ is for notes and drafts, artifacts/ is for finished results.
 Your budget is $budget. When it runs out you must stop, so plan few steps.
 You can read the memory below but not save facts; report new facts in your answer.
+You cannot take actions that leave the app: sharing or exporting files, changing the phone, scheduling, or calling MCP tools. No approval card can appear for you; describe such an action, with its arguments, under a Blockers heading in your answer, and the other agent will ask the user once.
+${OutsideContent.PROMPT_RULE}
 
 ${type.instructions}"""
         val skills = if (type.seesSkills) skillSection else ""
         return PromptBuilder(base).systemPrompt(startTools, memorySection = memorySection, skillSection = skills)
     }
 
-    /** What goes back to the thread's agent: the answer, how it ended, and the skipped parts. */
+    /** What goes back to the thread's agent: the answer and how it ended. */
     fun resultText(outcome: SubagentOutcome, limits: SubagentLimits): String {
         val parts = mutableListOf<String>()
         val endedEarly = outcome.stop != SubagentStop.COMPLETED && outcome.stop != SubagentStop.STEP_LIMIT
@@ -44,10 +46,6 @@ ${type.instructions}"""
         val ending = endingOf(outcome, limits)
         if (ending != null) {
             parts += ending
-        }
-        if (outcome.skipped.isNotEmpty()) {
-            parts += "Skipped (nobody answered the approval within 3 minutes):\n" +
-                outcome.skipped.joinToString("\n") { part -> "- $part" }
         }
         return parts.joinToString("\n\n")
     }

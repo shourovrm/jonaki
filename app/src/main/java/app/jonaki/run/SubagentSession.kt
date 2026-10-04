@@ -123,8 +123,6 @@ class SubagentSession(
     private fun stepStatusOf(status: SubagentStepStatus): StepStatus = when (status) {
         SubagentStepStatus.DONE -> StepStatus.DONE
         SubagentStepStatus.FAILED -> StepStatus.FAILED
-        SubagentStepStatus.DENIED -> StepStatus.DENIED
-        SubagentStepStatus.SKIPPED -> StepStatus.SKIPPED
     }
 
     private fun statusOf(stop: SubagentStop): SubagentStatus = when (stop) {

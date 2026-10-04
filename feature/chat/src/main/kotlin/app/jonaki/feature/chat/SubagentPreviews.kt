@@ -128,8 +128,6 @@ internal object SubagentSamples {
         id = "s2/c2",
         toolName = "write_file",
         description = "Save the 38 Daraz listings so the writer can read them.",
-        agentLabel = "researcher 2",
-        waitEndsAtMillis = System.currentTimeMillis() + 161_000,
     )
 
     val work = ChatItem.SubagentWork(

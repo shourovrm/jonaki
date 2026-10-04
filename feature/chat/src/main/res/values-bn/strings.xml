@@ -32,20 +32,12 @@
     <string name="chat_step_skipped">উত্তর নেই</string>
     <string name="chat_approval_title">%1$s চালাতে দেবেন?</string>
     <string name="chat_approval_once">একবার দিন</string>
-    <string name="chat_approval_thread">এই থ্রেডে দিন</string>
-    <string name="chat_approval_title_subagent">%1$s চাইছে: %2$s</string>
-    <string name="chat_approval_task">এই কাজে দিন</string>
+    <string name="chat_approval_thread">এই থ্রেডে সবকিছু দিন</string>
     <string name="chat_approval_deny">না</string>
     <string name="chat_retry">আবার চেষ্টা</string>
     <string name="chat_status_model">মডেল: %1$s। বদলান</string>
-    <string name="chat_status_context_window">কনটেক্সট উইন্ডো: %1$s টোকেন</string>
-    <string name="chat_status_context_used">কনটেক্সট ব্যবহার: %1$d%%</string>
     <string name="chat_status_cost">খরচ: %1$s</string>
-    <string name="chat_status_bypass">বাইপাস</string>
-    <string name="chat_status_bypass_description">বাইপাস: টুল জিজ্ঞেস না করেই চলে</string>
     <string name="chat_menu_approvals">অনুমতি</string>
-    <string name="chat_approvals_title">এই থ্রেডের অনুমতি</string>
-    <string name="chat_approvals_close">বন্ধ</string>
     <string name="chat_model_sheet_title">এই থ্রেডের মডেল</string>
     <string name="chat_model_sheet_prices">প্রতি মিলিয়ন টোকেনের দাম</string>
     <string name="chat_price_in">ইনপুট %1$s</string>
@@ -160,4 +152,10 @@
         <item quantity="one">%1$dটি সাবএজেন্টের সীমা ছাড়িয়ে যাবে। প্রতিটির খরচ %2$s পর্যন্ত হতে পারে।</item>
         <item quantity="other">%1$dটি সাবএজেন্টের সীমা ছাড়িয়ে যাবে। প্রতিটির খরচ %2$s পর্যন্ত হতে পারে।</item>
     </plurals>
+    <string name="chat_approval_after_outside">এই চ্যাট বাইরের লেখা পড়েছে।</string>
+    <string name="chat_status_approval">অনুমতি: %1$s। বদলান</string>
+    <string name="chat_status_approval_all">অনুমতি: %1$s, এই থ্রেডে সব অনুমোদিত। বদলান</string>
+    <string name="chat_status_context">কনটেক্সট: %2$s টোকেনের %1$d%% ব্যবহৃত</string>
+    <string name="chat_approval_all_active">এই থ্রেডে সবকিছু দেওয়া আছে</string>
+    <string name="chat_approval_withdraw">তুলে নিন</string>
 </resources>

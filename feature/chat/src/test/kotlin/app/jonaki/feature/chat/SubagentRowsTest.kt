@@ -180,11 +180,4 @@ class SubagentRowsTest {
         assertEquals(1f, SubagentRows.share(11.0, 10.0), 0.0001f)
         assertEquals(0f, SubagentRows.share(1.0, 0.0), 0.0001f)
     }
-
-    @Test
-    fun theApprovalCountdownRoundsUpToWholeSeconds() {
-        assertEquals("2:41", formatCountdown(160_200))
-        assertEquals("3:00", formatCountdown(180_000))
-        assertEquals("0:00", formatCountdown(-5))
-    }
 }

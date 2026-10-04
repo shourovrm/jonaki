@@ -32,22 +32,14 @@
     <string name="chat_step_skipped">No answer</string>
     <string name="chat_approval_title">Allow %1$s?</string>
     <string name="chat_approval_once">Allow once</string>
-    <string name="chat_approval_thread">Allow in thread</string>
-    <string name="chat_approval_title_subagent">%1$s asks for %2$s</string>
-    <string name="chat_approval_task">Allow for task</string>
+    <string name="chat_approval_thread">Allow all in this thread</string>
     <string name="chat_approval_deny">Deny</string>
     <string name="chat_retry">Retry</string>
     <string name="chat_status_model">Model: %1$s. Change</string>
-    <string name="chat_status_context_window">Context window: %1$s tokens</string>
-    <string name="chat_status_context_used">Context used: %1$d%%</string>
     <string name="chat_status_cost">Cost: %1$s</string>
-    <string name="chat_status_bypass">Bypass</string>
     <string name="chat_status_web_on">Web search on</string>
     <string name="chat_status_web_off">Web search off</string>
-    <string name="chat_status_bypass_description">Bypass: tools run without asking</string>
     <string name="chat_menu_approvals">Approvals</string>
-    <string name="chat_approvals_title">Approvals in this thread</string>
-    <string name="chat_approvals_close">Close</string>
     <string name="chat_model_sheet_title">Model for this thread</string>
     <string name="chat_model_sheet_prices">Prices per million tokens</string>
     <string name="chat_price_in">in %1$s</string>
@@ -160,4 +152,10 @@
         <item quantity="one">Over the limit of %1$d subagent. Each can cost up to %2$s.</item>
         <item quantity="other">Over the limit of %1$d subagents. Each can cost up to %2$s.</item>
     </plurals>
+    <string name="chat_approval_after_outside">This chat read outside content.</string>
+    <string name="chat_status_approval">Approvals: %1$s. Change</string>
+    <string name="chat_status_approval_all">Approvals: %1$s, all allowed in this thread. Change</string>
+    <string name="chat_status_context">Context: %1$d%% of %2$s tokens used</string>
+    <string name="chat_approval_all_active">Allow all in this thread is on</string>
+    <string name="chat_approval_withdraw">Withdraw</string>
 </resources>

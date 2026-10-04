@@ -43,18 +43,23 @@ object ViewedImages {
 
     private const val RESULT_PREFIX = "Image shown: "
 
+    private const val LINES_TO_SEARCH = 2
+
     fun isImagePath(path: String): Boolean =
         path.substringAfterLast('.', missingDelimiterValue = "").lowercase() in IMAGE_EXTENSIONS
 
     fun resultText(source: ImageSource): String =
         RESULT_PREFIX + source.reference + "\nThe image follows in the next message."
 
-    /** The image a view_image result names; null for any other text. */
+    /**
+     * The image a view_image result names; null for any other text. The line
+     * may sit second, below the opening line of the outside-content wrapper
+     * that an inbox image's result carries.
+     */
     fun sourceIn(resultText: String): ImageSource? {
-        if (!resultText.startsWith(RESULT_PREFIX)) {
-            return null
-        }
-        val reference = resultText.lineSequence().first().removePrefix(RESULT_PREFIX).trim()
+        val namingLine = resultText.lineSequence().take(LINES_TO_SEARCH).firstOrNull { line -> line.startsWith(RESULT_PREFIX) }
+            ?: return null
+        val reference = namingLine.removePrefix(RESULT_PREFIX).trim()
         if (reference.isEmpty()) {
             return null
         }

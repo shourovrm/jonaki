@@ -12,7 +12,6 @@ import app.jonaki.core.storage.StepStatus
 import app.jonaki.tools.runcode.InstallNeed
 import app.jonaki.tools.runcode.InstallNeeds
 import app.jonaki.core.agent.PromptBuilder
-import app.jonaki.core.agent.SubagentGate
 import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.core.storage.SubagentEntity
@@ -86,8 +85,7 @@ object ChatItems {
             items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentParts, stepWords)
             if (isLastTurn) {
                 items += pythonCardFor(turn, stepsById, pythonCard)
-                val stepStarts = steps.associate { step -> step.toolCallId to step.startedAtMillis }
-                items += pendingApprovals.map { pending -> approvalCard(pending, stepStarts, stepWords, subagentLimits, subagentTypeNames) }
+                items += pendingApprovals.map { pending -> approvalCard(pending, stepWords, subagentLimits, subagentTypeNames) }
             }
         }
         val withRetry = markRetryableError(items, visibleRows, isRunning)
@@ -120,33 +118,20 @@ object ChatItems {
         return listOfNotNull(pythonCard(step.toolCallId, need))
     }
 
-    /**
-     * A subagent's request_tool card names the tool it wants and says why;
-     * other cards say what the call will do. A subagent's card is withdrawn
-     * 3 minutes after its step started (D-062), which is when it was shown.
-     */
+    /** Only the thread's own agent asks; a card says what the call will do. */
     private fun approvalCard(
         pending: PendingApproval,
-        stepStarts: Map<String, Long>,
         stepWords: StepDetail.Words,
         subagentLimits: SubagentLimitSettings,
         subagentTypeNames: List<String>,
     ): ChatItem.Approval {
-        val subagent = pending.subagent
-        val reason = subagent?.reason
-        val description = if (reason != null) {
-            reason
-        } else {
-            StepDetail.of(pending.toolCall.toolName, pending.toolCall.argumentsJson, stepWords).target.orEmpty()
-        }
-        val shownAt = stepStarts[pending.toolCall.id]
-        val waitEndsAt = if (subagent == null || shownAt == null) null else shownAt + SubagentGate.WAIT_LIMIT.inWholeMilliseconds
+        val description = StepDetail.of(pending.toolCall.toolName, pending.toolCall.argumentsJson, stepWords).target.orEmpty()
         return ChatItem.Approval(
             pending.toolCall.id,
             pending.toolName,
             description,
-            agentLabel = subagent?.agentLabel,
-            waitEndsAtMillis = waitEndsAt,
+            offersThreadAllowance = pending.offersThreadAllowance,
+            afterOutsideContent = pending.afterOutsideContent,
             subagentsAfter = pending.subagentsAfter,
             costWarning = costWarningFor(pending.subagentsAfter, subagentLimits, subagentTypeNames),
         )
