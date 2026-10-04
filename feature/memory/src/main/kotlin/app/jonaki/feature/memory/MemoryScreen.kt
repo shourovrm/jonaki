@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +50,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.JonakiTheme
+import java.text.DateFormat
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +59,8 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
     var adding by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
-    val allFacts = state.waitingForReview + state.threadFacts + state.projectFacts + state.globalFacts
+    var supersededOpen by rememberSaveable { mutableStateOf(false) }
+    val allFacts = state.waitingForReview + state.threadFacts + state.projectFacts + state.globalFacts + state.supersededFacts
     val subtitle = state.threadTitle ?: state.projectName
 
     Scaffold(
@@ -135,6 +140,15 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
             )
             item(key = "review-switch") {
                 ReviewSwitch(state.reviewMode, actions.onReviewModeChange)
+            }
+            if (state.supersededFacts.isNotEmpty()) {
+                supersededSection(
+                    facts = state.supersededFacts,
+                    open = supersededOpen,
+                    onToggle = { supersededOpen = !supersededOpen },
+                    onDelete = { factId -> deletingId = factId },
+                    actions = actions,
+                )
             }
         }
     }
@@ -306,6 +320,76 @@ private fun labelOf(item: FactMenuItem): Int = when (item) {
     FactMenuItem.DELETE -> R.string.memory_menu_delete
 }
 
+/** Facts extraction replaced or removed: folded, with a count, until the user opens it. */
+private fun LazyListScope.supersededSection(
+    facts: List<MemoryFactUi>,
+    open: Boolean,
+    onToggle: () -> Unit,
+    onDelete: (Long) -> Unit,
+    actions: MemoryActions,
+) {
+    item(key = "superseded-header") {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .heightIn(min = 48.dp)
+                .padding(start = 4.dp),
+        ) {
+            Text(
+                stringResource(R.string.memory_section_superseded) + " (" + facts.size + ")",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                contentDescription = stringResource(if (open) R.string.memory_superseded_hide else R.string.memory_superseded_show),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 12.dp),
+            )
+        }
+    }
+    if (open) {
+        items(facts, key = { fact -> "superseded-${fact.id}" }) { fact ->
+            SupersededCard(fact, onDelete = { onDelete(fact.id) }, actions = actions)
+        }
+    }
+}
+
+@Composable
+private fun SupersededCard(fact: MemoryFactUi, onDelete: () -> Unit, actions: MemoryActions) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp)) {
+            Text(fact.text, style = MaterialTheme.typography.bodyLarge, maxLines = 4, overflow = TextOverflow.Ellipsis)
+            val supersededAtMillis = fact.supersededAtMillis
+            if (supersededAtMillis != null) {
+                val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(supersededAtMillis))
+                Text(
+                    stringResource(R.string.memory_superseded_on, date),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDelete) {
+                    Text(stringResource(R.string.memory_delete), color = JonakiTheme.colors.deny)
+                }
+                TextButton(onClick = { actions.onRestore(fact.id) }) {
+                    Text(stringResource(R.string.memory_restore))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ReviewCard(fact: MemoryFactUi, actions: MemoryActions) {
     Surface(
@@ -315,9 +399,15 @@ private fun ReviewCard(fact: MemoryFactUi, actions: MemoryActions) {
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp)) {
             Text(fact.text, style = MaterialTheme.typography.bodyLarge, maxLines = 4, overflow = TextOverflow.Ellipsis)
-            if (fact.threadTitle != null) {
+            // A global fact reaches every thread, so the card says so before the user approves it.
+            val whereLine = when {
+                fact.threadTitle != null -> stringResource(R.string.memory_in_thread, fact.threadTitle)
+                fact.scope == FactScopeUi.GLOBAL -> stringResource(R.string.memory_scope_global)
+                else -> null
+            }
+            if (whereLine != null) {
                 Text(
-                    stringResource(R.string.memory_in_thread, fact.threadTitle),
+                    whereLine,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

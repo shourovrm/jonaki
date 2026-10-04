@@ -1,5 +1,6 @@
 package app.jonaki.memory
 
+import app.jonaki.core.storage.FtsQuery
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MemoryEntity
 import app.jonaki.core.storage.MemoryOrigin
@@ -21,26 +22,33 @@ class RoomMemoryStore(
     private val threadId: String,
     private val projectId: String?,
     private val clock: () -> Long,
+    /** Whether a fact saved after the thread read outside content waits for the user's approval. */
+    private val holdFactsAfterOutsideContent: () -> Boolean = { true },
 ) : MemoryStore {
     private val memoryDao = database.memoryDao()
 
-    override suspend fun remember(scope: FactScope, text: String): RememberResult {
+    override suspend fun remember(scope: FactScope, text: String, keywords: String): RememberResult {
         val visible = memoryDao.listVisibleFrom(threadId, projectId)
         val same = FactText.findSame(visible, text)
+        // Read now: the thread can read a web page during a run, after the tool was built.
+        val waitsForReview = holdFactsAfterOutsideContent() && threadReadOutsideContent()
         if (same != null) {
             val sameScope = scopeOf(same)
             if (reach(scope) <= reach(sameScope)) {
                 return RememberResult.AlreadyKnown(factOf(same))
             }
-            // Asked to remember for more threads what fewer threads already know: move the fact up.
-            val widened = same.copy(
-                scope = storedScopeOf(scope),
-                threadId = null,
-                projectId = projectIdFor(scope),
-                updatedAtMillis = clock(),
-            )
-            memoryDao.update(widened)
-            return RememberResult.Saved(factOf(widened))
+            if (!waitsForReview) {
+                // Asked to remember for more threads what fewer threads already know: move the fact up.
+                val widened = same.copy(
+                    scope = storedScopeOf(scope),
+                    threadId = null,
+                    projectId = projectIdFor(scope),
+                    updatedAtMillis = clock(),
+                )
+                memoryDao.update(widened)
+                return RememberResult.Saved(factOf(widened))
+            }
+            // A held fact must not change what the known fact reaches, so the wider copy waits as a new fact.
         }
         val now = clock()
         val memory = MemoryEntity(
@@ -48,19 +56,24 @@ class RoomMemoryStore(
             threadId = if (scope == FactScope.THREAD) threadId else null,
             projectId = projectIdFor(scope),
             text = text,
+            keywords = FactKeywords.cleaned(keywords),
             sourceMessageId = database.messageDao().latestUserMessageId(threadId),
             origin = MemoryOrigin.TOOL,
+            pendingReview = waitsForReview,
             createdAtMillis = now,
             updatedAtMillis = now,
             lastUsedAtMillis = now,
         )
         val id = memoryDao.insert(memory)
-        return RememberResult.Saved(factOf(memory.copy(id = id)))
+        return RememberResult.Saved(factOf(memory.copy(id = id)), waitsForReview)
     }
+
+    private suspend fun threadReadOutsideContent(): Boolean =
+        database.threadDao().find(threadId)?.readOutsideContent == true
 
     override suspend fun forget(factId: Long): ForgetResult {
         val memory = memoryDao.find(factId)
-        val isVisible = memory != null && !memory.pendingReview && isVisibleHere(memory)
+        val isVisible = memory != null && !memory.pendingReview && memory.supersededAtMillis == null && isVisibleHere(memory)
         if (memory == null || !isVisible) {
             return ForgetResult.NotFound
         }
@@ -72,10 +85,12 @@ class RoomMemoryStore(
     }
 
     override suspend fun recall(query: String, limit: Int): List<Fact> {
-        val found = if (MemorySearchIndex.usesMatch(query)) {
-            memoryDao.searchByMatch(MemorySearchIndex.matchPhrase(query), threadId, projectId, limit)
+        // Any word of the query, best match first; no word long enough for the index falls back to LIKE.
+        val match = FtsQuery.anyWordOf(query)
+        val found = if (match != null) {
+            memoryDao.searchByMatch(match, threadId, projectId, limit)
         } else {
-            memoryDao.searchByLike(MemorySearchIndex.likePattern(query), threadId, projectId, limit)
+            memoryDao.searchByLike(MemorySearchIndex.likePattern(query.trim()), threadId, projectId, limit)
         }
         if (found.isNotEmpty()) {
             // A recalled fact counts as used, so it can enter the next run's prompt (D-034).

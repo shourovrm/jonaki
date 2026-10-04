@@ -28,8 +28,11 @@ object MemoryScreenState {
         reviewMode: Boolean,
         projectName: String? = null,
         projectFacts: List<MemoryEntity> = emptyList(),
+        /** Facts background extraction replaced or removed, from the views' own scopes. */
+        supersededFacts: List<MemoryEntity> = emptyList(),
     ): MemoryUiState {
-        val ownWaiting = (threadFacts + projectFacts).filter { fact -> fact.pendingReview }
+        // A global fact proposed by extraction waits for approval in every view, since it reaches every thread.
+        val ownWaiting = (threadFacts + projectFacts + globalFacts).filter { fact -> fact.pendingReview }
         val isSettingsView = threadId == null && projectName == null
         val waiting = if (isSettingsView) pendingFacts else ownWaiting
         return MemoryUiState(
@@ -44,6 +47,9 @@ object MemoryScreenState {
             reviewMode = reviewMode,
             projectName = projectName,
             projectFacts = projectFacts.filterNot { fact -> fact.pendingReview }.map { fact -> uiOf(fact, sourceMessages, null) },
+            supersededFacts = supersededFacts
+                .sortedByDescending { fact -> fact.supersededAtMillis }
+                .map { fact -> uiOf(fact, sourceMessages, null).copy(supersededAtMillis = fact.supersededAtMillis) },
         )
     }
 

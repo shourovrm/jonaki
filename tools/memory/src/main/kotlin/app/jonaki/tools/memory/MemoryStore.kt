@@ -6,13 +6,17 @@ package app.jonaki.tools.memory
  * storage (D-007), and a store cannot reach another thread's facts.
  */
 interface MemoryStore {
-    /** Saves a fact, or returns the fact already saved with the same text. */
-    suspend fun remember(scope: FactScope, text: String): RememberResult
+    /**
+     * Saves a fact, or returns the fact already saved with the same text.
+     * [keywords] are search words the text lacks (the main words in the other
+     * script); the store indexes them for recall and keeps them hidden.
+     */
+    suspend fun remember(scope: FactScope, text: String, keywords: String = ""): RememberResult
 
     /** Deletes a global fact, one of this thread's facts or one of its project's. */
     suspend fun forget(factId: Long): ForgetResult
 
-    /** Global, project and this thread's facts whose text contains [query], at most [limit]. */
+    /** Global, project and this thread's facts that hold any word of [query], best match first, at most [limit]. */
     suspend fun recall(query: String, limit: Int): List<Fact>
 }
 
@@ -32,7 +36,11 @@ data class Fact(
 )
 
 sealed interface RememberResult {
-    data class Saved(val fact: Fact) : RememberResult
+    /**
+     * [waitsForReview] is true when the fact is held until the user approves
+     * it on the Memory screen, so the model does not find it in recall yet.
+     */
+    data class Saved(val fact: Fact, val waitsForReview: Boolean = false) : RememberResult
 
     data class AlreadyKnown(val fact: Fact) : RememberResult
 }
