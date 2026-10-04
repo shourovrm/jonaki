@@ -46,6 +46,8 @@ data class SettingsUiState(
     val subagentLimits: List<SubagentLimitUi> = emptyList(),
     /** Subagent types the user made, in the order they were added (D-138). */
     val customSubagents: List<CustomSubagentRowUi> = emptyList(),
+    /** How an unanswered reminder rings again, on Settings > Files and schedule. */
+    val reminders: ReminderSettingsUi = ReminderSettingsUi(),
     /** Settings > Permissions, read again each time the screen resumes (D-124). */
     val permissions: List<PermissionRowUi> = emptyList(),
     /** The installed version name, for example "0.8.0". */
@@ -203,6 +205,9 @@ class SettingsActions(
     val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
     /** A limit's new value, one step from the old; the app keeps it in range (D-138). */
     val onSubagentLimitChange: (limit: SubagentLimit, value: Int) -> Unit = { _, _ -> },
+    /** The new minutes between repeats, one of [ReminderSettingsUi.intervalOptions]. */
+    val onReminderIntervalChange: (minutes: Int) -> Unit = {},
+    val onReminderMaxRepeatsChange: (repeats: Int) -> Unit = {},
     /** Opens a custom subagent's editor; null opens an empty one for a new subagent. */
     val onOpenCustomSubagent: (name: String?) -> Unit = {},
     /** A tap on a permission row or its button; the app asks or opens system settings by [PermissionRowUi.status]. */

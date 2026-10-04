@@ -74,6 +74,9 @@ object SettingsSearch {
             R.string.settings_section_files,
             R.string.settings_link_folder,
             R.string.settings_linked_folder,
+            R.string.settings_section_reminders,
+            R.string.settings_reminders_interval,
+            R.string.settings_reminders_repeats,
             R.string.settings_section_scheduled,
         ),
         SettingsPage.THEME to listOf(
