@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -220,6 +221,7 @@ private fun iconOf(page: SettingsPage): ImageVector = when (page) {
     SettingsPage.LOCAL_MODELS -> JonakiIcons.Download
     SettingsPage.WEB -> JonakiIcons.Globe
     SettingsPage.TOOLS -> Icons.Outlined.Build
+    SettingsPage.GUARDRAILS -> Icons.Outlined.Lock
     SettingsPage.SUBAGENTS -> JonakiIcons.People
     SettingsPage.ANSWERS -> JonakiIcons.ChatBubble
     SettingsPage.MEMORY_SKILLS -> JonakiIcons.Lightbulb

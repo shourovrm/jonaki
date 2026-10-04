@@ -41,6 +41,8 @@ data class SettingsUiState(
     /** The Jev guard switch, and whether an OpenRouter key exists for it to use. */
     val jevGuardOn: Boolean = false,
     val jevGuardAvailable: Boolean = false,
+    val guardrails: GuardrailOptionsUi = GuardrailOptionsUi(),
+    val memoryOptions: MemoryOptionsUi = MemoryOptionsUi(),
     /** How much of the time zone each message tells the model. */
     val zoneInMessages: ZoneChoice = ZoneChoice.NONE,
     /** The "always allow" rules; only this page creates or removes them. */
@@ -165,6 +167,26 @@ data class AddableServiceUi(
     val hint: String,
 )
 
+/** What a thread does once it has read outside content (a web page, a document, an MCP result, a subagent's answer). */
+data class GuardrailOptionsUi(
+    /** A call that sends data out, or makes a scheduled task, always shows its card (D-143). */
+    val askBeforeSendingOut: Boolean = true,
+    /** Facts saved from then on wait on the Memory screen for the user's approval. */
+    val holdNewFacts: Boolean = true,
+)
+
+/** The switches of Settings > Memory and skills. */
+data class MemoryOptionsUi(
+    /** Background extraction reads finished chats and saves facts from them (D-036). */
+    val saveFactsFromChats: Boolean = true,
+    /** Review mode: extracted facts wait for approval on the Memory screen. */
+    val reviewNewFacts: Boolean = false,
+    /** Extraction may propose a fact for every thread; it always waits for approval. */
+    val suggestFactsForAllThreads: Boolean = true,
+    /** The agent may propose a skill after a hard task; nothing is added without approval. */
+    val suggestSkills: Boolean = true,
+)
+
 /** Settings screen callbacks, grouped so the composable signature stays readable. */
 class SettingsActions(
     val onBack: () -> Unit,
@@ -213,6 +235,9 @@ class SettingsActions(
     val onOpenPersona: (personaId: String?) -> Unit = {},
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
     val onJevGuardChange: (Boolean) -> Unit = {},
+    val onGuardrailOptionsChange: (GuardrailOptionsUi) -> Unit = {},
+    val onMemoryOptionsChange: (MemoryOptionsUi) -> Unit = {},
+    val onExportMemory: () -> Unit = {},
     val onZoneInMessagesChange: (ZoneChoice) -> Unit = {},
     val onApprovalRuleAdd: (ApprovalRuleUi) -> Unit = {},
     val onApprovalRuleRemove: (ApprovalRuleUi) -> Unit = {},

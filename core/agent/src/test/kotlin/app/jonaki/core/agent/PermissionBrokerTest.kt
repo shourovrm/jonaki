@@ -255,6 +255,19 @@ class PermissionBrokerTest {
     }
 
     @Test
+    fun withTheOutsideContentRuleSwitchedOffBypassStillRunsASendOut() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        var ruleIsOn = false
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.BYPASS }, asksAfterOutsideContent = { ruleIsOn })
+        val addEvent = call("1", "phone", "action" to "calendar_add")
+        broker.outsideContentWasRead()
+
+        assertTrue("the rule is off, so bypass runs it", broker.mayRun(PhoneLikeTool(), addEvent))
+        ruleIsOn = true
+        assertFalse("switched on again, the next call asks", broker.mayRun(PhoneLikeTool(), addEvent))
+    }
+
+    @Test
     fun theOutsideContentFactIsSavedOnceAndRestoredWithTheThread() = runBlocking {
         val saved = mutableListOf<Pair<Boolean, Boolean>>()
         val state = ThreadApprovalState(save = { allowAll, readOutside -> saved += allowAll to readOutside })

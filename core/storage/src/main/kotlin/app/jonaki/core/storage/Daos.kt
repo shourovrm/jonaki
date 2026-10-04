@@ -307,6 +307,10 @@ interface MemoryDao {
     @Query("DELETE FROM memories WHERE projectId = :projectId")
     suspend fun deleteProjectFacts(projectId: String)
 
+    /** Every fact of every scope, for the Markdown export. */
+    @Query("SELECT * FROM memories ORDER BY id")
+    suspend fun listAll(): List<MemoryEntity>
+
     @Query("SELECT * FROM memories WHERE id = :memoryId")
     suspend fun find(memoryId: Long): MemoryEntity?
 

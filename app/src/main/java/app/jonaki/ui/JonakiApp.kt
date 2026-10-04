@@ -1,5 +1,7 @@
 package app.jonaki.ui
 
+import app.jonaki.feature.settings.GuardrailOptionsUi
+import app.jonaki.feature.settings.MemoryOptionsUi
 import app.jonaki.feature.settings.ApprovalRuleUi
 import app.jonaki.feature.settings.ApprovalRuleChoiceUi
 import app.jonaki.settings.ApprovalRules
@@ -107,6 +109,7 @@ import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.ThemeChoice
 import app.jonaki.settings.ToolGroup
 import app.jonaki.settings.ToolPicker
+import app.jonaki.tools.sharefile.DestinationResult
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
@@ -1101,6 +1104,16 @@ private fun SettingsRoute(
         personas = personaRowsOf(personas),
         approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
         jevGuardOn = snapshot.jevGuardOn,
+        guardrails = GuardrailOptionsUi(
+            askBeforeSendingOut = snapshot.askBeforeSendingOutAfterOutsideContent,
+            holdNewFacts = snapshot.holdFactsAfterOutsideContent,
+        ),
+        memoryOptions = MemoryOptionsUi(
+            saveFactsFromChats = snapshot.saveFactsFromChats,
+            reviewNewFacts = snapshot.reviewExtractedMemories,
+            suggestFactsForAllThreads = snapshot.suggestFactsForAllThreads,
+            suggestSkills = snapshot.suggestSkills,
+        ),
         // The two enums have the same three names; the screen's module does not see the agent's.
         zoneInMessages = ZoneChoice.valueOf(snapshot.zoneInMessages.name),
         jevGuardAvailable = SecretName.OPENROUTER in savedKeys,
@@ -1139,6 +1152,35 @@ private fun SettingsRoute(
             }
         },
         onJevGuardChange = { on -> settings.update { current -> current.copy(jevGuardOn = on) } },
+        onExportMemory = {
+            permissionScope.launch {
+                val result = application.memoryExport.saveToDownloads()
+                val message = when (result) {
+                    null -> context.getString(R.string.memory_export_empty)
+                    is DestinationResult.Done -> context.getString(R.string.memory_export_done, result.location)
+                    else -> context.getString(R.string.memory_export_failed)
+                }
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        },
+        onGuardrailOptionsChange = { options ->
+            settings.update { current ->
+                current.copy(
+                    askBeforeSendingOutAfterOutsideContent = options.askBeforeSendingOut,
+                    holdFactsAfterOutsideContent = options.holdNewFacts,
+                )
+            }
+        },
+        onMemoryOptionsChange = { options ->
+            settings.update { current ->
+                current.copy(
+                    saveFactsFromChats = options.saveFactsFromChats,
+                    reviewExtractedMemories = options.reviewNewFacts,
+                    suggestFactsForAllThreads = options.suggestFactsForAllThreads,
+                    suggestSkills = options.suggestSkills,
+                )
+            }
+        },
         onZoneInMessagesChange = { choice ->
             settings.update { current -> current.copy(zoneInMessages = ZoneInMessages.valueOf(choice.name)) }
         },

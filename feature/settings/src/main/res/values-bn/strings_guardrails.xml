@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_root_guardrails">সুরক্ষা</string>
+    <string name="settings_section_jev">জেভ</string>
+    <string name="settings_section_after_outside_content">বাইরের লেখা পড়ার পর</string>
+    <string name="settings_guardrail_ask_before_sending_out">বাইরে পাঠানোর আগে জিজ্ঞাসা</string>
+    <string name="settings_guardrail_hold_new_facts">নতুন তথ্য যাচাইয়ের জন্য রাখুন</string>
+    <string name="settings_summary_jev_on">জেভ গার্ড চালু</string>
+    <string name="settings_summary_jev_off">জেভ গার্ড বন্ধ</string>
+    <string name="settings_memory_save_facts">চ্যাট থেকে তথ্য সংরক্ষণ</string>
+    <string name="settings_memory_review_facts">নতুন তথ্য যাচাই</string>
+    <string name="settings_memory_suggest_global">সব থ্রেডের জন্য তথ্য প্রস্তাব</string>
+    <string name="settings_memory_export">Markdown হিসেবে এক্সপোর্ট</string>
+    <string name="settings_skills_suggest">স্কিল প্রস্তাব</string>
+</resources>

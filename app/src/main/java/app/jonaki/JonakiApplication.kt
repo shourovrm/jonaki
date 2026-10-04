@@ -12,6 +12,7 @@ import app.jonaki.files.IncomingShares
 import app.jonaki.files.LinkedFolder
 import app.jonaki.localmodels.LocalModels
 import app.jonaki.files.VisibleActivity
+import app.jonaki.memory.MemoryExport
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.phone.AndroidPhone
 import app.jonaki.phone.ReminderBook
@@ -78,6 +79,9 @@ class JonakiApplication : Application() {
 
     /** The cheapest set-up model, for memory extraction and compaction (D-036). */
     lateinit var backgroundModel: BackgroundModel
+        private set
+
+    lateinit var memoryExport: MemoryExport
         private set
 
     /** The skill library in files/skills/, which read_file can read as /skills/ (D-037). */
@@ -171,6 +175,8 @@ class JonakiApplication : Application() {
         reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json"))) { settings.snapshot.value.reminderPolicy }
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
         runtimePermissions = RuntimePermissions(this, visibleActivity, settings::recordPermissionRefusal)
+        val fileDestinations = AndroidFileDestinations(this, visibleActivity, linkedFolder)
+        memoryExport = MemoryExport(database, fileDestinations, File(cacheDir, "memory-export"))
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
         runner = AgentRunner(
             this,
@@ -183,7 +189,7 @@ class JonakiApplication : Application() {
             memoryExtractor,
             threadCompactor,
             skillLibrary,
-            AndroidFileDestinations(this, visibleActivity, linkedFolder),
+            fileDestinations,
             backgroundModel,
             AndroidPhone(this, runtimePermissions, visibleActivity, reminders),
             taskSchedulerFor = { threadId -> ThreadTaskScheduler(threadId, scheduledTasks, runtimePermissions) },

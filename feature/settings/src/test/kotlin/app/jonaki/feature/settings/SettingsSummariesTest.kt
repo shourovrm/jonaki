@@ -131,6 +131,14 @@ class SettingsSummariesTest {
     }
 
     @Test
+    fun guardrailsSaysWhetherTheJevGuardRuns() {
+        assertEquals("Jev guard off", summary(SettingsPage.GUARDRAILS, emptyState))
+        // Switched on without a key it cannot run, so the row still says off.
+        assertEquals("Jev guard off", summary(SettingsPage.GUARDRAILS, emptyState.copy(jevGuardOn = true)))
+        assertEquals("Jev guard on", summary(SettingsPage.GUARDRAILS, emptyState.copy(jevGuardOn = true, jevGuardAvailable = true)))
+    }
+
+    @Test
     fun memoryAndSkillsCountsBoth() {
         assertEquals("3 facts · 5 skills", summary(SettingsPage.MEMORY_SKILLS, emptyState.copy(factCount = 3, skillCount = 5)))
         assertEquals("1 fact · 0 skills", summary(SettingsPage.MEMORY_SKILLS, emptyState.copy(factCount = 1, skillCount = 0)))

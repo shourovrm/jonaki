@@ -23,6 +23,7 @@ object SettingsSummaries {
         SettingsPage.LOCAL_MODELS -> PageSummary(localModels(state.localModels, texts))
         SettingsPage.WEB -> PageSummary(web(state, texts))
         SettingsPage.TOOLS -> PageSummary(tools(state, texts))
+        SettingsPage.GUARDRAILS -> PageSummary(guardrails(state, texts))
         SettingsPage.SUBAGENTS -> PageSummary(subagents(state, texts))
         SettingsPage.ANSWERS -> PageSummary(answers(state, texts))
         SettingsPage.MEMORY_SKILLS -> PageSummary(memoryAndSkills(state, texts))
@@ -85,6 +86,12 @@ object SettingsSummaries {
         state.toolGroupCount,
         texts.approvalMode(state.approvalMode),
     )
+
+    /** The guard counts as on only when it can run: its switch is on and an OpenRouter key is saved. */
+    private fun guardrails(state: SettingsUiState, texts: SettingsTexts): String {
+        val jevRuns = state.jevGuardOn && state.jevGuardAvailable
+        return texts.string(if (jevRuns) R.string.settings_summary_jev_on else R.string.settings_summary_jev_off)
+    }
 
     /** "2 without asking · 1 custom": the limit that decides when the user is asked, and the user's own types. */
     private fun subagents(state: SettingsUiState, texts: SettingsTexts): String {

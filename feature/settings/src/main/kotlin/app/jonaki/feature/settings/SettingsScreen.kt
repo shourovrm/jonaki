@@ -91,6 +91,7 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
                 SettingsPage.LOCAL_MODELS -> Unit
                 SettingsPage.WEB -> WebPage(state, actions)
                 SettingsPage.TOOLS -> ToolsPage(state, actions)
+                SettingsPage.GUARDRAILS -> GuardrailsPage(state, actions)
                 SettingsPage.SUBAGENTS -> SubagentsPage(state, actions)
                 SettingsPage.ANSWERS -> AnswersAndPersonasSections(state, actions)
                 SettingsPage.MEMORY_SKILLS -> MemoryAndSkillsPage(state, actions)
@@ -128,10 +129,6 @@ private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
             modifier = Modifier.padding(horizontal = 8.dp),
         )
     }
-    Group {
-        GroupDivider()
-        JevGuardRow(state.jevGuardOn, state.jevGuardAvailable, actions.onJevGuardChange)
-    }
     SectionLabel(stringResource(R.string.settings_approvals_always))
     Group {
         ApprovalRuleRows(state.approvalRules, state.approvalRuleChoices, actions)
@@ -153,7 +150,31 @@ private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
 }
 
 @Composable
+private fun GuardrailsPage(state: SettingsUiState, actions: SettingsActions) {
+    val options = state.guardrails
+    SectionLabel(stringResource(R.string.settings_section_jev))
+    Group {
+        JevGuardRow(state.jevGuardOn, state.jevGuardAvailable, actions.onJevGuardChange)
+    }
+    SectionLabel(stringResource(R.string.settings_section_after_outside_content))
+    Group {
+        OptionSwitchRow(
+            text = stringResource(R.string.settings_guardrail_ask_before_sending_out),
+            isOn = options.askBeforeSendingOut,
+            onChange = { on -> actions.onGuardrailOptionsChange(options.copy(askBeforeSendingOut = on)) },
+        )
+        GroupDivider()
+        OptionSwitchRow(
+            text = stringResource(R.string.settings_guardrail_hold_new_facts),
+            isOn = options.holdNewFacts,
+            onChange = { on -> actions.onGuardrailOptionsChange(options.copy(holdNewFacts = on)) },
+        )
+    }
+}
+
+@Composable
 private fun MemoryAndSkillsPage(state: SettingsUiState, actions: SettingsActions) {
+    val options = state.memoryOptions
     SectionLabel(stringResource(R.string.settings_section_memory))
     Group {
         NavigationRow(
@@ -161,6 +182,26 @@ private fun MemoryAndSkillsPage(state: SettingsUiState, actions: SettingsActions
             summary = pluralStringResource(R.plurals.settings_summary_facts, state.factCount, state.factCount),
             onClick = actions.onOpenMemory,
         )
+        GroupDivider()
+        OptionSwitchRow(
+            text = stringResource(R.string.settings_memory_save_facts),
+            isOn = options.saveFactsFromChats,
+            onChange = { on -> actions.onMemoryOptionsChange(options.copy(saveFactsFromChats = on)) },
+        )
+        GroupDivider()
+        OptionSwitchRow(
+            text = stringResource(R.string.settings_memory_review_facts),
+            isOn = options.reviewNewFacts,
+            onChange = { on -> actions.onMemoryOptionsChange(options.copy(reviewNewFacts = on)) },
+        )
+        GroupDivider()
+        OptionSwitchRow(
+            text = stringResource(R.string.settings_memory_suggest_global),
+            isOn = options.suggestFactsForAllThreads,
+            onChange = { on -> actions.onMemoryOptionsChange(options.copy(suggestFactsForAllThreads = on)) },
+        )
+        GroupDivider()
+        NavigationRow(stringResource(R.string.settings_memory_export), onClick = actions.onExportMemory)
     }
     SectionLabel(stringResource(R.string.settings_section_skills))
     Group {
@@ -168,6 +209,12 @@ private fun MemoryAndSkillsPage(state: SettingsUiState, actions: SettingsActions
             text = stringResource(R.string.settings_skills_open),
             summary = pluralStringResource(R.plurals.settings_summary_skills, state.skillCount, state.skillCount),
             onClick = actions.onOpenSkills,
+        )
+        GroupDivider()
+        OptionSwitchRow(
+            text = stringResource(R.string.settings_skills_suggest),
+            isOn = options.suggestSkills,
+            onChange = { on -> actions.onMemoryOptionsChange(options.copy(suggestSkills = on)) },
         )
     }
 }

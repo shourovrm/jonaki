@@ -69,6 +69,16 @@ data class SettingsSnapshot(
     val zoneInMessages: ZoneInMessages = ZoneInMessages.NONE,
     /** The Jev guard: a second layer on the approval rules and a screen for outside text; off until switched on. */
     val jevGuardOn: Boolean = false,
+    /** Background extraction saves facts from finished chats (D-036); off leaves only the memory tool. */
+    val saveFactsFromChats: Boolean = true,
+    /** Extraction may propose a fact for every thread; such a fact always waits for approval. */
+    val suggestFactsForAllThreads: Boolean = true,
+    /** The agent may propose a skill after a hard task; nothing is added without approval. */
+    val suggestSkills: Boolean = true,
+    /** After a thread read outside content, a call that sends data out always asks (D-143, rule 1). */
+    val askBeforeSendingOutAfterOutsideContent: Boolean = true,
+    /** After a thread read outside content, new facts wait for approval on the Memory screen. */
+    val holdFactsAfterOutsideContent: Boolean = true,
     /** Subagent types the user made, in the order they were added (D-138). */
     val customSubagents: List<CustomSubagent> = emptyList(),
     /** Settings > Files and schedule: how an unanswered reminder rings again. */
@@ -143,6 +153,11 @@ class AppSettings(
                 maxRepeats = preferences.getInt(REMINDER_MAX_REPEATS, ReminderPolicy.DEFAULT_MAX_REPEATS),
             ).withinBounds(),
             jevGuardOn = preferences.getBoolean(JEV_GUARD_ON, false),
+            saveFactsFromChats = preferences.getBoolean(SAVE_FACTS_FROM_CHATS, true),
+            suggestFactsForAllThreads = preferences.getBoolean(SUGGEST_FACTS_FOR_ALL_THREADS, true),
+            suggestSkills = preferences.getBoolean(SUGGEST_SKILLS, true),
+            askBeforeSendingOutAfterOutsideContent = preferences.getBoolean(ASK_BEFORE_SENDING_OUT, true),
+            holdFactsAfterOutsideContent = preferences.getBoolean(HOLD_FACTS_AFTER_OUTSIDE_CONTENT, true),
             zoneInMessages = enumOrDefault(preferences.getString(ZONE_IN_MESSAGES, null), ZoneInMessages.NONE),
             approvalRules = ApprovalRules.fromText(preferences.getString(APPROVAL_RULES, "").orEmpty()),
         )
@@ -243,6 +258,11 @@ class AppSettings(
         editor.putInt(SUBAGENTS_MAX_PER_MESSAGE, limits.maxPerMessage)
         editor.putString(SUBAGENT_BUDGETS, SubagentBudgets.toText(limits.budgets))
         editor.putBoolean(JEV_GUARD_ON, snapshot.jevGuardOn)
+        editor.putBoolean(SAVE_FACTS_FROM_CHATS, snapshot.saveFactsFromChats)
+        editor.putBoolean(SUGGEST_FACTS_FOR_ALL_THREADS, snapshot.suggestFactsForAllThreads)
+        editor.putBoolean(SUGGEST_SKILLS, snapshot.suggestSkills)
+        editor.putBoolean(ASK_BEFORE_SENDING_OUT, snapshot.askBeforeSendingOutAfterOutsideContent)
+        editor.putBoolean(HOLD_FACTS_AFTER_OUTSIDE_CONTENT, snapshot.holdFactsAfterOutsideContent)
         editor.putString(ZONE_IN_MESSAGES, snapshot.zoneInMessages.name)
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
         editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
@@ -294,6 +314,11 @@ class AppSettings(
         const val REMINDER_INTERVAL_MINUTES = "reminder_interval_minutes"
         const val REMINDER_MAX_REPEATS = "reminder_max_repeats"
         const val JEV_GUARD_ON = "jev_guard_on"
+        const val SAVE_FACTS_FROM_CHATS = "save_facts_from_chats"
+        const val SUGGEST_FACTS_FOR_ALL_THREADS = "suggest_facts_for_all_threads"
+        const val SUGGEST_SKILLS = "suggest_skills"
+        const val ASK_BEFORE_SENDING_OUT = "ask_before_sending_out_after_outside_content"
+        const val HOLD_FACTS_AFTER_OUTSIDE_CONTENT = "hold_facts_after_outside_content"
         const val ZONE_IN_MESSAGES = "zone_in_messages"
         const val APPROVAL_RULES = "approval_rules"
     }

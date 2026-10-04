@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_export_done">%1$s-এ সেভ হয়েছে</string>
+    <string name="memory_export_empty">এক্সপোর্ট করার মতো তথ্য নেই</string>
+    <string name="memory_export_failed">মেমরি এক্সপোর্ট করা যায়নি</string>
+</resources>

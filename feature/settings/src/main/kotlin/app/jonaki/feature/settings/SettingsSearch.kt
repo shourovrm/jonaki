@@ -37,7 +37,6 @@ object SettingsSearch {
         ),
         SettingsPage.TOOLS to listOf(
             R.string.settings_section_approvals,
-            R.string.settings_jev_guard,
             R.string.settings_approvals_always,
             R.string.settings_approvals_add,
             R.string.settings_section_tools,
@@ -45,6 +44,12 @@ object SettingsSearch {
             R.string.settings_python,
             R.string.settings_section_mcp,
             R.string.settings_mcp_add,
+        ),
+        SettingsPage.GUARDRAILS to listOf(
+            R.string.settings_jev_guard,
+            R.string.settings_section_after_outside_content,
+            R.string.settings_guardrail_ask_before_sending_out,
+            R.string.settings_guardrail_hold_new_facts,
         ),
         SettingsPage.SUBAGENTS to listOf(
             R.string.settings_subagents_section_limits,
@@ -70,8 +75,13 @@ object SettingsSearch {
         SettingsPage.MEMORY_SKILLS to listOf(
             R.string.settings_section_memory,
             R.string.settings_memory_open,
+            R.string.settings_memory_save_facts,
+            R.string.settings_memory_review_facts,
+            R.string.settings_memory_suggest_global,
+            R.string.settings_memory_export,
             R.string.settings_section_skills,
             R.string.settings_skills_open,
+            R.string.settings_skills_suggest,
         ),
         SettingsPage.FILES_SCHEDULE to listOf(
             R.string.settings_section_files,

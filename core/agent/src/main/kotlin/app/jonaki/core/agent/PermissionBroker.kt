@@ -55,6 +55,12 @@ class PermissionBroker(
     private val guard: Guard = NoGuard,
     /** The user's latest message, which the guard compares the call with. */
     private val userRequest: () -> String = { "" },
+    /**
+     * Settings > Guardrails: whether a thread that read outside content asks
+     * before every call that sends data out (D-143, rule 1). Read before
+     * every call, so the switch applies at once.
+     */
+    private val asksAfterOutsideContent: () -> Boolean = { true },
 ) {
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
         val arguments = argumentsOf(toolCall)
@@ -62,7 +68,7 @@ class PermissionBroker(
             facts = factsOf(tool, arguments),
             mode = approvalMode(),
             allowAllInThread = threadState.allowAllInThread,
-            threadHasReadOutsideContent = threadState.readOutsideContent,
+            threadHasReadOutsideContent = asksAfterOutsideContent() && threadState.readOutsideContent,
         )
         if (verdict !is ApprovalVerdict.Asks) {
             return true

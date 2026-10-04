@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings > Guardrails, and the switches of Settings > Memory and skills. -->
+    <string name="settings_root_guardrails">Guardrails</string>
+    <string name="settings_section_jev">Jev</string>
+    <string name="settings_section_after_outside_content">After outside content</string>
+    <string name="settings_guardrail_ask_before_sending_out">Ask before sending out</string>
+    <string name="settings_guardrail_hold_new_facts">Hold new facts for review</string>
+    <string name="settings_summary_jev_on">Jev guard on</string>
+    <string name="settings_summary_jev_off">Jev guard off</string>
+    <string name="settings_memory_save_facts">Save facts from chats</string>
+    <string name="settings_memory_review_facts">Review new facts</string>
+    <string name="settings_memory_suggest_global">Suggest facts for all threads</string>
+    <string name="settings_memory_export">Export as Markdown</string>
+    <string name="settings_skills_suggest">Suggest skills</string>
+</resources>

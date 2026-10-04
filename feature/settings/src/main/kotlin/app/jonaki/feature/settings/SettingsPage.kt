@@ -17,6 +17,8 @@ enum class SettingsPage(val key: String, @StringRes val title: Int) {
     LOCAL_MODELS("local-models", R.string.settings_root_local_models),
     WEB("web", R.string.settings_root_web),
     TOOLS("tools", R.string.settings_root_tools),
+    /** The Jev guard and what a thread does after it has read outside content (D-143, D-144). */
+    GUARDRAILS("guardrails", R.string.settings_root_guardrails),
     /** Limits, the built-in types' models and the user's own types (D-138). */
     SUBAGENTS("subagents", R.string.settings_root_subagents),
     ANSWERS("answers", R.string.settings_root_answers),
@@ -30,7 +32,7 @@ enum class SettingsPage(val key: String, @StringRes val title: Int) {
     companion object {
         /** The first page's three groups, separated by space and without labels. */
         val GROUPS: List<List<SettingsPage>> = listOf(
-            listOf(MODELS, LOCAL_MODELS, WEB, TOOLS, SUBAGENTS),
+            listOf(MODELS, LOCAL_MODELS, WEB, TOOLS, GUARDRAILS, SUBAGENTS),
             listOf(ANSWERS, MEMORY_SKILLS, FILES_SCHEDULE),
             listOf(THEME, PERMISSIONS, ABOUT),
         )

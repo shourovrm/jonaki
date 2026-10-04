@@ -466,7 +466,7 @@ class AgentRunner(
     private fun launchExtraction(threadId: String, minimumNewMessages: Int) {
         scope.launch {
             val thread = database.threadDao().find(threadId) ?: return@launch
-            if (!ThreadMemory.isOn(thread)) {
+            if (!ThreadMemory.isOn(thread) || !settings.snapshot.value.saveFactsFromChats) {
                 return@launch
             }
             memoryExtractor.extractIfDue(threadId, modelKeyFor(thread), minimumNewMessages)
@@ -649,6 +649,7 @@ class AgentRunner(
             settingsRules = { settings.snapshot.value.approvalRules },
             guard = guard,
             userRequest = { latestUserText[threadId].orEmpty() },
+            asksAfterOutsideContent = { settings.snapshot.value.askBeforeSendingOutAfterOutsideContent },
         )
         val memorySection = ThreadMemory.sectionFor(thread) { memorySectionFor(thread, project) }
         val skillSection = skillSectionFor(thread)

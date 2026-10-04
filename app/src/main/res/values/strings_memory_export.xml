@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_export_done">Saved to %1$s</string>
+    <string name="memory_export_empty">No facts to export</string>
+    <string name="memory_export_failed">Can\'t export memory</string>
+</resources>
