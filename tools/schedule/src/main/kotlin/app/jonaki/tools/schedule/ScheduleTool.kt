@@ -85,7 +85,14 @@ class ScheduleTool(
         if (arguments.stringArgument("action") == Action.LIST.argument) SideEffect.READ_ONLY else SideEffect.CHANGES
 
     // A scheduled task lives in Jonaki and runs here again, where every guard applies; nothing leaves the app.
-    override fun sendsOutOf(arguments: JsonObject): Boolean = false
+    /**
+     * Creating a task counts as sending out for the rule about outside
+     * content: its prompt runs later, when the user is not watching, so a
+     * task made after the thread read a web page could carry that page's
+     * instructions into a run nobody sees start. Such a call always asks.
+     */
+    override fun sendsOutOf(arguments: JsonObject): Boolean =
+        arguments.stringArgument("action") == Action.CREATE.argument
 
     override fun actionOf(arguments: JsonObject): String? = arguments.stringArgument("action")
 

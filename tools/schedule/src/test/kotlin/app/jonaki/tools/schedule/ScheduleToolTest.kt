@@ -140,12 +140,15 @@ class ScheduleToolTest {
     private fun callOf(action: String) = JsonObject(mapOf("action" to JsonPrimitive(action)))
 
     @Test
-    fun createAndCancelAreRuleActionsAndNothingLeavesTheApp() {
+    fun createAndCancelAreRuleActionsAndOnlyCreateCountsAsSendingOut() {
         assertEquals(listOf("create", "cancel"), tool.ruleActions)
         assertEquals("create", tool.actionOf(callOf("create")))
         for (action in listOf("create", "list", "cancel")) {
-            assertFalse(action, tool.sendsOutOf(callOf(action)))
             assertFalse(action, tool.isVeryRiskyOf(callOf(action)))
         }
+        // A task made after the thread read a web page could carry that page's instructions into a later run.
+        assertTrue(tool.sendsOutOf(callOf("create")))
+        assertFalse(tool.sendsOutOf(callOf("list")))
+        assertFalse(tool.sendsOutOf(callOf("cancel")))
     }
 }
