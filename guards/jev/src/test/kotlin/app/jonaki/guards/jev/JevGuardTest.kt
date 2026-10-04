@@ -1,6 +1,7 @@
 package app.jonaki.guards.jev
 
 import app.jonaki.core.guardapi.ActionVerdict
+import app.jonaki.core.guardapi.GuardUsage
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
@@ -163,6 +164,56 @@ class JevGuardTest {
         val verdict = judgeWith(answerBody())
 
         assertEquals(2.7594e-05, verdict.costUsd!!, 1e-12)
+    }
+
+    @Test
+    fun tokensOfTheCallAreReported() {
+        val verdict = judgeWith(answerBody())
+
+        assertEquals(GuardUsage(inputTokens = 657, outputTokens = 73), verdict.usage)
+    }
+
+    @Test
+    fun anActionThatRunsWithoutACardCarriesItsNote() {
+        val verdict = judgeWith(answerBody(choice = "reversible", confidence = 0.97, servesRequest = 0.81))
+
+        assertEquals("Jev: ran without a card (reversible 0.97, asked for 0.81)", verdict.note)
+    }
+
+    @Test
+    fun anActionThatGetsACardCarriesItsNote() {
+        val verdict = judgeWith(answerBody(servesRequest = 0.41))
+
+        assertEquals("Jev: card shown (not sure the user asked, 0.41)", verdict.note)
+    }
+
+    @Test
+    fun aFailedActionCallCarriesTheNoAnswerNote() {
+        server.enqueue(MockResponse().setResponseCode(500))
+
+        val verdict = runBlocking { guard().judgeAction("remind me at 8", "phone", noArguments) }
+
+        assertEquals("Jev: no answer, card shown", verdict.note)
+    }
+
+    @Test
+    fun aResultNoteGivesTheHighestProbabilityOverAllParts() = runBlocking {
+        server.enqueue(MockResponse().setBody(injectionBody(0.83)))
+        server.enqueue(MockResponse().setBody(injectionBody(0.04)))
+        val twoParts = "a".repeat(JevGuard.CHUNK_SIZE + 1)
+
+        val verdict = guard().screenResult("web_fetch", twoParts)
+
+        assertEquals("Jev: result flagged (0.83)", verdict.note)
+    }
+
+    @Test
+    fun aClearResultCarriesItsNoteAndAFailedOneSaysNoAnswer() = runBlocking {
+        server.enqueue(MockResponse().setBody(injectionBody(0.04)))
+        server.enqueue(MockResponse().setResponseCode(500))
+
+        assertEquals("Jev: result clear (0.04)", guard().screenResult("web_fetch", "text").note)
+        assertEquals("Jev: no answer, result not checked", guard().screenResult("web_fetch", "text").note)
     }
 
     @Test

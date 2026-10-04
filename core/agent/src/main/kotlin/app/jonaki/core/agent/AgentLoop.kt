@@ -1,6 +1,7 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.GuardCallContext
 import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
@@ -176,11 +177,14 @@ class AgentLoop(
 
     private suspend fun runToolCall(toolCall: ToolCall): FinishedCall {
         record(AgentEvent.ToolStarted(toolCall))
-        val output = outputFor(toolCall)
-        // The saved message holds the wrapped text, so every later request sends the same bytes (D-005);
-        // the step card shows the output without the wrapper.
-        val message = Message(role = Role.TOOL, text = textForModel(toolCall, output), toolCallId = toolCall.id)
-        return FinishedCall(output, message)
+        // Names the call to the guard, so its answers are saved on this call's step.
+        return withContext(GuardCallContext(toolCall.id)) {
+            val output = outputFor(toolCall)
+            // The saved message holds the wrapped text, so every later request sends the same bytes (D-005);
+            // the step card shows the output without the wrapper.
+            val message = Message(role = Role.TOOL, text = textForModel(toolCall, output), toolCallId = toolCall.id)
+            FinishedCall(output, message)
+        }
     }
 
     /**

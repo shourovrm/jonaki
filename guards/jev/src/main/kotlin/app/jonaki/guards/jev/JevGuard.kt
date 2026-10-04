@@ -2,6 +2,7 @@ package app.jonaki.guards.jev
 
 import app.jonaki.core.guardapi.ActionVerdict
 import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.GuardUsage
 import app.jonaki.core.guardapi.ResultVerdict
 import java.io.IOException
 import kotlin.coroutines.coroutineContext
@@ -62,8 +63,8 @@ class JevGuard(
             }
         }
         return when (val reply = ask(state, JevQuestions.action)) {
-            is Reply.Failed -> ActionVerdict.ShowCard(reply.reason)
-            is Reply.Answers -> actionVerdictOf(reply.answers, reply.costUsd)
+            is Reply.Failed -> ActionVerdict.ShowCard(reply.reason, note = JevNotes.noAnswerForAction())
+            is Reply.Answers -> actionVerdictOf(reply.answers, reply.costUsd, reply.usage)
         }
     }
 
@@ -85,23 +86,23 @@ class JevGuard(
         }
         return when (val reply = ask(state, JevQuestions.result)) {
             is Reply.Failed -> notFlagged(reply.reason)
-            is Reply.Answers -> resultVerdictOf(reply.answers, reply.costUsd)
+            is Reply.Answers -> resultVerdictOf(reply.answers, reply.costUsd, reply.usage)
         }
     }
 
-    private fun actionVerdictOf(answers: JsonObject, costUsd: Double?): ActionVerdict {
+    private fun actionVerdictOf(answers: JsonObject, costUsd: Double?, usage: GuardUsage?): ActionVerdict {
         val effect = answers[JevQuestions.EFFECT] as? JsonObject
         val choice = (effect?.get("choice") as? JsonPrimitive)?.contentOrNull
         val confidence = numberOf(effect?.get("confidence"))
         val servesRequest = numberOf((answers[JevQuestions.SERVES_REQUEST] as? JsonObject)?.get("noul"))
         if (choice == null || confidence == null || servesRequest == null) {
-            return ActionVerdict.ShowCard("Jev's answer is missing effect, confidence or serves_request", costUsd)
+            return unusableAction("Jev's answer is missing effect, confidence or serves_request", costUsd, usage)
         }
         if (choice !in JevQuestions.EFFECT_CHOICES) {
-            return ActionVerdict.ShowCard("Jev answered effect \"$choice\", which is not an option", costUsd)
+            return unusableAction("Jev answered effect \"$choice\", which is not an option", costUsd, usage)
         }
         if (confidence !in 0.0..1.0 || servesRequest !in 0.0..1.0) {
-            return ActionVerdict.ShowCard("Jev's confidence or serves_request is outside 0 to 1", costUsd)
+            return unusableAction("Jev's confidence or serves_request is outside 0 to 1", costUsd, usage)
         }
 
         val effectIsSafe = choice == JevQuestions.READ_ONLY || choice == JevQuestions.REVERSIBLE
@@ -109,18 +110,24 @@ class JevGuard(
         val requestIsServed = servesRequest >= MINIMUM_SERVES_REQUEST
         val summary = "effect $choice, confidence $confidence, serves_request $servesRequest"
         if (effectIsSafe && effectIsSure && requestIsServed) {
-            return ActionVerdict.MayRunWithoutCard(summary, costUsd)
+            val note = JevNotes.ranWithoutCard(choice, confidence, servesRequest)
+            return ActionVerdict.MayRunWithoutCard(summary, costUsd, usage, note)
         }
-        return ActionVerdict.ShowCard(summary, costUsd)
+        val note = JevNotes.cardShown(choice, confidence, servesRequest, effectIsSafe, effectIsSure, requestIsServed)
+        return ActionVerdict.ShowCard(summary, costUsd, usage, note)
     }
 
-    private fun resultVerdictOf(answers: JsonObject, costUsd: Double?): ResultVerdict {
+    /** An answer that cannot be used still cost money, so its cost and tokens are kept. */
+    private fun unusableAction(reason: String, costUsd: Double?, usage: GuardUsage?): ActionVerdict =
+        ActionVerdict.ShowCard(reason, costUsd, usage, JevNotes.noAnswerForAction())
+
+    private fun resultVerdictOf(answers: JsonObject, costUsd: Double?, usage: GuardUsage?): ResultVerdict {
         val probability = numberOf((answers[JevQuestions.IS_INJECTION] as? JsonObject)?.get("noul"))
         if (probability == null || probability !in 0.0..1.0) {
-            return ResultVerdict(false, null, "Jev's is_injection answer is missing or outside 0 to 1", costUsd)
+            return ResultVerdict(false, null, "Jev's is_injection answer is missing or outside 0 to 1", costUsd, usage)
         }
         val isFlagged = probability >= MINIMUM_INJECTION_PROBABILITY
-        return ResultVerdict(isFlagged, probability, "is_injection $probability", costUsd)
+        return ResultVerdict(isFlagged, probability, "is_injection $probability", costUsd, usage)
     }
 
     /** Flagged if any chunk is; a failed chunk counts as not flagged but its reason is kept. */
@@ -128,6 +135,8 @@ class JevGuard(
         val highestProbability = chunkVerdicts.mapNotNull { verdict -> verdict.injectionProbability }.maxOrNull()
         val costs = chunkVerdicts.mapNotNull { verdict -> verdict.costUsd }
         val totalCostUsd = if (costs.isEmpty()) null else costs.sum()
+        val usages = chunkVerdicts.mapNotNull { verdict -> verdict.usage }
+        val totalUsage = if (usages.isEmpty()) null else GuardUsage(usages.sumOf { it.inputTokens }, usages.sumOf { it.outputTokens })
         val isFlagged = chunkVerdicts.any { verdict -> verdict.isFlagged }
         val reason = if (chunkVerdicts.size == 1) {
             chunkVerdicts.single().reason
@@ -135,13 +144,18 @@ class JevGuard(
             val reasons = chunkVerdicts.mapIndexed { index, verdict -> "part ${index + 1}: ${verdict.reason}" }
             reasons.joinToString("; ")
         }
-        return ResultVerdict(isFlagged, highestProbability, reason, totalCostUsd)
+        val note = if (highestProbability == null) {
+            JevNotes.noAnswerForResult()
+        } else {
+            JevNotes.result(isFlagged, highestProbability)
+        }
+        return ResultVerdict(isFlagged, highestProbability, reason, totalCostUsd, totalUsage, note)
     }
 
     private fun notFlagged(reason: String) = ResultVerdict(false, null, reason)
 
     private sealed interface Reply {
-        data class Answers(val answers: JsonObject, val costUsd: Double?) : Reply
+        data class Answers(val answers: JsonObject, val costUsd: Double?, val usage: GuardUsage?) : Reply
 
         data class Failed(val reason: String) : Reply
     }
@@ -193,7 +207,10 @@ class JevGuard(
         } ?: return Reply.Failed("Jev's answer is not a JSON object")
         val answers = root["answers"] as? JsonObject ?: return Reply.Failed("Jev's answer has no answers")
         val usage = root["usage"] as? JsonObject
-        return Reply.Answers(answers, numberOf(usage?.get("cost")))
+        val inputTokens = numberOf(usage?.get("input_tokens"))?.toInt()
+        val outputTokens = numberOf(usage?.get("output_tokens"))?.toInt()
+        val guardUsage = if (inputTokens != null && outputTokens != null) GuardUsage(inputTokens, outputTokens) else null
+        return Reply.Answers(answers, numberOf(usage?.get("cost")), guardUsage)
     }
 
     /** A JSON number only; the string "0.9" is not an answer. */

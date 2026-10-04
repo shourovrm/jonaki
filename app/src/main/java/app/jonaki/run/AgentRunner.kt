@@ -1,6 +1,8 @@
 package app.jonaki.run
 
 import app.jonaki.guard.GuardFactory
+import app.jonaki.guard.GuardRecorder
+import app.jonaki.guard.RecordingGuard
 import android.os.SystemClock
 import app.jonaki.R
 import app.jonaki.core.providerapi.ThinkingLevel
@@ -641,7 +643,11 @@ class AgentRunner(
         }
         threadApprovalStates[threadId] = approvalState
         // Made per run, so switching the Jev guard on or off applies to the next message.
-        val guard = GuardFactory(settings, secrets, httpClient).create()
+        val guard = RecordingGuard.around(
+            GuardFactory(settings, secrets, httpClient).create(),
+            // Saves each answer as a note on the step and each call's cost as a hidden usage row.
+            GuardRecorder(threadId, database.stepDao()::appendGuardNote, backgroundModel::saveUsage),
+        )
         val permissionBroker = PermissionBroker(
             approvalRequester = session,
             threadState = approvalState,

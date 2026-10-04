@@ -148,7 +148,7 @@ interface MessageDao {
     suspend fun closeInterrupted()
 
     /** Total cost of a thread in USD; null when no call in it has a known cost. */
-    @Query("SELECT SUM(costUsd) FROM messages WHERE threadId = :threadId")
+    @Query(GuardQueries.THREAD_COST)
     fun observeThreadCost(threadId: String): Flow<Double?>
 
     /** Total cost of every call since [sinceMillis], for the month's total in the thread list. */
@@ -209,6 +209,10 @@ interface StepDao {
 
     @Upsert
     suspend fun upsert(step: StepEntity)
+
+    /** Adds one line to the step's guard note; see [GuardQueries.APPEND_GUARD_NOTE]. */
+    @Query(GuardQueries.APPEND_GUARD_NOTE)
+    suspend fun appendGuardNote(toolCallId: String, note: String)
 
     /** Steps left running when Android stopped the app. */
     @Query("UPDATE steps SET status = 'STOPPED' WHERE status IN ('RUNNING', 'WAITING_FOR_APPROVAL')")

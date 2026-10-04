@@ -1,6 +1,7 @@
 package app.jonaki.core.agent
 
 import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.GuardCallContext
 import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
@@ -13,6 +14,7 @@ import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import app.jonaki.core.toolapi.stringArgument
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -237,7 +239,7 @@ internal class SubagentLoop(
         }
         val output = runToolWithTimeLimit(tool, arguments, toolContext.forCall(stepCall.id))
         // The wrapper keeps a web page's own instructions from reading as the subagent's task.
-        val wrapped = OutsideContent.wrapResult(tool, arguments, output, guard)
+        val wrapped = withContext(GuardCallContext(stepCall.id)) { OutsideContent.wrapResult(tool, arguments, output, guard) }
         return StepResult(
             output,
             if (output.isError) SubagentStepStatus.FAILED else SubagentStepStatus.DONE,
