@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -47,6 +48,7 @@ internal fun ApprovalSheet(
     onSelect: (ApprovalModeChoice?) -> Unit,
     onWithdrawAllowAll: () -> Unit,
     onDismiss: () -> Unit,
+    guardState: GuardState = GuardState.OFF,
 ) {
     val appliedMode = threadMode ?: defaultMode
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -87,7 +89,24 @@ internal fun ApprovalSheet(
                     }
                 }
             }
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            GuardRow(guardState)
+            Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+/** The Jev guard's state, so a user can see whether it is working; it is switched in Settings. */
+@Composable
+private fun GuardRow(guardState: GuardState) {
+    val stateText = when (guardState) {
+        GuardState.ON -> stringResource(R.string.chat_guard_on)
+        GuardState.OFF -> stringResource(R.string.chat_guard_off)
+        GuardState.ON_WITHOUT_KEY -> stringResource(R.string.chat_guard_no_key)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp)) {
+        Text(stringResource(R.string.chat_guard_title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(stateText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

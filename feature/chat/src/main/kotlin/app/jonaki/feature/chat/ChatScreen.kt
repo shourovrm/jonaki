@@ -299,6 +299,7 @@ fun ChatScreen(
                     onWithdrawAllowAll()
                 },
                 onDismiss = { openSheet = ChatSheet.NONE },
+                guardState = state.guardState,
             )
         }
         val openWork = state.items.firstOrNull { item -> item.id == openWorkId } as? ChatItem.SubagentWork

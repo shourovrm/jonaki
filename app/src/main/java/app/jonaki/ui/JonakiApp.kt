@@ -64,6 +64,7 @@ import app.jonaki.feature.chat.ChatScreen
 import app.jonaki.feature.chat.ChatStatusUi
 import app.jonaki.feature.chat.ContextUi
 import app.jonaki.feature.chat.ChatUiState
+import app.jonaki.feature.chat.guardStateOf
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
 import app.jonaki.feature.chat.QueuedMessageUi
@@ -720,6 +721,7 @@ private fun ChatRoute(
         threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
         defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
         allowAllInThread = !isNew && thread?.allowAllInThread == true,
+        guardState = guardStateOf(settingsSnapshot.jevGuardOn, SecretName.OPENROUTER in application.secrets.names.collectAsState().value),
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
     )

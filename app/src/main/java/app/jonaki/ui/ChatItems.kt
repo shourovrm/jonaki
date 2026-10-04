@@ -359,6 +359,7 @@ object ChatItems {
             durationMillis = if (finished == null) null else finished - step.startedAtMillis,
             startedAtMillis = step.startedAtMillis,
             opensDetail = step.toolName == RUN_CODE_TOOL,
+            guardNote = step.guardNote,
         )
     }
 

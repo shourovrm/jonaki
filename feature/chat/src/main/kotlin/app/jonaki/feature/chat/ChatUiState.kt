@@ -39,7 +39,23 @@ data class ChatUiState(
     val context: ContextUi? = null,
     /** The run_code step opened from its card; null when no code sheet is open (D-090). */
     val codeRun: CodeRunUi? = null,
+    /** Whether the Jev guard is working, for the approval chip's sheet. */
+    val guardState: GuardState = GuardState.OFF,
 )
+
+enum class GuardState {
+    ON,
+    OFF,
+
+    /** The switch is on but there is no OpenRouter key, so no call is checked. */
+    ON_WITHOUT_KEY,
+}
+
+fun guardStateOf(isSwitchedOn: Boolean, hasOpenRouterKey: Boolean): GuardState = when {
+    !isSwitchedOn -> GuardState.OFF
+    !hasOpenRouterKey -> GuardState.ON_WITHOUT_KEY
+    else -> GuardState.ON
+}
 
 /** One message waiting in the thread's queue. */
 @Immutable
@@ -299,6 +315,8 @@ data class StepUi(
     val startedAtMillis: Long? = null,
     /** Tapping the step opens a sheet with its details; true for run_code (D-090). */
     val opensDetail: Boolean = false,
+    /** What the guard said about this call and its result, one or two lines; null when no guard was asked. */
+    val guardNote: String? = null,
 )
 
 enum class StepUiStatus {

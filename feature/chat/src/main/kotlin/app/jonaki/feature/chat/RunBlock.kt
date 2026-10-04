@@ -38,6 +38,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.DotStyle
 import app.jonaki.core.ui.GlowDot
@@ -301,6 +302,17 @@ private fun StepDetail(step: StepUi) {
             text,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 1.dp),
+        )
+    }
+    if (step.guardNote != null) {
+        // The stored note is English only, like other stored tool text; it has at most two lines.
+        Text(
+            step.guardNote,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 1.dp),
         )
     }
