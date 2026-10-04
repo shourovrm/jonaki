@@ -74,7 +74,9 @@ import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
+import app.jonaki.feature.settings.ApprovalRuleChoiceUi
 import app.jonaki.settings.AppSettings
+import app.jonaki.settings.ApprovalRuleChoices
 import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.CustomSubagents
@@ -758,6 +760,27 @@ class AgentRunner(
             onlyTools = LocalModelToolList.CHOOSABLE.toSet(),
         )
         return ToolRegistry.tools(services)
+    }
+
+    /**
+     * Every tool the app can offer, built only to read the actions each declares for
+     * the Settings page of "always allow" rules; none of them runs. Reads saved keys,
+     * so call it off the main thread.
+     */
+    fun approvalRuleChoices(): List<ApprovalRuleChoiceUi> {
+        val services = ToolServices(
+            searchBackends = searchBackends(settings.snapshot.value.searchOrder),
+            videoSummarizer = videoSummarizer(),
+            webAccessEnabled = true,
+            memoryStore = RoomMemoryStore(database, NO_THREAD, null, System::currentTimeMillis),
+            fileDestinations = fileDestinations,
+            phone = phone,
+            taskScheduler = taskSchedulerFor?.invoke(NO_THREAD),
+            mcpServers = mcpServers.forTools(),
+            mcpToolListFolder = mcpServers.toolListFolder,
+            codeRuntimes = CodeRuntimes.forApp(context),
+        )
+        return ApprovalRuleChoices.of(ToolRegistry.tools(services))
     }
 
     /**

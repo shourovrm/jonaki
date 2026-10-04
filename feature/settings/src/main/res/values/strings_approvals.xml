@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings > Tools > Approvals: the always-allow rules. -->
+<resources>
+    <string name="settings_approvals_always">Always allow</string>
+    <string name="settings_approvals_add">Add rule</string>
+    <string name="settings_approvals_confirm">Add</string>
+    <string name="settings_approvals_remove">Remove rule</string>
+    <string name="settings_approvals_server">Server</string>
+    <string name="settings_approvals_tool">Tool</string>
+</resources>

@@ -1,5 +1,10 @@
 package app.jonaki.ui
 
+import app.jonaki.feature.settings.ApprovalRuleUi
+import app.jonaki.feature.settings.ApprovalRuleChoiceUi
+import app.jonaki.settings.ApprovalRules
+import app.jonaki.core.agent.ApprovalRule
+import androidx.compose.runtime.produceState
 import app.jonaki.core.modelcatalog.ThinkingSupport
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.ui.ThinkingChoice
@@ -1002,6 +1007,10 @@ private fun SettingsRoute(
     val reminders by application.reminders.book.reminders.collectAsState()
     val scheduledTasks by application.scheduledTasks.book.tasks.collectAsState()
     val mcpServers by application.mcpServers.servers.collectAsState()
+    // Builds every tool to read its declared actions, which reads saved keys; again when the servers change.
+    val approvalRuleChoices by produceState(emptyList<ApprovalRuleChoiceUi>(), mcpServers) {
+        value = withContext(Dispatchers.IO) { application.runner.approvalRuleChoices() }
+    }
     val globalFacts by remember { application.database.memoryDao().observeGlobal() }.collectAsState(initial = emptyList())
     var skillCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
@@ -1062,6 +1071,8 @@ private fun SettingsRoute(
         customInstructions = snapshot.customInstructions,
         personas = personaRowsOf(personas),
         approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
+        approvalRules = snapshot.approvalRules.map { rule -> ApprovalRuleUi(rule.toolName, rule.action, rule.detail) },
+        approvalRuleChoices = approvalRuleChoices,
         subagentModels = AgentTypes.ALL.map { type ->
             SubagentModelRowUi(
                 agentType = type.name,
@@ -1143,6 +1154,16 @@ private fun SettingsRoute(
         },
         onOpenCustomSubagent = onOpenCustomSubagent,
         onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },
+        onApprovalRuleAdd = { rule ->
+            settings.update { current ->
+                current.copy(approvalRules = ApprovalRules.added(current.approvalRules, ApprovalRule(rule.toolName, rule.action, rule.detail)))
+            }
+        },
+        onApprovalRuleRemove = { rule ->
+            settings.update { current ->
+                current.copy(approvalRules = current.approvalRules - ApprovalRule(rule.toolName, rule.action, rule.detail))
+            }
+        },
         onModelThinkingChange = { modelKey, choice ->
             settings.update { current ->
                 val level = thinkingLevelOf(choice)

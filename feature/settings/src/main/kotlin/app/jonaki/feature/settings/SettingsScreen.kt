@@ -128,6 +128,10 @@ private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
             modifier = Modifier.padding(horizontal = 8.dp),
         )
     }
+    SectionLabel(stringResource(R.string.settings_approvals_always))
+    Group {
+        ApprovalRuleRows(state.approvalRules, state.approvalRuleChoices, actions)
+    }
     SectionLabel(stringResource(R.string.settings_section_tools))
     Group {
         NavigationRow(
