@@ -57,6 +57,8 @@ dependencies {
     implementation(project(":core:model-catalog"))
     implementation(project(":core:local-models"))
     implementation(project(":core:balance-api"))
+    implementation(project(":core:guard-api"))
+    implementation(project(":guards:jev"))
     implementation(project(":providers:openai-compatible"))
     implementation(project(":providers:gemini"))
     implementation(project(":providers:local-llama"))

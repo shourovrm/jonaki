@@ -63,6 +63,8 @@ data class SettingsSnapshot(
     val localModelTools: Set<String> = LocalModelToolList.DEFAULT,
     /** Settings > Subagents: how many start, and each one's budget (D-138). */
     val subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
+    /** The Jev guard: a second layer on the approval rules and a screen for outside text; off until switched on. */
+    val jevGuardOn: Boolean = false,
     /** Subagent types the user made, in the order they were added (D-138). */
     val customSubagents: List<CustomSubagent> = emptyList(),
     /** Settings > Files and schedule: how an unanswered reminder rings again. */
@@ -134,6 +136,7 @@ class AppSettings(
                 intervalMinutes = preferences.getInt(REMINDER_INTERVAL_MINUTES, ReminderPolicy.DEFAULT_INTERVAL_MINUTES),
                 maxRepeats = preferences.getInt(REMINDER_MAX_REPEATS, ReminderPolicy.DEFAULT_MAX_REPEATS),
             ).withinBounds(),
+            jevGuardOn = preferences.getBoolean(JEV_GUARD_ON, false),
         )
     }
 
@@ -231,6 +234,7 @@ class AppSettings(
         editor.putInt(SUBAGENTS_PER_CALL, limits.perCall)
         editor.putInt(SUBAGENTS_MAX_PER_MESSAGE, limits.maxPerMessage)
         editor.putString(SUBAGENT_BUDGETS, SubagentBudgets.toText(limits.budgets))
+        editor.putBoolean(JEV_GUARD_ON, snapshot.jevGuardOn)
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
         editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
         editor.putInt(REMINDER_MAX_REPEATS, snapshot.reminderPolicy.maxRepeats)
@@ -279,5 +283,6 @@ class AppSettings(
         const val CUSTOM_SUBAGENTS = "custom_subagents"
         const val REMINDER_INTERVAL_MINUTES = "reminder_interval_minutes"
         const val REMINDER_MAX_REPEATS = "reminder_max_repeats"
+        const val JEV_GUARD_ON = "jev_guard_on"
     }
 }
