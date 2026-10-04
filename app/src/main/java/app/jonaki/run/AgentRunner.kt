@@ -1,5 +1,6 @@
 package app.jonaki.run
 
+import app.jonaki.guard.GuardFactory
 import android.os.SystemClock
 import app.jonaki.R
 import app.jonaki.core.providerapi.ThinkingLevel
@@ -142,6 +143,13 @@ class AgentRunner(
 
     /** The subagent runner of each running thread, so that one subagent can be stopped alone (D-126). */
     private val subagentRunners = ConcurrentHashMap<String, SubagentRunner>()
+
+    /**
+     * What the user last asked in each thread, for the guard to compare an
+     * action with. Empty after a restart or a retry, and then the guard has
+     * nothing to match, so the card is shown.
+     */
+    private val latestUserText = ConcurrentHashMap<String, String>()
 
     /** Threads the user left while a run was still going; extraction waits for the run's end. */
     private val leftWhileRunning = MutableStateFlow<Set<String>>(emptySet())
@@ -555,6 +563,7 @@ class AgentRunner(
         }
         val messageDao = database.messageDao()
         // The time goes into the message, not the system prompt, so the prompt cache holds (D-005).
+        latestUserText[threadId] = text
         val textForModel = promptBuilder.userMessageWithContext(text, ZonedDateTime.now(), settings.snapshot.value.zoneInMessages)
         messageDao.upsert(
             MessageEntity(
@@ -631,12 +640,16 @@ class AgentRunner(
             database.threadDao().setApprovalState(threadId, allowAll, readOutsideContent)
         }
         threadApprovalStates[threadId] = approvalState
+        // Made per run, so switching the Jev guard on or off applies to the next message.
+        val guard = GuardFactory(settings, secrets, httpClient).create()
         val permissionBroker = PermissionBroker(
             approvalRequester = session,
             threadState = approvalState,
             approvalMode = { currentApprovalMode(threadId) },
             // Read before every call, so a rule added or removed in Settings applies at once.
             settingsRules = { settings.snapshot.value.approvalRules },
+            guard = guard,
+            userRequest = { latestUserText[threadId].orEmpty() },
         )
         val memorySection = ThreadMemory.sectionFor(thread) { memorySectionFor(thread, project) }
         val skillSection = skillSectionFor(thread)
@@ -672,6 +685,7 @@ class AgentRunner(
             skillSection = skillSection,
             now = ZonedDateTime::now,
             zoneInMessages = snapshot.zoneInMessages,
+            guard = guard,
             // Read once here, so delegate's prompt text stays the same for the whole run (D-138).
             limitSettings = snapshot.subagentLimits,
             customTypes = CustomSubagents.agentTypesOf(snapshot.customSubagents),
@@ -699,6 +713,7 @@ class AgentRunner(
             ),
             imageMessages = threadImageMessages,
             takeQueuedMessages = { deliverQueuedMessages(threadId) },
+            guard = guard,
         )
         val summary = database.compactionDao().latestForThread(threadId)
         val history = CompactionPlan.historyAfter(

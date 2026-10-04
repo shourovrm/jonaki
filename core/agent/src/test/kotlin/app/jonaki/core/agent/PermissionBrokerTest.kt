@@ -1,5 +1,8 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.guardapi.ActionVerdict
+import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.ResultVerdict
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
@@ -44,6 +47,52 @@ class PermissionBrokerTest {
         assertEquals(2, approver.requests.size)
         assertFalse(approver.requests.first().offersThreadAllowance)
         assertFalse("the answer to a card that offered no allowance grants none", broker.threadState.allowAllInThread)
+    }
+
+    /** A guard that answers every action and every text the same way and counts what it was asked. */
+    private class FixedGuard(private val letsActionsRun: Boolean) : Guard {
+        var actionsJudged = 0
+
+        override suspend fun judgeAction(userRequest: String, toolName: String, arguments: JsonObject): ActionVerdict {
+            actionsJudged += 1
+            return if (letsActionsRun) ActionVerdict.MayRunWithoutCard("test") else ActionVerdict.ShowCard("test")
+        }
+
+        override suspend fun screenResult(source: String, text: String): ResultVerdict = ResultVerdict(false, null, "test")
+    }
+
+    @Test
+    fun theGuardLetsAnOrdinaryCallRunInsteadOfShowingACard() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val guard = FixedGuard(letsActionsRun = true)
+        val broker = PermissionBroker(approver, guard = guard)
+
+        assertTrue(broker.mayRun(writer, call("1", "write_file")))
+
+        assertTrue(approver.requests.isEmpty())
+        assertEquals(1, guard.actionsJudged)
+    }
+
+    @Test
+    fun aGuardThatIsUnsureLeavesTheCardInPlace() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, guard = FixedGuard(letsActionsRun = false))
+
+        assertFalse(broker.mayRun(writer, call("1", "write_file")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun theGuardIsNeverAskedAboutACallThatAlwaysAsks() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_ONCE)
+        val guard = FixedGuard(letsActionsRun = true)
+        val broker = PermissionBroker(approver, approvalMode = { ApprovalMode.BYPASS }, guard = guard)
+        val delegate = FakeTool("delegate", sideEffect = SideEffect.NEEDS_USER)
+
+        assertTrue(broker.mayRun(delegate, call("1", "delegate")))
+
+        assertEquals("the card was shown", 1, approver.requests.size)
+        assertEquals("the guard had no say", 0, guard.actionsJudged)
     }
 
     @Test

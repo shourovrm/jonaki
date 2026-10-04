@@ -1,5 +1,8 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.guardapi.ActionVerdict
+import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.toolapi.Tool
 import kotlinx.serialization.json.Json
@@ -48,6 +51,10 @@ class PermissionBroker(
     val threadState: ThreadApprovalState = ThreadApprovalState(),
     private val approvalMode: () -> ApprovalMode = { ApprovalMode.ASK },
     private val settingsRules: () -> List<ApprovalRule> = { emptyList() },
+    /** A second opinion on calls that would show a card; [NoGuard] always shows the card. */
+    private val guard: Guard = NoGuard,
+    /** The user's latest message, which the guard compares the call with. */
+    private val userRequest: () -> String = { "" },
 ) {
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
         val arguments = argumentsOf(toolCall)
@@ -62,7 +69,7 @@ class PermissionBroker(
         }
         // Only a call that may be allowed for the whole thread can be let through here: the calls that
         // always ask (very risky, after outside content, over the subagent cap) never are.
-        if (verdict.offersThreadAllowance && guardLetsCallRunInsteadOfAsking(tool, toolCall)) {
+        if (verdict.offersThreadAllowance && guardLetsCallRunInsteadOfAsking(tool, arguments)) {
             return true
         }
         val request = ApprovalRequest(tool.name, toolCall, verdict.offersThreadAllowance, verdict.afterOutsideContent)
@@ -85,12 +92,13 @@ class PermissionBroker(
     }
 
     /**
-     * The seam for the later guard: the one place where a card is about to
-     * be shown for a call that is not very risky and not caught by the
-     * outside-content rule. A suspending check can return true here to let
-     * the call run instead. Until then it never does.
+     * The one place where a card is about to be shown for a call that is
+     * not very risky and not caught by the outside-content rule. The guard
+     * can let the call run instead; it can never deny one, and on any
+     * failure it answers "show the card".
      */
-    private suspend fun guardLetsCallRunInsteadOfAsking(tool: Tool, toolCall: ToolCall): Boolean = false
+    private suspend fun guardLetsCallRunInsteadOfAsking(tool: Tool, arguments: JsonObject): Boolean =
+        guard.judgeAction(userRequest(), tool.name, arguments) is ActionVerdict.MayRunWithoutCard
 
     private fun factsOf(tool: Tool, arguments: JsonObject): CallFacts = CallFacts(
         sideEffect = tool.sideEffectOf(arguments),

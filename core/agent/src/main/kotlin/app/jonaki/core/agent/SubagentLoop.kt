@@ -1,5 +1,7 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
@@ -58,6 +60,8 @@ internal class SubagentLoop(
     private val limits: SubagentLimits,
     private val progress: SubagentProgress,
     timer: WaitTimer,
+    /** Screens the outside results this subagent reads, as for the thread's agent. */
+    private val guard: Guard = NoGuard,
 ) {
     private val scheduler = ToolCallScheduler(timer)
 
@@ -233,7 +237,7 @@ internal class SubagentLoop(
         }
         val output = runToolWithTimeLimit(tool, arguments, toolContext.forCall(stepCall.id))
         // The wrapper keeps a web page's own instructions from reading as the subagent's task.
-        val wrapped = OutsideContent.wrapResult(tool, arguments, output)
+        val wrapped = OutsideContent.wrapResult(tool, arguments, output, guard)
         return StepResult(
             output,
             if (output.isError) SubagentStepStatus.FAILED else SubagentStepStatus.DONE,

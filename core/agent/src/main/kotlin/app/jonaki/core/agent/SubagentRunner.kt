@@ -1,5 +1,7 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.toolapi.SubagentLauncher
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
@@ -52,6 +54,8 @@ class SubagentRunner(
     private val limitsOverride: SubagentLimits? = null,
     /** Types the user made; one named like a built-in type is left out. */
     customTypes: List<AgentType> = emptyList(),
+    /** Screens the outside results the subagents read; fixed for the run. */
+    private val guard: Guard = NoGuard,
     private val timer: WaitTimer = WaitTimer.REAL,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SubagentLauncher {
@@ -248,6 +252,7 @@ class SubagentRunner(
             limits = limits,
             progress = progress,
             timer = timer,
+            guard = guard,
         )
     }
 

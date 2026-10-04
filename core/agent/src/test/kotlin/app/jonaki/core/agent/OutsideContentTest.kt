@@ -1,5 +1,8 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.guardapi.ActionVerdict
+import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.ResultVerdict
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.ToolOutput
 import kotlinx.coroutines.runBlocking
@@ -63,6 +66,24 @@ class OutsideContentTest {
 
         assertTrue(result.isOutsideContent)
         assertEquals("<outside-content source=\"web_fetch example.com\">\nPage text\n</outside-content>", result.textForModel)
+    }
+
+    @Test
+    fun aResultTheGuardFlagsKeepsItsTextAndGainsAWarningInsideTheWrapper() = runBlocking {
+        val fetch = FakeTool("web_fetch", outsideSource = "example.com")
+        val flagsEverything = object : Guard {
+            override suspend fun judgeAction(userRequest: String, toolName: String, arguments: JsonObject): ActionVerdict =
+                ActionVerdict.ShowCard("test")
+
+            override suspend fun screenResult(source: String, text: String): ResultVerdict = ResultVerdict(true, 0.98, "test")
+        }
+
+        val result = OutsideContent.wrapResult(fetch, noArguments, ToolOutput.success("Page text"), flagsEverything)
+
+        assertEquals(
+            "<outside-content source=\"web_fetch example.com\">\n${OutsideContent.GUARD_WARNING}\nPage text\n</outside-content>",
+            result.textForModel,
+        )
     }
 
     @Test

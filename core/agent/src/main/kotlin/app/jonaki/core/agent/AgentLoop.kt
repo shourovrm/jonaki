@@ -1,5 +1,7 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.guardapi.Guard
+import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
@@ -51,6 +53,8 @@ class AgentLoop(
      * points, so a message never comes between a tool call and its result.
      */
     private val takeQueuedMessages: suspend () -> List<Message> = { emptyList() },
+    /** Screens outside results; [NoGuard] flags nothing. */
+    private val guard: Guard = NoGuard,
 ) {
     private val scheduler = ToolCallScheduler(waitTimer)
 
@@ -187,7 +191,7 @@ class AgentLoop(
     private suspend fun textForModel(toolCall: ToolCall, output: ToolOutput): String {
         val tool = toolsByName[toolCall.toolName] ?: return output.text
         val arguments = parseToolArguments(toolCall.argumentsJson) ?: return output.text
-        val wrapped = OutsideContent.wrapResult(tool, arguments, output)
+        val wrapped = OutsideContent.wrapResult(tool, arguments, output, guard)
         if (wrapped.isOutsideContent) {
             permissionBroker.outsideContentWasRead()
         }
