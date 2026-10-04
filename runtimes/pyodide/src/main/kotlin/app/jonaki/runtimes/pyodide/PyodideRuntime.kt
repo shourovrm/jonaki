@@ -38,10 +38,15 @@ class PyodideRuntime(
                 "Python's files are damaged (${installation.fileNames.joinToString(", ")}); " +
                     "remove Python in Settings and install it again",
             )
+            is Installation.DamagedWheels -> return CodeRunOutcome.Unavailable(
+                "the documents add-on's files are damaged (${installation.fileNames.joinToString(", ")}); " +
+                    "repair the documents add-on in Settings > Python",
+            )
             is Installation.Ready -> installation.lock
         }
         val installedPackages = lock.all.filter { lockPackage -> folder.packageFile(lockPackage).isFile }
-        val bridge = PythonBridge(jobJson(job, lock, installedPackages.map { lockPackage -> lockPackage.name }))
+        val installedNames = installedPackages.map { lockPackage -> lockPackage.name }
+        val bridge = PythonBridge(jobJson(job, lock, installedNames, folder.installedWheels()))
         val requests = PyodideRequests(folder, installedPackages, job.inputFiles)
         return runInWebView(requests, bridge, job.timeLimit)
     }
@@ -54,10 +59,20 @@ class PyodideRuntime(
         if (damaged.isNotEmpty()) {
             return Installation.Damaged(damaged)
         }
+        // Pyodide checks lock packages as it loads, but not wheels loaded from a path, so they are hashed here.
+        val damagedWheels = folder.damagedWheels()
+        if (damagedWheels.isNotEmpty()) {
+            return Installation.DamagedWheels(damagedWheels.map { wheel -> wheel.fileName })
+        }
         return Installation.Ready(checkNotNull(folder.lock()))
     }
 
-    private fun jobJson(job: CodeJob, lock: PyodideLock, installedPackageNames: List<String>): String =
+    private fun jobJson(
+        job: CodeJob,
+        lock: PyodideLock,
+        installedPackageNames: List<String>,
+        installedWheels: List<PinnedWheel>,
+    ): String =
         buildJsonObject {
             put("code", job.code)
             putJsonArray("inputPaths") { job.inputFiles.forEach { input -> add(input.relativePath) } }
@@ -67,6 +82,15 @@ class PyodideRuntime(
                     put(importName, packageName)
                 }
             }
+            // The documents add-on: wheels are loaded by the path the request filter serves them under.
+            putJsonObject("installedWheelPaths") {
+                for (wheel in installedWheels) {
+                    put(wheel.packageName, "pyodide/${wheel.fileName}")
+                }
+            }
+            putJsonArray("documentsAddOn") { PyodideRelease.DOCUMENTS_ADD_ON.forEach { name -> add(name) } }
+            putJsonArray("documentsImports") { PyodideRelease.DOCUMENTS_ADD_ON_IMPORTS.forEach { name -> add(name) } }
+            putJsonArray("bundledModules") { BundledModules.NAMES.forEach { name -> add(name) } }
         }.toString()
 
     private suspend fun runInWebView(requests: PyodideRequests, bridge: PythonBridge, timeLimit: Duration): CodeRunOutcome {
@@ -99,6 +123,8 @@ class PyodideRuntime(
         data object Missing : Installation
 
         data class Damaged(val fileNames: List<String>) : Installation
+
+        data class DamagedWheels(val fileNames: List<String>) : Installation
 
         data class Ready(val lock: PyodideLock) : Installation
     }

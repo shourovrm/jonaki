@@ -58,6 +58,41 @@ class PyodideRequestsTest {
     }
 
     @Test
+    fun servesABundledModuleFromTheModule() {
+        val answer = requests.resolve(url("python/jonaki_docs.py"))
+
+        assertEquals(PyodideResponse.Resource("python/jonaki_docs.py", "text/plain"), answer)
+    }
+
+    @Test
+    fun refusesEverythingInOrAroundTheBundledFolderThatIsNotListed() {
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("python/other.py")))
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("python/")))
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("python/jonaki_docs.py/extra")))
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("python/sub/jonaki_docs.py")))
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("python/../harness/harness.js")))
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("python/%2e%2e/secret.py")))
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("python/jonaki_docs.pyc")))
+        assertEquals(PyodideResponse.Blocked, requests.resolve(url("pyodide/jonaki_docs.py")))
+    }
+
+    @Test
+    fun servesAnInstalledWheelUnderPyodideAndNoOther() {
+        val wheel = PinnedWheel("python-docx", "1.2.0", listOf("docx"), "python_docx-1.2.0-py3-none-any.whl", "https://files.example/x.whl", "0".repeat(64), 5)
+        val absent = PinnedWheel("openpyxl", "3.1.5", listOf("openpyxl"), "openpyxl-3.1.5-py2.py3-none-any.whl", "https://files.example/y.whl", "0".repeat(64), 5)
+        val withWheels = PyodideFolder(root, release.copy(addOnWheels = listOf(wheel, absent)))
+        withWheels.wheelFile(wheel).apply {
+            parentFile.mkdirs()
+            writeText("12345")
+        }
+
+        val filter = PyodideRequests(withWheels, emptyList(), emptyList())
+
+        assertTrue(filter.resolve(url("pyodide/python_docx-1.2.0-py3-none-any.whl")) is PyodideResponse.File)
+        assertEquals(PyodideResponse.Blocked, filter.resolve(url("pyodide/openpyxl-3.1.5-py2.py3-none-any.whl")))
+    }
+
+    @Test
     fun servesOnlyTheGivenInputFiles() {
         val input = requests.resolve(url("input/inbox/sales%20report.csv")) as PyodideResponse.File
 

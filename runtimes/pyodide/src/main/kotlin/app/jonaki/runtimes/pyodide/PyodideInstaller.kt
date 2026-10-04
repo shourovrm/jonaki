@@ -72,6 +72,34 @@ class PyodideInstaller(
     }
 
     /**
+     * Installs the release's pinned wheels (the documents add-on's PyPI
+     * part): each is fetched from its pinned URL, hashed while it streams
+     * and kept only on a match. A wheel already present with the right hash
+     * is skipped, a damaged one is fetched again, so this is also Repair.
+     */
+    suspend fun installWheels(wheels: List<PinnedWheel>, onProgress: (DownloadProgress) -> Unit = {}): InstallResult {
+        val refused = wheels.firstOrNull { wheel -> !isSafeFileName(wheel.fileName) }
+        if (refused != null) {
+            return InstallResult.Failed("${refused.packageName} is refused: ${refused.fileName} is not a package archive")
+        }
+        var doneBytes = 0L
+        for (wheel in wheels) {
+            val target = folder.wheelFile(wheel)
+            val isIntact = withContext(Dispatchers.IO) { target.isFile && Checksums.sha256Of(target) == wheel.sha256 }
+            if (!isIntact) {
+                val problem = download(wheel.url, target, wheel.sha256) { fileBytes ->
+                    onProgress(DownloadProgress(doneBytes + fileBytes, totalBytes = null))
+                }
+                if (problem != null) {
+                    return InstallResult.Failed("Could not install ${wheel.packageName}: ${wheel.fileName} $problem")
+                }
+            }
+            doneBytes += wheel.sizeBytes
+        }
+        return InstallResult.Installed
+    }
+
+    /**
      * A plain file name of a wheel or zip archive. Native libraries (.so) and
      * Android code (.dex) are never downloaded (planning chat, policy
      * conditions); wheels may hold WebAssembly modules, which run only inside

@@ -38,6 +38,26 @@ class PyodideFolder(
         return PyodideLock.parse(lockFile.readText())
     }
 
+    fun wheelFile(wheel: PinnedWheel): File = File(versionFolder, wheel.fileName)
+
+    /** Wheels of the release that are present at their pinned size; [damagedWheels] checks the bytes. */
+    fun installedWheels(): List<PinnedWheel> = release.addOnWheels.filter { wheel ->
+        val file = wheelFile(wheel)
+        file.isFile && file.length() == wheel.sizeBytes
+    }
+
+    /** Wheels that are present but whose SHA-256 differs from the pinned one, or whose size does. */
+    fun damagedWheels(): List<PinnedWheel> = release.addOnWheels.filter { wheel ->
+        val file = wheelFile(wheel)
+        file.isFile && (file.length() != wheel.sizeBytes || Checksums.sha256Of(file) != wheel.sha256)
+    }
+
+    fun removeWheels(wheels: List<PinnedWheel>) {
+        for (wheel in wheels) {
+            wheelFile(wheel).delete()
+        }
+    }
+
     fun installedPackageNames(): List<String> {
         val lock = lock() ?: return emptyList()
         return lock.all.filter { lockPackage -> packageFile(lockPackage).isFile }.map { lockPackage -> lockPackage.name }

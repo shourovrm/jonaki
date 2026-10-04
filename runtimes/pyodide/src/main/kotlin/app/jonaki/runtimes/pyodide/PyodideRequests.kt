@@ -19,7 +19,8 @@ sealed interface PyodideResponse {
  * Decides what the Python WebView may load, the first of three walls that
  * keep programs offline: this filter, the Content-Security-Policy, and
  * Python running in a worker with no frames or WebRTC. It answers only the
- * harness, the installed Pyodide files and the run's input files, all from
+ * harness, the installed Pyodide files and wheels, the app's bundled Python
+ * modules and the run's input files, all from
  * a made-up host, as the artifact viewer does (D-047).
  */
 class PyodideRequests(
@@ -28,8 +29,10 @@ class PyodideRequests(
     inputFiles: List<InputFile>,
 ) {
     private val packageFiles: Map<String, java.io.File> =
-        installedPackages.associate { lockPackage -> lockPackage.fileName to folder.packageFile(lockPackage) }
+        installedPackages.associate { lockPackage -> lockPackage.fileName to folder.packageFile(lockPackage) } +
+            folder.installedWheels().associate { wheel -> wheel.fileName to folder.wheelFile(wheel) }
     private val coreNames: Set<String> = folder.release.coreFiles.map { pinned -> pinned.name }.toSet()
+    private val bundledModuleFiles: Set<String> = BundledModules.NAMES.map { name -> BundledModules.fileNameOf(name) }.toSet()
     private val inputs: Map<String, java.io.File> = inputFiles.associate { input -> input.relativePath to input.file }
 
     fun resolve(url: String): PyodideResponse {
@@ -47,6 +50,7 @@ class PyodideRequests(
             path in HARNESS_FILES -> PyodideResponse.Resource(path, mimeTypeOf(path))
             path.startsWith(PYODIDE_PREFIX) -> pyodideFile(path.removePrefix(PYODIDE_PREFIX))
             path.startsWith(INPUT_PREFIX) -> inputFile(path.removePrefix(INPUT_PREFIX))
+            path.startsWith(BUNDLED_PREFIX) -> bundledModule(path.removePrefix(BUNDLED_PREFIX))
             else -> PyodideResponse.Blocked
         }
     }
@@ -58,6 +62,14 @@ class PyodideRequests(
             else -> return PyodideResponse.Blocked
         }
         return PyodideResponse.File(file, mimeTypeOf(name))
+    }
+
+    /** Only the exact file names of [BundledModules]; a name with a slash or ".." is never listed. */
+    private fun bundledModule(fileName: String): PyodideResponse {
+        if (fileName !in bundledModuleFiles) {
+            return PyodideResponse.Blocked
+        }
+        return PyodideResponse.Resource(BUNDLED_PREFIX + fileName, "text/plain")
     }
 
     private fun inputFile(relativePath: String): PyodideResponse {
@@ -81,6 +93,7 @@ class PyodideRequests(
         const val HARNESS_URL = "$SCHEME://$HOST/harness.html"
         private const val PYODIDE_PREFIX = "pyodide/"
         private const val INPUT_PREFIX = "input/"
+        private const val BUNDLED_PREFIX = BundledModules.FOLDER + "/"
         val HARNESS_FILES = setOf("harness.html", "harness.js", "python-worker.js")
 
         /**
