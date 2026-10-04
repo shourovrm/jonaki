@@ -35,7 +35,10 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
         projectName?.let { name ->
             "This thread is in the project \"$name\": use scope project for facts about the project's work that its other threads need."
         },
-        "Facts under Memory in this prompt are already known; recall finds older ones by a word they contain, not by meaning.",
+        "When you remember a fact, give keywords: up to 6 search words that the fact's text lacks, mainly its key words in the other script " +
+            "(English words for a Bangla fact, Bangla words in Bangla script for an English one) and Bangla in Latin letters when the user writes that way.",
+        "Facts under Memory in this prompt are already known. Recall takes several words, finds facts holding any of the words, best match first; " +
+            "it matches letters, not meaning. When it finds nothing, try a second query with other words or the same words in the other script.",
         "Forget a fact by its id when the user asks or it turned out wrong. Never remember keys, passwords or card numbers.",
     )
 
@@ -54,6 +57,10 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
                 put("type", "string")
                 put("description", "remember: the fact, one short sentence")
             }
+            putJsonObject("keywords") {
+                put("type", "string")
+                put("description", "remember: up to 6 search words the text lacks, mainly its key words in the other script, separated by spaces")
+            }
             putJsonObject("scope") {
                 put("type", "string")
                 putJsonArray("enum") {
@@ -71,7 +78,7 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
             }
             putJsonObject("query") {
                 put("type", "string")
-                put("description", "recall: a word or part of a word the fact contains")
+                put("description", "recall: several words; finds facts holding any of them, best match first")
             }
             putJsonObject("limit") {
                 put("type", "integer")
@@ -119,9 +126,12 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
             }
             else -> return ToolOutput.error("unknown scope \"$scopeText\"", "Use scope ${scopeNames()}.")
         }
-        return when (val result = store.remember(scope, text)) {
-            is RememberResult.Saved ->
-                ToolOutput.success("Remembered fact ${result.fact.id} for ${scopeWords(result.fact.scope)}: ${result.fact.text}")
+        val keywords = arguments.stringArgument("keywords")?.trim().orEmpty()
+        return when (val result = store.remember(scope, text, keywords)) {
+            is RememberResult.Saved -> {
+                val saved = "Remembered fact ${result.fact.id} for ${scopeWords(result.fact.scope)}: ${result.fact.text}"
+                ToolOutput.success(if (result.waitsForReview) saved + "\n" + WAITS_FOR_REVIEW_NOTICE else saved)
+            }
             is RememberResult.AlreadyKnown ->
                 ToolOutput.success("Already remembered as fact ${result.fact.id}: ${result.fact.text}")
         }
@@ -146,17 +156,17 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
     private suspend fun recall(arguments: JsonObject): ToolOutput {
         val query = arguments.stringArgument("query")?.trim().orEmpty()
         if (query.isEmpty()) {
-            return ToolOutput.error("argument query is missing", "Give a word the fact contains, for example \"thesis\".")
+            return ToolOutput.error("argument query is missing", "Give several words the fact may hold, for example \"thesis deadline\".")
         }
         val limit = (arguments.intArgument("limit") ?: DEFAULT_RECALL_LIMIT).coerceIn(1, MAX_RECALL_LIMIT)
         val facts = store.recall(query, limit)
         if (facts.isEmpty()) {
             return ToolOutput.success(
-                "No fact contains \"$query\". Search matches letters, not meaning: try a shorter part of a word " +
-                    "or the word in the other language (English or Bangla).",
+                "No fact matches \"$query\". Search matches letters, not meaning: try a second query with other words, " +
+                    "or the same words in the other script (English or Bangla).",
             )
         }
-        val header = if (facts.size == 1) "1 fact contains \"$query\":" else "${facts.size} facts contain \"$query\":"
+        val header = if (facts.size == 1) "1 fact matches \"$query\":" else "${facts.size} facts match \"$query\", best first:"
         val lines = facts.map { fact -> "[${fact.id}] (${labelOf(fact)}) ${fact.text}" }
         return ToolOutput.success((listOf(header) + lines).joinToString("\n"))
     }
@@ -182,6 +192,10 @@ class MemoryTool(private val store: MemoryStore, private val projectName: String
     }
 
     private companion object {
+        /** Said when the thread read outside content, whose instructions could have steered what the model saves. */
+        const val WAITS_FOR_REVIEW_NOTICE =
+            "This fact waits for the user's approval on the Memory screen because this thread read outside content. " +
+                "It is not in memory yet; do not rely on it."
         const val ACTION_REMEMBER = "remember"
         const val ACTION_FORGET = "forget"
         const val ACTION_RECALL = "recall"

@@ -76,7 +76,7 @@ class ProjectMemoryExtractionTest {
     @Test
     fun theProjectRuleAndBlockAppearOnlyForAProjectThread() {
         assertTrue(MemoryExtraction.systemPrompt(inProject = true).contains("\"scope\":\"project\""))
-        assertEquals(MemoryExtraction.SYSTEM_PROMPT, MemoryExtraction.systemPrompt(inProject = false))
+        assertEquals(MemoryExtraction.SYSTEM_PROMPT, MemoryExtraction.systemPrompt(inProject = false, allowGlobalFacts = false))
 
         val withProject = MemoryExtraction.userPrompt(messages, emptyList(), emptyList(), listOf(projectFact(4, "Uses APA")))
         val withoutProject = MemoryExtraction.userPrompt(messages, emptyList(), emptyList(), null)

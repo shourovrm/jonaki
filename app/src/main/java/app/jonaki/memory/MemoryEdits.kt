@@ -36,7 +36,12 @@ class MemoryEdits(private val database: JonakiDatabase, private val clock: () ->
     /** An edited fact counts as the user's own, so background extraction no longer changes it (D-036). */
     suspend fun edit(factId: Long, text: String) {
         val fact = memoryDao.find(factId) ?: return
-        memoryDao.update(fact.copy(text = text, origin = MemoryOrigin.USER, pendingReview = false, updatedAtMillis = clock()))
+        memoryDao.update(edited(fact, text, clock()))
+    }
+
+    /** Puts a superseded fact back in use (the memory screen's Restore). */
+    suspend fun restore(factId: Long) {
+        memoryDao.restore(factId, clock())
     }
 
     suspend fun delete(factId: Long) {
@@ -88,5 +93,16 @@ class MemoryEdits(private val database: JonakiDatabase, private val clock: () ->
     suspend fun keep(factId: Long) {
         val fact = memoryDao.find(factId) ?: return
         memoryDao.update(fact.copy(pendingReview = false, updatedAtMillis = clock()))
+    }
+
+    companion object {
+        /**
+         * The fact after the user edited its text. New text may no longer fit the keywords,
+         * which described the old text, so a changed text clears them.
+         */
+        fun edited(fact: MemoryEntity, text: String, now: Long): MemoryEntity {
+            val keywords = if (text == fact.text) fact.keywords else ""
+            return fact.copy(text = text, keywords = keywords, origin = MemoryOrigin.USER, pendingReview = false, updatedAtMillis = now)
+        }
     }
 }

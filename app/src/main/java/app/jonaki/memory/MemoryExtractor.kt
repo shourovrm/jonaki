@@ -3,9 +3,6 @@ package app.jonaki.memory
 import android.util.Log
 import app.jonaki.core.model.Role
 import app.jonaki.core.storage.JonakiDatabase
-import app.jonaki.core.storage.MemoryEntity
-import app.jonaki.core.storage.MemoryOrigin
-import app.jonaki.core.storage.MemoryScope
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.run.BackgroundAnswer
 import app.jonaki.run.BackgroundModel
@@ -15,7 +12,9 @@ import kotlinx.coroutines.sync.withLock
 /**
  * Background memory extraction (D-009, D-036): reads a thread's messages
  * since the last extraction, asks the background model for add, update and
- * delete operations and applies the allowed ones to the thread's facts.
+ * delete operations and applies the allowed ones to the thread's facts. An
+ * update keeps the old text as a superseded fact and a delete only marks the
+ * fact superseded (the memory screen can restore both).
  */
 class MemoryExtractor(
     private val database: JonakiDatabase,
@@ -23,6 +22,10 @@ class MemoryExtractor(
     /** Review mode: extracted facts wait for the user's approval. */
     private val reviewMode: () -> Boolean,
     private val clock: () -> Long,
+    /** Whether extraction may propose global facts; they always wait for the user's review. */
+    private val proposeGlobalFacts: () -> Boolean = { true },
+    /** Whether facts found in a thread that read outside content wait for the user's review. */
+    private val holdFactsAfterOutsideContent: () -> Boolean = { true },
 ) {
     /** One extraction at a time, so two triggers cannot read and apply the same messages twice. */
     private val lock = Mutex()
@@ -38,6 +41,8 @@ class MemoryExtractor(
     }
 
     private suspend fun extractLocked(threadId: String, threadModelKey: String?, minimumNewMessages: Int) {
+        // Superseded facts older than 30 days go whenever extraction runs, due or not.
+        database.memoryDao().deleteSupersededBefore(ExtractionWrites.supersededDeleteCutoff(clock()))
         val thread = database.threadDao().find(threadId) ?: return
         // A second guard after the runner's: an incognito thread's messages never reach memory (D-111).
         if (!ThreadMemory.isOn(thread)) {
@@ -59,10 +64,11 @@ class MemoryExtractor(
         // A project deleted meanwhile counts as none.
         val projectId = thread.projectId?.takeIf { id -> database.projectDao().find(id) != null }
         val projectFacts = projectId?.let { id -> memoryDao.listProject(id) }
+        val allowGlobalFacts = proposeGlobalFacts()
         val answer = backgroundModel.complete(
             threadId = threadId,
             threadModelKey = threadModelKey,
-            systemPrompt = MemoryExtraction.systemPrompt(inProject = projectId != null),
+            systemPrompt = MemoryExtraction.systemPrompt(inProject = projectId != null, allowGlobalFacts = allowGlobalFacts),
             userText = MemoryExtraction.userPrompt(messages, threadFacts, globalFacts, projectFacts),
             maxOutputTokens = MAX_OUTPUT_TOKENS,
         )
@@ -72,7 +78,7 @@ class MemoryExtractor(
             return
         }
         val text = (answer as BackgroundAnswer.Success).text
-        val plan = MemoryExtraction.plan(MemoryExtraction.parse(text), threadFacts, globalFacts, messages, projectFacts)
+        val plan = MemoryExtraction.plan(MemoryExtraction.parse(text), threadFacts, globalFacts, messages, projectFacts, allowGlobalFacts)
         if (plan.failure != null) {
             // Asking again would likely cost as much and fail the same way, so these messages count as read.
             Log.w(TAG, "Memory extraction answer unreadable: ${plan.failure}")
@@ -85,27 +91,21 @@ class MemoryExtractor(
         val memoryDao = database.memoryDao()
         val now = clock()
         val waitForReview = reviewMode()
+        // Read now, not at the start of the call: the thread may have read outside content meanwhile.
+        val readOutsideContent = database.threadDao().find(threadId)?.readOutsideContent == true
+        val holdAfterOutsideContent = holdFactsAfterOutsideContent() && readOutsideContent
         for (newFact in plan.adds) {
-            memoryDao.insert(
-                MemoryEntity(
-                    scope = if (newFact.forProject) MemoryScope.PROJECT else MemoryScope.THREAD,
-                    threadId = if (newFact.forProject) null else threadId,
-                    projectId = if (newFact.forProject) projectId else null,
-                    text = newFact.text,
-                    sourceMessageId = newFact.sourceMessageId,
-                    origin = MemoryOrigin.EXTRACTED,
-                    pendingReview = waitForReview,
-                    createdAtMillis = now,
-                    updatedAtMillis = now,
-                ),
-            )
+            val pendingReview = ExtractionWrites.waitsForReview(newFact, waitForReview, holdAfterOutsideContent)
+            memoryDao.insert(ExtractionWrites.newMemory(newFact, threadId, projectId, now, pendingReview))
         }
         for (update in plan.updates) {
             val current = memoryDao.find(update.factId) ?: continue
-            memoryDao.update(current.copy(text = update.text, updatedAtMillis = now))
+            // The old text stays, as a superseded copy, so that the user can bring it back.
+            memoryDao.insert(ExtractionWrites.supersededCopy(current, now))
+            memoryDao.update(ExtractionWrites.updated(current, update, now))
         }
         for (factId in plan.deletes) {
-            memoryDao.delete(factId)
+            memoryDao.supersede(factId, now)
         }
     }
 

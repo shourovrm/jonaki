@@ -57,8 +57,16 @@ internal fun MemoryRoute(
         if (isSettingsView) memoryDao.observePendingReview() else flowOf(emptyList())
     }.collectAsState(initial = emptyList())
     val threads by remember { database.threadDao().observeAll() }.collectAsState(initial = emptyList())
+    val supersededThreadFacts by remember(threadId) {
+        if (threadId == null) flowOf(emptyList()) else memoryDao.observeSupersededThread(threadId)
+    }.collectAsState(initial = emptyList())
+    val supersededProjectFacts by remember(shownProjectId) {
+        if (shownProjectId == null) flowOf(emptyList()) else memoryDao.observeSupersededProject(shownProjectId)
+    }.collectAsState(initial = emptyList())
+    val supersededGlobalFacts by remember { memoryDao.observeSupersededGlobal() }.collectAsState(initial = emptyList())
 
-    val allFacts = threadFacts + projectFacts + globalFacts + pendingFacts
+    val supersededFacts = supersededThreadFacts + (if (project == null) emptyList() else supersededProjectFacts) + supersededGlobalFacts
+    val allFacts = threadFacts + projectFacts + globalFacts + pendingFacts + supersededFacts
     val sourceIds = allFacts.mapNotNull { fact -> fact.sourceMessageId }.toSet()
     var sourceMessages by remember { mutableStateOf<Map<String, MessageEntity>>(emptyMap()) }
     LaunchedEffect(sourceIds) {
@@ -76,6 +84,7 @@ internal fun MemoryRoute(
         reviewMode = settingsSnapshot.reviewExtractedMemories,
         projectName = project?.name,
         projectFacts = if (project == null) emptyList() else projectFacts,
+        supersededFacts = supersededFacts,
     )
     val actions = MemoryActions(
         onBack = onBack,
@@ -106,6 +115,7 @@ internal fun MemoryRoute(
             }
         },
         onKeep = { factId -> scope.launch { edits.keep(factId) } },
+        onRestore = { factId -> scope.launch { edits.restore(factId) } },
         onReviewModeChange = { enabled ->
             application.settings.update { current -> current.copy(reviewExtractedMemories = enabled) }
         },

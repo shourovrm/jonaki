@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_section_superseded">Replaced</string>
+    <string name="memory_superseded_on">Replaced %1$s</string>
+    <string name="memory_restore">Restore</string>
+    <string name="memory_superseded_show">Show replaced facts</string>
+    <string name="memory_superseded_hide">Hide replaced facts</string>
+</resources>

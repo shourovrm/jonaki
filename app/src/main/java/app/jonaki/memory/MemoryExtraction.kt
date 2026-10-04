@@ -20,10 +20,19 @@ data class ExtractionMessage(
 
 /** What the model asked for, before it is checked against the saved facts. */
 sealed interface ExtractionOperation {
-    /** [forProject] is true when the model marked the fact "scope":"project" (D-135). */
-    data class Add(val text: String, val source: String?, val forProject: Boolean = false) : ExtractionOperation
+    /**
+     * [forProject] is true when the model marked the fact "scope":"project" (D-135),
+     * [forGlobal] when it marked it "scope":"global". [keywords] are already cleaned.
+     */
+    data class Add(
+        val text: String,
+        val source: String?,
+        val forProject: Boolean = false,
+        val forGlobal: Boolean = false,
+        val keywords: String = "",
+    ) : ExtractionOperation
 
-    data class Update(val factId: Long, val text: String) : ExtractionOperation
+    data class Update(val factId: Long, val text: String, val keywords: String = "") : ExtractionOperation
 
     data class Delete(val factId: Long) : ExtractionOperation
 }
@@ -35,10 +44,19 @@ sealed interface ParsedExtraction {
     data class Failed(val reason: String) : ParsedExtraction
 }
 
-/** [forProject] is true for a fact the thread's project shares (D-135). */
-data class NewFact(val text: String, val sourceMessageId: String?, val forProject: Boolean = false)
+/**
+ * [forProject] is true for a fact the thread's project shares (D-135),
+ * [forGlobal] for a fact proposed for every thread, which always waits for the user's review.
+ */
+data class NewFact(
+    val text: String,
+    val sourceMessageId: String?,
+    val forProject: Boolean = false,
+    val forGlobal: Boolean = false,
+    val keywords: String = "",
+)
 
-data class FactUpdate(val factId: Long, val text: String)
+data class FactUpdate(val factId: Long, val text: String, val keywords: String = "")
 
 /** The changes to make to one thread's facts and its project's. */
 data class ExtractionPlan(
@@ -69,21 +87,40 @@ object MemoryExtraction {
 
     const val SYSTEM_PROMPT = """You keep the memory of one chat thread: short lasting facts that help in later conversations.
 Read the new messages and answer with JSON only, no other text, in this form:
-{"operations":[{"op":"add","text":"...","source":"m1"},{"op":"update","id":12,"text":"..."},{"op":"delete","id":7}]}
+{"operations":[{"op":"add","text":"...","keywords":"...","source":"m1"},{"op":"update","id":12,"text":"...","keywords":"..."},{"op":"delete","id":7}]}
 Rules:
 - Add only lasting facts: the user's goals, preferences, decisions, names, dates, constraints and plans. Not questions, small talk or what an answer explained.
 - Write each fact as one short sentence that makes sense alone, in the language the user wrote in. Turn relative dates into dates using the time in brackets.
 - source is the label of the message the fact comes from.
+- Give keywords for every add and update: up to 6 search words that the fact's text lacks, mainly its key words in the other script, so that a search in one script finds a fact written in the other. A fact in Bangla script gets English words, a fact in English gets Bangla words in Bangla script, and Bangla written in Latin letters gets both. Never repeat the text's own words. Examples: "আমার বোনের বিয়ে জানুয়ারিতে" gets "keywords":"sister wedding marriage January"; "I work at a bank in Dhaka" gets "keywords":"ব্যাংক চাকরি ঢাকা".
 - Update a thread fact when the new messages change it; delete one the user says is wrong or no longer true.
 - Never add what the thread facts or global facts already say. Global facts cannot be changed here.
 - Never store keys, passwords or card numbers.
 - When nothing should change, answer {"operations":[]}."""
 
     /** Added to [SYSTEM_PROMPT] for a thread in a project (D-135). */
-    private const val PROJECT_RULE = """- This thread belongs to a project. Add "scope":"project" to a new fact about the project's work that the project's other threads need (its goals, decisions, names, data, deadlines). Facts about the user in general or only about this thread get no scope. Project facts can be updated and deleted like thread facts."""
+    private const val PROJECT_RULE = """- This thread belongs to a project. Add "scope":"project" to a new fact about the project's work that the project's other threads need (its goals, decisions, names, data, deadlines). Other facts get no scope. Project facts can be updated and deleted like thread facts."""
 
-    /** The instructions for one thread: [SYSTEM_PROMPT], plus the project rule when the thread has a project. */
-    fun systemPrompt(inProject: Boolean): String = if (inProject) SYSTEM_PROMPT + "\n" + PROJECT_RULE else SYSTEM_PROMPT
+    /**
+     * Added to [SYSTEM_PROMPT] when the user allows global proposals. The fact reaches
+     * every thread, so the app holds it for the user's review whatever the review mode is.
+     */
+    private const val GLOBAL_RULE = """- Add "scope":"global" to a new fact that is a lasting fact about the user and holds in every thread (name, language, where they live, standing preferences). Facts about one thread's work get no scope. The user approves a global fact before it is used."""
+
+    /**
+     * The instructions for one thread: [SYSTEM_PROMPT], plus the project rule when the thread
+     * has a project and the global rule when [allowGlobalFacts].
+     */
+    fun systemPrompt(inProject: Boolean, allowGlobalFacts: Boolean = true): String {
+        val rules = mutableListOf(SYSTEM_PROMPT)
+        if (inProject) {
+            rules += PROJECT_RULE
+        }
+        if (allowGlobalFacts) {
+            rules += GLOBAL_RULE
+        }
+        return rules.joinToString("\n")
+    }
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -125,7 +162,8 @@ Rules:
 
     /**
      * [projectFacts] is null for a thread without a project; then a fact
-     * marked for the project stays with the thread.
+     * marked for the project stays with the thread. A fact marked global
+     * stays with the thread too when [allowGlobalFacts] is false.
      */
     fun plan(
         parsed: ParsedExtraction,
@@ -133,6 +171,7 @@ Rules:
         globalFacts: List<MemoryEntity>,
         messages: List<ExtractionMessage>,
         projectFacts: List<MemoryEntity>? = null,
+        allowGlobalFacts: Boolean = true,
     ): ExtractionPlan {
         if (parsed is ParsedExtraction.Failed) {
             return ExtractionPlan(emptyList(), emptyList(), emptyList(), skipped = 0, failure = parsed.reason)
@@ -158,6 +197,8 @@ Rules:
                             text = operation.text,
                             sourceMessageId = sourceMessageIdOf(operation.source, messages),
                             forProject = inProject && operation.forProject,
+                            forGlobal = allowGlobalFacts && operation.forGlobal,
+                            keywords = operation.keywords,
                         )
                     } else {
                         skipped += 1
@@ -169,7 +210,7 @@ Rules:
                     if (fact != null && changesText) {
                         touchedIds += fact.id
                         knownTexts += FactText.normalized(operation.text)
-                        updates += FactUpdate(fact.id, operation.text)
+                        updates += FactUpdate(fact.id, operation.text, operation.keywords)
                     } else {
                         skipped += 1
                     }
@@ -207,12 +248,19 @@ Rules:
         val kind = fields.text("op")?.trim()?.lowercase()
         val text = fields.text("text")?.trim()?.takeIf { it.isNotEmpty() && it.length <= MAX_FACT_LENGTH }
         val factId = fields.number("id")
+        val keywords = FactKeywords.cleaned(fields.text("keywords"))
         return when (kind) {
             "add" -> text?.let {
-                val forProject = fields.text("scope")?.trim()?.lowercase() == "project"
-                ExtractionOperation.Add(it, fields.text("source")?.trim(), forProject)
+                val scope = fields.text("scope")?.trim()?.lowercase()
+                ExtractionOperation.Add(
+                    text = it,
+                    source = fields.text("source")?.trim(),
+                    forProject = scope == "project",
+                    forGlobal = scope == "global",
+                    keywords = keywords,
+                )
             }
-            "update" -> if (text != null && factId != null) ExtractionOperation.Update(factId, text) else null
+            "update" -> if (text != null && factId != null) ExtractionOperation.Update(factId, text, keywords) else null
             "delete" -> factId?.let { ExtractionOperation.Delete(it) }
             else -> null
         }

@@ -19,6 +19,8 @@ data class MemoryUiState(
      */
     val projectName: String? = null,
     val projectFacts: List<MemoryFactUi> = emptyList(),
+    /** Facts background extraction replaced or removed, newest first; shown in a folded section at the bottom. */
+    val supersededFacts: List<MemoryFactUi> = emptyList(),
 ) {
     val isThreadView: Boolean
         get() = threadTitle != null
@@ -53,6 +55,8 @@ data class MemoryFactUi(
     val sourcePreview: String?,
     /** The thread a fact waiting for review belongs to, shown when opened from Settings. */
     val threadTitle: String? = null,
+    /** When extraction replaced or removed the fact; null for a fact in use. */
+    val supersededAtMillis: Long? = null,
 )
 
 /** What the user can do with one fact; the app writes it to the database. */
@@ -68,6 +72,8 @@ class MemoryActions(
     val onMoveToProject: (factId: Long) -> Unit = {},
     val onOpenSource: (factId: Long) -> Unit,
     val onKeep: (factId: Long) -> Unit,
+    /** Puts a superseded fact back in use. */
+    val onRestore: (factId: Long) -> Unit = {},
     val onReviewModeChange: (enabled: Boolean) -> Unit,
 )
 

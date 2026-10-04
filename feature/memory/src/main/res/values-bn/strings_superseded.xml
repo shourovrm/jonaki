@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_section_superseded">বদলে যাওয়া</string>
+    <string name="memory_superseded_on">বদলেছে %1$s</string>
+    <string name="memory_restore">ফিরিয়ে আনুন</string>
+    <string name="memory_superseded_show">বদলে যাওয়া তথ্য দেখান</string>
+    <string name="memory_superseded_hide">বদলে যাওয়া তথ্য লুকান</string>
+</resources>

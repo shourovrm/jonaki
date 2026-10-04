@@ -18,16 +18,21 @@ class MemoryToolTest {
     private class FakeStore : MemoryStore {
         val facts = mutableListOf<Fact>()
         var lastRecallLimit = 0
+        var lastKeywords: String? = null
+
+        /** Makes every new fact wait for the user, as after outside content. */
+        var holdsNewFacts = false
         private var nextId = 1L
 
-        override suspend fun remember(scope: FactScope, text: String): RememberResult {
+        override suspend fun remember(scope: FactScope, text: String, keywords: String): RememberResult {
+            lastKeywords = keywords
             val existing = facts.firstOrNull { it.text.equals(text, ignoreCase = true) }
             if (existing != null) {
                 return RememberResult.AlreadyKnown(existing)
             }
             val fact = Fact(nextId++, scope, text, pinned = false)
             facts += fact
-            return RememberResult.Saved(fact)
+            return RememberResult.Saved(fact, waitsForReview = holdsNewFacts)
         }
 
         override suspend fun forget(factId: Long): ForgetResult {
@@ -180,7 +185,7 @@ class MemoryToolTest {
         val output = call("action" to "recall", "query" to "thesis")
 
         assertEquals(
-            "2 facts contain \"thesis\":\n" +
+            "2 facts match \"thesis\", best first:\n" +
                 "[1] (all threads, pinned) Thesis supervisor is Dr. Rahman\n" +
                 "[2] (this thread) Thesis draft is in work/draft.md",
             output.text,
@@ -191,7 +196,46 @@ class MemoryToolTest {
     fun recallWithNoMatchSaysWhatToTry() {
         val output = call("action" to "recall", "query" to "rivers")
         assertFalse(output.isError)
-        assertTrue(output.text.startsWith("No fact contains \"rivers\"."))
+        assertTrue(output.text.startsWith("No fact matches \"rivers\"."))
+        assertTrue(output.text.contains("second query"))
+        assertTrue(output.text.contains("other script"))
+    }
+
+    @Test
+    fun rememberPassesTrimmedKeywordsToTheStore() {
+        call("action" to "remember", "text" to "থিসিস জমা ১২ ডিসেম্বর", "keywords" to "  thesis submission deadline ")
+
+        assertEquals("thesis submission deadline", store.lastKeywords)
+    }
+
+    @Test
+    fun rememberWithoutKeywordsPassesNone() {
+        call("action" to "remember", "text" to "Likes tea")
+
+        assertEquals("", store.lastKeywords)
+    }
+
+    @Test
+    fun aFactHeldForReviewSaysItWaitsForApproval() {
+        store.holdsNewFacts = true
+
+        val output = call("action" to "remember", "text" to "Prefers APA")
+
+        assertFalse(output.isError)
+        assertTrue(output.text.startsWith("Remembered fact 1 for this thread: Prefers APA"))
+        assertTrue(output.text.contains("waits for the user's approval on the Memory screen"))
+        assertTrue(output.text.contains("outside content"))
+    }
+
+    @Test
+    fun theGuidelinesAndSchemaDescribeKeywordsAndMultiWordRecall() {
+        val guidelines = tool.guidelines.joinToString("\n")
+        assertTrue(guidelines.contains("any of the words"))
+        assertTrue(guidelines.contains("second query"))
+        assertTrue(guidelines.contains("keywords"))
+        val schemaText = tool.parameterSchema.toString()
+        assertTrue(schemaText.contains("\"keywords\""))
+        assertTrue(schemaText.contains("several words"))
     }
 
     @Test

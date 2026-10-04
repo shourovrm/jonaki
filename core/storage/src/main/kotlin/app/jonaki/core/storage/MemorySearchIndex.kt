@@ -64,19 +64,23 @@ object MemorySearchIndex {
         "threadId = :threadId OR (threadId IS NULL AND (projectId IS NULL OR projectId = :projectId))"
 
     /**
-     * Facts visible from one thread (its own, its project's and the global ones) whose text
-     * contains the query. The query is bound as a quoted FTS5 phrase, see [matchPhrase].
+     * Facts visible from one thread (its own, its project's and the global ones) that hold any
+     * word of the query in their text or keywords, best match first. [FtsQuery.anyWordOf] builds
+     * the bound `:match` text. bm25 returns a lower number for a better match, and its weights
+     * (text 1.0, keywords 0.5) let a word in the fact's own text count more than one in its
+     * keywords. Pinned facts only break ties. Facts waiting for review and superseded facts are left out.
      */
     const val MATCH_SEARCH =
         "SELECT memories.* FROM memories JOIN $TABLE ON memories.id = $TABLE.rowid " +
-            "WHERE $TABLE MATCH :phrase AND memories.pendingReview = 0 " +
+            "WHERE $TABLE MATCH :match AND memories.pendingReview = 0 AND memories.supersededAtMillis IS NULL " +
             "AND (memories.threadId = :threadId OR (memories.threadId IS NULL AND " +
             "(memories.projectId IS NULL OR memories.projectId = :projectId))) " +
-            "ORDER BY memories.pinned DESC, memories.updatedAtMillis DESC LIMIT :limit"
+            "ORDER BY bm25($TABLE, 1.0, 0.5), memories.pinned DESC, memories.updatedAtMillis DESC LIMIT :limit"
 
-    /** The same search for one- and two-character queries, which trigrams cannot match. */
+    /** The same search for queries with no word of three characters, which trigrams cannot match. */
     const val LIKE_SEARCH =
-        "SELECT * FROM memories WHERE text LIKE :pattern ESCAPE '\\' AND pendingReview = 0 " +
+        "SELECT * FROM memories WHERE (text LIKE :pattern ESCAPE '\\' OR keywords LIKE :pattern ESCAPE '\\') " +
+            "AND pendingReview = 0 AND supersededAtMillis IS NULL " +
             "AND ($VISIBLE_FROM_THREAD) " +
             "ORDER BY pinned DESC, updatedAtMillis DESC LIMIT :limit"
 

@@ -1,0 +1,311 @@
+[
+ {
+  "kind": "bangla",
+  "fact": "আমার থিসিস জমা দেওয়ার শেষ তারিখ ১২ ডিসেম্বর।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"The deadline for submitting my thesis is December 12.\",\"keywords\":\"থিসিস, জমা, শেষ তারিখ, ডিসেম্বর\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "থিসিস, জমা, শেষ তারিখ, ডিসেম্বর",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 6.32e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমি সিলেটে থাকি।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"I live in Sylhet.\",\"keywords\":\"সিলেট, থাকি\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "সিলেট, থাকি",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 5.94e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমার সুপারভাইজার ড. রহমান, তিনি এপিএ স্টাইল পছন্দ করেন।",
+  "answer": "```json\n{\"operations\": [\n  {\"op\": \"add\", \"text\": \"আমার সুপারভাইজার ড. রহমান।\", \"keywords\": \"সুপারভাইজার, ড. রহমান\", \"source\": \"m1\"},\n  {\"op\": \"add\", \"text\": \"তিনি এপিএ স্টাইল পছন্দ করেন।\", \"keywords\": \"এপিএ স্টাইল, পছন্দ\", \"source\": \"m1\"}\n]}\n```",
+  "parsed": true,
+  "adds": 2,
+  "scopes": [
+   null,
+   null
+  ],
+  "keywords": "সুপারভাইজার, ড. রহমান এপিএ স্টাইল, পছন্দ",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 8.3e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমি দুধ ছাড়া লাল চা খাই।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"I drink red tea without milk.\",\"keywords\":\"লাল চা, দুধ ছাড়া\",\"source\":\"m1\"},{\"op\":\"add\",\"text\":\"The user wants red tea without milk.\",\"keywords\":\"লাল চা, দুধ ছাড়া\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 2,
+  "scopes": [
+   null,
+   "global"
+  ],
+  "keywords": "লাল চা, দুধ ছাড়া লাল চা, দুধ ছাড়া",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 7.16e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমার ল্যাপটপে আর্চ লিনাক্স চলে।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"My laptop runs Arch Linux.\",\"keywords\":\"ল্যাপটপ, আর্চ লিনাক্স\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "ল্যাপটপ, আর্চ লিনাক্স",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 6.14e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "প্রতি শুক্রবার সকালে আমি বাজারে যাই।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"The user goes to the market every Friday morning.\",\"keywords\":\"বাজার, প্রতি শুক্রবার, সকাল\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "বাজার, প্রতি শুক্রবার, সকাল",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 6.04e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমার মেয়ের জন্মদিন ৫ মার্চ।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"আমার মেয়ের জন্মদিন ৫ মার্চ।\",\"keywords\":\"মেয়ে, জন্মদিন, ৫ মার্চ\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "মেয়ে, জন্মদিন, ৫ মার্চ",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 5.91e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমি ঢাকা বিশ্ববিদ্যালয়ে পদার্থবিজ্ঞান পড়েছি।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"I studied Physics at the University of Dhaka.\",\"keywords\":\"ঢাকা বিশ্ববিদ্যালয়, পদার্থবিজ্ঞান\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "ঢাকা বিশ্ববিদ্যালয়, পদার্থবিজ্ঞান",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 6.14e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমার বাজেট মাসে বিশ হাজার টাকা।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"My budget is twenty thousand taka per month.\",\"keywords\":\"বাজেট, বিশ হাজার, টাকা, মাস\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "বাজেট, বিশ হাজার, টাকা, মাস",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 6.32e-05
+ },
+ {
+  "kind": "bangla",
+  "fact": "আমি উত্তর দিতে বাংলা ভাষা পছন্দ করি।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"I prefer to reply in Bengali.\",\"keywords\":\"বাংলা, ভাষা, পছন্দ\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "বাংলা, ভাষা, পছন্দ",
+  "judgement": {
+   "usable_english_keyword": false
+  },
+  "cost_usd": 6.05e-05
+ },
+ {
+  "kind": "english",
+  "fact": "My thesis is due on 12 December.",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"Thesis is due on 12 December 2026.\",\"keywords\":\"থিসিস, জমা দেওয়ার তারিখ\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "থিসিস, জমা দেওয়ার তারিখ",
+  "judgement": {
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 6.27e-05
+ },
+ {
+  "kind": "english",
+  "fact": "I live in Sylhet and work as a civil engineer.",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"The user lives in Sylhet.\",\"keywords\":\"সিলেট\",\"source\":\"m1\"},{\"op\":\"add\",\"text\":\"The user works as a civil engineer.\",\"keywords\":\"সিভিল ইঞ্জিনিয়ার\",\"source\":\"m1\",\"scope\":\"global\"},{\"op\":\"add\",\"text\":\"The user's name is not specified.\",\"keywords\":\"নাম\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 3,
+  "scopes": [
+   null,
+   "global",
+   "global"
+  ],
+  "keywords": "সিলেট সিভিল ইঞ্জিনিয়ার নাম",
+  "judgement": {
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 8.17e-05
+ },
+ {
+  "kind": "english",
+  "fact": "I prefer answers in short bullet points.",
+  "answer": "{\"operations\":[{\"op\":\"add\",\"text\":\"User prefers answers in short bullet points.\",\"keywords\":\"short bullet points, পছন্দ\",\"source\":\"m1\",\"scope\":\"global\"}]}",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "short bullet points, পছন্দ",
+  "judgement": {
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 5.89e-05
+ },
+ {
+  "kind": "english",
+  "fact": "My daughter's birthday is on 5 March.",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"My daughter's birthday is on 5 March.\",\"keywords\":\"daughter, birthday, 5 March\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "daughter, birthday, 5 March",
+  "judgement": {
+   "usable_bangla_keyword": false
+  },
+  "cost_usd": 6.16e-05
+ },
+ {
+  "kind": "english",
+  "fact": "I use Kotlin and Jetpack Compose for my Android apps.",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"I use Kotlin and Jetpack Compose for my Android apps.\",\"keywords\":\"kotlin, jetpack compose, android, apps, ব্যবহার, কোটলিন, জেপ্যাক কম্পোজ\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "kotlin, jetpack compose, android, apps, ব্যবহার, কোটলিন, জেপ্যাক কম্পোজ",
+  "judgement": {
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 6.77e-05
+ },
+ {
+  "kind": "mixed",
+  "fact": "আমার thesis supervisor হলেন Dr. Rahman।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"My thesis supervisor is Dr. Rahman.\",\"keywords\":\"thesis supervisor ডঃ রহমান\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "thesis supervisor ডঃ রহমান",
+  "judgement": {
+   "usable_english_keyword": true,
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 6.09e-05
+ },
+ {
+  "kind": "mixed",
+  "fact": "আমি প্রতিদিন সকালে gym এ যাই।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"I go to the gym every morning.\",\"keywords\":\"প্রতিদিন সকালে\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "প্রতিদিন সকালে",
+  "judgement": {
+   "usable_english_keyword": false,
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 6e-05
+ },
+ {
+  "kind": "mixed",
+  "fact": "Amar exam 3 January theke shuru.",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"My exam starts on January 3rd.\",\"keywords\":\"পরীক্ষা, শুরু, ৩ জানুয়ারি\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "পরীক্ষা, শুরু, ৩ জানুয়ারি",
+  "judgement": {
+   "usable_english_keyword": false,
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 6.11e-05
+ },
+ {
+  "kind": "mixed",
+  "fact": "আমার laptop এর battery দুই ঘণ্টা চলে।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"My laptop battery lasts for two hours.\",\"keywords\":\"laptop, battery, দুই ঘণ্টা\",\"source\":\"m1\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   null
+  ],
+  "keywords": "laptop, battery, দুই ঘণ্টা",
+  "judgement": {
+   "usable_english_keyword": true,
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 5.97e-05
+ },
+ {
+  "kind": "mixed",
+  "fact": "My বন্ধু Karim থাকে Chattogram এ।",
+  "answer": "```json\n{\"operations\":[{\"op\":\"add\",\"text\":\"My friend Karim lives in Chattogram.\",\"keywords\":\"বন্ধু করিম চট্টগ্রাম\",\"source\":\"m1\",\"scope\":\"global\"}]}\n```",
+  "parsed": true,
+  "adds": 1,
+  "scopes": [
+   "global"
+  ],
+  "keywords": "বন্ধু করিম চট্টগ্রাম",
+  "judgement": {
+   "usable_english_keyword": false,
+   "usable_bangla_keyword": true
+  },
+  "cost_usd": 6.01e-05
+ }
+]

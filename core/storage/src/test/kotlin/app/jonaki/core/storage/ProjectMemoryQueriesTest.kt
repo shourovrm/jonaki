@@ -7,14 +7,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
-/** Which facts a thread sees once projects have their own facts (D-135), on the version 10 schema. */
+/** Which facts a thread sees once projects have their own facts (D-135), on the version 12 schema. */
 class ProjectMemoryQueriesTest {
     private val databases = MigrationTestDatabases()
     private lateinit var connection: SQLiteConnection
 
     @Before
     fun openDatabase() {
-        connection = databases.openVersion(10)
+        connection = databases.openVersion(12)
         insertThread("thesis-chat")
         insertThread("other-chat")
         insertFact(1, threadId = null, projectId = null, text = "Name is Riad")

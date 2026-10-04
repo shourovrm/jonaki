@@ -59,7 +59,7 @@ class ToolRegistryTest {
     }
 
     private val memoryStore = object : MemoryStore {
-        override suspend fun remember(scope: FactScope, text: String) =
+        override suspend fun remember(scope: FactScope, text: String, keywords: String) =
             RememberResult.Saved(Fact(1, scope, text, pinned = false))
 
         override suspend fun forget(factId: Long) = ForgetResult.NotFound
