@@ -36,6 +36,9 @@ shape `{"detail": {"error": "..."}}`.
 | `openrouter-credits.json` | `GET openrouter.ai/api/v1/credits`, 2026-10-02 | 24 credits, 11.126219445 used |
 | `openrouter-key.json` | `GET openrouter.ai/api/v1/key`, trimmed to the limit fields (label and ids removed) | limit 20 monthly, 19.927821514 left |
 | `tavily-usage.json` | `GET api.tavily.com/usage` | plan usage 3 of 1,000 credits |
+| `minimax-balance-cli-types.json` | Hand-written sample, not a live call: `GET api.minimax.io/account/query_balance`, field names and string amounts as typed in the MiniMax-AI/cli `AccountBalanceResponse`; the values are invented | available 12.34 (USD on the international platform) |
+| `minimax-token-plan-cli-types.json` | Hand-written sample, not a live call: `GET api.minimax.io/v1/token_plan/remains`, field names as typed in the MiniMax-AI/cli `QuotaResponse`; the values are invented | M3 5-hour window, 80% left |
+| `minimax-error-1004-recorded.json` | Recorded with curl and a dummy key on 2026-10-05: `GET api.minimax.io/v1/token_plan/remains` | HTTP 200 whose `base_resp.status_code` is 1004 |
 | `deepseek-balance-documented.json` | Not recorded (no DeepSeek key); shape from DeepSeek's documentation of `GET /user/balance` | balance as text, per currency |
 
 ## openrouter/ (M3b, D-027)

@@ -90,6 +90,73 @@ class BalanceTest {
         assertTrue(balance is Balance.Failed && balance.message.contains("401"))
     }
 
+    private fun miniMax(key: String) = MiniMaxBalance(key, OkHttpClient(), server.url("/").toString())
+
+    @Test
+    fun miniMaxPayAsYouGoKeyReadsTheAvailableDollars() = runBlocking {
+        server.enqueue(MockResponse().setBody(recorded("minimax-balance-cli-types.json")))
+
+        val balance = miniMax("sk-api-x").fetch() as Balance.Money
+
+        assertEquals(12.34, balance.amount, 1e-9)
+        assertEquals("USD", balance.currency)
+        assertEquals("/account/query_balance", server.takeRequest().path)
+    }
+
+    @Test
+    fun miniMaxTokenPlanKeyReadsTheTextModelWindow() = runBlocking {
+        server.enqueue(MockResponse().setBody(recorded("minimax-token-plan-cli-types.json")))
+
+        val balance = miniMax("sk-cp-x").fetch() as Balance.Credits
+
+        // 1200 reported with 80% left: the count is the remaining one, so 300 of 1500 are used.
+        assertEquals(300L, balance.used)
+        assertEquals(1500L, balance.limit)
+        assertEquals("/v1/token_plan/remains", server.takeRequest().path)
+    }
+
+    @Test
+    fun miniMaxTokenPlanCountReadAsUsedWhenThePercentageSaysSo() = runBlocking {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"model_remains":[{"model_name":"MiniMax-M3","current_interval_total_count":1500,""" +
+                    """"current_interval_usage_count":300,"current_interval_remaining_percent":80}],""" +
+                    """"base_resp":{"status_code":0}}""",
+            ),
+        )
+
+        val balance = miniMax("sk-cp-x").fetch() as Balance.Credits
+
+        assertEquals(300L, balance.used)
+    }
+
+    @Test
+    fun miniMaxRefusedKeyIsFailedEvenThoughHttpIs200() = runBlocking {
+        server.enqueue(MockResponse().setBody(recorded("minimax-error-1004-recorded.json")))
+
+        assertTrue(miniMax("sk-cp-x").fetch() is Balance.Failed)
+    }
+
+    @Test
+    fun miniMaxMalformedOrUnexpectedAnswersGiveNoNumber() = runBlocking {
+        server.enqueue(MockResponse().setBody("not json"))
+        server.enqueue(MockResponse().setResponseCode(500))
+        server.enqueue(MockResponse().setBody("""{"base_resp":{"status_code":0},"available_amount":"soon"}"""))
+        // Percentage matches neither reading of the count, so the number would be a guess.
+        server.enqueue(
+            MockResponse().setBody(
+                """{"model_remains":[{"model_name":"MiniMax-M3","current_interval_total_count":1500,""" +
+                    """"current_interval_usage_count":700,"current_interval_remaining_percent":10}],""" +
+                    """"base_resp":{"status_code":0}}""",
+            ),
+        )
+
+        assertTrue(miniMax("sk-cp-x").fetch() is Balance.Failed)
+        assertTrue(miniMax("sk-cp-x").fetch() is Balance.Failed)
+        assertEquals(Balance.Unavailable, miniMax("sk-api-x").fetch())
+        assertEquals(Balance.Unavailable, miniMax("sk-cp-x").fetch())
+    }
+
     @Test
     fun deepSeekPrefersItsDollarBalance() = runBlocking {
         server.enqueue(MockResponse().setBody(recorded("deepseek-balance-two-currencies.json")))
