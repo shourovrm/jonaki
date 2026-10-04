@@ -3,6 +3,7 @@ package app.jonaki.settings
 import app.jonaki.core.balanceapi.Balance
 import app.jonaki.core.balanceapi.BalanceSource
 import app.jonaki.providers.openaicompatible.DeepSeekBalance
+import app.jonaki.providers.openaicompatible.MiniMaxBalance
 import app.jonaki.providers.openaicompatible.OpenRouterBalance
 import app.jonaki.search.tavily.TavilyBalance
 import kotlinx.coroutines.async
@@ -52,6 +53,7 @@ class AccountBalances(
         val sources = mutableMapOf<SecretName, BalanceSource>()
         secrets.read(SecretName.OPENROUTER)?.let { key -> sources[SecretName.OPENROUTER] = OpenRouterBalance(key, httpClient) }
         secrets.read(SecretName.DEEPSEEK)?.let { key -> sources[SecretName.DEEPSEEK] = DeepSeekBalance(key, httpClient) }
+        secrets.read(SecretName.MINIMAX)?.let { key -> sources[SecretName.MINIMAX] = MiniMaxBalance(key, httpClient) }
         secrets.read(SecretName.TAVILY)?.let { key -> sources[SecretName.TAVILY] = TavilyBalance(key, httpClient) }
         return sources
     }

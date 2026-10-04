@@ -71,6 +71,65 @@ class DeepSeekBalance(
     }
 }
 
+/**
+ * MiniMax (international platform). A pay-as-you-go key (prefix "sk-api-")
+ * reads GET /account/query_balance, a USD amount; any other key is a Token
+ * Plan key and reads GET /v1/token_plan/remains, the 5-hour window of the
+ * text model. The field names come from MiniMax's own command line tool
+ * (MiniMax-AI/cli), not from an API reference, so every unexpected answer
+ * gives no balance rather than a guessed one. MiniMax answers HTTP 200 even
+ * for a refused key and reports the error in base_resp.status_code.
+ */
+class MiniMaxBalance(
+    private val apiKey: String,
+    private val httpClient: OkHttpClient,
+    private val baseUrl: String = "https://api.minimax.io",
+) : BalanceSource {
+    override suspend fun fetch(): Balance {
+        val isPayAsYouGo = apiKey.startsWith(PAY_AS_YOU_GO_KEY_PREFIX)
+        val path = if (isPayAsYouGo) "/account/query_balance" else "/v1/token_plan/remains"
+        val answer = getJson(httpClient, apiKey, baseUrl, path)
+        val root = answer.json ?: return Balance.Failed("MiniMax answered ${answer.problem}")
+        val statusCode = (root["base_resp"] as? JsonObject)?.number("status_code")
+        if (statusCode != 0.0) {
+            return Balance.Failed("MiniMax answered status $statusCode")
+        }
+        if (isPayAsYouGo) {
+            val amount = root.number("available_amount") ?: return Balance.Unavailable
+            return Balance.Money(amount, "USD")
+        }
+        return tokenPlanCredits(root)
+    }
+
+    private fun tokenPlanCredits(root: JsonObject): Balance {
+        val rows = (root["model_remains"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
+        val textRow = rows.firstOrNull { row -> row.text("model_name")?.startsWith("MiniMax-M") == true }
+            ?: return Balance.Unavailable
+        val total = textRow.number("current_interval_total_count") ?: return Balance.Unavailable
+        val reported = textRow.number("current_interval_usage_count") ?: return Balance.Unavailable
+        val remainingPercent = textRow.number("current_interval_remaining_percent") ?: return Balance.Unavailable
+        if (total <= 0.0 || reported < 0.0 || reported > total) {
+            return Balance.Unavailable
+        }
+        // Older answers put the remaining count in *_usage_count and newer ones
+        // the used count. Only the percentage tells which; if it matches
+        // neither reading, no number is shown.
+        val percentIfRemaining = reported / total * 100
+        val percentIfUsed = (total - reported) / total * 100
+        val used = when {
+            Math.abs(percentIfRemaining - remainingPercent) <= PERCENT_TOLERANCE -> total - reported
+            Math.abs(percentIfUsed - remainingPercent) <= PERCENT_TOLERANCE -> reported
+            else -> return Balance.Unavailable
+        }
+        return Balance.Credits(used.toLong(), total.toLong())
+    }
+
+    private companion object {
+        const val PAY_AS_YOU_GO_KEY_PREFIX = "sk-api-"
+        const val PERCENT_TOLERANCE = 1.0
+    }
+}
+
 /** A JSON body, or what went wrong ("HTTP 401", "no connection: …"). */
 private class JsonAnswer(val json: JsonObject?, val problem: String?)
 
