@@ -96,6 +96,31 @@ class McpTool(
         return SideEffect.CHANGES
     }
 
+    /** A call hands arguments to someone else's server, which may do anything with them. */
+    override fun isVeryRiskyOf(arguments: JsonObject): Boolean = arguments.stringArgument("action") == ACTION_CALL
+
+    /** What a server's tool returns is its own text; search and describe read the cached lists. */
+    override fun outsideContentSourceOf(arguments: JsonObject): String? {
+        if (arguments.stringArgument("action") != ACTION_CALL) {
+            return null
+        }
+        return listOf(arguments.stringArgument("server"), arguments.stringArgument("tool"))
+            .filter { part -> !part.isNullOrBlank() }
+            .joinToString("/")
+    }
+
+    override fun actionOf(arguments: JsonObject): String? = arguments.stringArgument("action")
+
+    override val ruleActions: List<String> = listOf(ACTION_CALL)
+
+    override val ruleDetailName: String = "server/tool"
+
+    override fun ruleDetailOf(arguments: JsonObject): String? {
+        val server = arguments.stringArgument("server")?.trim().orEmpty()
+        val tool = arguments.stringArgument("tool")?.trim().orEmpty()
+        return "$server/$tool"
+    }
+
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput =
         when (val action = arguments.stringArgument("action")) {
             ACTION_SEARCH -> search(arguments, context)

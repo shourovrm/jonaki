@@ -6,7 +6,6 @@ import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.StepEntity
 import app.jonaki.core.storage.SubagentEntity
-import app.jonaki.core.agent.SubagentAsk
 import app.jonaki.run.PendingApproval
 import kotlinx.coroutines.CompletableDeferred
 import app.jonaki.core.agent.SubagentRunner
@@ -336,18 +335,16 @@ class ChatItemsTest {
     }
 
     @Test
-    fun aSubagentsRequestShowsItsReasonNameAndWhenItIsWithdrawn() {
-        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(ToolCall("d1", "delegate", "{}"))))
-        val request = ToolCall("s1/c3", "request_tool", """{"name":"share_file","reason":"save the report"}""")
-        val steps = listOf(step("s1/c3", "request_tool", "WAITING_FOR_APPROVAL", request.argumentsJson, started = 1_000).copy(subagentId = "s1"))
-        val pending = PendingApproval("t", "share_file", request, CompletableDeferred(), SubagentAsk("writer", "save the report"))
+    fun aCardCarriesWhetherItOffersTheThreadAllowanceAndWhyItAsks() {
+        val call = ToolCall("c1", "share_file", """{"action":"share","path":"artifacts/a.pdf"}""")
+        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(call)))
+        val steps = listOf(step("c1", "share_file", "WAITING_FOR_APPROVAL", call.argumentsJson, started = 1_000))
+        val pending = PendingApproval("t", "share_file", call, CompletableDeferred(), offersThreadAllowance = false, afterOutsideContent = true)
 
         val card = ChatItems.build(rows, steps, isRunning = true, pendingApprovals = listOf(pending), stepWords = englishStepWords).last() as ChatItem.Approval
 
-        assertEquals(
-            ChatItem.Approval("s1/c3", "share_file", "save the report", agentLabel = "writer", waitEndsAtMillis = 181_000),
-            card,
-        )
+        assertEquals(false, card.offersThreadAllowance)
+        assertEquals(true, card.afterOutsideContent)
     }
 
     /** The card says it goes over the cap and names the highest cost cap of any type. */
@@ -398,18 +395,6 @@ class ChatItemsTest {
 
         assertEquals(20, run.subagents.single().stepLimit)
         assertEquals(0.50, run.subagents.single().costLimitUsd, 0.0001)
-    }
-
-    @Test
-    fun theThreadAgentsOwnCardHasNoCountdown() {
-        val call = ToolCall("c1", "write_file", """{"path":"work/a.md"}""")
-        val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(call)))
-        val steps = listOf(step("c1", "write_file", "WAITING_FOR_APPROVAL", call.argumentsJson, started = 1_000))
-        val pending = PendingApproval("t", "write_file", call, CompletableDeferred())
-
-        val card = ChatItems.build(rows, steps, isRunning = true, pendingApprovals = listOf(pending), stepWords = englishStepWords).last() as ChatItem.Approval
-
-        assertEquals(null, card.waitEndsAtMillis)
     }
 
     @Test

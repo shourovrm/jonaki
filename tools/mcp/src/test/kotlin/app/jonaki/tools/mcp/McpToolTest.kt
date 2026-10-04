@@ -229,4 +229,26 @@ class McpToolTest {
     fun thePromptLineNamesTheServers() {
         assertTrue(tool(wiki()).promptLine.contains("deepwiki"))
     }
+
+    @Test
+    fun onlyACallIsVeryRiskyOutsideContentAndRuleBound() {
+        val tool = tool(wiki())
+
+        val call = arguments("""{"action":"call","server":"deepwiki","tool":"ask_question"}""")
+        val search = arguments("""{"action":"search","query":"wiki"}""")
+        val describe = arguments("""{"action":"describe","server":"deepwiki","tool":"ask_question"}""")
+
+        assertTrue(tool.isVeryRiskyOf(call))
+        assertTrue(tool.sendsOutOf(call))
+        assertEquals("deepwiki/ask_question", tool.outsideContentSourceOf(call))
+        assertEquals("deepwiki/ask_question", tool.ruleDetailOf(call))
+        assertEquals("call", tool.actionOf(call))
+        for (reading in listOf(search, describe)) {
+            assertFalse(tool.isVeryRiskyOf(reading))
+            assertFalse(tool.sendsOutOf(reading))
+            assertEquals(null, tool.outsideContentSourceOf(reading))
+        }
+        assertEquals(listOf("call"), tool.ruleActions)
+        assertEquals("server/tool", tool.ruleDetailName)
+    }
 }

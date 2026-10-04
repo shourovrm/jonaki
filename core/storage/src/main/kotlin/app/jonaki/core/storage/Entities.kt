@@ -14,7 +14,11 @@ data class ThreadEntity(
     val updatedAtMillis: Long,
     /** Per-thread switch from the D-011 amendment. */
     val webSearchEnabled: Boolean,
-    /** Tools the user allowed for the whole thread, comma-separated names. */
+    /**
+     * Tool names the user allowed for the whole thread, comma-separated. Unused
+     * since version 11, when "Allow all in this thread" replaced the per-tool
+     * answer; old values stay in the column and are ignored.
+     */
     val toolsAllowedForThread: String = "",
     /** The thread's model as "service:modelId" (D-027); null in threads made before version 2. */
     val modelKey: String? = null,
@@ -45,6 +49,20 @@ data class ThreadEntity(
      */
     @ColumnInfo(defaultValue = "0")
     val incognito: Boolean = false,
+    /**
+     * The user answered "Allow all in this thread": every tool runs without a
+     * card here, except the very risky calls that always ask. The chat's
+     * approval chip can withdraw it.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val allowAllInThread: Boolean = false,
+    /**
+     * Outside content (a web page, a document, an MCP result, a subagent's
+     * answer) reached this thread. From then on every call that sends data out
+     * of the app asks. It stays set, because the outside text stays in the history.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val readOutsideContent: Boolean = false,
 )
 
 /**

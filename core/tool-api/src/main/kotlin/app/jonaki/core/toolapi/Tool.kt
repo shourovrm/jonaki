@@ -33,6 +33,57 @@ interface Tool {
      */
     fun sideEffectOf(arguments: JsonObject): SideEffect = sideEffect
 
+    /**
+     * True when this call is very risky: it deletes or overwrites something
+     * outside the thread folder, or sends a file or data to another app or
+     * server. "Allow all in this thread" never covers such a call, so its
+     * card offers only Allow once and Deny. Answered per call from the
+     * arguments, like [sideEffectOf].
+     */
+    fun isVeryRiskyOf(arguments: JsonObject): Boolean = false
+
+    /**
+     * True when this call sends data out of the app. After the thread has
+     * read outside content such a call always asks, in every approval mode
+     * (the fixed rule against prompt injection). The default is any call
+     * that [SideEffect.CHANGES] something outside Jonaki, so a new tool is
+     * covered until its author says otherwise.
+     */
+    fun sendsOutOf(arguments: JsonObject): Boolean = sideEffectOf(arguments) == SideEffect.CHANGES
+
+    /**
+     * Null when the result is Jonaki's own text. Otherwise the result is
+     * outside content: text written by someone else (a web page, a document,
+     * another service, a subagent), which reaches the model wrapped as data.
+     * The value is a short source for the wrapper, such as a host or a file
+     * name; an empty string means the result has no single source.
+     */
+    fun outsideContentSourceOf(arguments: JsonObject): String? = null
+
+    /**
+     * The action of this call as a Settings rule names it, for example
+     * "reminder" for the phone tool; null for a tool with one action.
+     */
+    fun actionOf(arguments: JsonObject): String? = null
+
+    /**
+     * Actions that Settings lists for "always allow" rules, as [actionOf]
+     * returns them. Empty for a tool with one action.
+     */
+    val ruleActions: List<String>
+        get() = emptyList()
+
+    /**
+     * What a rule for an action of this tool must name besides the action,
+     * for example "server/tool" for the mcp tool's call; null when the action
+     * alone is enough.
+     */
+    val ruleDetailName: String?
+        get() = null
+
+    /** The detail of this call that a rule names, as [ruleDetailName] describes it; null without one. */
+    fun ruleDetailOf(arguments: JsonObject): String? = null
+
     val requiredCapabilities: Set<Capability>
 
     val timeLimit: Duration
@@ -46,6 +97,14 @@ enum class SideEffect {
 
     /** Changes something outside Jonaki: Downloads, the linked folder, the phone, a server. */
     CHANGES,
+
+    /**
+     * Changes something outside Jonaki that the user can undo easily and
+     * that sends nothing to another app: a reminder, a copy saved to
+     * Downloads/Jonaki. Asks in the Ask mode; the Auto mode runs it without
+     * asking.
+     */
+    CHANGES_REVERSIBLE,
 
     /**
      * Changes only files inside the thread's own folder. Needs approval like
@@ -63,7 +122,7 @@ enum class SideEffect {
     CHANGES_APP_DATA,
 
     /**
-     * Always asks, in every approval mode, and "Allow in thread" never covers
+     * Always asks, in every approval mode, and "Allow all in this thread" never covers
      * it: the user decides each time. For costs the user wants to see before
      * they happen, such as subagents beyond the automatic limit (D-137).
      */

@@ -23,7 +23,8 @@ import kotlinx.serialization.json.putJsonObject
  * Sends a thread file out of the app (Downloads, "Save as", the share sheet,
  * the linked folder) and brings files in from the linked folder (D-017).
  * Every action reaches outside the app, so each call needs the user's
- * approval (D-044, proposed).
+ * approval (D-044, proposed), except a copy saved to Downloads/Jonaki, which
+ * the user can delete again and which runs in the Auto mode.
  */
 class ShareFileTool(private val destinations: FileDestinations) : Tool {
     override val name: String = "share_file"
@@ -63,6 +64,26 @@ class ShareFileTool(private val destinations: FileDestinations) : Tool {
     }
 
     override val sideEffect: SideEffect = SideEffect.CHANGES
+
+    override fun sideEffectOf(arguments: JsonObject): SideEffect = when (actionOf(arguments)) {
+        Action.DOWNLOADS.argument -> SideEffect.CHANGES_REVERSIBLE
+        else -> SideEffect.CHANGES
+    }
+
+    /** Sharing sends the file to another app; the linked folder may already hold a file of that name. */
+    override fun isVeryRiskyOf(arguments: JsonObject): Boolean =
+        actionOf(arguments) == Action.SHARE.argument || actionOf(arguments) == Action.LINKED_FOLDER.argument
+
+    /** Listing and importing only look at the linked folder or bring a file in; nothing leaves. */
+    override fun sendsOutOf(arguments: JsonObject): Boolean = when (actionOf(arguments)) {
+        Action.LIST_LINKED.argument, Action.IMPORT_LINKED.argument, Action.DOWNLOADS.argument -> false
+        else -> true
+    }
+
+    override fun actionOf(arguments: JsonObject): String? = arguments.stringArgument("action")
+
+    override val ruleActions: List<String> = Action.entries.map { action -> action.argument }
+
     override val requiredCapabilities: Set<Capability> = emptySet()
 
     /** Long, because "Save as" waits while the user picks a folder and a name. */

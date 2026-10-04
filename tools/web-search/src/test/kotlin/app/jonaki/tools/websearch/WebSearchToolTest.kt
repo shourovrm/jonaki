@@ -132,4 +132,9 @@ class WebSearchToolTest {
 
         assertTrue(guidelines.contains("never names, personal details or file contents"))
     }
+
+    @Test
+    fun theResultIsOutsideContentWithoutASingleSource() {
+        assertEquals("", WebSearchTool(emptyList()).outsideContentSourceOf(kotlinx.serialization.json.JsonObject(emptyMap())))
+    }
 }

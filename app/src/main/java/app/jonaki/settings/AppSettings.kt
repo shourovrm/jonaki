@@ -3,6 +3,7 @@ package app.jonaki.settings
 import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.AnswerStyle
 import app.jonaki.core.agent.ApprovalMode
+import app.jonaki.core.agent.ApprovalRule
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
@@ -64,6 +65,8 @@ data class SettingsSnapshot(
     val subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
     /** Subagent types the user made, in the order they were added (D-138). */
     val customSubagents: List<CustomSubagent> = emptyList(),
+    /** "Always allow" rules of Settings > Approvals; each names one action of one tool and applies in every thread. */
+    val approvalRules: List<ApprovalRule> = emptyList(),
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -127,6 +130,7 @@ class AppSettings(
             localModelTools = preferences.getStringSet(LOCAL_MODEL_TOOLS, null)?.toSet() ?: LocalModelToolList.DEFAULT,
             subagentLimits = readSubagentLimits(customSubagents),
             customSubagents = customSubagents,
+            approvalRules = ApprovalRules.fromText(preferences.getString(APPROVAL_RULES, "").orEmpty()),
         )
     }
 
@@ -225,6 +229,7 @@ class AppSettings(
         editor.putInt(SUBAGENTS_MAX_PER_MESSAGE, limits.maxPerMessage)
         editor.putString(SUBAGENT_BUDGETS, SubagentBudgets.toText(limits.budgets))
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
+        editor.putString(APPROVAL_RULES, ApprovalRules.toText(snapshot.approvalRules))
         editor.apply()
     }
 
@@ -268,5 +273,6 @@ class AppSettings(
         const val SUBAGENT_COST_CENTS = "subagent_cost_cents"
         const val SUBAGENT_MINUTES = "subagent_minutes"
         const val CUSTOM_SUBAGENTS = "custom_subagents"
+        const val APPROVAL_RULES = "approval_rules"
     }
 }

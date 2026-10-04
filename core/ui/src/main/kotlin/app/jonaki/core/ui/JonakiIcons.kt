@@ -232,6 +232,43 @@ object JonakiIcons {
     /** Material "skip_next": a part a subagent skipped (D-126). */
     val SkipNext: ImageVector by lazy { icon("SkipNext", "M6,18l8.5,-6L6,6v12zM16,6v12h2V6h-2z") }
 
+    /** Material "security" outlined: the shield of the Ask approval mode, an empty guard that waits for you. */
+    val ShieldOutline: ImageVector by lazy {
+        icon(
+            "ShieldOutline",
+            "M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z" +
+                "M19,11c0,4.52 -3.2,8.99 -7,10.88 -3.8,-1.89 -7,-6.36 -7,-10.88V6.3l7,-3.11 7,3.11V11z",
+        )
+    }
+
+    /** Material "verified_user": the shield of the Auto approval mode. */
+    val ShieldCheck: ImageVector by lazy {
+        icon(
+            "ShieldCheck",
+            "M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z" +
+                "M10,17l-4,-4 1.41,-1.41L10,14.17l6.59,-6.59L18,9l-8,8z",
+        )
+    }
+
+    /** Material "gpp_bad": the shield of the Bypass approval mode, with a cross where the check was. */
+    val ShieldCross: ImageVector by lazy {
+        icon(
+            "ShieldCross",
+            "M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z" +
+                "M15.5,14.09L14.09,15.5 12,13.41 9.91,15.5 8.5,14.09 10.59,12 8.5,9.91 9.91,8.5 12,10.59 14.09,8.5" +
+                "l1.41,1.41L13.41,12l2.09,2.09z",
+        )
+    }
+
+    /** Material "done_all": marks the approval chip while "Allow all in this thread" is on. */
+    val DoneAll: ImageVector by lazy {
+        icon(
+            "DoneAll",
+            "M18,7l-1.41,-1.41 -6.34,6.34 1.41,1.41L18,7zM22.24,5.59L11.66,16.17 7.48,12l-1.41,1.41L11.66,19l12,-12" +
+                " -1.42,-1.41zM0.41,13.41L6,19l1.41,-1.41L1.83,12 0.41,13.41z",
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
             .addPath(pathData = addPathNodes(pathData), fill = SolidColor(Color.Black))

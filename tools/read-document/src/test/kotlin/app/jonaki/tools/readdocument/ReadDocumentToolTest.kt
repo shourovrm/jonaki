@@ -140,4 +140,11 @@ class ReadDocumentToolTest {
         assertTrue(output.text.contains("Full output saved to work/tool-output/read_document-1.txt"))
         assertTrue(File(threadFolder, "work/tool-output/read_document-1.txt").readText().contains("6000000"))
     }
+
+    @Test
+    fun theResultIsOutsideContentNamedByTheFile() {
+        val arguments = JsonObject(mapOf("path" to JsonPrimitive("inbox/offer.pdf")))
+
+        assertEquals("offer.pdf", ReadDocumentTool().outsideContentSourceOf(arguments))
+    }
 }

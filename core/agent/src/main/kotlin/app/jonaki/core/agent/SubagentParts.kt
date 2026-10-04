@@ -53,7 +53,7 @@ data class SubagentLimits(
     val maxNotesCalls: Int = 10,
     /** Applies only while the calls' cost is known. */
     val costCapUsd: Double = 0.10,
-    /** Long enough for three unanswered 3-minute approvals. */
+    /** How long one subagent may run before it returns what it has. */
     val timeLimit: Duration = 10.minutes,
     /** Wait before the one retry of an overloaded model, as for the thread's agent (D-026). */
     val retryDelay: Duration = 2.seconds,
@@ -81,8 +81,6 @@ data class SubagentOutcome(
     val stop: SubagentStop,
     /** Its final answer, or for a stop without one, what it wrote and found so far. */
     val answer: String,
-    /** Parts skipped because an approval was not answered within 3 minutes (D-015). */
-    val skipped: List<String>,
     val toolSteps: Int,
     /** Null when no call had a known cost. */
     val costUsd: Double?,
@@ -103,8 +101,6 @@ data class SubagentStart(
 enum class SubagentStepStatus {
     DONE,
     FAILED,
-    DENIED,
-    SKIPPED,
 }
 
 /**
@@ -159,7 +155,6 @@ fun interface ParentAsker {
 internal class SubagentProgress {
     private val texts = mutableListOf<String>()
     private val toolResults = mutableListOf<Pair<String, String>>()
-    private val skippedParts = mutableListOf<String>()
     private var knownCostUsd: Double? = null
 
     /** Calls that count against the step budget; the notes board is not among them. */
@@ -196,11 +191,6 @@ internal class SubagentProgress {
     }
 
     @Synchronized
-    fun addSkipped(part: String) {
-        skippedParts += part
-    }
-
-    @Synchronized
     fun addCost(costUsd: Double?) {
         if (costUsd != null) {
             knownCostUsd = (knownCostUsd ?: 0.0) + costUsd
@@ -209,7 +199,7 @@ internal class SubagentProgress {
 
     @Synchronized
     fun finished(stop: SubagentStop, finalText: String): SubagentOutcome =
-        SubagentOutcome(stop, finalText.trim(), skippedParts.toList(), toolSteps, knownCostUsd)
+        SubagentOutcome(stop, finalText.trim(), toolSteps, knownCostUsd)
 
     /** For a stop without a final answer: its texts, then its last tool results, cut short. */
     @Synchronized
@@ -223,7 +213,7 @@ internal class SubagentProgress {
                 parts += "[$toolName]\n${text.take(RESULT_CHARACTERS_KEPT)}"
             }
         }
-        return SubagentOutcome(stop, parts.joinToString("\n\n"), skippedParts.toList(), toolSteps, knownCostUsd, failure)
+        return SubagentOutcome(stop, parts.joinToString("\n\n"), toolSteps, knownCostUsd, failure)
     }
 
     private companion object {

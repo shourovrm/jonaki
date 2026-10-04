@@ -136,8 +136,10 @@ fun ChatScreen(
     onOpenStyle: () -> Unit = {},
     /** Keep on the incognito banner: the thread becomes a regular one (D-111). */
     onKeepThread: () -> Unit = {},
-    /** An approval mode picked for this thread in the menu; null follows Settings (D-058). */
+    /** An approval mode picked for this thread in the chip's sheet; null follows Settings (D-058). */
     onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
+    /** "Withdraw" in the chip's sheet: every tool asks again by the mode. */
+    onWithdrawAllowAll: () -> Unit = {},
     /** The ring pill: the app works out [ChatUiState.context] for the sheet; null leaves the pill without a tap. */
     onOpenContext: (() -> Unit)? = null,
     /** A run_code step was tapped: the app fills [ChatUiState.codeRun] for the code sheet (D-090). */
@@ -178,7 +180,6 @@ fun ChatScreen(
                         onRename = onRename,
                         onOpenMemory = onOpenMemory,
                         onOpenSkills = onOpenSkills,
-                        onOpenApprovals = { openSheet = ChatSheet.APPROVALS },
                         onOpenStyle = onOpenStyle,
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -205,6 +206,9 @@ fun ChatScreen(
                                     openContext()
                                 }
                             },
+                            approvalMode = state.threadApprovalMode ?: state.defaultApprovalMode,
+                            allowAllInThread = state.allowAllInThread,
+                            onApprovalClick = { openSheet = ChatSheet.APPROVALS },
                         )
                     }
                     if (state.attachments.isNotEmpty()) {
@@ -276,12 +280,17 @@ fun ChatScreen(
             )
             openSheet == ChatSheet.USAGE && usage != null -> UsageSheet(usage, onDismiss = { openSheet = ChatSheet.NONE })
             openSheet == ChatSheet.CONTEXT -> ContextSheet(state.context, onDismiss = { openSheet = ChatSheet.NONE })
-            openSheet == ChatSheet.APPROVALS -> ApprovalModeDialog(
-                selected = state.threadApprovalMode,
-                defaultChoice = state.defaultApprovalMode,
+            openSheet == ChatSheet.APPROVALS -> ApprovalSheet(
+                threadMode = state.threadApprovalMode,
+                defaultMode = state.defaultApprovalMode,
+                allowAllInThread = state.allowAllInThread,
                 onSelect = { choice ->
                     openSheet = ChatSheet.NONE
                     onApprovalModeChange(choice)
+                },
+                onWithdrawAllowAll = {
+                    openSheet = ChatSheet.NONE
+                    onWithdrawAllowAll()
                 },
                 onDismiss = { openSheet = ChatSheet.NONE },
             )
@@ -324,26 +333,6 @@ private enum class ChatSheet {
     CONTEXT,
 }
 
-/** Follow Settings, or this thread's own mode (D-058). */
-@Composable
-private fun ApprovalModeDialog(
-    selected: ApprovalModeChoice?,
-    defaultChoice: ApprovalModeChoice,
-    onSelect: (ApprovalModeChoice?) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.chat_approvals_title)) },
-        text = { ApprovalModeOptions(selected = selected, onSelect = onSelect, defaultChoice = defaultChoice) },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.chat_approvals_close))
-            }
-        },
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatTopBar(
@@ -353,7 +342,6 @@ private fun ChatTopBar(
     onRename: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
-    onOpenApprovals: () -> Unit,
     onOpenStyle: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -410,20 +398,6 @@ private fun ChatTopBar(
                             onClick = {
                                 menuOpen = false
                                 onOpenSkills()
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.chat_menu_approvals)) },
-                            trailingIcon = {
-                                Text(
-                                    approvalModeLabel(state.threadApprovalMode ?: state.defaultApprovalMode),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                            onClick = {
-                                menuOpen = false
-                                onOpenApprovals()
                             },
                         )
                     }
@@ -579,29 +553,26 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                val agentLabel = approval.agentLabel
-                val title = if (agentLabel == null) {
-                    stringResource(R.string.chat_approval_title, approval.toolName)
-                } else {
-                    stringResource(R.string.chat_approval_title_subagent, agentLabel.replaceFirstChar { it.uppercase() }, approval.toolName)
-                }
                 Text(
-                    title,
+                    stringResource(R.string.chat_approval_title, approval.toolName),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                val waitEndsAt = approval.waitEndsAtMillis
-                if (waitEndsAt != null) {
-                    Spacer(Modifier.width(8.dp))
-                    WaitCountdown(waitEndsAt)
-                }
             }
             Text(
                 approval.description,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
+                modifier = Modifier.padding(top = 4.dp, bottom = if (approval.afterOutsideContent) 2.dp else 10.dp),
             )
+            if (approval.afterOutsideContent) {
+                Text(
+                    stringResource(R.string.chat_approval_after_outside),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = JonakiTheme.colors.deny,
+                    modifier = Modifier.padding(bottom = 10.dp),
+                )
+            }
             val subagentsAfter = approval.subagentsAfter
             if (subagentsAfter != null) {
                 Text(
@@ -635,19 +606,15 @@ private fun ApprovalCard(approval: ChatItem.Approval, onChoice: (String, Approva
                 ) {
                     Text(stringResource(R.string.chat_approval_once))
                 }
-                // A subagent's allowance lasts for its task; the thread's own agent's for the thread (D-062).
-                // Subagents beyond the automatic limit are decided each time, so they get no allowance (D-137).
-                val isSubagent = approval.agentLabel != null
-                if (approval.subagentsAfter == null) FilledTonalButton(
-                    onClick = {
-                        onChoice(approval.id, if (isSubagent) ApprovalChoice.ALLOW_FOR_TASK else ApprovalChoice.ALLOW_FOR_THREAD)
-                    },
+                // Calls that always ask (very risky, after outside content, over the subagent cap) offer no allowance.
+                if (approval.offersThreadAllowance && approval.subagentsAfter == null) FilledTonalButton(
+                    onClick = { onChoice(approval.id, ApprovalChoice.ALLOW_ALL_IN_THREAD) },
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = onContainer.copy(alpha = 0.12f),
                         contentColor = onContainer,
                     ),
                 ) {
-                    Text(stringResource(if (isSubagent) R.string.chat_approval_task else R.string.chat_approval_thread))
+                    Text(stringResource(R.string.chat_approval_thread))
                 }
                 TextButton(
                     onClick = { onChoice(approval.id, ApprovalChoice.DENY) },
@@ -897,20 +864,3 @@ private fun StopButton(onStop: () -> Unit) {
         Icon(JonakiIcons.Stop, contentDescription = stringResource(R.string.chat_stop), modifier = Modifier.size(22.dp))
     }
 }
-
-/** The time left before a subagent's card is withdrawn unanswered (D-062), ticking each second. */
-@Composable
-private fun WaitCountdown(waitEndsAtMillis: Long) {
-    val now by produceState(System.currentTimeMillis(), waitEndsAtMillis) {
-        while (value < waitEndsAtMillis) {
-            delay(COUNTDOWN_TICK_MILLIS)
-            value = System.currentTimeMillis()
-        }
-    }
-    Text(
-        formatCountdown(waitEndsAtMillis - now),
-        style = MaterialTheme.typography.labelLarge.copy(fontFamily = MonospaceFamily),
-    )
-}
-
-private const val COUNTDOWN_TICK_MILLIS = 1_000L

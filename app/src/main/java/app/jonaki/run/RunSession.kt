@@ -9,7 +9,6 @@ import app.jonaki.core.agent.ApprovalRequester
 import app.jonaki.core.agent.RequestTimer
 import app.jonaki.core.agent.RunOutcome
 import app.jonaki.core.agent.StepRecorder
-import app.jonaki.core.agent.SubagentAsk
 import app.jonaki.core.model.Role
 import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.storage.HistoryMapper
@@ -34,7 +33,7 @@ class RunSession(
     elapsedClock: () -> Long,
     /** Shows the approval card; the runner clears it once answered. */
     private val onApprovalNeeded: (PendingApproval) -> Unit,
-    /** Removes a card nobody answered in time (a subagent's 3-minute rule, D-062), or one cut off by Stop. */
+    /** Removes a card once it is answered, or when Stop cut it off. */
     private val onApprovalWithdrawn: (PendingApproval) -> Unit,
     /** Counts steps for the thread list's "step N" label. */
     private val onStepStarted: () -> Unit,
@@ -61,7 +60,6 @@ class RunSession(
     private var streamingPosition: Long = 0
     private val streamingText = StringBuilder()
     private val streamingReasoning = StringBuilder()
-    // Only the thread agent's denials; a subagent's steps get their status from SubagentSession.
     private val deniedToolCallIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val stepsOfThisRun = mutableSetOf<String>()
 
@@ -93,12 +91,20 @@ class RunSession(
     override suspend fun requestApproval(request: ApprovalRequest): ApprovalDecision {
         setStepStatus(request.toolCall.id, StepStatus.WAITING_FOR_APPROVAL)
         val answer = CompletableDeferred<ApprovalDecision>()
-        val subagentsAfter = if (request.toolName == DELEGATE_TOOL && request.subagent == null) {
+        val subagentsAfter = if (request.toolName == DELEGATE_TOOL) {
             subagentsStarted() + DelegateCalls.taskCount(request.toolCall.argumentsJson)
         } else {
             null
         }
-        val pending = PendingApproval(threadId, request.toolName, request.toolCall, answer, request.subagent, subagentsAfter)
+        val pending = PendingApproval(
+            threadId = threadId,
+            toolName = request.toolName,
+            toolCall = request.toolCall,
+            answer = answer,
+            offersThreadAllowance = request.offersThreadAllowance,
+            afterOutsideContent = request.afterOutsideContent,
+            subagentsAfter = subagentsAfter,
+        )
         onApprovalNeeded(pending)
         val decision = try {
             answer.await()
@@ -106,9 +112,7 @@ class RunSession(
             onApprovalWithdrawn(pending)
         }
         if (decision == ApprovalDecision.DENY) {
-            if (request.subagent == null) {
-                deniedToolCallIds += request.toolCall.id
-            }
+            deniedToolCallIds += request.toolCall.id
             setStepStatus(request.toolCall.id, StepStatus.DENIED)
         } else {
             // The step's time counts from approval, not from the wait for the user.
@@ -281,8 +285,10 @@ data class PendingApproval(
     val toolName: String,
     val toolCall: app.jonaki.core.model.ToolCall,
     val answer: CompletableDeferred<ApprovalDecision>,
-    /** Set when a subagent asks; the card names it and offers "Allow for this task" (D-062). */
-    val subagent: SubagentAsk? = null,
+    /** False for a call that always asks: the card offers only Allow once and Deny. */
+    val offersThreadAllowance: Boolean = true,
+    /** True when the card is there because the thread read outside content and this call sends data out. */
+    val afterOutsideContent: Boolean = false,
     /**
      * For a delegate card: the subagents this run will have started if the
      * user allows it (D-137); null for every other card.

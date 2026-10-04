@@ -84,6 +84,13 @@ class ScheduleTool(
     override fun sideEffectOf(arguments: JsonObject): SideEffect =
         if (arguments.stringArgument("action") == Action.LIST.argument) SideEffect.READ_ONLY else SideEffect.CHANGES
 
+    // A scheduled task lives in Jonaki and runs here again, where every guard applies; nothing leaves the app.
+    override fun sendsOutOf(arguments: JsonObject): Boolean = false
+
+    override fun actionOf(arguments: JsonObject): String? = arguments.stringArgument("action")
+
+    override val ruleActions: List<String> = listOf(Action.CREATE.argument, Action.CANCEL.argument)
+
     override val requiredCapabilities: Set<Capability> = emptySet()
 
     /** Long enough for the user to answer Android's notification permission dialog. */

@@ -667,7 +667,6 @@ private fun ChatRoute(
             contextWindowTokens = modelInfo?.contextWindowTokens,
             contextUsedTokens = lastInputTokens ?: 0,
             costUsd = threadCost ?: 0.0,
-            bypassApprovals = !isNew && runner.approvalModeFor(thread) == ApprovalMode.BYPASS,
         )
     } else {
         null
@@ -706,6 +705,7 @@ private fun ChatRoute(
         incognito = if (isNew) isNewIncognito else thread?.incognito == true,
         threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
         defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
+        allowAllInThread = !isNew && thread?.allowAllInThread == true,
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
     )
@@ -788,6 +788,11 @@ private fun ChatRoute(
         onCancelEdit = {
             editingMessageId = null
             draft = ""
+        },
+        onWithdrawAllowAll = {
+            if (!isNew) {
+                scope.launch { runner.withdrawAllowAll(threadId) }
+            }
         },
         onApprovalChoice = { approvalId, choice -> runner.answerApproval(threadId, approvalId, decisionOf(choice)) },
         onRetry = { runner.retry(threadId) },
@@ -1343,8 +1348,7 @@ private fun routingUiOf(routing: OpenRouterRouting): RoutingUi = when (routing) 
 
 private fun decisionOf(choice: ApprovalChoice): ApprovalDecision = when (choice) {
     ApprovalChoice.ALLOW_ONCE -> ApprovalDecision.ALLOW_ONCE
-    ApprovalChoice.ALLOW_FOR_THREAD -> ApprovalDecision.ALLOW_FOR_THREAD
-    ApprovalChoice.ALLOW_FOR_TASK -> ApprovalDecision.ALLOW_FOR_TASK
+    ApprovalChoice.ALLOW_ALL_IN_THREAD -> ApprovalDecision.ALLOW_ALL_IN_THREAD
     ApprovalChoice.DENY -> ApprovalDecision.DENY
 }
 

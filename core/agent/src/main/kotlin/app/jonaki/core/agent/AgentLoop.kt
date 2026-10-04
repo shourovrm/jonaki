@@ -173,8 +173,25 @@ class AgentLoop(
     private suspend fun runToolCall(toolCall: ToolCall): FinishedCall {
         record(AgentEvent.ToolStarted(toolCall))
         val output = outputFor(toolCall)
-        val message = Message(role = Role.TOOL, text = output.text, toolCallId = toolCall.id)
+        // The saved message holds the wrapped text, so every later request sends the same bytes (D-005);
+        // the step card shows the output without the wrapper.
+        val message = Message(role = Role.TOOL, text = textForModel(toolCall, output), toolCallId = toolCall.id)
         return FinishedCall(output, message)
+    }
+
+    /**
+     * The result as the model reads it: outside content is wrapped as data.
+     * The thread remembers that it read some, so that later calls that send
+     * data out ask (see [OutsideContent.sendOutNeedsCard]).
+     */
+    private suspend fun textForModel(toolCall: ToolCall, output: ToolOutput): String {
+        val tool = toolsByName[toolCall.toolName] ?: return output.text
+        val arguments = parseToolArguments(toolCall.argumentsJson) ?: return output.text
+        val wrapped = OutsideContent.wrapResult(tool, arguments, output)
+        if (wrapped.isOutsideContent) {
+            permissionBroker.outsideContentWasRead()
+        }
+        return wrapped.textForModel
     }
 
     private suspend fun outputFor(toolCall: ToolCall): ToolOutput {

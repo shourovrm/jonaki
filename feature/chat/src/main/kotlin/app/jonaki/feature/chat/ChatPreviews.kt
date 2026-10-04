@@ -66,12 +66,14 @@ private fun StatusStripPreviewContent() {
             StatusStrip(status, isRunning = true, onModelClick = {}, onCostClick = {}, webSearchEnabled = true, onWebSearchChange = {})
             StatusStrip(status, isRunning = false, onModelClick = {}, onCostClick = {}, webSearchEnabled = false, onWebSearchChange = {})
             StatusStrip(
-                status.copy(bypassApprovals = true),
+                status,
                 isRunning = false,
                 onModelClick = {},
                 onCostClick = {},
                 webSearchEnabled = false,
                 onWebSearchChange = {},
+                approvalMode = app.jonaki.core.ui.ApprovalModeChoice.BYPASS,
+                allowAllInThread = true,
             )
         }
     }

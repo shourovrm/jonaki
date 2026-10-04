@@ -59,4 +59,14 @@ class ViewImageToolTest {
         assertTrue(view("path" to "../other/a.png").text.contains("outside the thread folder"))
         assertTrue(view("path" to "work/notes.txt").isError)
     }
+
+    @Test
+    fun onlyAnInboxImageIsOutsideContent() {
+        fun sourceOf(path: String) = ViewImageTool().outsideContentSourceOf(JsonObject(mapOf("path" to JsonPrimitive(path))))
+
+        assertEquals("Photo.JPG", sourceOf("inbox/Photo.JPG"))
+        assertEquals("Photo.JPG", sourceOf("./inbox/Photo.JPG"))
+        assertEquals(null, sourceOf("artifacts/chart.png"))
+        assertEquals(null, sourceOf("work/inbox/a.png"))
+    }
 }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -30,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.ui.ContextRing
 import app.jonaki.core.ui.DotStyle
 import app.jonaki.core.ui.GlowDot
@@ -37,10 +37,12 @@ import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
 import app.jonaki.core.ui.UsageFormat
+import app.jonaki.core.ui.approvalModeLabel
 
 /**
- * The status strip above the message field (D-027): model, context window,
- * share of it in use, this thread's cost and its web search switch (D-123).
+ * The status strip above the message field (D-027): model, context window
+ * with the share of it in use, this thread's cost, its web search switch
+ * (D-123) and its approval mode.
  * Each pill is labelled for screen readers; Settings has a page that
  * explains the icons.
  */
@@ -55,6 +57,11 @@ internal fun StatusStrip(
     modifier: Modifier = Modifier,
     /** Opens the context sheet (D-081); null leaves the ring pill without a tap. */
     onContextClick: (() -> Unit)? = null,
+    /** The thread's approval mode as it applies now: its own, else the default from Settings. */
+    approvalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
+    /** "Allow all in this thread" is on. */
+    allowAllInThread: Boolean = false,
+    onApprovalClick: () -> Unit = {},
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -64,19 +71,14 @@ internal fun StatusStrip(
         ModelPill(status.modelName, isRunning, onModelClick)
         val window = status.contextWindowTokens
         if (window != null) {
+            // One pill for the window and its use: the strip has no room for the approval chip otherwise at 360 dp.
             val windowText = UsageFormat.tokenCount(window)
-            Pill(description = stringResource(R.string.chat_status_context_window, windowText)) {
-                Icon(JonakiIcons.Memory, contentDescription = null, modifier = Modifier.size(PillIconSize))
-                PillNumber(windowText)
-            }
             val percent = UsageFormat.percentUsed(status.contextUsedTokens, window)
-            Pill(description = stringResource(R.string.chat_status_context_used, percent), onClick = onContextClick) {
+            Pill(description = stringResource(R.string.chat_status_context, percent, windowText), onClick = onContextClick) {
                 ContextRing(percent)
                 PillNumber("$percent%")
+                PillNumber("/$windowText")
             }
-        }
-        if (status.bypassApprovals) {
-            BypassPill()
         }
         val costText = UsageFormat.cost(status.costUsd)
         Pill(description = stringResource(R.string.chat_status_cost, costText), onClick = onCostClick) {
@@ -84,6 +86,7 @@ internal fun StatusStrip(
             PillNumber(costText)
         }
         WebSearchPill(webSearchEnabled, onWebSearchChange)
+        ApprovalPill(approvalMode, allowAllInThread, onApprovalClick)
     }
 }
 
@@ -197,26 +200,47 @@ private fun Pill(description: String, onClick: (() -> Unit)? = null, content: @C
     }
 }
 
-/** Drawn in the warning colour, so a thread where nothing asks is never mistaken for one that does. */
+/**
+ * The thread's approval mode as a shield: an empty one for Ask, a checked one for Auto and, in the
+ * warning colour, a crossed one for Bypass, so a thread where nothing asks is never mistaken for one
+ * that does. While "Allow all in this thread" is on, a double check sits beside the shield.
+ */
 @Composable
-private fun BypassPill() {
+private fun ApprovalPill(mode: ApprovalModeChoice, allowAllInThread: Boolean, onClick: () -> Unit) {
     val deny = JonakiTheme.colors.deny
-    val description = stringResource(R.string.chat_status_bypass_description)
+    val isBypass = mode == ApprovalModeChoice.BYPASS
+    val container = if (isBypass) deny.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceContainer
+    val content = if (isBypass) deny else JonakiTheme.colors.inkSoft
+    val icon = when (mode) {
+        ApprovalModeChoice.ASK -> JonakiIcons.ShieldOutline
+        ApprovalModeChoice.AUTO -> JonakiIcons.ShieldCheck
+        ApprovalModeChoice.BYPASS -> JonakiIcons.ShieldCross
+    }
+    val modeLabel = approvalModeLabel(mode)
+    val description = if (allowAllInThread) {
+        stringResource(R.string.chat_status_approval_all, modeLabel)
+    } else {
+        stringResource(R.string.chat_status_approval, modeLabel)
+    }
     Surface(
+        onClick = onClick,
         shape = PillShape,
-        color = deny.copy(alpha = 0.14f),
-        contentColor = deny,
+        color = container,
+        contentColor = content,
         modifier = Modifier.height(PillHeight).clearAndSetSemantics {
             contentDescription = description
+            role = Role.Button
         },
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 9.dp),
         ) {
-            Icon(Icons.Filled.Warning, contentDescription = null, modifier = Modifier.size(PillIconSize))
-            Text(stringResource(R.string.chat_status_bypass), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(PillIconSize))
+            if (allowAllInThread) {
+                Icon(JonakiIcons.DoneAll, contentDescription = null, modifier = Modifier.size(12.dp))
+            }
         }
     }
 }

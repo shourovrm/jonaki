@@ -102,7 +102,7 @@ class PhoneToolTest {
 
         assertEquals(SideEffect.READ_ONLY, costOf("calendar_list"))
         assertEquals(SideEffect.READ_ONLY, costOf("clipboard_read"))
-        for (action in listOf("calendar_add", "reminder", "notify", "clipboard_write", "open_app")) {
+        for (action in listOf("calendar_add", "notify", "clipboard_write", "open_app")) {
             assertEquals(action, SideEffect.CHANGES, costOf(action))
         }
     }
@@ -266,5 +266,33 @@ class PhoneToolTest {
 
         assertTrue(output.isError)
         assertTrue(output.text, output.text.contains("calendar_list"))
+    }
+
+    private fun callOf(action: String) = JsonObject(mapOf("action" to JsonPrimitive(action)))
+
+    @Test
+    fun onlyTheReminderIsReversible() {
+        assertEquals(SideEffect.CHANGES_REVERSIBLE, tool.sideEffectOf(callOf("reminder")))
+        for (action in listOf("calendar_add", "notify", "clipboard_write", "open_app")) {
+            assertEquals(action, SideEffect.CHANGES, tool.sideEffectOf(callOf(action)))
+        }
+    }
+
+    @Test
+    fun theCalendarEventAndTheClipboardSendDataOutAndTheRestDoNot() {
+        val sendingOut = listOf("calendar_list", "calendar_add", "reminder", "notify", "clipboard_read", "clipboard_write", "open_app")
+            .filter { action -> tool.sendsOutOf(callOf(action)) }
+
+        assertEquals(listOf("calendar_add", "clipboard_write"), sendingOut)
+    }
+
+    @Test
+    fun noActionIsVeryRiskyYet() {
+        assertTrue(listOf("calendar_add", "reminder", "notify", "clipboard_write", "open_app").none { action -> tool.isVeryRiskyOf(callOf(action)) })
+    }
+
+    @Test
+    fun theChangingActionsCanBeNamedByARule() {
+        assertEquals(listOf("calendar_add", "reminder", "notify", "clipboard_write", "open_app"), tool.ruleActions)
     }
 }
