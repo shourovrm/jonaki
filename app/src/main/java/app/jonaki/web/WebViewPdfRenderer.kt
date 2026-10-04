@@ -73,6 +73,7 @@ class WebViewPdfRenderer(private val context: Context) : PdfRenderer {
                 client.failure?.let { reason -> throw PdfRenderException(reason) }
                 waitForSteadyPage(webView, client)
                 client.failure?.let { reason -> throw PdfRenderException(reason) }
+                webView.evaluateToText(FIT_TO_PAPER_SCRIPT)
                 printToFile(webView, outputFile, pageSize)
             }
             if (pageCount == null) {
@@ -213,6 +214,29 @@ class WebViewPdfRenderer(private val context: Context) : PdfRenderer {
         const val A4_PRINTABLE_WIDTH = 717
         const val LETTER_PRINTABLE_WIDTH = 739
         const val SLIDES_WIDTH = 1536
+
+        /**
+         * Paper cannot scroll sideways. A report made for the phone puts a wide
+         * table in a box that scrolls and keeps its cells on one line, and on
+         * paper the box cut the table off at the page's edge (seen on the first
+         * report exported on the test phone). For print only, this opens every
+         * box that scrolls sideways and lets table cells wrap.
+         */
+        const val FIT_TO_PAPER_SCRIPT =
+            "(function(){" +
+                "document.querySelectorAll('*').forEach(function(element){" +
+                "var overflowX=getComputedStyle(element).overflowX;" +
+                "if(overflowX==='auto'||overflowX==='scroll'){element.classList.add('jonaki-print-open');}" +
+                "});" +
+                "var style=document.createElement('style');" +
+                "style.textContent='@media print{" +
+                ".jonaki-print-open{overflow:visible !important}" +
+                "table{min-width:0 !important;max-width:100% !important}" +
+                "th,td{white-space:normal !important;overflow-wrap:anywhere}" +
+                "}';" +
+                "document.head.appendChild(style);" +
+                "return 'done';" +
+                "})()"
 
         const val PAGE_FINGERPRINT_SCRIPT =
             "document.body ? [document.body.innerText.length, document.querySelectorAll('canvas,svg').length, " +
