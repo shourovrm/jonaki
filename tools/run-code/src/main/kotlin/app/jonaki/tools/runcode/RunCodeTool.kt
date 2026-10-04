@@ -61,7 +61,8 @@ class RunCodeTool(private val runtimes: List<CodeRuntime>) : Tool {
         if (CodeLanguage.PYTHON in languages) {
             add(
                 "In Python, use open() with the same paths and print(); numpy and pandas work when installed. " +
-                    "There is no pip at run time.",
+                    "There is no pip at run time. Python can read and write Word, Excel and PowerPoint files once " +
+                    "the documents add-on is installed; jonaki_docs has ready-made helpers.",
             )
         }
         if (languages.size > 1) {
