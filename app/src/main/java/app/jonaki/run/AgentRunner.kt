@@ -1,5 +1,6 @@
 package app.jonaki.run
 
+import app.jonaki.guard.FactScreen
 import app.jonaki.guard.GuardFactory
 import app.jonaki.guard.GuardRecorder
 import app.jonaki.guard.RecordingGuard
@@ -146,6 +147,8 @@ class AgentRunner(
     private val skillProposals: SkillProposals? = null,
     /** Read for every run: false leaves propose_skill out, so a Settings switch applies from the next message. */
     private val isSkillProposalOn: () -> Boolean = { true },
+    /** Screens a fact the memory tool saves after outside content; null holds every such fact. */
+    private val factScreen: FactScreen? = null,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -780,6 +783,7 @@ class AgentRunner(
                 projectId = project?.id,
                 clock = System::currentTimeMillis,
                 holdFactsAfterOutsideContent = { settings.snapshot.value.holdFactsAfterOutsideContent },
+                looksPlanted = { factText -> factScreen?.looksPlanted(thread.id, factText) },
             )
         },
         projectName = project?.name,

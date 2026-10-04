@@ -1,14 +1,20 @@
 package app.jonaki.ui
 
+import app.jonaki.guard.GuardRecorder
+import app.jonaki.guard.JevOptions
+import app.jonaki.feature.settings.JevOptionsUi
+import app.jonaki.feature.settings.JevStrictnessChoice
 import app.jonaki.feature.settings.GuardrailOptionsUi
 import app.jonaki.feature.settings.MemoryOptionsUi
 import app.jonaki.feature.settings.ApprovalRuleUi
 import app.jonaki.feature.settings.ApprovalRuleChoiceUi
+import app.jonaki.settings.JevStrictness
 import app.jonaki.settings.ApprovalRules
 import app.jonaki.core.agent.ApprovalRule
 import androidx.compose.runtime.produceState
 import app.jonaki.core.modelcatalog.ThinkingSupport
 import app.jonaki.core.providerapi.ThinkingLevel
+import app.jonaki.core.ui.UsageFormat
 import app.jonaki.core.ui.ThinkingChoice
 import android.net.Uri
 import android.os.SystemClock
@@ -724,7 +730,7 @@ private fun ChatRoute(
         threadApprovalMode = ApprovalMode.entries.firstOrNull { mode -> mode.name == thread?.approvalMode }?.let(::approvalChoiceOf),
         defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
         allowAllInThread = !isNew && thread?.allowAllInThread == true,
-        guardState = guardStateOf(settingsSnapshot.jevGuardOn, SecretName.OPENROUTER in application.secrets.names.collectAsState().value),
+        guardState = guardStateOf(settingsSnapshot.jevOptions.isOn, SecretName.OPENROUTER in application.secrets.names.collectAsState().value),
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
     )
@@ -1054,6 +1060,9 @@ private fun SettingsRoute(
         readPermissionRows(context, snapshot.refusedPermissions)
     }
     val appVersion = remember { installedVersionName(context) }
+    val jevCostThisMonth by remember {
+        application.database.messageDao().observeModelCostSince(GuardRecorder.JEV_MODEL_KEY, startOfThisMonthMillis())
+    }.collectAsState(initial = null)
     val localModelChanges by application.localModels.changes.collectAsState()
     var localModelsSummary by remember { mutableStateOf(LocalModelsSummaryUi()) }
     LaunchedEffect(localModelChanges) {
@@ -1105,7 +1114,13 @@ private fun SettingsRoute(
         customInstructions = snapshot.customInstructions,
         personas = personaRowsOf(personas),
         approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
-        jevGuardOn = snapshot.jevGuardOn,
+        jev = JevOptionsUi(
+            skipsCards = snapshot.jevOptions.skipsCards,
+            screensOutsideContent = snapshot.jevOptions.screensOutsideContent,
+            // The two enums have the same three names; the screen's module does not see the app's.
+            strictness = JevStrictnessChoice.valueOf(snapshot.jevOptions.strictness.name),
+            costThisMonth = jevCostThisMonth?.let(UsageFormat::cost),
+        ),
         guardrails = GuardrailOptionsUi(
             askBeforeSendingOut = snapshot.askBeforeSendingOutAfterOutsideContent,
             holdNewFacts = snapshot.holdFactsAfterOutsideContent,
@@ -1153,7 +1168,17 @@ private fun SettingsRoute(
                 current.copy(searchOrder = names.map { name -> SearchService.valueOf(name) })
             }
         },
-        onJevGuardChange = { on -> settings.update { current -> current.copy(jevGuardOn = on) } },
+        onJevOptionsChange = { options ->
+            settings.update { current ->
+                current.copy(
+                    jevOptions = JevOptions(
+                        skipsCards = options.skipsCards,
+                        screensOutsideContent = options.screensOutsideContent,
+                        strictness = JevStrictness.valueOf(options.strictness.name),
+                    ),
+                )
+            }
+        },
         onExportMemory = {
             permissionScope.launch {
                 val result = application.memoryExport.saveToDownloads()

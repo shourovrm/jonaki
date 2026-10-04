@@ -4,6 +4,7 @@ import android.util.Log
 import app.jonaki.core.model.Role
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MessageEntity
+import app.jonaki.guard.FactScreen
 import app.jonaki.run.BackgroundAnswer
 import app.jonaki.run.BackgroundModel
 import kotlinx.coroutines.sync.Mutex
@@ -26,6 +27,8 @@ class MemoryExtractor(
     private val proposeGlobalFacts: () -> Boolean = { true },
     /** Whether facts found in a thread that read outside content wait for the user's review. */
     private val holdFactsAfterOutsideContent: () -> Boolean = { true },
+    /** The guard's view of a fact found after outside content; see [FactScreen.looksPlanted]. */
+    private val looksPlanted: suspend (threadId: String, factText: String) -> Boolean? = { _, _ -> null },
 ) {
     /** One extraction at a time, so two triggers cannot read and apply the same messages twice. */
     private val lock = Mutex()
@@ -95,7 +98,9 @@ class MemoryExtractor(
         val readOutsideContent = database.threadDao().find(threadId)?.readOutsideContent == true
         val holdAfterOutsideContent = holdFactsAfterOutsideContent() && readOutsideContent
         for (newFact in plan.adds) {
-            val pendingReview = ExtractionWrites.waitsForReview(newFact, waitForReview, holdAfterOutsideContent)
+            // Asked only for a fact that would otherwise be held, so plain threads cost nothing.
+            val heldAsPlanted = holdAfterOutsideContent && FactScreen.waitsForReview(looksPlanted(threadId, newFact.text))
+            val pendingReview = ExtractionWrites.waitsForReview(newFact, waitForReview, heldAsPlanted)
             memoryDao.insert(ExtractionWrites.newMemory(newFact, threadId, projectId, now, pendingReview))
         }
         for (update in plan.updates) {

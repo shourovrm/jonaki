@@ -46,6 +46,8 @@ class JevGuard(
     /** Tests point this at a local server. */
     private val url: String = DECISIONS_URL,
     private val timeLimit: Duration = DEFAULT_TIME_LIMIT,
+    /** Settings > Guardrails picks one of the three presets; the tested one is the default. */
+    private val thresholds: JevThresholds = JevThresholds.BALANCED,
 ) : Guard {
     // The key is only ever put into the Authorization header: never into a
     // body, a reason text or a log line.
@@ -106,8 +108,8 @@ class JevGuard(
         }
 
         val effectIsSafe = choice == JevQuestions.READ_ONLY || choice == JevQuestions.REVERSIBLE
-        val effectIsSure = confidence >= MINIMUM_EFFECT_CONFIDENCE
-        val requestIsServed = servesRequest >= MINIMUM_SERVES_REQUEST
+        val effectIsSure = confidence >= thresholds.effectConfidence
+        val requestIsServed = servesRequest >= thresholds.servesRequest
         val summary = "effect $choice, confidence $confidence, serves_request $servesRequest"
         if (effectIsSafe && effectIsSure && requestIsServed) {
             val note = JevNotes.ranWithoutCard(choice, confidence, servesRequest)
@@ -126,7 +128,7 @@ class JevGuard(
         if (probability == null || probability !in 0.0..1.0) {
             return ResultVerdict(false, null, "Jev's is_injection answer is missing or outside 0 to 1", costUsd, usage)
         }
-        val isFlagged = probability >= MINIMUM_INJECTION_PROBABILITY
+        val isFlagged = probability >= thresholds.injectionProbability
         return ResultVerdict(isFlagged, probability, "is_injection $probability", costUsd, usage)
     }
 
@@ -225,21 +227,6 @@ class JevGuard(
     companion object {
         const val DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
         const val MODEL = "typesafe/jev-1.13"
-
-        // Thresholds from spikes/jev-guard/results.md (40 labelled cases): at
-        // these values all 12 safe actions ran without a card and all 12
-        // risky ones got a card; the closest case, a22, was stopped by two
-        // conditions at once. The spike had 0 missed injections and 0 false
-        // alarms at 0.5, 0.65 and 0.8, so 0.65 sits in the middle.
-
-        /** An effect answer is trusted only at this confidence or above. */
-        const val MINIMUM_EFFECT_CONFIDENCE = 0.9
-
-        /** The action must serve the user's request with at least this probability. */
-        const val MINIMUM_SERVES_REQUEST = 0.65
-
-        /** A text is flagged at this probability or above. */
-        const val MINIMUM_INJECTION_PROBABILITY = 0.65
 
         /** The spike's longest text was 300 characters, so this size is a cost and speed choice, not a measured limit. */
         const val CHUNK_SIZE = 8_000

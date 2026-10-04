@@ -89,7 +89,7 @@ object SettingsSummaries {
 
     /** The guard counts as on only when it can run: its switch is on and an OpenRouter key is saved. */
     private fun guardrails(state: SettingsUiState, texts: SettingsTexts): String {
-        val jevRuns = state.jevGuardOn && state.jevGuardAvailable
+        val jevRuns = state.jev.isOn && state.jevGuardAvailable
         return texts.string(if (jevRuns) R.string.settings_summary_jev_on else R.string.settings_summary_jev_off)
     }
 

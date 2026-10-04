@@ -12,6 +12,9 @@ import app.jonaki.files.IncomingShares
 import app.jonaki.files.LinkedFolder
 import app.jonaki.localmodels.LocalModels
 import app.jonaki.files.VisibleActivity
+import app.jonaki.guard.FactScreen
+import app.jonaki.guard.GuardFactory
+import app.jonaki.guard.GuardRecorder
 import app.jonaki.memory.MemoryExport
 import app.jonaki.memory.MemoryExtractor
 import app.jonaki.phone.AndroidPhone
@@ -84,6 +87,10 @@ class JonakiApplication : Application() {
         private set
 
     lateinit var memoryExport: MemoryExport
+        private set
+
+    /** Screens a fact saved after outside content, for the memory tool and for extraction. */
+    lateinit var factScreen: FactScreen
         private set
 
     /** The skill library in files/skills/, which read_file can read as /skills/ (D-037). */
@@ -178,6 +185,10 @@ class JonakiApplication : Application() {
         localModels = LocalModels(this, httpClient, applicationScope)
         localModelRuntime = LocalModelRuntime(localModels.store)
         backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog, localModelRuntime)
+        factScreen = FactScreen(
+            guard = { GuardFactory(settings, secrets, httpClient).create() },
+            recorderFor = { threadId -> GuardRecorder(threadId, database.stepDao()::appendGuardNote, backgroundModel::saveUsage) },
+        )
         val memoryExtractor = MemoryExtractor(
             database = database,
             backgroundModel = backgroundModel,
@@ -185,6 +196,7 @@ class JonakiApplication : Application() {
             clock = System::currentTimeMillis,
             proposeGlobalFacts = { settings.snapshot.value.suggestFactsForAllThreads },
             holdFactsAfterOutsideContent = { settings.snapshot.value.holdFactsAfterOutsideContent },
+            looksPlanted = factScreen::looksPlanted,
         )
         reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json"))) { settings.snapshot.value.reminderPolicy }
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
@@ -211,6 +223,7 @@ class JonakiApplication : Application() {
             localRuntime = localModelRuntime,
             skillProposals = skillProposals,
             isSkillProposalOn = { settings.snapshot.value.suggestSkills },
+            factScreen = factScreen,
         )
         localModelTools = LocalModelTools(settings, runner::toolsForLocalPromptCosts)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))

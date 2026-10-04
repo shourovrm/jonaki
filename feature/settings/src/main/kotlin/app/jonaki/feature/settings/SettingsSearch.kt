@@ -47,6 +47,10 @@ object SettingsSearch {
         ),
         SettingsPage.GUARDRAILS to listOf(
             R.string.settings_jev_guard,
+            R.string.settings_jev_skip_cards,
+            R.string.settings_jev_screen_outside_content,
+            R.string.settings_jev_strictness,
+            R.string.settings_jev_cost_month,
             R.string.settings_section_after_outside_content,
             R.string.settings_guardrail_ask_before_sending_out,
             R.string.settings_guardrail_hold_new_facts,

@@ -38,8 +38,8 @@ data class SettingsUiState(
     val personas: List<PersonaRowUi> = emptyList(),
     /** When tools ask first, in every thread without its own mode (D-058). */
     val approvalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
-    /** The Jev guard switch, and whether an OpenRouter key exists for it to use. */
-    val jevGuardOn: Boolean = false,
+    /** The Jev guard's options, and whether an OpenRouter key exists for it to use. */
+    val jev: JevOptionsUi = JevOptionsUi(),
     val jevGuardAvailable: Boolean = false,
     val guardrails: GuardrailOptionsUi = GuardrailOptionsUi(),
     val memoryOptions: MemoryOptionsUi = MemoryOptionsUi(),
@@ -167,6 +167,27 @@ data class AddableServiceUi(
     val hint: String,
 )
 
+/** How sure the Jev guard must be; the app maps each stop to its numbers. */
+enum class JevStrictnessChoice {
+    CAREFUL,
+    BALANCED,
+    RELAXED,
+}
+
+/** The Jev guard on Settings > Guardrails. */
+data class JevOptionsUi(
+    /** A call that would show an ordinary card may run without it when Jev is sure. */
+    val skipsCards: Boolean = false,
+    /** Outside results, and facts saved after them, are screened for planted instructions. */
+    val screensOutsideContent: Boolean = false,
+    val strictness: JevStrictnessChoice = JevStrictnessChoice.BALANCED,
+    /** What the guard's calls cost since the first of the month, ready to show; null before any call. */
+    val costThisMonth: String? = null,
+) {
+    val isOn: Boolean
+        get() = skipsCards || screensOutsideContent
+}
+
 /** What a thread does once it has read outside content (a web page, a document, an MCP result, a subagent's answer). */
 data class GuardrailOptionsUi(
     /** A call that sends data out, or makes a scheduled task, always shows its card (D-143). */
@@ -234,7 +255,7 @@ class SettingsActions(
     /** Opens a persona's editor; null opens an empty one for a new persona. */
     val onOpenPersona: (personaId: String?) -> Unit = {},
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
-    val onJevGuardChange: (Boolean) -> Unit = {},
+    val onJevOptionsChange: (JevOptionsUi) -> Unit = {},
     val onGuardrailOptionsChange: (GuardrailOptionsUi) -> Unit = {},
     val onMemoryOptionsChange: (MemoryOptionsUi) -> Unit = {},
     val onExportMemory: () -> Unit = {},

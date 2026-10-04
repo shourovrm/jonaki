@@ -8,6 +8,7 @@ import app.jonaki.core.agent.ApprovalRule
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
+import app.jonaki.guard.JevOptions
 import android.content.Context
 import app.jonaki.phone.ReminderPolicy
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
@@ -67,8 +68,8 @@ data class SettingsSnapshot(
     val subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
     /** How much of the time zone each message's date line tells the model; nothing unless the user chooses more. */
     val zoneInMessages: ZoneInMessages = ZoneInMessages.NONE,
-    /** The Jev guard: a second layer on the approval rules and a screen for outside text; off until switched on. */
-    val jevGuardOn: Boolean = false,
+    /** The Jev guard's options (Settings > Guardrails); both jobs are off until switched on. */
+    val jevOptions: JevOptions = JevOptions(skipsCards = false, screensOutsideContent = false, strictness = JevStrictness.BALANCED),
     /** Background extraction saves facts from finished chats (D-036); off leaves only the memory tool. */
     val saveFactsFromChats: Boolean = true,
     /** Extraction may propose a fact for every thread; such a fact always waits for approval. */
@@ -152,7 +153,12 @@ class AppSettings(
                 intervalMinutes = preferences.getInt(REMINDER_INTERVAL_MINUTES, ReminderPolicy.DEFAULT_INTERVAL_MINUTES),
                 maxRepeats = preferences.getInt(REMINDER_MAX_REPEATS, ReminderPolicy.DEFAULT_MAX_REPEATS),
             ).withinBounds(),
-            jevGuardOn = preferences.getBoolean(JEV_GUARD_ON, false),
+            jevOptions = JevOptions(
+                // Before the two switches there was one; its value is the default of both.
+                skipsCards = preferences.getBoolean(JEV_SKIPS_CARDS, preferences.getBoolean(JEV_GUARD_ON, false)),
+                screensOutsideContent = preferences.getBoolean(JEV_SCREENS_OUTSIDE_CONTENT, preferences.getBoolean(JEV_GUARD_ON, false)),
+                strictness = enumOrDefault(preferences.getString(JEV_STRICTNESS, null), JevStrictness.BALANCED),
+            ),
             saveFactsFromChats = preferences.getBoolean(SAVE_FACTS_FROM_CHATS, true),
             suggestFactsForAllThreads = preferences.getBoolean(SUGGEST_FACTS_FOR_ALL_THREADS, true),
             suggestSkills = preferences.getBoolean(SUGGEST_SKILLS, true),
@@ -257,7 +263,9 @@ class AppSettings(
         editor.putInt(SUBAGENTS_PER_CALL, limits.perCall)
         editor.putInt(SUBAGENTS_MAX_PER_MESSAGE, limits.maxPerMessage)
         editor.putString(SUBAGENT_BUDGETS, SubagentBudgets.toText(limits.budgets))
-        editor.putBoolean(JEV_GUARD_ON, snapshot.jevGuardOn)
+        editor.putBoolean(JEV_SKIPS_CARDS, snapshot.jevOptions.skipsCards)
+        editor.putBoolean(JEV_SCREENS_OUTSIDE_CONTENT, snapshot.jevOptions.screensOutsideContent)
+        editor.putString(JEV_STRICTNESS, snapshot.jevOptions.strictness.name)
         editor.putBoolean(SAVE_FACTS_FROM_CHATS, snapshot.saveFactsFromChats)
         editor.putBoolean(SUGGEST_FACTS_FOR_ALL_THREADS, snapshot.suggestFactsForAllThreads)
         editor.putBoolean(SUGGEST_SKILLS, snapshot.suggestSkills)
@@ -313,7 +321,11 @@ class AppSettings(
         const val CUSTOM_SUBAGENTS = "custom_subagents"
         const val REMINDER_INTERVAL_MINUTES = "reminder_interval_minutes"
         const val REMINDER_MAX_REPEATS = "reminder_max_repeats"
+        /** The single switch of version 1.2.0; read once as the default of the two that replaced it. */
         const val JEV_GUARD_ON = "jev_guard_on"
+        const val JEV_SKIPS_CARDS = "jev_skips_cards"
+        const val JEV_SCREENS_OUTSIDE_CONTENT = "jev_screens_outside_content"
+        const val JEV_STRICTNESS = "jev_strictness"
         const val SAVE_FACTS_FROM_CHATS = "save_facts_from_chats"
         const val SUGGEST_FACTS_FOR_ALL_THREADS = "suggest_facts_for_all_threads"
         const val SUGGEST_SKILLS = "suggest_skills"

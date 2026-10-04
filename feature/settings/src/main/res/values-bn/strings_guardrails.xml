@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_root_guardrails">সুরক্ষা</string>
-    <string name="settings_section_jev">জেভ</string>
     <string name="settings_section_after_outside_content">বাইরের লেখা পড়ার পর</string>
     <string name="settings_guardrail_ask_before_sending_out">বাইরে পাঠানোর আগে জিজ্ঞাসা</string>
     <string name="settings_guardrail_hold_new_facts">নতুন তথ্য যাচাইয়ের জন্য রাখুন</string>
@@ -12,4 +11,11 @@
     <string name="settings_memory_suggest_global">সব থ্রেডের জন্য তথ্য প্রস্তাব</string>
     <string name="settings_memory_export">Markdown হিসেবে এক্সপোর্ট</string>
     <string name="settings_skills_suggest">স্কিল প্রস্তাব</string>
+    <string name="settings_jev_skip_cards">নিরাপদ কাজে কার্ড বাদ</string>
+    <string name="settings_jev_screen_outside_content">বাইরের লেখা যাচাই</string>
+    <string name="settings_jev_strictness">কড়াকড়ি</string>
+    <string name="settings_jev_strictness_careful">সতর্ক</string>
+    <string name="settings_jev_strictness_balanced">মাঝামাঝি</string>
+    <string name="settings_jev_strictness_relaxed">শিথিল</string>
+    <string name="settings_jev_cost_month">এই মাসের খরচ</string>
 </resources>

@@ -134,8 +134,9 @@ class SettingsSummariesTest {
     fun guardrailsSaysWhetherTheJevGuardRuns() {
         assertEquals("Jev guard off", summary(SettingsPage.GUARDRAILS, emptyState))
         // Switched on without a key it cannot run, so the row still says off.
-        assertEquals("Jev guard off", summary(SettingsPage.GUARDRAILS, emptyState.copy(jevGuardOn = true)))
-        assertEquals("Jev guard on", summary(SettingsPage.GUARDRAILS, emptyState.copy(jevGuardOn = true, jevGuardAvailable = true)))
+        val oneJobOn = emptyState.copy(jev = JevOptionsUi(screensOutsideContent = true))
+        assertEquals("Jev guard off", summary(SettingsPage.GUARDRAILS, oneJobOn))
+        assertEquals("Jev guard on", summary(SettingsPage.GUARDRAILS, oneJobOn.copy(jevGuardAvailable = true)))
     }
 
     @Test

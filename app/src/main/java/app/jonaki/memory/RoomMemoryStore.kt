@@ -1,5 +1,6 @@
 package app.jonaki.memory
 
+import app.jonaki.guard.FactScreen
 import app.jonaki.core.storage.FtsQuery
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MemoryEntity
@@ -24,6 +25,12 @@ class RoomMemoryStore(
     private val clock: () -> Long,
     /** Whether a fact saved after the thread read outside content waits for the user's approval. */
     private val holdFactsAfterOutsideContent: () -> Boolean = { true },
+    /**
+     * The guard's view of a fact saved after outside content: true when it
+     * looks planted, false when it looks clear, null without an answer. Only
+     * a clear fact is saved without waiting ([FactScreen.waitsForReview]).
+     */
+    private val looksPlanted: suspend (factText: String) -> Boolean? = { null },
 ) : MemoryStore {
     private val memoryDao = database.memoryDao()
 
@@ -31,7 +38,8 @@ class RoomMemoryStore(
         val visible = memoryDao.listVisibleFrom(threadId, projectId)
         val same = FactText.findSame(visible, text)
         // Read now: the thread can read a web page during a run, after the tool was built.
-        val waitsForReview = holdFactsAfterOutsideContent() && threadReadOutsideContent()
+        val mayBePlanted = holdFactsAfterOutsideContent() && threadReadOutsideContent()
+        val waitsForReview = mayBePlanted && FactScreen.waitsForReview(looksPlanted(text))
         if (same != null) {
             val sameScope = scopeOf(same)
             if (reach(scope) <= reach(sameScope)) {

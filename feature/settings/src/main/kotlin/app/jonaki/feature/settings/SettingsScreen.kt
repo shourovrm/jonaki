@@ -152,10 +152,8 @@ private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
 @Composable
 private fun GuardrailsPage(state: SettingsUiState, actions: SettingsActions) {
     val options = state.guardrails
-    SectionLabel(stringResource(R.string.settings_section_jev))
-    Group {
-        JevGuardRow(state.jevGuardOn, state.jevGuardAvailable, actions.onJevGuardChange)
-    }
+    SectionLabel(stringResource(R.string.settings_jev_guard))
+    JevGuardSection(state.jev, state.jevGuardAvailable, actions.onJevOptionsChange)
     SectionLabel(stringResource(R.string.settings_section_after_outside_content))
     Group {
         OptionSwitchRow(

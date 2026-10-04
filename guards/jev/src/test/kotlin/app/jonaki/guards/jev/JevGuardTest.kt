@@ -46,8 +46,11 @@ class JevGuardTest {
         server.shutdown()
     }
 
-    private fun guard(apiKey: String = secretKey, timeLimit: kotlin.time.Duration = 3_000.milliseconds) =
-        JevGuard(apiKey, OkHttpClient(), server.url("/api/alpha/decisions").toString(), timeLimit)
+    private fun guard(
+        apiKey: String = secretKey,
+        timeLimit: kotlin.time.Duration = 3_000.milliseconds,
+        thresholds: JevThresholds = JevThresholds.BALANCED,
+    ) = JevGuard(apiKey, OkHttpClient(), server.url("/api/alpha/decisions").toString(), timeLimit, thresholds)
 
     private val noArguments: JsonObject = buildJsonObject { }
 
@@ -243,6 +246,37 @@ class JevGuardTest {
 
         assertTrue(guard().screenResult("web_fetch", "text").isFlagged)
         assertFalse(guard().screenResult("web_fetch", "text").isFlagged)
+    }
+
+    private fun judgeWith(thresholds: JevThresholds, body: String): ActionVerdict = runBlocking {
+        server.enqueue(MockResponse().setBody(body))
+        guard(thresholds = thresholds).judgeAction("remind me at 8", "phone", noArguments)
+    }
+
+    @Test
+    fun carefulNeedsMoreConfidenceThanBalancedAndRelaxedLess() {
+        val fairlySure = answerBody(confidence = 0.92, servesRequest = 0.7)
+        assertShowsCard(judgeWith(JevThresholds.CAREFUL, fairlySure))
+        assertTrue(judgeWith(JevThresholds.BALANCED, fairlySure) is ActionVerdict.MayRunWithoutCard)
+
+        val lessSure = answerBody(confidence = 0.82, servesRequest = 0.55)
+        assertShowsCard(judgeWith(JevThresholds.BALANCED, lessSure))
+        assertTrue(judgeWith(JevThresholds.RELAXED, lessSure) is ActionVerdict.MayRunWithoutCard)
+    }
+
+    @Test
+    fun noPresetLetsAnIrreversibleActionRunWithoutACard() {
+        assertShowsCard(judgeWith(JevThresholds.RELAXED, answerBody(choice = "irreversible")))
+        assertShowsCard(judgeWith(JevThresholds.RELAXED, answerBody(choice = "sends_out")))
+    }
+
+    @Test
+    fun carefulFlagsATextThatRelaxedLetsPass() = runBlocking {
+        server.enqueue(MockResponse().setBody(injectionBody(0.6)))
+        server.enqueue(MockResponse().setBody(injectionBody(0.6)))
+
+        assertTrue(guard(thresholds = JevThresholds.CAREFUL).screenResult("web_fetch", "text").isFlagged)
+        assertFalse(guard(thresholds = JevThresholds.RELAXED).screenResult("web_fetch", "text").isFlagged)
     }
 
     @Test

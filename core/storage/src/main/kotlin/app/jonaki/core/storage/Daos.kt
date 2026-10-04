@@ -155,6 +155,10 @@ interface MessageDao {
     @Query("SELECT SUM(costUsd) FROM messages WHERE createdAtMillis >= :sinceMillis")
     fun observeCostSince(sinceMillis: Long): Flow<Double?>
 
+    /** What one model's calls cost since [sinceMillis]; the Jev guard's line in Settings > Guardrails. */
+    @Query("SELECT SUM(costUsd) FROM messages WHERE model = :modelKey AND createdAtMillis >= :sinceMillis")
+    fun observeModelCostSince(modelKey: String, sinceMillis: Long): Flow<Double?>
+
     /** One row per model used in a thread, in the order the models were first used (usage sheet). */
     @Query(
         "SELECT model, COUNT(*) AS turns, SUM(inputTokens) AS inputTokens, " +
