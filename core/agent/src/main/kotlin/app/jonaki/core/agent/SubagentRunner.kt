@@ -45,6 +45,8 @@ class SubagentRunner(
     private val memorySection: String,
     private val skillSection: String,
     private val now: () -> ZonedDateTime,
+    /** How much of the time zone a task's date line carries, as for the thread's own messages. */
+    private val zoneInMessages: ZoneInMessages = ZoneInMessages.NONE,
     /** The user's limits when the run started; fixed for the run (D-138). */
     override val limitSettings: SubagentLimitSettings = SubagentLimitSettings(),
     /** Replaces the user's per-type budgets for every type; tests use it to set one tight limit. */
@@ -142,7 +144,7 @@ class SubagentRunner(
             recorder.subagentStarted(SubagentStart(subagentId, group.parentToolCallId, index, type.name, task.task, model.key))
             val loop = buildLoop(subagentId, label, type, task, model, group, context, progress, limits)
             runStoppable(subagentId, progress) {
-                withTimeoutOrNull(limits.timeLimit) { loop.run(PromptBuilder("").userMessageWithContext(task.task, now())) }
+                withTimeoutOrNull(limits.timeLimit) { loop.run(PromptBuilder("").userMessageWithContext(task.task, now(), zoneInMessages)) }
                     ?: progress.stoppedEarly(SubagentStop.TIME_LIMIT)
             }
         } catch (cancellation: CancellationException) {

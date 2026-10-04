@@ -59,7 +59,7 @@ class ScheduleToolTest {
         val task = scheduler.tasks.single()
         assertEquals(ZonedDateTime.of(2026, 10, 4, 8, 0, 0, 0, dhaka), task.nextRun)
         assertEquals(Repeat.DAILY, task.repeat)
-        assertTrue(output.text, output.text.contains("daily at 08:00, first run Sun 4 Oct 2026 08:00 (Asia/Dhaka)"))
+        assertTrue(output.text, output.text.contains("daily at 08:00, first run Sun 4 Oct 2026 08:00 (local time)"))
     }
 
     @Test

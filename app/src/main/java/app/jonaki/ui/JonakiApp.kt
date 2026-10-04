@@ -61,6 +61,8 @@ import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
 import app.jonaki.feature.chat.QueuedMessageUi
 import app.jonaki.feature.chat.UsageUi
+import app.jonaki.core.agent.ZoneInMessages
+import app.jonaki.feature.settings.ZoneChoice
 import app.jonaki.feature.settings.AccountLineUi
 import app.jonaki.feature.settings.AddModelsScreen
 import app.jonaki.feature.settings.AddModelsUiState
@@ -1072,6 +1074,8 @@ private fun SettingsRoute(
         personas = personaRowsOf(personas),
         approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
         jevGuardOn = snapshot.jevGuardOn,
+        // The two enums have the same three names; the screen's module does not see the agent's.
+        zoneInMessages = ZoneChoice.valueOf(snapshot.zoneInMessages.name),
         jevGuardAvailable = SecretName.OPENROUTER in savedKeys,
         subagentModels = AgentTypes.ALL.map { type ->
             SubagentModelRowUi(
@@ -1106,6 +1110,9 @@ private fun SettingsRoute(
             }
         },
         onJevGuardChange = { on -> settings.update { current -> current.copy(jevGuardOn = on) } },
+        onZoneInMessagesChange = { choice ->
+            settings.update { current -> current.copy(zoneInMessages = ZoneInMessages.valueOf(choice.name)) }
+        },
         onWebSearchOffInNewThreadsChange = { off -> settings.update { current -> current.copy(webSearchOffInNewThreads = off) } },
         onThemeModeChange = { mode -> settings.update { current -> current.copy(theme = themeChoiceOf(mode)) } },
         onOpenPage = onOpenPage,

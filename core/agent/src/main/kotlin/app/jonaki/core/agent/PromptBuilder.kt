@@ -5,6 +5,18 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/** How much of the user's time zone goes into each message's date line; a choice in Settings. */
+enum class ZoneInMessages {
+    /** Local date and time only. */
+    NONE,
+
+    /** The offset from UTC, for example +06:00: enough to convert times, without naming a city. */
+    OFFSET,
+
+    /** The zone's name, for example Asia/Dhaka. */
+    NAME,
+}
+
 /**
  * Builds the system prompt and the per-message context line. The system
  * prompt depends only on the base text and the active tools, never on the
@@ -64,18 +76,26 @@ class PromptBuilder(private val basePrompt: String) {
     }
 
     /**
-     * The user's text with the current time in front. The result is stored as
-     * the message, so that later requests resend exactly the same bytes.
+     * The user's text with the current local date and time in front. The
+     * result is stored as the message, so that later requests resend exactly
+     * the same bytes. The zone is left out unless the user chose to send it,
+     * because its name tells the provider the user's country on every message
+     * and the tools take local times anyway.
      */
-    fun userMessageWithContext(text: String, now: ZonedDateTime): String {
+    fun userMessageWithContext(text: String, now: ZonedDateTime, zone: ZoneInMessages = ZoneInMessages.NONE): String {
         val formatted = CONTEXT_FORMAT.format(now)
-        return "[$formatted ${now.zone.id}]\n$text"
+        val zonePart = when (zone) {
+            ZoneInMessages.NONE -> ""
+            ZoneInMessages.OFFSET -> " ${now.offset.id}"
+            ZoneInMessages.NAME -> " ${now.zone.id}"
+        }
+        return "[$formatted$zonePart]\n$text"
     }
 
     companion object {
         private val CONTEXT_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy, HH:mm", Locale.ENGLISH)
 
-        /** The "[date, time zone]" line that [userMessageWithContext] puts in front. */
+        /** The "[date, time]" line that [userMessageWithContext] puts in front, with or without a zone. */
         private val CONTEXT_LINE = Regex("""^\[[^\]\n]*]\n""")
 
         /** What the user typed, without the time line meant for the model; for every place the user reads it. */

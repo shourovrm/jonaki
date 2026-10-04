@@ -3,6 +3,7 @@ package app.jonaki.settings
 import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.AnswerStyle
 import app.jonaki.core.agent.ApprovalMode
+import app.jonaki.core.agent.ZoneInMessages
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
@@ -63,6 +64,8 @@ data class SettingsSnapshot(
     val localModelTools: Set<String> = LocalModelToolList.DEFAULT,
     /** Settings > Subagents: how many start, and each one's budget (D-138). */
     val subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
+    /** How much of the time zone each message's date line tells the model; nothing unless the user chooses more. */
+    val zoneInMessages: ZoneInMessages = ZoneInMessages.NONE,
     /** The Jev guard: a second layer on the approval rules and a screen for outside text; off until switched on. */
     val jevGuardOn: Boolean = false,
     /** Subagent types the user made, in the order they were added (D-138). */
@@ -137,6 +140,7 @@ class AppSettings(
                 maxRepeats = preferences.getInt(REMINDER_MAX_REPEATS, ReminderPolicy.DEFAULT_MAX_REPEATS),
             ).withinBounds(),
             jevGuardOn = preferences.getBoolean(JEV_GUARD_ON, false),
+            zoneInMessages = enumOrDefault(preferences.getString(ZONE_IN_MESSAGES, null), ZoneInMessages.NONE),
         )
     }
 
@@ -235,6 +239,7 @@ class AppSettings(
         editor.putInt(SUBAGENTS_MAX_PER_MESSAGE, limits.maxPerMessage)
         editor.putString(SUBAGENT_BUDGETS, SubagentBudgets.toText(limits.budgets))
         editor.putBoolean(JEV_GUARD_ON, snapshot.jevGuardOn)
+        editor.putString(ZONE_IN_MESSAGES, snapshot.zoneInMessages.name)
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
         editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
         editor.putInt(REMINDER_MAX_REPEATS, snapshot.reminderPolicy.maxRepeats)
@@ -284,5 +289,6 @@ class AppSettings(
         const val REMINDER_INTERVAL_MINUTES = "reminder_interval_minutes"
         const val REMINDER_MAX_REPEATS = "reminder_max_repeats"
         const val JEV_GUARD_ON = "jev_guard_on"
+        const val ZONE_IN_MESSAGES = "zone_in_messages"
     }
 }

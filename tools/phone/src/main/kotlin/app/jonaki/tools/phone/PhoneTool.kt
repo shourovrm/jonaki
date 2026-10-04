@@ -160,7 +160,7 @@ class PhoneTool(
             is PhoneAnswer.Done -> answer.value
             else -> return errorFor(answer, "calendar")
         }
-        val range = "from ${from.format(DAY_AND_TIME)} to ${to.format(DAY_AND_TIME)} (${now.zone.id})"
+        val range = "from ${from.format(DAY_AND_TIME)} to ${to.format(DAY_AND_TIME)} (local time)"
         if (events.isEmpty()) {
             return ToolOutput.success("No events $range.")
         }
@@ -272,7 +272,8 @@ class PhoneTool(
             is PhoneAnswer.Done -> answer.value
             else -> return errorFor(answer, "notifications")
         }
-        val reminderTime = "${at.format(DAY_AND_TIME)} (${at.zone.id})"
+        // The zone's name is left out: it would tell the provider the user's country (see ZoneInMessages).
+        val reminderTime = "${at.format(DAY_AND_TIME)} (local time)"
         val timingNote = when (timing) {
             ReminderTiming.EXACT -> ""
             ReminderTiming.INEXACT -> " Exact alarms are off for Jonaki, so Android may show it some minutes late; " +

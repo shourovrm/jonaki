@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_zone_in_messages">মেসেজে টাইম জোন</string>
+    <string name="settings_zone_in_messages_description">আপনার তারিখ ও সময় সবসময় পাঠানো হয়।</string>
+    <string name="settings_zone_none">নেই</string>
+    <string name="settings_zone_offset">অফসেট</string>
+    <string name="settings_zone_name">জোনের নাম</string>
+</resources>

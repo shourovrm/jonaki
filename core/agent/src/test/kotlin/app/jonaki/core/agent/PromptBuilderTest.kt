@@ -75,7 +75,19 @@ class PromptBuilderTest {
 
         val message = builder.userMessageWithContext("What's on today?", now)
 
-        assertEquals("[Friday 2 October 2026, 14:44 Asia/Dhaka]\nWhat's on today?", message)
+        assertEquals("[Friday 2 October 2026, 14:44]\nWhat's on today?", message)
+    }
+
+    @Test
+    fun theZoneIsLeftOutUnlessTheUserChoosesToSendIt() {
+        val now = ZonedDateTime.of(2026, 10, 2, 14, 44, 0, 0, ZoneId.of("Asia/Dhaka"))
+
+        val withOffset = builder.userMessageWithContext("Hi", now, ZoneInMessages.OFFSET)
+        val withName = builder.userMessageWithContext("Hi", now, ZoneInMessages.NAME)
+
+        assertEquals("[Friday 2 October 2026, 14:44 +06:00]\nHi", withOffset)
+        assertEquals("[Friday 2 October 2026, 14:44 Asia/Dhaka]\nHi", withName)
+        assertEquals("Hi", PromptBuilder.userTextOf(withOffset))
     }
 
     @Test

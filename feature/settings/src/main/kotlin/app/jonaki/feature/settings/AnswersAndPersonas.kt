@@ -48,6 +48,10 @@ internal fun AnswersAndPersonasSections(state: SettingsUiState, actions: Setting
     Group {
         CustomInstructionsRow(state.customInstructions, actions.onOpenCustomInstructions)
     }
+    Spacer(Modifier.size(12.dp))
+    Group {
+        ZoneInMessagesRow(state.zoneInMessages, actions.onZoneInMessagesChange)
+    }
     SectionLabel(stringResource(R.string.settings_section_personas))
     Group {
         for (persona in state.personas) {

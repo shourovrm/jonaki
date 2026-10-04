@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_zone_in_messages">Time zone in messages</string>
+    <string name="settings_zone_in_messages_description">Your date and time are always sent.</string>
+    <string name="settings_zone_none">None</string>
+    <string name="settings_zone_offset">Offset</string>
+    <string name="settings_zone_name">Zone name</string>
+</resources>

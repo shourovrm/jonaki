@@ -186,7 +186,8 @@ class ScheduleTool(
         }
     }
 
-    private fun formatTime(time: ZonedDateTime): String = time.format(DATE_AND_TIME) + " (${time.zone.id})"
+    /** Without the zone's name, which would tell the provider the user's country. */
+    private fun formatTime(time: ZonedDateTime): String = time.format(DATE_AND_TIME) + " (local time)"
 
     private fun titleFrom(prompt: String): String = shortened(prompt.lineSequence().first(), TITLE_CHARACTERS)
 

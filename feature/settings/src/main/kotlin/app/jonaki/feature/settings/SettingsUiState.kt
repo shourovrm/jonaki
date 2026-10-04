@@ -41,6 +41,8 @@ data class SettingsUiState(
     /** The Jev guard switch, and whether an OpenRouter key exists for it to use. */
     val jevGuardOn: Boolean = false,
     val jevGuardAvailable: Boolean = false,
+    /** How much of the time zone each message tells the model. */
+    val zoneInMessages: ZoneChoice = ZoneChoice.NONE,
     /** The model each subagent type runs on (D-065). */
     val subagentModels: List<SubagentModelRowUi> = emptyList(),
     /** The user's scoped models, offered for each type. */
@@ -207,6 +209,7 @@ class SettingsActions(
     val onOpenPersona: (personaId: String?) -> Unit = {},
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
     val onJevGuardChange: (Boolean) -> Unit = {},
+    val onZoneInMessagesChange: (ZoneChoice) -> Unit = {},
     /** [modelKey] null returns the type to its default. */
     val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
     /** A limit's new value, one step from the old; the app keeps it in range (D-138). */

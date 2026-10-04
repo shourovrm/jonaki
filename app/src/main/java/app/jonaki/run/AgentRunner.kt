@@ -532,7 +532,7 @@ class AgentRunner(
         }
         val messageDao = database.messageDao()
         // The time goes into the message, not the system prompt, so the prompt cache holds (D-005).
-        val textForModel = promptBuilder.userMessageWithContext(text, ZonedDateTime.now())
+        val textForModel = promptBuilder.userMessageWithContext(text, ZonedDateTime.now(), settings.snapshot.value.zoneInMessages)
         messageDao.upsert(
             MessageEntity(
                 id = UUID.randomUUID().toString(),
@@ -640,6 +640,7 @@ class AgentRunner(
             memorySection = memorySection,
             skillSection = skillSection,
             now = ZonedDateTime::now,
+            zoneInMessages = snapshot.zoneInMessages,
             // Read once here, so delegate's prompt text stays the same for the whole run (D-138).
             limitSettings = snapshot.subagentLimits,
             customTypes = CustomSubagents.agentTypesOf(snapshot.customSubagents),

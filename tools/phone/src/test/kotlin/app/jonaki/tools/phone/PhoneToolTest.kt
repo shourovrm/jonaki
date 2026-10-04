@@ -173,7 +173,7 @@ class PhoneToolTest {
         val output = run("action" to "reminder", "text" to "Take the pills", "in_minutes" to 20)
 
         assertEquals("Take the pills" to dhaka(3, 14, 50), phone.reminders.single())
-        assertEquals("Reminder set for Sat 3 Oct 2026 14:50 (Asia/Dhaka): \"Take the pills\". It rings again until the user taps Done.", output.text)
+        assertEquals("Reminder set for Sat 3 Oct 2026 14:50 (local time): \"Take the pills\". It rings again until the user taps Done.", output.text)
     }
 
     @Test

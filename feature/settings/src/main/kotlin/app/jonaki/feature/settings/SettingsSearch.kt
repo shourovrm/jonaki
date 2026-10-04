@@ -61,6 +61,7 @@ object SettingsSearch {
         ),
         SettingsPage.ANSWERS to listOf(
             R.string.settings_custom_instructions,
+            R.string.settings_zone_in_messages,
             R.string.settings_section_personas,
             R.string.settings_add_persona,
         ),
