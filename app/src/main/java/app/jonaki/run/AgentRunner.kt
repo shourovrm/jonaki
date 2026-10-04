@@ -90,6 +90,7 @@ import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import app.jonaki.web.WebViewPageRenderer
+import app.jonaki.web.WebViewPdfRenderer
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -176,6 +177,7 @@ class AgentRunner(
 
     /** One for the app, because it lets only one page render at a time (D-131). */
     private val pageRenderer = WebViewPageRenderer(context)
+    private val pdfRenderer = WebViewPdfRenderer(context)
 
     /**
      * Each running thread's own approval mode name, "" when it follows
@@ -721,6 +723,7 @@ class AgentRunner(
         mcpToolListFolder = mcpServers.toolListFolder,
         codeRuntimes = CodeRuntimes.forApp(context),
         pageRenderer = pageRenderer,
+        pdfRenderer = pdfRenderer,
         enabledGroups = settings.snapshot.value.enabledToolGroups,
     )
 

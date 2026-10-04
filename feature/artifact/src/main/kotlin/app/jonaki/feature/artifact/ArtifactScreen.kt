@@ -162,7 +162,8 @@ private fun lockedDownWebView(context: Context, requests: ArtifactRequests): Web
         webViewClient = ArtifactWebViewClient(requests)
     }
 
-private class ArtifactWebViewClient(private val requests: ArtifactRequests) : WebViewClient() {
+/** Answers the page's requests from artifacts/ only; open so that the PDF export can reuse the same wall. */
+open class ArtifactWebViewClient(private val requests: ArtifactRequests) : WebViewClient() {
     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =
         when (val answer = requests.resolve(request.url.toString())) {
             is ArtifactResponse.File -> WebResourceResponse(

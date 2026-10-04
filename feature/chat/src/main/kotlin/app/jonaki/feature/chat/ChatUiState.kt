@@ -330,9 +330,10 @@ enum class ApprovalChoice {
     DENY,
 }
 
-/** Tool names that the word rule below would spell wrong: an acronym and a brand. */
+/** Tool names that the word rule below would spell wrong: acronyms and a brand. */
 private val stepLabelExceptions = mapOf(
     "mcp" to "MCP",
+    "export_pdf" to "Export PDF",
     "youtube_summarize" to "YouTube summary",
 )
 

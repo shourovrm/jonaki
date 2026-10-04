@@ -9,6 +9,8 @@ import app.jonaki.settings.ToolGroups
 import app.jonaki.tools.artifact.ArtifactTool
 import app.jonaki.tools.delegate.DelegateTool
 import app.jonaki.tools.editfile.EditFileTool
+import app.jonaki.tools.exportpdf.ExportPdfTool
+import app.jonaki.tools.exportpdf.PdfRenderer
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.mcp.McpServer
 import app.jonaki.tools.mcp.McpTool
@@ -59,6 +61,8 @@ data class ToolServices(
     val codeRuntimes: List<CodeRuntime> = emptyList(),
     /** The off-screen WebView that lets web_fetch run a page's JavaScript (D-131); null reads pages without it. */
     val pageRenderer: PageRenderer? = null,
+    /** The off-screen WebView that makes the PDF for export_pdf; null leaves export_pdf out. */
+    val pdfRenderer: PdfRenderer? = null,
     /** The groups switched on in the picker or Settings > Tools; the tools of the others are left out. */
     val enabledGroups: Set<ToolGroup> = ToolGroup.entries.toSet(),
     /** When set, only these tools are offered; a local model's thread uses ToolGroups.LOCAL_MODEL_TOOLS (D-133). */
@@ -96,6 +100,9 @@ object ToolRegistry {
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)
+        }
+        if (services.pdfRenderer != null) {
+            tools += ExportPdfTool(services.pdfRenderer)
         }
         if (services.phone != null) {
             tools += PhoneTool(services.phone)

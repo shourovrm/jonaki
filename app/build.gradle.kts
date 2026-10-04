@@ -36,6 +36,7 @@ dependencies {
     implementation(project(":tools:youtube-summarize"))
     implementation(project(":tools:memory"))
     implementation(project(":tools:share-file"))
+    implementation(project(":tools:export-pdf"))
     implementation(project(":tools:view-image"))
     implementation(project(":tools:read-document"))
     implementation(project(":tools:phone"))

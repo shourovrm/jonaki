@@ -24,7 +24,7 @@ enum class ToolGroup(
     YOUTUBE(setOf("youtube_summarize")),
     MEMORY(setOf("memory")),
     SUBAGENTS(setOf("delegate")),
-    REPORTS(setOf("artifact")),
+    REPORTS(setOf("artifact", "export_pdf")),
     SHARE(setOf("share_file")),
     PHONE(setOf("phone")),
     SCHEDULE(setOf("schedule")),

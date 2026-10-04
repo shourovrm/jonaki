@@ -15,20 +15,16 @@ import android.webkit.WebViewClient
 import app.jonaki.tools.webfetch.PageRenderException
 import app.jonaki.tools.webfetch.PageRenderer
 import app.jonaki.tools.webfetch.RenderedPage
-import kotlin.coroutines.resume
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Renders a page for web_fetch in a WebView that is never shown (D-131). A
@@ -64,7 +60,7 @@ class WebViewPageRenderer(private val context: Context) : PageRenderer {
             }
             client.failure?.let { reason -> throw PageRenderException(reason) }
             // A page that is still loading trackers when time runs out usually has its text already.
-            val html = withTimeoutOrNull(CAPTURE_ALLOWANCE) { evaluate(webView, OUTER_HTML_SCRIPT) }
+            val html = withTimeoutOrNull(CAPTURE_ALLOWANCE) { webView.evaluateToText(OUTER_HTML_SCRIPT) }
                 ?: throw PageRenderException("the page did not answer within $timeLimit")
             client.failure?.let { reason -> throw PageRenderException(reason) }
             return RenderedPage(
@@ -123,24 +119,13 @@ class WebViewPageRenderer(private val context: Context) : PageRenderer {
         while (client.failure == null) {
             delay(SETTLE_STEP)
             checks += 1
-            val length = evaluate(webView, TEXT_LENGTH_SCRIPT).toIntOrNull() ?: 0
+            val length = webView.evaluateToText(TEXT_LENGTH_SCRIPT).toIntOrNull() ?: 0
             steadyChecks = if (length > 0 && length == previousLength) steadyChecks + 1 else 0
             previousLength = length
             if (steadyChecks >= checksForSteady && checks >= minimumChecks) {
                 return
             }
         }
-    }
-
-    /** Runs [script] in the page and returns its result as text; a JavaScript string comes back unquoted. */
-    private suspend fun evaluate(webView: WebView, script: String): String {
-        val json = suspendCancellableCoroutine { continuation ->
-            webView.evaluateJavascript(script) { result ->
-                if (continuation.isActive) continuation.resume(result)
-            }
-        }
-        val value = runCatching { Json.parseToJsonElement(json) }.getOrNull() as? JsonPrimitive
-        return value?.content.orEmpty()
     }
 
     private fun destroy(webView: WebView) {
