@@ -29,7 +29,7 @@ class FtsQueryTest {
 
     @Test
     fun operatorsAndQuotesInTheTextStayPlainText() {
-        assertEquals("\"NOT\" OR \"say \"\"hi\"\"\"".replace("say ", "say"), FtsQuery.anyWordOf("NOT say\"hi\""))
+        assertEquals("\"NOT\" OR \"say\"\"hi\"\"\"", FtsQuery.anyWordOf("NOT say\"hi\""))
     }
 
     @Test
