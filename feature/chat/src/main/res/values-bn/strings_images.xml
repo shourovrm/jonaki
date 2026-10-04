@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_image_open">ছবি খুলুন</string>
+    <string name="chat_image_missing">ছবি নেই</string>
+    <string name="chat_image_close">বন্ধ করুন</string>
+</resources>

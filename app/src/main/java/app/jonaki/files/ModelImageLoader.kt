@@ -1,13 +1,8 @@
 package app.jonaki.files
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Matrix
-import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
-import android.media.ExifInterface
 import android.os.ParcelFileDescriptor
 import app.jonaki.core.agent.ImageLoader
 import app.jonaki.core.model.ImagePart
@@ -68,51 +63,8 @@ class ModelImageLoader(threadFolder: File, private val cacheFolder: File) : Imag
         return jpegBytes
     }
 
-    private fun decodeUpright(file: File): Bitmap? {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.path, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            return null
-        }
-        val original = PixelSize(bounds.outWidth, bounds.outHeight)
-        val target = ImageScale.fitted(original)
-        val options = BitmapFactory.Options().apply { inSampleSize = ImageScale.sampleSize(original, target) }
-        val decoded = BitmapFactory.decodeFile(file.path, options) ?: return null
-        val rotation = rotationDegrees(file)
-        val turnsSideways = rotation == 90 || rotation == 270
-        val outputSize = if (turnsSideways) PixelSize(target.height, target.width) else target
-
-        val output = Bitmap.createBitmap(outputSize.width, outputSize.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        // JPEG has no transparency; a transparent PNG would otherwise turn black.
-        canvas.drawColor(Color.WHITE)
-        val placement = Matrix()
-        placement.postScale(target.width.toFloat() / decoded.width, target.height.toFloat() / decoded.height)
-        placement.postRotate(rotation.toFloat())
-        when (rotation) {
-            90 -> placement.postTranslate(outputSize.width.toFloat(), 0f)
-            180 -> placement.postTranslate(outputSize.width.toFloat(), outputSize.height.toFloat())
-            270 -> placement.postTranslate(0f, outputSize.height.toFloat())
-        }
-        canvas.drawBitmap(decoded, placement, Paint(Paint.FILTER_BITMAP_FLAG))
-        decoded.recycle()
-        return output
-    }
-
-    /** Phone cameras often save the picture sideways and note the turn in EXIF. */
-    private fun rotationDegrees(file: File): Int {
-        val orientation = try {
-            ExifInterface(file.path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-        } catch (noExif: IOException) {
-            ExifInterface.ORIENTATION_NORMAL
-        }
-        return when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270
-            else -> 0
-        }
-    }
+    private fun decodeUpright(file: File): Bitmap? =
+        UprightImageDecoder.decode(file, Color.WHITE) { uprightOriginal -> ImageScale.fitted(uprightOriginal) }
 
     /** A scanned page, drawn at 1,568 pixels on its long side on white. */
     private fun renderPdfPage(file: File, pageNumber: Int): Bitmap? {

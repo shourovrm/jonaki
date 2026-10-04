@@ -48,9 +48,11 @@ import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
 import app.jonaki.core.ui.resolvesToDark
 import app.jonaki.core.toolapi.IncomingFiles
+import app.jonaki.core.toolapi.ViewedImages
 import app.jonaki.feature.chat.ApprovalChoice
 import app.jonaki.feature.chat.AttachmentUi
 import app.jonaki.files.AttachmentDrafts
+import app.jonaki.files.StagedFile
 import app.jonaki.files.CameraPhotos
 import app.jonaki.files.RefusedFile
 import app.jonaki.feature.chat.ChatScreen
@@ -345,21 +347,24 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     route = ROUTE_THREADS
                 }
                 BackHandler(onBack = leaveChat)
-                ChatRoute(
-                    application = application,
-                    threadId = chatThreadId,
-                    focusMessageId = chatTarget.substringAfter(FOCUS_SEPARATOR, "").ifEmpty { null },
-                    onBack = leaveChat,
-                    openSubagentId = openSubagentId,
-                    onOpenSubagent = { subagentId -> openSubagentId = subagentId },
-                    listState = chatListStates.getOrPut(chatThreadId) { LazyListState() },
-                    onThreadCreated = { threadId -> route = ROUTE_CHAT_PREFIX + threadId },
-                    onEditModels = { route = settingsPageRoute(SettingsPage.MODELS) },
-                    onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
-                    onOpenSkills = { route = ROUTE_SKILLS_THREAD_PREFIX + chatThreadId },
-                    onOpenArtifact = { path -> route = ROUTE_ARTIFACT_PREFIX + chatThreadId + FOCUS_SEPARATOR + path },
-                    newThreadProjectId = selectedProjectId,
-                )
+                val isNewChat = chatThreadId == NEW_THREAD || chatThreadId == NEW_INCOGNITO_THREAD
+                ProvideChatImages(application, chatThreadId, isNewChat) {
+                    ChatRoute(
+                        application = application,
+                        threadId = chatThreadId,
+                        focusMessageId = chatTarget.substringAfter(FOCUS_SEPARATOR, "").ifEmpty { null },
+                        onBack = leaveChat,
+                        openSubagentId = openSubagentId,
+                        onOpenSubagent = { subagentId -> openSubagentId = subagentId },
+                        listState = chatListStates.getOrPut(chatThreadId) { LazyListState() },
+                        onThreadCreated = { threadId -> route = ROUTE_CHAT_PREFIX + threadId },
+                        onEditModels = { route = settingsPageRoute(SettingsPage.MODELS) },
+                        onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
+                        onOpenSkills = { route = ROUTE_SKILLS_THREAD_PREFIX + chatThreadId },
+                        onOpenArtifact = { path -> route = ROUTE_ARTIFACT_PREFIX + chatThreadId + FOCUS_SEPARATOR + path },
+                        newThreadProjectId = selectedProjectId,
+                    )
+                }
             }
             else -> ThreadsRoute(
                 application = application,
@@ -698,7 +703,7 @@ private fun ChatRoute(
         modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application, rememberLocalModelKeys(application)),
         selectedModelKey = modelKey,
         usage = usageOf(modelUsage, catalog, threadCost, messages),
-        attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name) },
+        attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name, previewPath = previewPathOf(file)) },
         editingMessageId = editingMessageId,
         threadThinking = if (isNew) {
             thinkingForNewThread
@@ -878,6 +883,9 @@ private fun ChatRoute(
         )
     }
 }
+
+/** The staged file's path when it is an image, so its chip shows a thumbnail. */
+private fun previewPathOf(file: StagedFile): String? = file.file.path.takeIf { ViewedImages.isImagePath(file.name) }
 
 /** The step track's labels in the app's language (M11). */
 @Composable

@@ -82,6 +82,8 @@ data class SubagentCostWarning(
 data class AttachmentUi(
     val id: String,
     val name: String,
+    /** Absolute path of the staged file when it is an image, so the chip shows a thumbnail; null otherwise. */
+    val previewPath: String? = null,
 )
 
 /** The model, context and cost of this thread, shown as pills above the message field. */
