@@ -2094,3 +2094,37 @@ no line. MiMo documents only its console's balance page, and four likely
 paths on its API host return 404, so its card stays without one. Amends the
 balance note of 2026-10-03. Outcome: none of the three checked on a phone,
 and the MiniMax answer was not seen with a real key.
+
+## D-153 · 2026-10-05 · Word, Excel and PowerPoint files through a documents add-on — proposed
+User ruling ("go with the python packages"). Jonaki could read .docx, .xlsx
+and .pptx (D-052) but not write them. The documents add-on of the Python
+runtime is lxml, pillow, typing-extensions, beautifulsoup4 and soupsieve
+from the Pyodide lock file (3,373,005 bytes) plus five pure-Python wheels
+pinned by URL, SHA-256 and size in PyodideRelease.kt: python-docx 1.2.0,
+openpyxl 3.1.5, et-xmlfile 2.0.0, python-pptx 1.0.2 and XlsxWriter 3.2.9
+(1,170,059 bytes; MIT and BSD). Total 4,543,064 bytes, downloaded on demand,
+so the APK grows only by the helper below. The wheels come from
+files.pythonhosted.org, a second download host the user approved; each is
+hashed while it streams and again before every run, and Pyodide loads it
+from the app's files without micropip. Amends D-069 ("packages outside the
+lock file are not supported"). Programs stay offline (D-070): the request
+filter also serves the bundled module by its exact name, nothing else.
+Importing docx, openpyxl, pptx, xlsxwriter or jonaki_docs loads the whole
+add-on; a missing one is reported like numpy, and D-094's card offers it.
+Settings > Python has a row with Install, Repair and Remove.
+jonaki_docs.py (bundled, 67 KB) gives three builders, WordDoc, Sheets and
+Deck, that share the themes leaf, plain and formal, accept the user's own
+.docx or .pptx as a template (its styles and layouts are used, its sample
+content left out), and convert an HTML report or deck (html_to_docx,
+html_to_pptx, html_tables_to_xlsx). CSS is not carried over, because Word
+and PowerPoint have none. A Chart.js canvas keeps its data in script, so the
+report and slides skills now add a data-chart attribute; it becomes a native
+chart in PowerPoint and a picture in Word (python-docx has no charts; the
+picture's labels are Latin only). New built-in skill office-documents.
+Checked in Pyodide 314.0.7 under Node (spikes/office-docs): 31 assertions
+on reopened files pass, and the files rendered with LibreOffice look as
+intended in all three themes, with Bangla text. Rejected: Apache POI (about
+10 MB of APK, D-052), an own zip-and-XML writer (new files only, no
+editing), translating CSS. Also fixed: a download that failed at once could
+finish before its job was recorded, so its problem never showed. Outcome:
+not run on a phone or in the WebView worker; not opened in Microsoft Office.

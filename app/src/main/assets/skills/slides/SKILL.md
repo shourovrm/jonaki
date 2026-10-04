@@ -35,6 +35,7 @@ A deck is one HTML file in `artifacts/`, for example `artifacts/solar-energy-sli
 - Light theme by default with one accent colour; respect `prefers-color-scheme: dark` unless the user asks for a fixed look.
 - Print: `@page { size: 16in 9in; margin: 0 }` and `@media print` showing every slide, one per page (`break-after: page`), with navigation hidden. This is what PDF export uses.
 - When the user asks for a PDF, call `export_pdf` with the deck's path and `page` set to `slides` (16:9, one slide per page). `share_file` then saves or shares the file.
+- When the user asks for a PowerPoint file, read the `office-documents` skill. Give every chart's `<canvas>` a `data-chart` attribute with its type, labels and series as JSON, so the chart becomes a native PowerPoint chart.
 - Bangla text: `lang="bn"` and the font stack `"Noto Sans Bengali", sans-serif`.
 
 ## Checks before you finish

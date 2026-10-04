@@ -2,7 +2,7 @@
 
 An Android app that runs an AI agent in a chat, with your own API keys.
 
-**Download:** [jonaki-v1.3.0.apk](https://github.com/shourovrm/jonaki/releases/download/v1.3.0/jonaki-v1.3.0.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
+**Download:** [jonaki-v1.4.0.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.0/jonaki-v1.4.0.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
 
 - Android 8.0 or later, 64-bit ARM
 - Interface in English and Bangla
@@ -70,11 +70,15 @@ The sections follow the order in which you meet each part: the chat, the model b
 - You can add your own subagent types
 - Remote MCP servers add their tools to the agent
 
-### Reports and slides
+### Reports, slides and Office files
 
 - The agent writes HTML pages with charts, shown in an offline viewer
 - Every version is kept
 - A report or slide deck exports to PDF with selectable text
+- The agent writes and changes Word, Excel and PowerPoint files, with native charts in Excel and PowerPoint
+- Office files follow one of three themes or your own `.docx` or `.pptx` template
+- An HTML report or deck converts to Word, PowerPoint or Excel
+- Office files need Python and its documents add-on, a 4.5 MB download
 
 ### Memory
 
@@ -90,7 +94,7 @@ The sections follow the order in which you meet each part: the chat, the model b
 ### Skills
 
 - A skill is a set of instructions for one kind of task
-- Built in: report, slides, YouTube summary, Reddit, formal letter in Bangla
+- Built in: report, slides, Office documents, YouTube summary, Reddit, formal letter in Bangla
 - Skills import from a file, a link or a GitHub folder
 - The agent can propose a skill after a hard task; it is added only when you approve it
 - Skills switch on or off per thread
