@@ -15,6 +15,12 @@ data class PromptFact(
     val pinned: Boolean,
     /** Null when the fact has never been in a prompt or a recall result. */
     val lastUsedAtMillis: Long?,
+    /**
+     * The day the fact was saved or last changed, as the model reads it
+     * ("2026-10-04"), so that it can tell which of two facts is newer. It
+     * changes only when the fact does, so the prompt cache holds (D-035).
+     */
+    val savedOn: String? = null,
 )
 
 /** The memory part of the system prompt and the facts it holds. */
@@ -58,7 +64,8 @@ data class MemoryBudget(
  * (D-005, D-035).
  */
 object MemorySection {
-    private const val HEADER = "Memory (facts saved earlier; [id] is for the memory tool):"
+    private const val HEADER = "Memory (facts saved earlier; [id] is for the memory tool; the date is when the fact " +
+        "was saved or last changed, and where two facts disagree the newer one holds):"
     private const val GLOBAL_HEADING = "All threads:"
     private const val PROJECT_HEADING = "This project:"
     private const val THREAD_HEADING = "This thread:"
@@ -115,5 +122,11 @@ object MemorySection {
     }
 
     /** One line per fact; line breaks inside a fact would break the list, so they become spaces. */
-    private fun lineOf(fact: PromptFact): String = "- [${fact.id}] " + fact.text.replace('\n', ' ')
+    private fun lineOf(fact: PromptFact): String {
+        val date = if (fact.savedOn == null) "" else "(${fact.savedOn}) "
+        return "- [${fact.id}] " + date + fact.text.replace('\n', ' ')
+    }
+
+    /** A fact as the context sheet lists it: the prompt's line without the id, which only the model needs. */
+    fun displayLineOf(fact: PromptFact): String = lineOf(fact).substringAfter("] ")
 }

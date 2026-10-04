@@ -785,7 +785,12 @@ private fun ChatRoute(
                 contextUi = null
                 scope.launch {
                     val breakdown = runner.contextBreakdown(threadId) ?: return@launch
-                    contextUi = ContextSheetState.of(breakdown, lastInputTokens, contextWindowTokens)
+                    contextUi = ContextSheetState.of(
+                        breakdown,
+                        lastInputTokens,
+                        contextWindowTokens,
+                        memoryFacts = runner.promptFactLines(threadId),
+                    )
                 }
             }
         },

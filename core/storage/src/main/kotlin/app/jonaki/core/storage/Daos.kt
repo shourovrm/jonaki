@@ -178,6 +178,17 @@ interface MessageDao {
     @Query("SELECT id FROM messages WHERE threadId = :threadId AND role = 'USER' ORDER BY position DESC LIMIT 1")
     suspend fun latestUserMessageId(threadId: String): String?
 
+    /** Records which facts the run this user message started had in its prompt; null for none. */
+    @Query("UPDATE messages SET promptFactIds = :factIds WHERE id = :messageId")
+    suspend fun setPromptFactIds(messageId: String, factIds: String?)
+
+    /** The facts of the thread's last run that had a memory section, as [setPromptFactIds] stored them. */
+    @Query(
+        "SELECT promptFactIds FROM messages WHERE threadId = :threadId AND role = 'USER' AND promptFactIds IS NOT NULL " +
+            "ORDER BY position DESC LIMIT 1",
+    )
+    suspend fun latestPromptFactIds(threadId: String): String?
+
     /** Source messages of memory facts, for the memory screen. */
     @Query("SELECT * FROM messages WHERE id IN (:messageIds)")
     suspend fun findAll(messageIds: List<String>): List<MessageEntity>

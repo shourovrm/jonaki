@@ -1,6 +1,7 @@
 package app.jonaki.feature.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,14 +82,21 @@ private fun ContextSummary(context: ContextUi) {
     )
     ContextBar(context)
     Spacer(Modifier.height(8.dp))
+    var factsAreOpen by rememberSaveable { mutableStateOf(false) }
     for (part in context.parts) {
+        val opensFacts = part.kind == ContextPartUiKind.MEMORY && context.memoryFacts.isNotEmpty()
         ContextRow(
             color = colorOf(part.kind),
             label = labelOf(part.kind),
             detail = detailOf(part),
             tokens = part.tokens,
             windowTokens = context.windowTokens,
+            onClick = if (opensFacts) ({ factsAreOpen = !factsAreOpen }) else null,
+            onClickLabel = stringResource(if (factsAreOpen) R.string.chat_context_hide_facts else R.string.chat_context_show_facts),
         )
+        if (opensFacts && factsAreOpen) {
+            MemoryFacts(context.memoryFacts)
+        }
     }
     ContextRow(
         color = JonakiTheme.colors.track,
@@ -132,9 +144,38 @@ private fun ContextBar(context: ContextUi) {
     }
 }
 
+/** The facts of the memory section, indented to the row's text; a long fact wraps, so none is cut. */
 @Composable
-private fun ContextRow(color: Color, label: String, detail: String?, tokens: Int, windowTokens: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+private fun MemoryFacts(facts: List<String>) {
+    Column(Modifier.padding(start = 22.dp, bottom = 6.dp)) {
+        for (fact in facts) {
+            Text(
+                fact,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 3.dp),
+            )
+        }
+    }
+}
+
+/** [onClick] makes the row open something below it; [onClickLabel] says what, for screen readers. */
+@Composable
+private fun ContextRow(
+    color: Color,
+    label: String,
+    detail: String?,
+    tokens: Int,
+    windowTokens: Int,
+    onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null,
+) {
+    val rowModifier = if (onClick == null) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier.fillMaxWidth().clickable(onClickLabel = onClickLabel, onClick = onClick)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = rowModifier.padding(vertical = 6.dp)) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(color))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {

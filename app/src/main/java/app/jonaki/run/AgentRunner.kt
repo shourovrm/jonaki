@@ -39,9 +39,6 @@ import app.jonaki.core.agent.PromptFact
 import app.jonaki.core.agent.ProjectSection
 import app.jonaki.core.agent.ProjectFilesSection
 import app.jonaki.core.agent.MemoryBudget
-import app.jonaki.core.agent.PromptFactScope
-import app.jonaki.core.storage.MemoryEntity
-import app.jonaki.tools.memory.FactScope
 import app.jonaki.core.agent.PermissionBroker
 import app.jonaki.core.agent.ThreadApprovalState
 import app.jonaki.core.agent.PromptBuilder
@@ -53,6 +50,7 @@ import app.jonaki.settings.AnswerStyles
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.core.model.Role
 import app.jonaki.memory.MemoryExtractor
+import app.jonaki.memory.PromptFacts
 import app.jonaki.memory.RoomMemoryStore
 import app.jonaki.memory.ThreadMemory
 import app.jonaki.core.modelcatalog.CostCalculator
@@ -95,6 +93,7 @@ import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import app.jonaki.web.WebViewPageRenderer
 import app.jonaki.web.WebViewPdfRenderer
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -925,7 +924,26 @@ class AgentRunner(
             // Safe for the cache: the section is chosen by use time but written in id order (D-035).
             database.memoryDao().markUsed(section.includedIds, System.currentTimeMillis())
         }
+        // The context sheet lists these as the facts the last answer had.
+        database.messageDao().latestUserMessageId(thread.id)?.let { messageId ->
+            database.messageDao().setPromptFactIds(messageId, PromptFacts.idsText(section.includedIds))
+        }
         return section.text
+    }
+
+    /**
+     * The facts in the memory section of the thread's last run, or of its next
+     * request before any run, one line each for the context sheet.
+     */
+    suspend fun promptFactLines(threadId: String): List<String> {
+        val thread = database.threadDao().find(threadId) ?: return emptyList()
+        if (!ThreadMemory.isOn(thread)) {
+            return emptyList()
+        }
+        val facts = promptFactsOf(thread, projectOf(thread))
+        val lastRunIds = database.messageDao().latestPromptFactIds(threadId)?.let(PromptFacts::idsOf)
+        val nextRequestIds = MemorySection.build(facts, memoryBudgetFor(thread)).includedIds
+        return PromptFacts.sheetLines(facts, lastRunIds, nextRequestIds)
     }
 
     /** A model on the phone gets a smaller memory section, as every prompt token costs it time (D-135). */
@@ -933,21 +951,7 @@ class AgentRunner(
         if (LocalModelRuntime.isLocal(modelKeyFor(thread))) MemoryBudget.LOCAL else MemoryBudget.CLOUD
 
     private suspend fun promptFactsOf(thread: ThreadEntity, project: ThreadProject?): List<PromptFact> =
-        database.memoryDao().listVisibleFrom(thread.id, project?.id).map { memory ->
-            PromptFact(
-                id = memory.id,
-                text = memory.text,
-                scope = promptScopeOf(memory),
-                pinned = memory.pinned,
-                lastUsedAtMillis = memory.lastUsedAtMillis,
-            )
-        }
-
-    private fun promptScopeOf(memory: MemoryEntity): PromptFactScope = when (RoomMemoryStore.scopeOf(memory)) {
-        FactScope.GLOBAL -> PromptFactScope.GLOBAL
-        FactScope.PROJECT -> PromptFactScope.PROJECT
-        FactScope.THREAD -> PromptFactScope.THREAD
-    }
+        database.memoryDao().listVisibleFrom(thread.id, project?.id).map { memory -> PromptFacts.of(memory, ZoneId.systemDefault()) }
 
     /** The thread's project with its shared folder, or null; a project deleted meanwhile counts as none. */
     private suspend fun projectOf(thread: ThreadEntity): ThreadProject? {

@@ -14,7 +14,12 @@ object ContextSheetState {
      * latest request. The sheet opens only from the ring, which shows only
      * when the model's window is known.
      */
-    fun of(breakdown: ContextBreakdown, lastInputTokens: Int?, contextWindowTokens: Int): ContextUi {
+    fun of(
+        breakdown: ContextBreakdown,
+        lastInputTokens: Int?,
+        contextWindowTokens: Int,
+        memoryFacts: List<String> = emptyList(),
+    ): ContextUi {
         val use = breakdown.measure(lastInputTokens, contextWindowTokens)
         return ContextUi(
             windowTokens = contextWindowTokens,
@@ -24,6 +29,7 @@ object ContextSheetState {
             freeTokens = use.freeTokens ?: 0,
             // The same threshold the compactor checks after each run.
             compactAtTokens = CompactionPlan.thresholdTokens(contextWindowTokens),
+            memoryFacts = memoryFacts,
         )
     }
 

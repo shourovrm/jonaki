@@ -112,6 +112,8 @@ data class ContextUi(
     val freeTokens: Int,
     /** Older messages are summarised after a run whose last request reached this many tokens (D-033). */
     val compactAtTokens: Int,
+    /** The facts in the prompt's memory section, one line each; the Memory row opens them. */
+    val memoryFacts: List<String> = emptyList(),
 )
 
 /** [count] is shown beside the label: tools, skills, facts, images, or messages a summary covers. */

@@ -15,6 +15,32 @@ class MemorySectionTest {
             lastUsedAtMillis = lastUsed,
         )
 
+    private val HEADER = "Memory (facts saved earlier; [id] is for the memory tool; the date is when the fact " +
+        "was saved or last changed, and where two facts disagree the newer one holds):"
+
+    @Test
+    fun aFactWithADayShowsItBetweenTheIdAndTheText() {
+        val section = MemorySection.build(listOf(fact(12, "Thesis due 20 December").copy(savedOn = "2026-10-04")))
+
+        assertEquals(HEADER + "\nThis thread:\n- [12] (2026-10-04) Thesis due 20 December", section.text)
+    }
+
+    @Test
+    fun theDayCountsAgainstTheBudget() {
+        val text = "x".repeat(40)
+        val dated = listOf(fact(1, text, lastUsed = 2), fact(2, text, lastUsed = 1)).map { it.copy(savedOn = "2026-10-04") }
+        val budget = MemoryBudget(globalCharacters = 0, projectCharacters = 0, threadCharacters = 100)
+
+        // Without the day two lines of 47 characters fit in 100; with it each is 60, so one fits.
+        assertEquals(listOf(1L), MemorySection.build(dated, budget).includedIds)
+    }
+
+    @Test
+    fun theSheetLineLeavesTheIdOut() {
+        assertEquals("(2026-10-04) Uses LaTeX", MemorySection.displayLineOf(fact(7, "Uses LaTeX").copy(savedOn = "2026-10-04")))
+        assertEquals("Uses LaTeX", MemorySection.displayLineOf(fact(7, "Uses LaTeX")))
+    }
+
     @Test
     fun noFactsMeansNoSection() {
         assertEquals("", MemorySection.build(emptyList()).text)
@@ -27,7 +53,7 @@ class MemorySectionTest {
         )
 
         assertEquals(
-            "Memory (facts saved earlier; [id] is for the memory tool):\n" +
+            HEADER + "\n" +
                 "All threads:\n" +
                 "- [3] User's name is Riad\n" +
                 "This thread:\n" +
@@ -112,7 +138,7 @@ class MemorySectionTest {
         )
 
         assertEquals(
-            "Memory (facts saved earlier; [id] is for the memory tool):\n" +
+            HEADER + "\n" +
                 "All threads:\n- [3] User's name is Riad\n" +
                 "This project:\n- [9] Supervisor wants APA style\n" +
                 "This thread:\n- [5] We chose option B",
