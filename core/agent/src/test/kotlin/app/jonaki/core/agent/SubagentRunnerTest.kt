@@ -153,6 +153,17 @@ class SubagentRunnerTest {
     }
 
     @Test
+    fun theStartedCountBeginsAgainWithAQueuedUserMessage() = runBlocking {
+        val runner = runner(mapOf("scout" to ScriptedProvider(textTurn("Done."), textTurn("Done."))))
+        runner.launch(listOf(SubagentTask("scout", "a"), SubagentTask("scout", "b")), context)
+        assertEquals(2, runner.startedThisRun)
+
+        runner.userMessageArrived()
+
+        assertEquals(0, runner.startedThisRun)
+    }
+
+    @Test
     fun aCustomTypeHasTheStandardBudgetUntilTheUserChangesIt() = runBlocking {
         val provider = ScriptedProvider(textTurn("| Shop | Price |"))
         val runner = runner(mapOf("price-checker" to provider), customTypes = listOf(priceChecker))

@@ -273,7 +273,11 @@ class AgentRunner(
      * not on send, keeps the chat in the order the model saw.
      */
     private suspend fun deliverQueuedMessages(threadId: String): List<Message> {
-        return takeQueuedText(threadId).map { text -> Message(Role.USER, saveUserMessage(threadId, text)) }
+        val queuedTexts = takeQueuedText(threadId)
+        if (queuedTexts.isNotEmpty()) {
+            subagentRunners[threadId]?.userMessageArrived()
+        }
+        return queuedTexts.map { text -> Message(Role.USER, saveUserMessage(threadId, text)) }
     }
 
     /** Empties the thread's queue in one step, so no message is taken twice. */

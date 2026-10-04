@@ -75,6 +75,14 @@ class SubagentRunner(
     override val startedThisRun: Int
         get() = startedCount.get()
 
+    /**
+     * A message the user queued reached the model mid-run. The limits count
+     * subagents per user message (D-137), so the count starts again with it.
+     */
+    fun userMessageArrived() {
+        startedCount.set(0)
+    }
+
     /** The work of each running subagent by its id, so that the user can stop one alone (D-126). */
     private val runningWork = ConcurrentHashMap<String, Job>()
 
