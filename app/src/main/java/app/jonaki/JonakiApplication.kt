@@ -168,7 +168,7 @@ class JonakiApplication : Application() {
             reviewMode = { settings.snapshot.value.reviewExtractedMemories },
             clock = System::currentTimeMillis,
         )
-        reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json")))
+        reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json"))) { settings.snapshot.value.reminderPolicy }
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
         runtimePermissions = RuntimePermissions(this, visibleActivity, settings::recordPermissionRefusal)
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)

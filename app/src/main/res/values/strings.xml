@@ -13,6 +13,15 @@
     <string name="files_no_camera">No camera app</string>
     <string name="reminders_channel_name">Reminders</string>
     <string name="reminder_notification_title">Reminder</string>
+    <string name="reminder_action_done">Done</string>
+    <string name="reminder_action_ten_minutes">10 min</string>
+    <string name="reminder_action_later">Later…</string>
+    <string name="reminder_later_title">Remind again</string>
+    <string name="reminder_later_hour">1 hour</string>
+    <string name="reminder_later_day">1 day</string>
+    <string name="reminder_later_pick">Pick date and time</string>
+    <string name="reminder_later_past">Pick a time in the future</string>
+    <string name="scheduled_waiting_for_done">Waiting for Done</string>
     <string name="scheduled_tasks_channel_name">Scheduled tasks</string>
     <string name="scheduled_task_needs_approval">Needs approval</string>
     <string name="scheduled_task_failed">Failed: %1$s</string>

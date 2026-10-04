@@ -5,6 +5,7 @@ import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import android.content.Context
+import app.jonaki.phone.ReminderPolicy
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +63,8 @@ data class SettingsSnapshot(
     val subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
     /** Subagent types the user made, in the order they were added (D-138). */
     val customSubagents: List<CustomSubagent> = emptyList(),
+    /** Settings > Files and schedule: how an unanswered reminder rings again. */
+    val reminderPolicy: ReminderPolicy = ReminderPolicy(),
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -124,6 +127,10 @@ class AppSettings(
             localModelTools = preferences.getStringSet(LOCAL_MODEL_TOOLS, null)?.toSet() ?: LocalModelToolList.DEFAULT,
             subagentLimits = readSubagentLimits(),
             customSubagents = CustomSubagents.fromText(preferences.getString(CUSTOM_SUBAGENTS, "").orEmpty()),
+            reminderPolicy = ReminderPolicy(
+                intervalMinutes = preferences.getInt(REMINDER_INTERVAL_MINUTES, ReminderPolicy.DEFAULT_INTERVAL_MINUTES),
+                maxRepeats = preferences.getInt(REMINDER_MAX_REPEATS, ReminderPolicy.DEFAULT_MAX_REPEATS),
+            ).withinBounds(),
         )
     }
 
@@ -198,6 +205,8 @@ class AppSettings(
         editor.putInt(SUBAGENT_COST_CENTS, limits.costCapCents)
         editor.putInt(SUBAGENT_MINUTES, limits.minutes)
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
+        editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
+        editor.putInt(REMINDER_MAX_REPEATS, snapshot.reminderPolicy.maxRepeats)
         editor.apply()
     }
 
@@ -237,5 +246,7 @@ class AppSettings(
         const val SUBAGENT_COST_CENTS = "subagent_cost_cents"
         const val SUBAGENT_MINUTES = "subagent_minutes"
         const val CUSTOM_SUBAGENTS = "custom_subagents"
+        const val REMINDER_INTERVAL_MINUTES = "reminder_interval_minutes"
+        const val REMINDER_MAX_REPEATS = "reminder_max_repeats"
     }
 }

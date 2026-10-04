@@ -1340,7 +1340,7 @@ private fun approvalModeOf(choice: ApprovalModeChoice): ApprovalMode = when (cho
     ApprovalModeChoice.BYPASS -> ApprovalMode.BYPASS
 }
 
-private fun themeModeOf(choice: ThemeChoice): ThemeMode = when (choice) {
+internal fun themeModeOf(choice: ThemeChoice): ThemeMode = when (choice) {
     ThemeChoice.SYSTEM -> ThemeMode.SYSTEM
     ThemeChoice.LIGHT -> ThemeMode.LIGHT
     ThemeChoice.DARK -> ThemeMode.DARK
