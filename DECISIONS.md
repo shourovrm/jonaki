@@ -1987,3 +1987,110 @@ because of it. Images the user attaches show as thumbnails in the message
 and the composer, and a tap opens them full screen with zoom; the stored
 text and what the model gets are unchanged. Thumbnails not checked on a
 phone.
+
+## D-147 · 2026-10-05 · Memory: dates, ranked recall, keywords, superseded facts — proposed
+User ruling ("go ahead, implement all") after a research round (Hermes Agent
+docs and r/hermesagent, other Reddit threads, LongMemEval, Letta, Mem0, the
+SQLite FTS5 docs). Room v12 adds memories.keywords and
+memories.supersededAtMillis, messages.promptFactIds and steps.guardNote, and
+rebuilds the fact index over text and keywords (KeywordsMigrationTest).
+(1) A fact's line in the prompt is "- [id] (2026-10-04) text", the day it was
+saved or last changed, and the header says the newer of two facts holds; the
+day changes only with the fact, so D-035's cache rule stands. (2) Recall
+takes several words, matches any of them (FtsQuery) and orders by
+bm25(text 1.0, keywords 0.5); amends D-009's phrase match. (3) Each fact
+carries keywords in both scripts, written by the model that saves it and
+never shown. Spike on 20 facts with gemini-2.5-flash-lite
+(spikes/memory-keywords): asking for "the other script" gave an English
+keyword for 3 of 10 Bangla facts, asking for both scripts every time gave 10
+of 10 and 5 of 5; four runs cost $0.005. Closes D-009's limit ("thesis" did
+not find "থিসিস") where the model writes the keyword. (4) Background
+extraction no longer destroys: an update keeps the old text as a superseded
+copy and a delete marks the fact superseded; the Memory screen lists them
+under Replaced with Restore and Delete, and extraction removes those older
+than 30 days. The memory tool's forget and the user's delete stay real
+deletes. Amends D-036. (5) Extraction may mark a fact "scope":"global"; it
+always waits for approval, and the rule names what qualifies (4 of 20 spike
+facts marked, against 14 before it was narrowed). Rejected: embeddings, a
+vector store, a knowledge graph (no evidence of gain at a few thousand
+facts), a consolidation pass (wait until facts number in the hundreds).
+Limits: the update's two writes are not one transaction; restoring a copy
+can leave two similar facts. Outcome: not checked on a phone.
+
+## D-148 · 2026-10-05 · search_chats tool and a message index outside Room — proposed
+tools/search-chats finds complete user and assistant messages of regular
+threads by words, across threads or in this one, best match first, each hit
+with the message before and after it. The index is a contentless FTS5
+trigram table plus an id map, made and rebuilt by a database callback, so it
+needs no Room version. Measured on 20,000 mixed Bangla and English messages
+(11.4 MB of text): 21.8 MB, 1.91 times the text
+(spikes/message-index/results.md). Rejected: keying on messages' implicit
+rowid (VACUUM may renumber it), detail=none or detail=column (FTS5 then
+refuses trigram phrase queries), a view as content source (breaks Room's
+table rebuild), an own copy of the text (2.99 times). Why: LongMemEval
+reports that extracted facts alone lower accuracy and that raw turns with
+facts as keys raise it; Hermes Agent searches sessions the same way. The
+tool is in the Memory group and is not given to incognito threads, subagents
+or local models. Its results are not wrapped as outside content, since they
+are the user's own chats; an old answer that quoted a web page is the gap.
+About 145 prompt tokens (estimate). Outcome: not checked on a phone; the
+first open after the upgrade indexes old messages and was not timed.
+
+## D-149 · 2026-10-05 · Facts held after outside content; the Jev guard screens them — proposed
+Published attacks plant memories through web pages, so a fact saved in a
+thread that has read outside content (D-143) waits for the user's approval
+on the Memory screen, from the memory tool and from extraction alike. With
+the Jev guard's screening on, each such fact is first put to Jev as a
+"memory fact": only a planted-looking fact or a missing answer waits, a
+clear one is saved (FactScreen, OneJobGuardAndFactScreenTest). A plain
+thread is never asked, so it costs nothing. Settings > Guardrails >
+"Hold new facts for review" switches the rule off. Limit: without the guard
+every later fact of a thread that searched the web once waits. Outcome: not
+checked on a phone.
+
+## D-150 · 2026-10-05 · Settings > Guardrails; the Jev guard's options — proposed
+User rulings. A new Settings page holds the Jev guard and the two rules that
+follow outside content ("Ask before sending out", D-143 rule 1, and "Hold
+new facts for review", D-149); both rules can be switched off. The guard's
+single switch (D-144) became two, "Skip cards for safe actions" and "Screen
+outside content", each defaulting to the old switch's value. A slider picks
+Careful (0.95, 0.80, flag at 0.50), Balanced (0.90, 0.65, 0.65) or Relaxed
+(0.80, 0.50, 0.80); only Balanced's action values were tested, while all
+three flag values had no miss and no false alarm in the spikes. The page
+shows the guard's cost this month. Amends D-144: every guard question saves
+a one-line note on its step, shown under the step, and its cost as a hidden
+BACKGROUND row, so thread and month totals include it (D-036); the shield
+sheet says On, Off or On without a key. Second test on 21 real pages (3,935
+to 19,993 characters) and 12 poisoned copies, 2 in Bangla: 0 false positives
+(0.02 to 0.03), 0 misses (0.81 to 0.98), median 0.42 s, $0.006
+(spikes/jev-guard/results_pages.md). Left out by user ruling: the TypeSafe
+direct endpoint. Settings > Memory and skills gains switches for saving
+facts from chats, reviewing new facts, suggesting facts for all threads and
+suggesting skills. Outcome: not checked on a phone, with the guard on or off.
+
+## D-151 · 2026-10-05 · The agent proposes a skill; the user adds it — proposed
+tools/propose-skill saves a proposal (name, description, SKILL.md, optional
+"replaces") outside the skill library, at most 5 waiting and 6,000
+characters each. The Skills screen lists them under Proposed; Add writes the
+skill through the library, Discard deletes the proposal. Nothing is listed
+in the prompt or loadable until the user adds it. Guidelines: only after a
+task with many steps, a solved dead end or a correction, and a change to an
+existing skill before a new one. Not given to subagents, incognito threads
+or local models. Why: Hermes Agent's users report about five near-duplicate
+auto-created skills per workflow. Rejected: creating skills without the
+user. About 305 prompt tokens (estimate). Outcome: not checked on a phone.
+
+## D-152 · 2026-10-05 · Facts in the context sheet; Markdown export; MiniMax balance — proposed
+(1) A run records the ids of its memory section on its user message, and the
+context sheet's Memory row opens those facts. (2) Settings > Memory and
+skills > "Export as Markdown" writes every fact in use to
+Downloads/Jonaki/jonaki-memory-<date>.md, grouped by scope. Why: users of
+file-based memory value a copy they can read and keep; the store stays
+SQLite. (3) MiniMax's card shows a balance: a pay-as-you-go key (sk-api-)
+reads /account/query_balance, any other key the 5-hour window of
+/v1/token_plan/remains. The second endpoint is in MiniMax's FAQ; the field
+names come from MiniMax's own command line tool, so any other answer shows
+no line. MiMo documents only its console's balance page, and four likely
+paths on its API host return 404, so its card stays without one. Amends the
+balance note of 2026-10-03. Outcome: none of the three checked on a phone,
+and the MiniMax answer was not seen with a real key.
