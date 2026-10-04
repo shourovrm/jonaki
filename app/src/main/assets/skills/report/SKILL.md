@@ -37,6 +37,7 @@ A report is one HTML file in `artifacts/`, for example `artifacts/laptop-compari
 - Tables scroll sideways inside a wrapper (`overflow-x: auto`) instead of breaking the page width.
 - Charts: load the bundled Chart.js 4 with `<script src="lib/chart.js"></script>` (it works only inside Jonaki's viewer) and draw into a `<canvas>` inside a box of fixed height, with `responsive: true, maintainAspectRatio: false`. Label both axes and give each dataset a label. For one or two simple bars, inline SVG is also fine.
 - Add `@media print` rules: white background, black text, no shadows, `break-inside: avoid` on tables and figures, so a PDF export looks clean.
+- When the user asks for a PDF, call `export_pdf` with the report's path (page `a4`, the default). It writes the PDF beside the HTML file; `share_file` then saves or shares it.
 
 ## Checks before you finish
 
