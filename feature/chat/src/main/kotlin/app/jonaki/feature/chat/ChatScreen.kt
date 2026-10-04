@@ -63,6 +63,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -97,6 +98,8 @@ fun ChatScreen(
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
+    /** The cancel mark on a queued message. */
+    onCancelQueued: (queuedId: String) -> Unit = {},
     onApprovalChoice: (approvalId: String, choice: ApprovalChoice) -> Unit,
     onRetry: (errorId: String) -> Unit,
     onWebSearchChange: (enabled: Boolean) -> Unit,
@@ -209,6 +212,11 @@ fun ChatScreen(
                     }
                     if (state.editingMessageId != null) {
                         EditingBanner(onCancelEdit)
+                    }
+                    for (queued in state.queuedMessages) {
+                        key(queued.id) {
+                            QueuedMessageRow(queued, onCancel = { onCancelQueued(queued.id) })
+                        }
                     }
                     Composer(
                         draft = state.draft,
@@ -759,18 +767,18 @@ private fun Composer(
             Spacer(Modifier.width(8.dp))
             if (isRunning) {
                 StopButton(onStop)
-            } else {
-                FilledIconButton(
-                    onClick = onSend,
-                    enabled = canSend,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                    modifier = Modifier.size(52.dp),
-                ) {
-                    Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
-                }
+                Spacer(Modifier.width(8.dp))
+            }
+            FilledIconButton(
+                onClick = onSend,
+                enabled = canSend,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier.size(52.dp),
+            ) {
+                Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
             }
         }
     }
@@ -877,18 +885,16 @@ private fun AttachmentChips(attachments: List<AttachmentUi>, onRemove: (String) 
     }
 }
 
+/** Round and as large as Send; the words are only for screen readers. */
 @Composable
 private fun StopButton(onStop: () -> Unit) {
     val colors = JonakiTheme.colors
-    Button(
+    FilledIconButton(
         onClick = onStop,
-        colors = ButtonDefaults.buttonColors(containerColor = colors.stop, contentColor = colors.onStop),
-        contentPadding = PaddingValues(start = 14.dp, end = 18.dp),
-        modifier = Modifier.heightIn(min = 52.dp),
+        colors = IconButtonDefaults.filledIconButtonColors(containerColor = colors.stop, contentColor = colors.onStop),
+        modifier = Modifier.size(52.dp),
     ) {
-        Icon(JonakiIcons.Stop, contentDescription = null, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(stringResource(R.string.chat_stop), fontWeight = FontWeight.SemiBold)
+        Icon(JonakiIcons.Stop, contentDescription = stringResource(R.string.chat_stop), modifier = Modifier.size(22.dp))
     }
 }
 

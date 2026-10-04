@@ -57,6 +57,7 @@ import app.jonaki.feature.chat.ContextUi
 import app.jonaki.feature.chat.ChatUiState
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
+import app.jonaki.feature.chat.QueuedMessageUi
 import app.jonaki.feature.chat.UsageUi
 import app.jonaki.feature.settings.AccountLineUi
 import app.jonaki.feature.settings.AddModelsScreen
@@ -580,6 +581,8 @@ private fun ChatRoute(
     }.collectAsState(initial = emptyList())
     val running by runner.runningThreadIds.collectAsState()
     val approvals by runner.pendingApprovals.collectAsState()
+    val queuedByThread by runner.queuedMessages.collectAsState()
+    val handedBackTexts by runner.handedBackText.collectAsState()
     val settingsSnapshot by application.settings.snapshot.collectAsState()
     val attachmentsByThread by application.attachmentDrafts.byThread.collectAsState()
     val sharedTexts by application.incomingShares.textFor.collectAsState()
@@ -605,6 +608,11 @@ private fun ChatRoute(
     LaunchedEffect(threadId, sharedTexts[threadId]) {
         val sharedText = application.incomingShares.takeText(threadId) ?: return@LaunchedEffect
         draft = if (draft.isBlank()) sharedText else draft.trimEnd() + "\n\n" + sharedText
+    }
+    // A stopped or failed run hands its queued messages back instead of sending them.
+    LaunchedEffect(threadId, handedBackTexts[threadId]) {
+        val handedBack = runner.takeHandedBackText(threadId) ?: return@LaunchedEffect
+        draft = if (draft.isBlank()) handedBack else draft.trimEnd() + "\n\n" + handedBack
     }
     // A new thread does not exist yet, so a model picked before the first message is kept here.
     var modelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
@@ -681,6 +689,7 @@ private fun ChatRoute(
             stepWords = stepDetailWords(),
         ),
         isRunning = isRunning,
+        queuedMessages = queuedByThread[threadId].orEmpty().map { queued -> QueuedMessageUi(queued.id, queued.text) },
         draft = draft,
         status = status,
         modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application, rememberLocalModelKeys(application)),
@@ -747,6 +756,7 @@ private fun ChatRoute(
             }
         },
         onStop = { runner.stop(threadId) },
+        onCancelQueued = { queuedId -> runner.cancelQueued(threadId, queuedId) },
         onOpenContext = if (isNew || contextWindowTokens == null) {
             null
         } else {

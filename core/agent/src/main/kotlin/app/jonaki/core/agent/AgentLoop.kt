@@ -45,6 +45,12 @@ class AgentLoop(
     private val imageMessages: ImageMessages? = null,
     /** Spaces web searches that run side by side; tests pass a virtual clock. */
     waitTimer: WaitTimer = WaitTimer.REAL,
+    /**
+     * Messages the user sent while the run was going, already saved as user
+     * messages; empty when none are waiting. The loop asks only at safe
+     * points, so a message never comes between a tool call and its result.
+     */
+    private val takeQueuedMessages: suspend () -> List<Message> = { emptyList() },
 ) {
     private val scheduler = ToolCallScheduler(waitTimer)
 
@@ -78,11 +84,25 @@ class AgentLoop(
                 return finish(RunOutcome.BudgetReached(answered.message.text))
             }
             if (answered.message.toolCalls.isEmpty()) {
-                return finish(RunOutcome.Completed(answered.message.text))
+                val queuedMessages = takeQueuedMessages()
+                if (queuedMessages.isEmpty()) {
+                    return finish(RunOutcome.Completed(answered.message.text))
+                }
+                // The user spoke before the answer ended the run, so the run goes on with their message.
+                conversation += queuedMessages
+                toolTurnsUsed = 0
+                continue
             }
 
             toolTurnsUsed += 1
             conversation += runToolCalls(answered.message.toolCalls)
+            // Safe point: every tool result is in, and the next request has not been sent.
+            val queuedMessages = takeQueuedMessages()
+            if (queuedMessages.isNotEmpty()) {
+                conversation += queuedMessages
+                // One step budget per user message (D-005), and these are new user messages.
+                toolTurnsUsed = 0
+            }
         }
     }
 

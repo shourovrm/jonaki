@@ -14,6 +14,8 @@
     <string name="chat_add_files">Files</string>
     <string name="chat_attachment_remove">Remove %1$s</string>
     <string name="chat_stop">Stop</string>
+    <string name="chat_queued">Queued</string>
+    <string name="chat_queued_cancel">Cancel queued message</string>
     <string name="chat_run_working">Working</string>
     <string name="chat_run_step">step %1$d</string>
     <plurals name="chat_run_steps">

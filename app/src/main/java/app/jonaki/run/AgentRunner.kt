@@ -15,6 +15,7 @@ import app.jonaki.core.agent.AgentLoop
 import app.jonaki.core.agent.ContextBreakdown
 import app.jonaki.core.agent.PromptSkill
 import app.jonaki.core.model.ImagePart
+import app.jonaki.core.model.Message
 import app.jonaki.core.toolapi.SubagentLauncher
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.ThreadPaths
@@ -95,10 +96,12 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -145,6 +148,24 @@ class AgentRunner(
     /** Cards waiting per thread, oldest first; parallel subagents can ask at the same time (M7). */
     private val approvals = MutableStateFlow<Map<String, List<PendingApproval>>>(emptyMap())
     val pendingApprovals: StateFlow<Map<String, List<PendingApproval>>> = approvals.asStateFlow()
+
+    /**
+     * Messages sent while a thread's run was going, oldest first. They live in
+     * memory only: each is saved to the database when the loop takes it.
+     */
+    private val queues = MutableStateFlow<Map<String, List<QueuedMessage>>>(emptyMap())
+    val queuedMessages: StateFlow<Map<String, List<QueuedMessage>>> = queues.asStateFlow()
+
+    /** Queued text a stopped or failed run handed back, waiting for the chat to put it in its field. */
+    private val handedBack = MutableStateFlow<Map<String, String>>(emptyMap())
+    val handedBackText: StateFlow<Map<String, String>> = handedBack.asStateFlow()
+
+    /**
+     * Held while a run starts, while a message is queued and while a run ends,
+     * so a message sent at the moment a run ends is either taken by that run's
+     * follow-up or handed back, never lost.
+     */
+    private val runStateLock = Any()
 
     private val stepCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
 
@@ -194,35 +215,87 @@ class AgentRunner(
     fun modelKeyFor(thread: ThreadEntity?): String? =
         thread?.modelKey ?: settings.snapshot.value.chatModels.defaultModelKey
 
+    /** Starts a run, or queues the message when the thread's run is going (it reaches the model at the next safe point). */
     fun send(threadId: String, text: String) {
-        if (threadId in running.value || text.isBlank()) {
+        if (text.isBlank()) {
             return
         }
-        startRun(threadId) {
-            saveUserMessage(threadId, text.trim())
+        synchronized(runStateLock) {
+            if (threadId in running.value) {
+                enqueue(threadId, text.trim())
+                return
+            }
+            startRun(threadId) {
+                saveUserMessage(threadId, text.trim())
+            }
         }
     }
 
     /** Like [send], for a scheduled task: false when the thread is busy, so the caller can wait and try again. */
     fun sendIfIdle(threadId: String, text: String): Boolean {
-        if (threadId in running.value || text.isBlank()) {
+        if (text.isBlank()) {
             return false
         }
-        send(threadId, text)
-        return true
+        synchronized(runStateLock) {
+            if (threadId in running.value) {
+                return false
+            }
+            startRun(threadId) {
+                saveUserMessage(threadId, text.trim())
+            }
+            return true
+        }
     }
+
+    private fun enqueue(threadId: String, text: String) {
+        val queued = QueuedMessage(id = UUID.randomUUID().toString(), text = text)
+        queues.update { current -> current + (threadId to current[threadId].orEmpty() + queued) }
+    }
+
+    /** The user cancelled one queued message; it is dropped and nothing goes back to the field. */
+    fun cancelQueued(threadId: String, queuedId: String) {
+        queues.update { current ->
+            val remaining = current[threadId].orEmpty().filter { queued -> queued.id != queuedId }
+            if (remaining.isEmpty()) current - threadId else current + (threadId to remaining)
+        }
+    }
+
+    /** The chat put the handed-back text into its field. */
+    fun takeHandedBackText(threadId: String): String? {
+        val text = handedBack.value[threadId] ?: return null
+        handedBack.update { current -> current - threadId }
+        return text
+    }
+
+    /**
+     * The agent loop's safe point: saves each waiting message as a user
+     * message, in order, and returns them for the next request. Saving here,
+     * not on send, keeps the chat in the order the model saw.
+     */
+    private suspend fun deliverQueuedMessages(threadId: String): List<Message> {
+        return takeQueuedText(threadId).map { text -> Message(Role.USER, saveUserMessage(threadId, text)) }
+    }
+
+    /** Empties the thread's queue in one step, so no message is taken twice. */
+    private fun takeQueuedText(threadId: String): List<String> =
+        queues.getAndUpdate { current -> current - threadId }[threadId].orEmpty().map { queued -> queued.text }
 
     /**
      * Replaces a sent prompt with [text]: the prompt and everything after it
      * are deleted, then the new prompt runs (D-056).
      */
     fun editAndResend(threadId: String, messageId: String, text: String) {
-        if (threadId in running.value || text.isBlank()) {
+        if (text.isBlank()) {
             return
         }
-        startRun(threadId) {
-            deleteFromMessage(threadId, messageId)
-            saveUserMessage(threadId, text.trim())
+        synchronized(runStateLock) {
+            if (threadId in running.value) {
+                return
+            }
+            startRun(threadId) {
+                deleteFromMessage(threadId, messageId)
+                saveUserMessage(threadId, text.trim())
+            }
         }
     }
 
@@ -249,17 +322,22 @@ class AgentRunner(
 
     /** Runs again on the saved history, after a failed answer. */
     fun retry(threadId: String) {
-        if (threadId in running.value) {
-            return
+        synchronized(runStateLock) {
+            if (threadId in running.value) {
+                return
+            }
+            startRun(threadId) {}
         }
-        startRun(threadId) {}
     }
 
     /** The thread's folder, made if missing; attachments move into its inbox/ before a message is sent. */
     fun threadFolder(threadId: String): java.io.File = ThreadFolders.create(context, threadId)
 
     suspend fun deleteThread(threadId: String) {
-        stop(threadId)
+        // Waits for the run to end, so its queue is handed back before it is cleared below.
+        runningJobs[threadId]?.cancelAndJoin()
+        queues.update { current -> current - threadId }
+        handedBack.update { current -> current - threadId }
         database.threadDao().delete(threadId)
         ThreadFolders.delete(context, threadId)
     }
@@ -372,6 +450,7 @@ class AgentRunner(
         }
     }
 
+    /** Call with [runStateLock] held and the thread idle. */
     private fun startRun(threadId: String, beforeRun: suspend () -> Unit) {
         running.update { current -> current + threadId }
         stepCounts.update { current -> current - threadId }
@@ -379,34 +458,69 @@ class AgentRunner(
         val job = scope.launch {
             try {
                 beforeRun()
-                runWithOneRetry(threadId)
-                extractMemoryAfterRun(threadId)
-                launchCompaction(threadId)
+                runUntilNothingIsQueued(threadId)
             } finally {
-                approvals.update { current -> current - threadId }
-                runningJobs.remove(threadId)
-                subagentRunners.remove(threadId)
-                running.update { current -> current - threadId }
+                finishRun(threadId)
             }
         }
         runningJobs[threadId] = job
     }
 
-    private suspend fun saveUserMessage(threadId: String, text: String) {
+    /**
+     * Runs the thread, then runs again when a message was queued too late for
+     * the loop to take it. A run that was stopped or failed does not go on:
+     * its queue is handed back in [finishRun].
+     */
+    private suspend fun runUntilNothingIsQueued(threadId: String) {
+        while (true) {
+            val outcome = runWithOneRetry(threadId)
+            extractMemoryAfterRun(threadId)
+            launchCompaction(threadId)
+            val endedNormally = outcome is RunOutcome.Completed || outcome is RunOutcome.BudgetReached
+            if (!endedNormally) {
+                return
+            }
+            val lateMessages = takeQueuedText(threadId)
+            if (lateMessages.isEmpty()) {
+                return
+            }
+            for (text in lateMessages) {
+                saveUserMessage(threadId, text)
+            }
+        }
+    }
+
+    private fun finishRun(threadId: String) {
+        synchronized(runStateLock) {
+            approvals.update { current -> current - threadId }
+            runningJobs.remove(threadId)
+            subagentRunners.remove(threadId)
+            val leftInQueue = takeQueuedText(threadId)
+            if (leftInQueue.isNotEmpty()) {
+                // After Stop or a failure nothing is sent on its own; the user decides.
+                handedBack.update { current -> current + (threadId to leftInQueue.joinToString("\n\n")) }
+            }
+            running.update { current -> current - threadId }
+        }
+    }
+
+    /** Saves the message as the thread's next row and returns the text the model gets. */
+    private suspend fun saveUserMessage(threadId: String, text: String): String {
         val threadDao = database.threadDao()
-        val thread = threadDao.find(threadId) ?: return
+        val thread = threadDao.find(threadId) ?: return text
         if (thread.title.isBlank()) {
             threadDao.rename(threadId, titleFrom(text))
         }
         val messageDao = database.messageDao()
+        // The time goes into the message, not the system prompt, so the prompt cache holds (D-005).
+        val textForModel = promptBuilder.userMessageWithContext(text, ZonedDateTime.now())
         messageDao.upsert(
             MessageEntity(
                 id = UUID.randomUUID().toString(),
                 threadId = threadId,
                 position = messageDao.nextPosition(threadId),
                 role = Role.USER.name,
-                // The time goes into the message, not the system prompt, so the prompt cache holds (D-005).
-                text = promptBuilder.userMessageWithContext(text, ZonedDateTime.now()),
+                text = textForModel,
                 toolCallsJson = "[]",
                 toolCallId = null,
                 isComplete = true,
@@ -414,21 +528,24 @@ class AgentRunner(
             ),
         )
         threadDao.touch(threadId, System.currentTimeMillis())
+        return textForModel
     }
 
-    private suspend fun runWithOneRetry(threadId: String) {
-        val firstOutcome = runOnce(threadId) ?: return
+    /** The run's final outcome; null when the run could not start. */
+    private suspend fun runWithOneRetry(threadId: String): RunOutcome? {
+        val firstOutcome = runOnce(threadId) ?: return null
         val shouldRetry = firstOutcome is RunOutcome.ProviderFailed && firstOutcome.retryable
         // Overload errors such as Gemini's 503 usually pass on a second try.
         val finalOutcome = if (shouldRetry) {
             delay(RETRY_DELAY_MILLIS)
-            runOnce(threadId) ?: return
+            runOnce(threadId) ?: return null
         } else {
             firstOutcome
         }
         if (finalOutcome is RunOutcome.ProviderFailed) {
             saveError(threadId, finalOutcome.message)
         }
+        return finalOutcome
     }
 
     /** Runs the loop once; null when the run could not start (an error row explains why). */
@@ -530,6 +647,7 @@ class AgentRunner(
                 systemPrompt = systemPrompt,
             ),
             imageMessages = threadImageMessages,
+            takeQueuedMessages = { deliverQueuedMessages(threadId) },
         )
         val summary = database.compactionDao().latestForThread(threadId)
         val history = CompactionPlan.historyAfter(
@@ -865,6 +983,9 @@ class AgentRunner(
         const val PARENT_ANSWER_TOKENS = 1_000
     }
 }
+
+/** A message sent while the thread's run was going, shown above the composer until the loop takes it. */
+data class QueuedMessage(val id: String, val text: String)
 
 /** Each thread's folder (D-008): inbox/ for files that come in, work/ and artifacts/. */
 object ThreadFolders {
