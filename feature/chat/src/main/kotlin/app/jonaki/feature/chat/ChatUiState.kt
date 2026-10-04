@@ -266,6 +266,8 @@ sealed interface ChatItem {
         override val id: String,
         /** Empty when Python itself is missing. */
         val packageNames: List<String>,
+        /** True when the names are the documents add-on's; the card then says "Documents add-on", not the list. */
+        val isDocumentsAddOn: Boolean = false,
         /** Null when the size is not known before the download. */
         val downloadBytes: Long?,
         val state: PythonInstallState,

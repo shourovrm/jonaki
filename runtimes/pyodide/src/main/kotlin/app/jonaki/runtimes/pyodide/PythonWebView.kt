@@ -62,10 +62,13 @@ private class PythonWebViewClient(
     private fun response(mimeType: String, body: InputStream): WebResourceResponse =
         WebResourceResponse(mimeType, "utf-8", OK, "OK", policyHeaders, body)
 
-    private fun harnessResource(name: String): InputStream =
-        checkNotNull(PythonWebView::class.java.getResourceAsStream("$HARNESS_RESOURCES/$name")) {
+    /** Bundled Python modules sit in python/, beside the harness folder; everything else is in harness/. */
+    private fun harnessResource(name: String): InputStream {
+        val folder = if (name.startsWith(BundledModules.FOLDER + "/")) RESOURCES else HARNESS_RESOURCES
+        return checkNotNull(PythonWebView::class.java.getResourceAsStream("$folder/$name")) {
             "$name is missing from the APK"
         }
+    }
 
     /** The page never leaves the harness. */
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
@@ -89,7 +92,8 @@ private class PythonWebViewClient(
         const val FORBIDDEN = 403
 
         // Absolute, because R8 moves classes to other packages in release builds.
-        const val HARNESS_RESOURCES = "/app/jonaki/runtimes/pyodide/harness"
+        const val RESOURCES = "/app/jonaki/runtimes/pyodide"
+        const val HARNESS_RESOURCES = "$RESOURCES/harness"
 
         val policyHeaders = mapOf("Content-Security-Policy" to PyodideRequests.CONTENT_POLICY)
     }

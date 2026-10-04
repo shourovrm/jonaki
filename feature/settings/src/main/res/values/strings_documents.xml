@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_python_documents_add_on">Documents add-on: Word, Excel, PowerPoint</string>
+    <string name="settings_python_downloading_documents">Downloading documents add-on</string>
+</resources>

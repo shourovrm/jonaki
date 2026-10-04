@@ -4,9 +4,11 @@ import app.jonaki.runtimes.pyodide.DownloadProgress
 import app.jonaki.runtimes.pyodide.InstallResult
 import app.jonaki.runtimes.pyodide.PyodideFolder
 import app.jonaki.runtimes.pyodide.PyodideInstaller
+import app.jonaki.runtimes.pyodide.PinnedWheel
 import app.jonaki.runtimes.pyodide.PyodideRelease
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -42,6 +44,10 @@ data class PythonState(
     val coreStatus: PythonCoreStatus = PythonCoreStatus.CHECKING,
     val damagedFiles: List<String> = emptyList(),
     val installedPackages: List<String> = emptyList(),
+    /** The documents add-on's pinned wheels that are on the phone at their pinned size. */
+    val installedWheels: List<PinnedWheel> = emptyList(),
+    /** File names of pinned wheels that are present with the wrong bytes; Repair fetches them again. */
+    val damagedWheelFiles: List<String> = emptyList(),
     /** numpy and pandas with their dependencies; empty until the core's lock file is there. */
     val dataAddOnPackages: Set<String> = emptySet(),
     val storageBytes: Long = 0,
@@ -55,9 +61,18 @@ data class PythonState(
     val isDataAddOnInstalled: Boolean
         get() = dataAddOnPackages.isNotEmpty() && installedPackages.containsAll(dataAddOnPackages)
 
-    /** True when every named package is installed; the names are lock names, as run_code reports them. */
-    fun hasPackages(names: List<String>): Boolean =
-        coreStatus == PythonCoreStatus.INSTALLED && installedPackages.containsAll(names)
+    /** Every lock package and every pinned wheel of the documents add-on is installed, and no wheel is damaged. */
+    val isDocumentsAddOnInstalled: Boolean
+        get() = damagedWheelFiles.isEmpty() && hasPackages(PyodideRelease.DOCUMENTS_ADD_ON)
+
+    /**
+     * True when every named package is installed; the names are lock names or
+     * wheel names, as run_code reports them.
+     */
+    fun hasPackages(names: List<String>): Boolean {
+        val installedNames = installedPackages + installedWheels.map { wheel -> wheel.packageName }
+        return coreStatus == PythonCoreStatus.INSTALLED && installedNames.containsAll(names)
+    }
 }
 
 /**
@@ -100,8 +115,16 @@ class PythonSetup(
     fun installDataAddOn(): Job? = installPackages(PyodideRelease.DATA_ADD_ON)
 
     /**
+     * Installs lxml, pillow, beautifulsoup4 and their dependencies from the
+     * lock file and the five pinned wheels; the core comes first when missing.
+     * Also Repair: a missing or damaged file is fetched again, the rest is kept.
+     */
+    fun installDocumentsAddOn(): Job? = installPackages(PyodideRelease.DOCUMENTS_ADD_ON)
+
+    /**
      * Installs packages from the lock file with their dependencies; the core
-     * comes first when missing. A name outside the lock file fails with the
+     * comes first when missing. The documents add-on's wheel names are
+     * installed from their pinned URLs. A name outside the lock file fails with the
      * installer's message ("requests is not available for Pyodide 314.0.7").
      */
     fun installPackages(names: List<String>): Job? {
@@ -136,14 +159,30 @@ class PythonSetup(
         refresh()
     }
 
+    fun removeDocumentsAddOn(): Job = scope.launch {
+        withContext(fileDispatcher) {
+            folder.removePackages(PyodideRelease.DOCUMENTS_ADD_ON_LOCK_PACKAGES)
+            folder.removeWheels(release.addOnWheels)
+        }
+        refresh()
+    }
+
     /** The add-on's measured size, with the core's when that is missing too; null for other packages. */
     fun totalBytesFor(packageNames: List<String>): Long? {
         val current = state.value
         val coreBytes = if (current.coreStatus == PythonCoreStatus.INSTALLED) 0 else release.coreDownloadBytes
-        if (!isWithinDataAddOn(packageNames)) {
-            return null
+        val addOnBytes = when {
+            isWithinDataAddOn(packageNames) -> PyodideRelease.DATA_ADD_ON_DOWNLOAD_BYTES
+            isWithinDocumentsAddOn(packageNames) -> PyodideRelease.DOCUMENTS_ADD_ON_DOWNLOAD_BYTES
+            else -> return null
         }
-        return coreBytes + PyodideRelease.DATA_ADD_ON_DOWNLOAD_BYTES
+        return coreBytes + addOnBytes
+    }
+
+    /** True for the documents add-on's lock packages and wheels; names compare without regard to case. */
+    fun isWithinDocumentsAddOn(packageNames: List<String>): Boolean {
+        val addOnNames = PyodideRelease.DOCUMENTS_ADD_ON.map { name -> name.lowercase() }.toSet()
+        return packageNames.isNotEmpty() && packageNames.all { name -> name.lowercase() in addOnNames }
     }
 
     /**
@@ -162,7 +201,9 @@ class PythonSetup(
         mutableState.update { current ->
             current.copy(download = PythonDownload(packageNames, doneBytes = 0, totalBytes = totalBytes), problem = null)
         }
-        val job = scope.launch {
+        // Started only after downloadJob is set: a download that fails at once would otherwise
+        // compare itself with a still empty downloadJob and never show its problem.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             val ownJob = coroutineContext[Job]
             val result = download(packageNames)
             // A cancelled call can end as an IOException, which is the user's Cancel, not a problem.
@@ -179,6 +220,7 @@ class PythonSetup(
             }
         }
         downloadJob = job
+        job.start()
         return job
     }
 
@@ -197,8 +239,23 @@ class PythonSetup(
         if (packageNames.isEmpty()) {
             return InstallResult.Installed
         }
-        return installer.installPackages(packageNames) { progress: DownloadProgress ->
-            showProgress(coreBytes + progress.doneBytes)
+        val wheels = release.addOnWheels.filter { wheel -> wheel.packageName in packageNames }
+        val lockNames = packageNames.filter { name -> release.addOnWheels.none { wheel -> wheel.packageName == name } }
+        var lockBytes = 0L
+        if (lockNames.isNotEmpty()) {
+            val lockResult = installer.installPackages(lockNames) { progress: DownloadProgress ->
+                lockBytes = progress.doneBytes
+                showProgress(coreBytes + progress.doneBytes)
+            }
+            if (lockResult is InstallResult.Failed) {
+                return lockResult
+            }
+        }
+        if (wheels.isEmpty()) {
+            return InstallResult.Installed
+        }
+        return installer.installWheels(wheels) { progress: DownloadProgress ->
+            showProgress(coreBytes + lockBytes + progress.doneBytes)
         }
     }
 
@@ -227,6 +284,8 @@ class PythonSetup(
         return PythonState(
             coreStatus = PythonCoreStatus.INSTALLED,
             installedPackages = folder.installedPackageNames().sorted(),
+            installedWheels = folder.installedWheels(),
+            damagedWheelFiles = folder.damagedWheels().map { wheel -> wheel.fileName },
             dataAddOnPackages = addOnPackages.toSet(),
             storageBytes = folder.storageBytes(),
         )

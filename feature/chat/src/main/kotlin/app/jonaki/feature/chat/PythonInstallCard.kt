@@ -85,6 +85,8 @@ internal fun PythonInstallCard(item: ChatItem.PythonInstall, canTryAgain: Boolea
 private fun title(item: ChatItem.PythonInstall): String {
     val what = if (item.packageNames.isEmpty()) {
         stringResource(R.string.chat_python_python)
+    } else if (item.isDocumentsAddOn) {
+        stringResource(R.string.chat_python_documents_add_on)
     } else {
         item.packageNames.joinToString(", ")
     }

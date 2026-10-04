@@ -6,6 +6,8 @@
 importScripts("pyodide/pyodide.js");
 
 const THREAD_ROOT = "/thread";
+// Outside /thread, so that it is never sent back as a changed file.
+const MODULES_FOLDER = "/jonaki_modules";
 const STARTING_FOLDERS = ["inbox", "work", "artifacts"];
 
 function post(message, transfer) {
@@ -97,27 +99,72 @@ function programTraceback(message) {
   return "Traceback (most recent call last):\n" + message.substring(programFrame);
 }
 
-function missingPackagesFor(pyodide, code, job) {
+function importedModules(pyodide, code) {
   const codeModule = pyodide.pyimport("pyodide.code");
   const importsProxy = codeModule.find_imports(code);
   const imports = importsProxy.toJs();
   importsProxy.destroy();
   codeModule.destroy();
-  const installed = new Set(job.installedPackages);
-  const needed = new Set();
+  return imports;
+}
+
+// Sorts what the program imports into packages to load and packages that are
+// not installed. A program that imports a documents wheel or a bundled module
+// needs the whole documents add-on, the combination that was tested together.
+function packagesFor(imports, job) {
+  const installedLock = new Set(job.installedPackages);
+  const installedWheels = job.installedWheelPaths;
+  const needsDocuments = imports.some((importName) => job.documentsImports.includes(importName));
+  const neededLock = new Set();
   const missing = new Set();
   for (const importName of imports) {
     const packageName = job.packageForImport[importName];
     if (packageName === undefined) {
       continue;
     }
-    if (installed.has(packageName)) {
-      needed.add(packageName);
+    if (installedLock.has(packageName)) {
+      neededLock.add(packageName);
     } else {
       missing.add(packageName);
     }
   }
-  return { needed: Array.from(needed), missing: Array.from(missing) };
+  const neededWheelPaths = [];
+  if (needsDocuments) {
+    for (const partName of job.documentsAddOn) {
+      if (installedLock.has(partName)) {
+        neededLock.add(partName);
+      } else if (installedWheels[partName] !== undefined) {
+        neededWheelPaths.push(installedWheels[partName]);
+      } else {
+        missing.add(partName);
+      }
+    }
+  }
+  return { neededLock: Array.from(neededLock), neededWheelPaths: neededWheelPaths, missing: Array.from(missing) };
+}
+
+// Pyodide loads a pure-Python wheel from a URL without resolving its
+// dependencies; the app serves the file from the folder it checked.
+function wheelUrl(path) {
+  return new URL(path, self.location.href).href;
+}
+
+// Writes the bundled modules the program imports into a folder on Python's
+// import path. The app serves only the names it lists (python/<name>.py).
+async function writeBundledModules(pyodide, imports, job) {
+  const wanted = job.bundledModules.filter((name) => imports.includes(name));
+  if (wanted.length === 0) {
+    return;
+  }
+  makeFolders(pyodide.FS, MODULES_FOLDER);
+  for (const name of wanted) {
+    const response = await fetch("python/" + name + ".py");
+    if (!response.ok) {
+      throw new Error("Could not read the bundled module " + name + " (" + response.status + ")");
+    }
+    pyodide.FS.writeFile(MODULES_FOLDER + "/" + name + ".py", new Uint8Array(await response.arrayBuffer()));
+  }
+  pyodide.runPython("import sys\nsys.path.insert(0, " + JSON.stringify(MODULES_FOLDER) + ")");
 }
 
 function describeResult(result) {
@@ -139,14 +186,21 @@ async function run(job) {
     stdout: (line) => post({ type: "stdout", text: line + "\n" }),
     stderr: (line) => post({ type: "stderr", text: line + "\n" }),
   });
-  const packages = missingPackagesFor(pyodide, job.code, job);
+  const imports = importedModules(pyodide, job.code);
+  const packages = packagesFor(imports, job);
   if (packages.missing.length > 0) {
     return { missingPackages: packages.missing };
   }
-  if (packages.needed.length > 0) {
+  if (packages.neededLock.length > 0 || packages.neededWheelPaths.length > 0) {
     post({ type: "phase", name: "packages" });
-    await pyodide.loadPackage(packages.needed, { messageCallback: () => {} });
   }
+  if (packages.neededLock.length > 0) {
+    await pyodide.loadPackage(packages.neededLock, { messageCallback: () => {} });
+  }
+  if (packages.neededWheelPaths.length > 0) {
+    await pyodide.loadPackage(packages.neededWheelPaths.map(wheelUrl), { messageCallback: () => {} });
+  }
+  await writeBundledModules(pyodide, imports, job);
   for (const folder of STARTING_FOLDERS) {
     makeFolders(pyodide.FS, THREAD_ROOT + "/" + folder);
   }

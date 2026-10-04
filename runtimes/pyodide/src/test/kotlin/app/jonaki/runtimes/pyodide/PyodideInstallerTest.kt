@@ -75,7 +75,29 @@ class PyodideInstallerTest {
             val bytes = served.getValue(name)
             PinnedFile(name, Checksums.sha256Of(bytes), bytes.size.toLong())
         }
-        return PyodideRelease(version = "test", baseUrl = server.url("/full/").toString(), coreFiles = coreFiles)
+        return PyodideRelease(
+            version = "test",
+            baseUrl = server.url("/full/").toString(),
+            coreFiles = coreFiles,
+            addOnWheels = pypiWheels.map { fileName -> pinnedWheel(fileName) },
+        )
+    }
+
+    /** What the fake PyPI host serves: files under /packages/, a different path from the CDN's /full/. */
+    private val pypiWheels = listOf("python_docx-1.2.0-py3-none-any.whl", "openpyxl-3.1.5-py2.py3-none-any.whl")
+
+    private fun pinnedWheel(fileName: String, nameInUrl: String = fileName): PinnedWheel {
+        val bytes = "wheel bytes of $fileName".toByteArray()
+        served[nameInUrl] = bytes
+        return PinnedWheel(
+            packageName = fileName.substringBefore('-').replace('_', '-'),
+            version = "1",
+            importNames = listOf(fileName.substringBefore('-')),
+            fileName = fileName,
+            url = server.url("/packages/ab/cd/$nameInUrl").toString(),
+            sha256 = Checksums.sha256Of(bytes),
+            sizeBytes = bytes.size.toLong(),
+        )
     }
 
     private val folder by lazy { PyodideFolder(root, release()) }
@@ -233,5 +255,84 @@ class PyodideInstallerTest {
         folder.removePackages(listOf("numpy"))
 
         assertEquals(setOf("python-dateutil", "pytz", "six"), folder.installedPackageNames().toSet())
+    }
+
+    private fun installWheels(): InstallResult =
+        runBlocking { installer.installWheels(folder.release.addOnWheels) }
+
+    @Test
+    fun installsPinnedWheelsFromTheirOwnUrls() {
+        assertTrue(folder.installedWheels().isEmpty())
+
+        assertEquals(InstallResult.Installed, installWheels())
+
+        assertEquals(folder.release.addOnWheels, folder.installedWheels())
+        assertTrue(folder.damagedWheels().isEmpty())
+        assertTrue(server.takeRequest().path!!.startsWith("/packages/"))
+    }
+
+    @Test
+    fun aWheelIsKeptOnlyWhenItsHashMatches() {
+        val wheels = folder.release.addOnWheels
+        served[wheels[1].fileName] = "tampered".toByteArray()
+
+        val result = installWheels()
+
+        assertTrue(result.toString(), (result as InstallResult.Failed).message.contains("openpyxl"))
+        assertEquals(listOf(wheels[0]), folder.installedWheels())
+        assertTrue(root.walkTopDown().none { file -> file.name.endsWith(".part") })
+    }
+
+    @Test
+    fun aWheelFileWithTheWrongBytesIsDamagedAndRepairFetchesItAgain() {
+        installWheels()
+        val wheel = folder.release.addOnWheels[0]
+        folder.wheelFile(wheel).writeText("x".repeat(wheel.sizeBytes.toInt()))
+        assertEquals(listOf(wheel), folder.damagedWheels())
+        val requestsBefore = server.requestCount
+
+        assertEquals(InstallResult.Installed, installWheels())
+
+        assertTrue(folder.damagedWheels().isEmpty())
+        assertEquals(requestsBefore + 1, server.requestCount)
+    }
+
+    @Test
+    fun wheelsAlreadyInstalledAreNotDownloadedAgain() {
+        installWheels()
+        val requestsBefore = server.requestCount
+
+        installWheels()
+
+        assertEquals(requestsBefore, server.requestCount)
+    }
+
+    @Test
+    fun neverDownloadsAWheelWhoseNameIsNotAPlainArchiveName() {
+        val release = release()
+        val nested = pinnedWheel("../outside.whl")
+        val native = pinnedWheel("libtrick.so")
+        val folderWithBadWheels = PyodideFolder(root, release)
+        val requestsBefore = server.requestCount
+
+        val nestedResult = runBlocking { PyodideInstaller(folderWithBadWheels, OkHttpClient()).installWheels(listOf(nested)) }
+        val nativeResult = runBlocking { PyodideInstaller(folderWithBadWheels, OkHttpClient()).installWheels(listOf(native)) }
+
+        assertTrue(nestedResult is InstallResult.Failed)
+        assertTrue(nativeResult is InstallResult.Failed)
+        assertEquals(requestsBefore, server.requestCount)
+        assertFalse(File(root, "outside.whl").exists())
+    }
+
+    @Test
+    fun removeWheelsDeletesOnlyTheWheels() {
+        installCore()
+        installPackages("numpy")
+        installWheels()
+
+        folder.removeWheels(folder.release.addOnWheels)
+
+        assertTrue(folder.installedWheels().isEmpty())
+        assertEquals(listOf("numpy"), folder.installedPackageNames())
     }
 }

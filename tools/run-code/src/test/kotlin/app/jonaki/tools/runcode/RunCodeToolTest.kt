@@ -289,6 +289,27 @@ class RunCodeToolTest {
     }
 
     @Test
+    fun namesMissingDocumentsPackagesAsAnInstallNeed() {
+        val names = listOf("python-docx", "lxml", "XlsxWriter")
+        val runtime = FakeRuntime(CodeLanguage.PYTHON, CodeRunOutcome.MissingPackages(names))
+
+        val output = run(RunCodeTool(listOf(runtime)), "language" to text("python"), "code" to text("import docx"))
+
+        assertEquals(InstallNeed(names), InstallNeeds.of(output.text))
+    }
+
+    @Test
+    fun pythonGuidelinesMentionTheDocumentsAddOnInUnder200Characters() {
+        val tool = RunCodeTool(listOf(FakeRuntime(CodeLanguage.PYTHON, finished())))
+
+        val line = tool.guidelines.single { guideline -> guideline.contains("documents add-on") }
+
+        assertTrue(line, line.contains("jonaki_docs"))
+        val addedSentence = line.substringAfter("There is no pip at run time. ")
+        assertTrue(addedSentence, addedSentence.length < 200)
+    }
+
+    @Test
     fun offersOnlyTheLanguagesItHasRuntimesFor() {
         val pythonOnly = RunCodeTool(listOf(FakeRuntime(CodeLanguage.PYTHON, finished())))
         val both = RunCodeTool(
