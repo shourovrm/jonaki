@@ -33,6 +33,9 @@ import app.jonaki.tools.schedule.ScheduledTask
 import app.jonaki.tools.schedule.TaskCreated
 import app.jonaki.tools.schedule.TaskRequest
 import app.jonaki.tools.schedule.TaskScheduler
+import app.jonaki.tools.exportpdf.PdfPageSize
+import app.jonaki.tools.exportpdf.PdfRenderer
+import app.jonaki.tools.exportpdf.RenderedPdf
 import app.jonaki.tools.sharefile.DestinationResult
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.LinkedListing
@@ -116,6 +119,16 @@ class ToolRegistryTest {
         override suspend fun launch(tasks: List<SubagentTask>, context: ToolContext) = emptyList<SubagentReport>()
     }
 
+    private val pdfRenderer = object : PdfRenderer {
+        override suspend fun render(
+            threadFolder: java.io.File,
+            htmlPath: String,
+            outputFile: java.io.File,
+            pageSize: PdfPageSize,
+            timeLimit: kotlin.time.Duration,
+        ): RenderedPdf = error("not used in this test")
+    }
+
     private val everything = ToolServices(
         searchBackends = listOf(searchBackend),
         videoSummarizer = { VideoAnswer.Success("summary", inputTokens = null) },
@@ -126,6 +139,7 @@ class ToolRegistryTest {
         phone = phone,
         taskScheduler = taskScheduler,
         codeRuntimes = listOf(FakeRuntime(CodeLanguage.JAVASCRIPT), FakeRuntime(CodeLanguage.PYTHON)),
+        pdfRenderer = pdfRenderer,
     )
 
     private fun withGroupsOff(vararg groups: ToolGroup) =
@@ -145,7 +159,7 @@ class ToolRegistryTest {
             setOf(
                 "read_file", "write_file", "edit_file", "find_files", "search_files",
                 "web_search", "web_fetch", "youtube_summarize", "memory", "artifact", "share_file",
-                "read_document", "view_image", "phone", "schedule", "run_code",
+                "read_document", "view_image", "phone", "schedule", "run_code", "export_pdf",
             ),
             namesFor(everything).toSet(),
         )
@@ -182,6 +196,18 @@ class ToolRegistryTest {
     fun shareFileNeedsTheAppsFileDestinations() {
         val names = namesFor(everything.copy(fileDestinations = null)).toSet()
         assertEquals(false, "share_file" in names)
+    }
+
+    @Test
+    fun exportPdfNeedsTheAppsPdfRenderer() {
+        val names = namesFor(everything.copy(pdfRenderer = null)).toSet()
+        assertEquals(false, "export_pdf" in names)
+    }
+
+    @Test
+    fun exportPdfGoesWithTheReportsGroup() {
+        assertEquals(false, "export_pdf" in namesFor(withGroupsOff(ToolGroup.REPORTS)).toSet())
+        assertEquals(true, "export_pdf" in namesFor(withGroupsOff(ToolGroup.SHARE)).toSet())
     }
 
     @Test

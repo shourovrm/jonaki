@@ -42,6 +42,7 @@ data class StepDetail(
                 "web_fetch", "youtube_summarize" -> StepDetail(query = null, target = arguments.text("url")?.let(::withoutScheme))
                 "find_files", "search_files" -> StepDetail(query = null, target = arguments.text("pattern") ?: arguments.text("path"))
                 "share_file" -> StepDetail(query = null, target = shareFileTarget(arguments.text("action"), arguments.text("path"), words))
+                "export_pdf" -> StepDetail(query = null, target = exportPdfTarget(arguments.text("path"), arguments.text("output")))
                 "phone" -> StepDetail(query = null, target = phoneTarget(arguments, words))
                 "schedule" -> StepDetail(query = null, target = scheduleTarget(arguments, words))
                 "mcp" -> mcpDetail(arguments)
@@ -51,6 +52,14 @@ data class StepDetail(
                 "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments, words))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
+        }
+
+        /** The step shows the PDF that will be made, which is the default name beside the HTML file when no output is given. */
+        private fun exportPdfTarget(htmlPath: String?, output: String?): String? {
+            if (output != null) {
+                return output
+            }
+            return htmlPath?.let { path -> path.substringBeforeLast('.', path) + ".pdf" }
         }
 
         /** The approval card names what the phone action does and to what (plan M9). */

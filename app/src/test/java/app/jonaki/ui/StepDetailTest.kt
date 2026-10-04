@@ -25,6 +25,18 @@ class StepDetailTest {
     }
 
     @Test
+    fun exportPdfShowsTheOutputOrTheDefaultNameBesideTheHtml() {
+        assertEquals(
+            "exports/q3.pdf",
+            StepDetail.of("export_pdf", """{"path":"artifacts/q3.html","output":"exports/q3.pdf"}""", englishStepWords).target,
+        )
+        assertEquals(
+            "artifacts/q3.pdf",
+            StepDetail.of("export_pdf", """{"path":"artifacts/q3.html"}""", englishStepWords).target,
+        )
+    }
+
+    @Test
     fun youTubeShowsTheLink() {
         assertEquals("youtu.be/abc", StepDetail.of("youtube_summarize", """{"url":"https://youtu.be/abc"}""", englishStepWords).target)
     }
