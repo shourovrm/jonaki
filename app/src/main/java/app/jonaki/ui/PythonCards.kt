@@ -16,10 +16,14 @@ import app.jonaki.tools.runcode.InstallNeed
 object PythonCards {
     fun idFor(toolCallId: String): String = "python-$toolCallId"
 
-    /** What Install downloads: the whole data add-on when the need lies within it, else exactly the named packages. */
-    fun installTarget(need: InstallNeed, isWithinDataAddOn: Boolean): List<String> = when {
+    /**
+     * What Install downloads: the whole data add-on or the whole documents
+     * add-on when the need lies within it, else exactly the named packages.
+     */
+    fun installTarget(need: InstallNeed, isWithinDataAddOn: Boolean, isWithinDocumentsAddOn: Boolean = false): List<String> = when {
         need.packageNames.isEmpty() -> emptyList()
         isWithinDataAddOn -> PyodideRelease.DATA_ADD_ON
+        isWithinDocumentsAddOn -> PyodideRelease.DOCUMENTS_ADD_ON
         else -> need.packageNames
     }
 
@@ -30,9 +34,11 @@ object PythonCards {
         /** The download's size, or null when unknown (packages outside the data add-on). */
         downloadBytes: Long?,
         installTarget: List<String>,
+        isDocumentsAddOn: Boolean = false,
     ): ChatItem.PythonInstall = ChatItem.PythonInstall(
         id = idFor(toolCallId),
         packageNames = need.packageNames,
+        isDocumentsAddOn = isDocumentsAddOn,
         downloadBytes = downloadBytes,
         state = stateOf(need, python, installTarget),
     )

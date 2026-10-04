@@ -16,6 +16,8 @@ private val noActions = PythonActions(
     onRemove = {},
     onInstallDataAddOn = {},
     onRemoveDataAddOn = {},
+    onInstallDocumentsAddOn = {},
+    onRemoveDocumentsAddOn = {},
     onInstallPackage = {},
 )
 

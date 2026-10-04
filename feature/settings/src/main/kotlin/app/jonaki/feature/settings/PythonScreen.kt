@@ -69,6 +69,10 @@ data class PythonUiState(
     val damagedFiles: List<String> = emptyList(),
     val dataAddOnInstalled: Boolean = false,
     val dataAddOnDownloadBytes: Long,
+    val documentsAddOnInstalled: Boolean = false,
+    /** A pinned wheel of the documents add-on is present with the wrong bytes; the row offers Repair. */
+    val documentsAddOnDamaged: Boolean = false,
+    val documentsAddOnDownloadBytes: Long = 0,
     /** Null while nothing downloads. */
     val download: PythonDownloadUi? = null,
     /** The last install's error, as the installer said it. */
@@ -81,6 +85,7 @@ data class PythonDownloadUi(
     val packageNames: List<String>,
     val doneBytes: Long,
     val totalBytes: Long?,
+    val isDocumentsAddOn: Boolean = false,
 )
 
 class PythonActions(
@@ -91,6 +96,9 @@ class PythonActions(
     val onRemove: () -> Unit,
     val onInstallDataAddOn: () -> Unit,
     val onRemoveDataAddOn: () -> Unit,
+    /** Also Repair: only missing or damaged files are fetched again. */
+    val onInstallDocumentsAddOn: () -> Unit,
+    val onRemoveDocumentsAddOn: () -> Unit,
     /** A package name from Pyodide's lock file, as typed. */
     val onInstallPackage: (name: String) -> Unit,
 )
@@ -224,30 +232,24 @@ private fun PackagesSection(state: PythonUiState, actions: PythonActions) {
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 16.dp, end = 8.dp),
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_python_data_add_on), style = MaterialTheme.typography.titleSmall)
-                val detail = if (state.dataAddOnInstalled) {
-                    stringResource(R.string.settings_python_installed)
-                } else {
-                    stringResource(R.string.settings_python_add_on_size, UsageFormat.byteSize(state.dataAddOnDownloadBytes))
-                }
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.width(8.dp))
-            if (state.dataAddOnInstalled) {
-                TextButton(onClick = actions.onRemoveDataAddOn, enabled = !isDownloading) {
-                    Text(stringResource(R.string.settings_python_remove))
-                }
-            } else {
-                TextButton(onClick = actions.onInstallDataAddOn, enabled = !isDownloading) {
-                    Text(stringResource(R.string.settings_python_install_short))
-                }
-            }
-        }
+        AddOnRow(
+            title = stringResource(R.string.settings_python_data_add_on),
+            isInstalled = state.dataAddOnInstalled,
+            isDamaged = false,
+            downloadBytes = state.dataAddOnDownloadBytes,
+            isBusy = isDownloading,
+            onInstall = actions.onInstallDataAddOn,
+            onRemove = actions.onRemoveDataAddOn,
+        )
+        AddOnRow(
+            title = stringResource(R.string.settings_python_documents_add_on),
+            isInstalled = state.documentsAddOnInstalled,
+            isDamaged = state.documentsAddOnDamaged,
+            downloadBytes = state.documentsAddOnDownloadBytes,
+            isBusy = isDownloading,
+            onInstall = actions.onInstallDocumentsAddOn,
+            onRemove = actions.onRemoveDocumentsAddOn,
+        )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Text(
             if (state.installedPackages.isEmpty()) {
@@ -290,6 +292,49 @@ private fun PackagesSection(state: PythonUiState, actions: PythonActions) {
     }
 }
 
+/** One add-on: its name, its size or "Installed" under it, and Install, Repair or Remove beside it. */
+@Composable
+private fun AddOnRow(
+    title: String,
+    isInstalled: Boolean,
+    isDamaged: Boolean,
+    downloadBytes: Long,
+    isBusy: Boolean,
+    onInstall: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 16.dp, end = 8.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            val detail = when {
+                isDamaged -> stringResource(R.string.settings_python_damaged)
+                isInstalled -> stringResource(R.string.settings_python_installed)
+                else -> stringResource(R.string.settings_python_add_on_size, UsageFormat.byteSize(downloadBytes))
+            }
+            val detailColor = if (isDamaged) JonakiTheme.colors.deny else MaterialTheme.colorScheme.onSurfaceVariant
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = detailColor)
+        }
+        Spacer(Modifier.width(8.dp))
+        if (isDamaged) {
+            TextButton(onClick = onInstall, enabled = !isBusy) {
+                Text(stringResource(R.string.settings_python_repair))
+            }
+        }
+        if (isInstalled || isDamaged) {
+            TextButton(onClick = onRemove, enabled = !isBusy) {
+                Text(stringResource(R.string.settings_python_remove))
+            }
+        } else {
+            TextButton(onClick = onInstall, enabled = !isBusy) {
+                Text(stringResource(R.string.settings_python_install_short))
+            }
+        }
+    }
+}
+
 @Composable
 private fun statusText(state: PythonUiState): String = stringResource(
     when (state.status) {
@@ -304,6 +349,9 @@ private fun statusText(state: PythonUiState): String = stringResource(
 private fun downloadingText(download: PythonDownloadUi): String {
     if (download.packageNames.isEmpty()) {
         return stringResource(R.string.settings_python_downloading_python)
+    }
+    if (download.isDocumentsAddOn) {
+        return stringResource(R.string.settings_python_downloading_documents)
     }
     return stringResource(R.string.settings_python_downloading, download.packageNames.joinToString(", "))
 }
@@ -336,13 +384,15 @@ object PythonSample {
         coreDownloadBytes = 13_532_188,
         storageBytes = 0,
         dataAddOnDownloadBytes = 7_889_748,
+        documentsAddOnDownloadBytes = 4_543_064,
     )
 
     val installed = notInstalled.copy(
         status = PythonStatusUi.INSTALLED,
         storageBytes = 21_421_936,
-        installedPackages = listOf("numpy", "pandas", "python-dateutil", "pytz", "six"),
+        installedPackages = listOf("numpy", "pandas", "python-dateutil", "pytz", "six", "python-docx 1.2.0", "openpyxl 3.1.5"),
         dataAddOnInstalled = true,
+        documentsAddOnDamaged = true,
         problem = "requests is not available for Pyodide 314.0.7",
     )
 

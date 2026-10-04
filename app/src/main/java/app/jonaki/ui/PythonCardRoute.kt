@@ -33,20 +33,26 @@ fun rememberPythonCardHooks(application: JonakiApplication, threadId: String, on
             if (PythonCards.idFor(toolCallId) in dismissedIds || pythonState.coreStatus == PythonCoreStatus.CHECKING) {
                 null
             } else {
-                val isWithinAddOn = python.isWithinDataAddOn(need.packageNames)
+                val isWithinDataAddOn = python.isWithinDataAddOn(need.packageNames)
+                val isWithinDocumentsAddOn = python.isWithinDocumentsAddOn(need.packageNames)
                 PythonCards.of(
                     toolCallId = toolCallId,
                     need = need,
                     python = pythonState,
                     downloadBytes = if (need.packageNames.isEmpty()) python.release.coreDownloadBytes else python.totalBytesFor(need.packageNames),
-                    installTarget = PythonCards.installTarget(need, isWithinAddOn),
+                    installTarget = PythonCards.installTarget(need, isWithinDataAddOn, isWithinDocumentsAddOn),
+                    isDocumentsAddOn = isWithinDocumentsAddOn && !isWithinDataAddOn,
                 )
             }
         },
         onAction = { card, action ->
             when (action) {
                 PythonCardAction.INSTALL -> {
-                    val target = PythonCards.installTarget(InstallNeed(card.packageNames), python.isWithinDataAddOn(card.packageNames))
+                    val target = PythonCards.installTarget(
+                        InstallNeed(card.packageNames),
+                        python.isWithinDataAddOn(card.packageNames),
+                        python.isWithinDocumentsAddOn(card.packageNames),
+                    )
                     if (target.isEmpty()) python.installCore() else python.installPackages(target)
                 }
                 PythonCardAction.CANCEL -> python.cancel()

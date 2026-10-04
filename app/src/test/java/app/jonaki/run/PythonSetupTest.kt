@@ -2,6 +2,7 @@ package app.jonaki.run
 
 import app.jonaki.runtimes.pyodide.Checksums
 import app.jonaki.runtimes.pyodide.PinnedFile
+import app.jonaki.runtimes.pyodide.PinnedWheel
 import app.jonaki.runtimes.pyodide.PyodideFolder
 import app.jonaki.runtimes.pyodide.PyodideInstaller
 import app.jonaki.runtimes.pyodide.PyodideRelease
@@ -47,8 +48,23 @@ class PythonSetupTest {
         "pytz" to "pytz-2026.1.post1-py2.py3-none-any.whl",
         "six" to "six-1.17.0-py2.py3-none-any.whl",
         "regex" to "regex-2026.1-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+        "lxml" to "lxml-6.1.3-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+        "pillow" to "pillow-12.2.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+        "typing-extensions" to "typing_extensions-4.15.0-py3-none-any.whl",
+        "beautifulsoup4" to "beautifulsoup4-4.14.3-py3-none-any.whl",
+        "soupsieve" to "soupsieve-2.8.3-py3-none-any.whl",
+    )
+
+    /** The documents add-on's PyPI wheels, served by the same fake server under /packages/. */
+    private val pypiWheelFiles = mapOf(
+        "python-docx" to "python_docx-1.2.0-py3-none-any.whl",
+        "openpyxl" to "openpyxl-3.1.5-py2.py3-none-any.whl",
+        "et-xmlfile" to "et_xmlfile-2.0.0-py3-none-any.whl",
+        "python-pptx" to "python_pptx-1.0.2-py3-none-any.whl",
+        "XlsxWriter" to "xlsxwriter-3.2.9-py3-none-any.whl",
     )
     private val depends = mapOf(
+        "beautifulsoup4" to listOf("soupsieve", "typing-extensions"),
         "pandas" to listOf("numpy", "python-dateutil", "pytz"),
         "python-dateutil" to listOf("six"),
     )
@@ -97,7 +113,20 @@ class PythonSetupTest {
             val bytes = served.getValue(name)
             PinnedFile(name, Checksums.sha256Of(bytes), bytes.size.toLong())
         }
-        PyodideRelease(version = "test", baseUrl = server.url("/full/").toString(), coreFiles = coreFiles)
+        val addOnWheels = pypiWheelFiles.map { (name, fileName) ->
+            val bytes = "wheel bytes of $fileName".toByteArray()
+            served[fileName] = bytes
+            PinnedWheel(
+                packageName = name,
+                version = "1",
+                importNames = listOf(name),
+                fileName = fileName,
+                url = server.url("/packages/ab/cd/$fileName").toString(),
+                sha256 = Checksums.sha256Of(bytes),
+                sizeBytes = bytes.size.toLong(),
+            )
+        }
+        PyodideRelease(version = "test", baseUrl = server.url("/full/").toString(), coreFiles = coreFiles, addOnWheels = addOnWheels)
     }
 
     private val folder by lazy { PyodideFolder(root, release) }
@@ -289,5 +318,103 @@ class PythonSetupTest {
         runBlocking { setup.installCore()!!.join() }
 
         assertEquals(PythonCoreStatus.INSTALLED, setup.state.value.coreStatus)
+    }
+
+    @Test
+    fun theDocumentsAddOnInstallsTheCoreThenLockPackagesThenWheels() {
+        runBlocking { setup.installDocumentsAddOn()!!.join() }
+
+        val state = setup.state.value
+        assertEquals(PythonCoreStatus.INSTALLED, state.coreStatus)
+        assertNull(state.problem)
+        assertTrue(state.isDocumentsAddOnInstalled)
+        assertFalse(state.isDataAddOnInstalled)
+        assertEquals(release.addOnWheels, state.installedWheels)
+        assertEquals(PyodideRelease.DOCUMENTS_ADD_ON_LOCK_PACKAGES.sorted(), state.installedPackages)
+        assertTrue(state.hasPackages(listOf("python-docx", "lxml", "XlsxWriter")))
+    }
+
+    @Test
+    fun theDocumentsAddOnShowsItsMeasuredSizeWithTheCoresAtOnce() {
+        slowFiles += "pyodide.asm.wasm"
+        refreshed()
+
+        setup.installDocumentsAddOn()
+
+        val download = setup.state.value.download
+        assertNotNull(download)
+        assertEquals(release.coreDownloadBytes + PyodideRelease.DOCUMENTS_ADD_ON_DOWNLOAD_BYTES, download!!.totalBytes)
+        assertEquals(PyodideRelease.DOCUMENTS_ADD_ON, download.packageNames)
+    }
+
+    @Test
+    fun theDocumentsAddOnIsNotInstalledWhenAnyOnePartIsMissing() {
+        runBlocking { setup.installDocumentsAddOn()!!.join() }
+
+        File(File(root, "test"), "python_pptx-1.0.2-py3-none-any.whl").delete()
+        assertFalse(refreshed().isDocumentsAddOnInstalled)
+        runBlocking { setup.installDocumentsAddOn()!!.join() }
+        assertTrue(setup.state.value.isDocumentsAddOnInstalled)
+
+        File(File(root, "test"), "pillow-12.2.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl").delete()
+        assertFalse(refreshed().isDocumentsAddOnInstalled)
+    }
+
+    @Test
+    fun aDamagedWheelIsReadAsDamagedAndRepairFetchesOnlyThatFile() {
+        runBlocking { setup.installDocumentsAddOn()!!.join() }
+        val damagedFile = File(File(root, "test"), "openpyxl-3.1.5-py2.py3-none-any.whl")
+        damagedFile.writeText("x".repeat(damagedFile.length().toInt()))
+        val state = refreshed()
+        assertEquals(listOf(damagedFile.name), state.damagedWheelFiles)
+        assertFalse(state.isDocumentsAddOnInstalled)
+        val wheelRequestsBefore = server.requestCount
+
+        runBlocking { setup.installDocumentsAddOn()!!.join() }
+
+        assertTrue(setup.state.value.isDocumentsAddOnInstalled)
+        assertTrue(setup.state.value.damagedWheelFiles.isEmpty())
+        assertEquals(wheelRequestsBefore + 1, server.requestCount)
+    }
+
+    @Test
+    fun removingTheDocumentsAddOnKeepsPythonAndTheDataAddOn() {
+        runBlocking {
+            setup.installDataAddOn()!!.join()
+            setup.installDocumentsAddOn()!!.join()
+            setup.removeDocumentsAddOn().join()
+        }
+
+        val state = setup.state.value
+        assertEquals(PythonCoreStatus.INSTALLED, state.coreStatus)
+        assertFalse(state.isDocumentsAddOnInstalled)
+        assertTrue(state.installedWheels.isEmpty())
+        assertTrue(state.isDataAddOnInstalled)
+        assertEquals(setOf("numpy", "pandas", "python-dateutil", "pytz", "six"), state.installedPackages.toSet())
+    }
+
+    @Test
+    fun removingPythonAlsoRemovesTheWheels() {
+        runBlocking {
+            setup.installDocumentsAddOn()!!.join()
+            setup.remove().join()
+        }
+
+        val state = setup.state.value
+        assertTrue(state.installedWheels.isEmpty())
+        assertEquals(0L, state.storageBytes)
+    }
+
+    @Test
+    fun sizesAreKnownForTheDocumentsAddOnAndTheNamesItReports() {
+        runBlocking { setup.installCore()!!.join() }
+
+        assertEquals(PyodideRelease.DOCUMENTS_ADD_ON_DOWNLOAD_BYTES, setup.totalBytesFor(listOf("python-docx", "lxml")))
+        assertEquals(PyodideRelease.DOCUMENTS_ADD_ON_DOWNLOAD_BYTES, setup.totalBytesFor(listOf("pillow")))
+        assertNull(setup.totalBytesFor(listOf("python-docx", "regex")))
+        assertTrue(setup.isWithinDocumentsAddOn(listOf("XlsxWriter", "et-xmlfile")))
+        assertTrue(setup.isWithinDocumentsAddOn(listOf("xlsxwriter")))
+        assertFalse(setup.isWithinDocumentsAddOn(listOf("numpy")))
+        assertFalse(setup.isWithinDocumentsAddOn(emptyList()))
     }
 }

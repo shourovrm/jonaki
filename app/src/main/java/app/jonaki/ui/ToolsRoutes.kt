@@ -65,6 +65,8 @@ fun PythonRoute(application: JonakiApplication, onBack: () -> Unit) {
             onRemove = { python.remove() },
             onInstallDataAddOn = { python.installDataAddOn() },
             onRemoveDataAddOn = { python.removeDataAddOn() },
+            onInstallDocumentsAddOn = { python.installDocumentsAddOn() },
+            onRemoveDocumentsAddOn = { python.removeDocumentsAddOn() },
             onInstallPackage = { name -> python.installPackages(listOf(name)) },
         ),
     )
@@ -132,12 +134,20 @@ private fun pythonUiState(state: PythonState, release: PyodideRelease): PythonUi
     version = release.version,
     coreDownloadBytes = release.coreDownloadBytes,
     storageBytes = state.storageBytes,
-    installedPackages = state.installedPackages,
+    installedPackages = state.installedPackages + state.installedWheels.map { wheel -> "${wheel.packageName} ${wheel.version}" },
     damagedFiles = state.damagedFiles,
     dataAddOnInstalled = state.isDataAddOnInstalled,
     dataAddOnDownloadBytes = PyodideRelease.DATA_ADD_ON_DOWNLOAD_BYTES,
+    documentsAddOnInstalled = state.isDocumentsAddOnInstalled,
+    documentsAddOnDamaged = state.damagedWheelFiles.isNotEmpty(),
+    documentsAddOnDownloadBytes = PyodideRelease.DOCUMENTS_ADD_ON_DOWNLOAD_BYTES,
     download = state.download?.let { download ->
-        PythonDownloadUi(download.packageNames, download.doneBytes, download.totalBytes)
+        PythonDownloadUi(
+            packageNames = download.packageNames,
+            doneBytes = download.doneBytes,
+            totalBytes = download.totalBytes,
+            isDocumentsAddOn = download.packageNames == PyodideRelease.DOCUMENTS_ADD_ON,
+        )
     },
     problem = state.problem,
 )
