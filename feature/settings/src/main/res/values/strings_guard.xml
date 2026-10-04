@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_jev_guard">Jev guard</string>
+    <string name="settings_jev_guard_description">Sends each checked action and outside text to OpenRouter.</string>
+    <string name="settings_jev_guard_needs_key">Needs an OpenRouter key.</string>
+</resources>

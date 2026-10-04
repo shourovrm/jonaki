@@ -38,6 +38,9 @@ data class SettingsUiState(
     val personas: List<PersonaRowUi> = emptyList(),
     /** When tools ask first, in every thread without its own mode (D-058). */
     val approvalMode: ApprovalModeChoice = ApprovalModeChoice.ASK,
+    /** The Jev guard switch, and whether an OpenRouter key exists for it to use. */
+    val jevGuardOn: Boolean = false,
+    val jevGuardAvailable: Boolean = false,
     /** The model each subagent type runs on (D-065). */
     val subagentModels: List<SubagentModelRowUi> = emptyList(),
     /** The user's scoped models, offered for each type. */
@@ -199,6 +202,7 @@ class SettingsActions(
     /** Opens a persona's editor; null opens an empty one for a new persona. */
     val onOpenPersona: (personaId: String?) -> Unit = {},
     val onApprovalModeChange: (ApprovalModeChoice) -> Unit = {},
+    val onJevGuardChange: (Boolean) -> Unit = {},
     /** [modelKey] null returns the type to its default. */
     val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
     /** A limit's new value, one step from the old; the app keeps it in range (D-138). */

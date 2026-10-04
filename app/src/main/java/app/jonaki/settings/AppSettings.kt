@@ -60,6 +60,8 @@ data class SettingsSnapshot(
     val localModelTools: Set<String> = LocalModelToolList.DEFAULT,
     /** Settings > Subagents: how many start, and each one's budget (D-138). */
     val subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
+    /** The Jev guard: a second layer on the approval rules and a screen for outside text; off until switched on. */
+    val jevGuardOn: Boolean = false,
     /** Subagent types the user made, in the order they were added (D-138). */
     val customSubagents: List<CustomSubagent> = emptyList(),
 ) {
@@ -123,6 +125,7 @@ class AppSettings(
             // Missing means never chosen, so the defaults; a saved empty set stays empty.
             localModelTools = preferences.getStringSet(LOCAL_MODEL_TOOLS, null)?.toSet() ?: LocalModelToolList.DEFAULT,
             subagentLimits = readSubagentLimits(),
+            jevGuardOn = preferences.getBoolean(JEV_GUARD_ON, false),
             customSubagents = CustomSubagents.fromText(preferences.getString(CUSTOM_SUBAGENTS, "").orEmpty()),
         )
     }
@@ -197,6 +200,7 @@ class AppSettings(
         editor.putInt(SUBAGENT_TOOL_STEPS, limits.toolSteps)
         editor.putInt(SUBAGENT_COST_CENTS, limits.costCapCents)
         editor.putInt(SUBAGENT_MINUTES, limits.minutes)
+        editor.putBoolean(JEV_GUARD_ON, snapshot.jevGuardOn)
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
         editor.apply()
     }
@@ -237,5 +241,6 @@ class AppSettings(
         const val SUBAGENT_COST_CENTS = "subagent_cost_cents"
         const val SUBAGENT_MINUTES = "subagent_minutes"
         const val CUSTOM_SUBAGENTS = "custom_subagents"
+        const val JEV_GUARD_ON = "jev_guard_on"
     }
 }

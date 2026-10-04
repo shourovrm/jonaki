@@ -37,6 +37,7 @@ object SettingsSearch {
         ),
         SettingsPage.TOOLS to listOf(
             R.string.settings_section_approvals,
+            R.string.settings_jev_guard,
             R.string.settings_section_tools,
             R.string.settings_tools_all,
             R.string.settings_python,

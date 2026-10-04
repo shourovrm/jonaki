@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_jev_guard">জেভ গার্ড</string>
+    <string name="settings_jev_guard_description">যাচাই করা প্রতিটি কাজ ও বাইরের লেখা OpenRouter-এ পাঠায়।</string>
+    <string name="settings_jev_guard_needs_key">OpenRouter কী লাগবে।</string>
+</resources>

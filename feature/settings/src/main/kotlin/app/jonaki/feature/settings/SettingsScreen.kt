@@ -128,6 +128,10 @@ private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
             modifier = Modifier.padding(horizontal = 8.dp),
         )
     }
+    Group {
+        GroupDivider()
+        JevGuardRow(state.jevGuardOn, state.jevGuardAvailable, actions.onJevGuardChange)
+    }
     SectionLabel(stringResource(R.string.settings_section_tools))
     Group {
         NavigationRow(

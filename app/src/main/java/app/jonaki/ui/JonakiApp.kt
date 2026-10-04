@@ -1046,6 +1046,8 @@ private fun SettingsRoute(
         customInstructions = snapshot.customInstructions,
         personas = personaRowsOf(personas),
         approvalMode = approvalChoiceOf(snapshot.defaultApprovalMode),
+        jevGuardOn = snapshot.jevGuardOn,
+        jevGuardAvailable = SecretName.OPENROUTER in savedKeys,
         subagentModels = AgentTypes.ALL.map { type ->
             SubagentModelRowUi(
                 agentType = type.name,
@@ -1074,6 +1076,7 @@ private fun SettingsRoute(
                 current.copy(searchOrder = names.map { name -> SearchService.valueOf(name) })
             }
         },
+        onJevGuardChange = { on -> settings.update { current -> current.copy(jevGuardOn = on) } },
         onWebSearchOffInNewThreadsChange = { off -> settings.update { current -> current.copy(webSearchOffInNewThreads = off) } },
         onThemeModeChange = { mode -> settings.update { current -> current.copy(theme = themeChoiceOf(mode)) } },
         onOpenPage = onOpenPage,
