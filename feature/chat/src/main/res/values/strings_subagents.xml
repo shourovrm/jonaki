@@ -31,8 +31,8 @@
         <item quantity="other">%1$d over budget</item>
     </plurals>
     <plurals name="subagents_work_out_of_steps">
-        <item quantity="one">%1$d out of steps</item>
-        <item quantity="other">%1$d out of steps</item>
+        <item quantity="one">%1$d at step limit</item>
+        <item quantity="other">%1$d at step limit</item>
     </plurals>
     <plurals name="subagents_work_timed_out">
         <item quantity="one">%1$d timed out</item>

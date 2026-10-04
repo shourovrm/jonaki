@@ -13,7 +13,7 @@ import app.jonaki.tools.runcode.InstallNeed
 import app.jonaki.tools.runcode.InstallNeeds
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.SubagentGate
-import app.jonaki.core.agent.SubagentLimits
+import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.core.storage.SubagentEntity
 import app.jonaki.feature.chat.NotesBoardUi
@@ -64,6 +64,8 @@ object ChatItems {
          * measured against today's limits, since a subagent's row keeps none.
          */
         subagentLimits: SubagentLimitSettings = SubagentLimitSettings(),
+        /** Every subagent type, custom ones included; the delegate card names the highest cost cap among them. */
+        subagentTypeNames: List<String> = AgentTypes.ALL.map { type -> type.name },
         /** Labels for the step track and approval cards, in the app's language. */
         stepWords: StepDetail.Words,
     ): List<ChatItem> {
@@ -73,7 +75,7 @@ object ChatItems {
         val stepsById = steps.filter { step -> step.subagentId == null }.associateBy { step -> step.toolCallId }
         val subagentSteps = steps.filter { step -> step.subagentId != null }.groupBy { step -> step.subagentId }
         val subagentsByParent = subagents.groupBy { subagent -> subagent.parentToolCallId }
-        val subagentParts = SubagentParts(subagentsByParent, subagentSteps, modelNameOf, stepWords, SubagentLimits.from(subagentLimits))
+        val subagentParts = SubagentParts(subagentsByParent, subagentSteps, modelNameOf, stepWords, subagentLimits)
         val items = mutableListOf<ChatItem>()
         val firstKeptTurn = compaction?.let { summary -> firstTurnAfter(turns, summary.upToPosition) }
         for ((index, turn) in turns.withIndex()) {
@@ -85,7 +87,7 @@ object ChatItems {
             if (isLastTurn) {
                 items += pythonCardFor(turn, stepsById, pythonCard)
                 val stepStarts = steps.associate { step -> step.toolCallId to step.startedAtMillis }
-                items += pendingApprovals.map { pending -> approvalCard(pending, stepStarts, stepWords, subagentLimits) }
+                items += pendingApprovals.map { pending -> approvalCard(pending, stepStarts, stepWords, subagentLimits, subagentTypeNames) }
             }
         }
         val withRetry = markRetryableError(items, visibleRows, isRunning)
@@ -128,6 +130,7 @@ object ChatItems {
         stepStarts: Map<String, Long>,
         stepWords: StepDetail.Words,
         subagentLimits: SubagentLimitSettings,
+        subagentTypeNames: List<String>,
     ): ChatItem.Approval {
         val subagent = pending.subagent
         val reason = subagent?.reason
@@ -145,16 +148,21 @@ object ChatItems {
             agentLabel = subagent?.agentLabel,
             waitEndsAtMillis = waitEndsAt,
             subagentsAfter = pending.subagentsAfter,
-            costWarning = costWarningFor(pending.subagentsAfter, subagentLimits),
+            costWarning = costWarningFor(pending.subagentsAfter, subagentLimits, subagentTypeNames),
         )
     }
 
-    /** Only a delegate card above the user's warning number warns (D-137, D-138). */
-    private fun costWarningFor(subagentsAfter: Int?, limits: SubagentLimitSettings): SubagentCostWarning? {
-        if (subagentsAfter == null || subagentsAfter <= limits.warnAbove) {
+    /**
+     * Only a delegate card that takes the message above the user's cap says so
+     * (D-137, D-138). The cost shown is the highest cap of any type, since the
+     * card cannot know which types the call names.
+     */
+    private fun costWarningFor(subagentsAfter: Int?, limits: SubagentLimitSettings, typeNames: List<String>): SubagentCostWarning? {
+        if (subagentsAfter == null || subagentsAfter <= limits.maxPerMessage) {
             return null
         }
-        return SubagentCostWarning(above = limits.warnAbove, costCapUsd = limits.costCapUsd)
+        val highestCents = limits.highestCostCapCents(typeNames)
+        return SubagentCostWarning(above = limits.maxPerMessage, costCapUsd = highestCents / 100.0)
     }
 
     /** A running tool wins, then text being written; anything else is thinking. */
@@ -301,7 +309,7 @@ object ChatItems {
         private val stepsBySubagent: Map<String?, List<StepEntity>>,
         private val modelNameOf: (String) -> String?,
         private val stepWords: StepDetail.Words,
-        private val limits: SubagentLimits,
+        private val limits: SubagentLimitSettings,
     ) {
         fun stepsOf(subagent: SubagentEntity): List<StepEntity> =
             stepsBySubagent[subagent.id].orEmpty().sortedBy { step -> step.startedAtMillis }
@@ -311,6 +319,7 @@ object ChatItems {
             // The same names the delegate result uses: "researcher", or "researcher 2" among several.
             val label = if (siblings > 1) "${subagent.agentType} ${subagent.orderInCall + 1}" else subagent.agentType
             val steps = stepsOf(subagent)
+            val budget = limits.budgetFor(subagent.agentType)
             return SubagentUi(
                 id = subagent.id,
                 label = label,
@@ -326,8 +335,8 @@ object ChatItems {
                 finishedAtMillis = subagent.finishedAtMillis,
                 filesWritten = filesWrittenBy(steps),
                 notesPosted = steps.count(::isNotePosted),
-                stepLimit = limits.maxToolSteps,
-                costLimitUsd = limits.costCapUsd,
+                stepLimit = budget.toolSteps,
+                costLimitUsd = budget.costCapUsd,
             )
         }
 

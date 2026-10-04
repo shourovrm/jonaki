@@ -316,7 +316,7 @@ class ParallelToolCallsTest {
             memorySection = "",
             skillSection = "",
             now = { ZonedDateTime.of(2026, 10, 3, 9, 0, 0, 0, ZoneOffset.UTC) },
-            limits = limits,
+            limitsOverride = limits,
             timer = clock,
         )
     }

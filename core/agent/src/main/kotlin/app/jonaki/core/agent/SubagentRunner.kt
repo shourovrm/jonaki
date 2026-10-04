@@ -47,7 +47,8 @@ class SubagentRunner(
     private val now: () -> ZonedDateTime,
     /** The user's limits when the run started; fixed for the run (D-138). */
     override val limitSettings: SubagentLimitSettings = SubagentLimitSettings(),
-    private val limits: SubagentLimits = SubagentLimits.from(limitSettings),
+    /** Replaces the user's per-type budgets for every type; tests use it to set one tight limit. */
+    private val limitsOverride: SubagentLimits? = null,
     /** Types the user made; one named like a built-in type is left out. */
     customTypes: List<AgentType> = emptyList(),
     private val timer: WaitTimer = WaitTimer.REAL,
@@ -58,6 +59,10 @@ class SubagentRunner(
     private val types: List<AgentType> = AgentTypes.ALL + customTypes.filter { type -> AgentTypes.byName(type.name) == null }
 
     override val agentTypes: List<SubagentTypeInfo> = types.map { type -> SubagentTypeInfo(type.name, type.description) }
+
+    /** The budget of one type: the user's setting for it, or the default of its kind (D-138). */
+    private fun limitsFor(type: AgentType): SubagentLimits =
+        limitsOverride ?: SubagentLimits.from(limitSettings.budgetFor(type.name))
 
     override val models: List<SubagentModelInfo>
         get() = subagentModels.scoped
@@ -122,24 +127,25 @@ class SubagentRunner(
         }
         val model = subagentModels.modelFor(type, task.modelKey)
             ?: return SubagentReport(label, "Error: the model for $label has no saved API key. Pick another model.")
+        val limits = limitsFor(type)
         val subagentId = newId()
         val progress = SubagentProgress()
         val outcome = try {
             recorder.subagentStarted(SubagentStart(subagentId, group.parentToolCallId, index, type.name, task.task, model.key))
-            val loop = buildLoop(subagentId, label, type, task, model, group, context, progress)
+            val loop = buildLoop(subagentId, label, type, task, model, group, context, progress, limits)
             runStoppable(subagentId, progress) {
                 withTimeoutOrNull(limits.timeLimit) { loop.run(PromptBuilder("").userMessageWithContext(task.task, now())) }
                     ?: progress.stoppedEarly(SubagentStop.TIME_LIMIT)
             }
         } catch (cancellation: CancellationException) {
             // Stop: the card must not stay "running"; NonCancellable lets the save finish.
-            withContext(NonCancellable) { finish(subagentId, label, progress.stoppedEarly(SubagentStop.STOPPED), group, context) }
+            withContext(NonCancellable) { finish(subagentId, label, progress.stoppedEarly(SubagentStop.STOPPED), group, context, limits) }
             throw cancellation
         } catch (exception: Exception) {
             progress.stoppedEarly(SubagentStop.FAILED, failure = "${exception::class.simpleName}: ${exception.message}")
         }
         // Saving waits for a lock, which a Stop at that moment must not interrupt.
-        val answerText = withContext(NonCancellable) { finish(subagentId, label, outcome, group, context) }
+        val answerText = withContext(NonCancellable) { finish(subagentId, label, outcome, group, context, limits) }
         return SubagentReport(label, answerText)
     }
 
@@ -173,6 +179,7 @@ class SubagentRunner(
         outcome: SubagentOutcome,
         group: DelegationGroup,
         context: ToolContext,
+        limits: SubagentLimits,
     ): String {
         val fullText = SubagentPrompt.resultText(outcome, limits)
         val answerText = cappedAnswer(fullText, "${group.folder}/${label.replace(' ', '-')}.md", context)
@@ -201,6 +208,7 @@ class SubagentRunner(
         group: DelegationGroup,
         context: ToolContext,
         progress: SubagentProgress,
+        limits: SubagentLimits,
     ): SubagentLoop {
         // view_image follows the subagent's model, so a text-only thread can hand images to a vision model.
         val usableTools = givableTools.filter { tool -> tool.name != ViewedImages.TOOL_NAME || model.acceptsImages }
@@ -213,7 +221,7 @@ class SubagentRunner(
         })
         val helpers = mutableListOf<Tool>(RequestTool(), askParent)
         if (group.size > 1) {
-            helpers += NotesTool(context.threadFolder, "${group.folder}/notes.md", label, group.notesLock)
+            helpers += NotesTool(context.threadFolder, "${group.folder}/notes.md", label, group.notesLock, limits.maxNotesCalls)
         }
         val startTools = threadToolsAtStart + helpers
         return SubagentLoop(

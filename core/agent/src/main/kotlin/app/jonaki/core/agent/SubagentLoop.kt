@@ -135,32 +135,73 @@ internal class SubagentLoop(
     }
 
     private suspend fun runToolCalls(toolCalls: List<ToolCall>): List<Message> {
-        // Decided before any call starts, so that calls running side by side cannot both take the last step.
-        val stepsLeft = (limits.maxToolSteps - progress.toolSteps).coerceAtLeast(0)
+        val (toRun, notRun) = splitByStepBudget(toolCalls)
         val results = scheduler.runAll(
-            toolCalls = toolCalls.take(stepsLeft),
+            toolCalls = toRun,
             runsAlongsideOthers = { toolCall -> ToolCallScheduler.readsOnly(toolbox.active(toolCall.toolName), toolCall) },
             run = ::runToolCall,
             inCallOrder = { _, _ -> },
         )
         // Calls beyond the budget in the same turn get a result, which every provider requires.
-        val notRun = toolCalls.drop(stepsLeft).map { toolCall ->
+        val notRunResults = notRun.map { toolCall ->
             Message(Role.TOOL, "Not run: the step limit of ${limits.maxToolSteps} is used up.", toolCallId = toolCall.id)
         }
-        return results + notRun
+        return results + notRunResults
+    }
+
+    /**
+     * The calls that fit the steps left, and the rest. Decided before any
+     * call starts, so that calls running side by side cannot both take the
+     * last step. A notes call costs no step, so it always runs; its own
+     * ceiling is checked when it runs.
+     */
+    private fun splitByStepBudget(toolCalls: List<ToolCall>): Pair<List<ToolCall>, List<ToolCall>> {
+        var stepsLeft = (limits.maxToolSteps - progress.toolSteps).coerceAtLeast(0)
+        val toRun = mutableListOf<ToolCall>()
+        val notRun = mutableListOf<ToolCall>()
+        for (toolCall in toolCalls) {
+            if (toolCall.toolName == NotesTool.NAME) {
+                toRun += toolCall
+            } else if (stepsLeft > 0) {
+                stepsLeft -= 1
+                toRun += toolCall
+            } else {
+                notRun += toolCall
+            }
+        }
+        return toRun to notRun
     }
 
     private suspend fun runToolCall(toolCall: ToolCall): Message {
         // Saved under the subagent's id, because two subagents' providers may hand out the same call ids.
         val stepCall = toolCall.copy(id = "$subagentId/${toolCall.id}")
-        progress.countToolStep()
+        val overNotesCeiling = countAndCheckNotesCeiling(toolCall)
         recorder.stepStarted(subagentId, stepCall)
-        val result = resultOf(toolCall, stepCall)
+        val result = if (overNotesCeiling) notesCeilingReached() else resultOf(toolCall, stepCall)
         recorder.stepFinished(subagentId, stepCall, result.output, result.status)
         progress.addToolResult(toolCall.toolName, result.output.text)
         // The model keeps its own id, so the result matches its call.
         return Message(Role.TOOL, result.output.text, toolCallId = toolCall.id)
     }
+
+    /**
+     * Counts the call: a step, or for the notes board a note call, which
+     * costs no step. True when this is a notes call beyond the ceiling.
+     */
+    private fun countAndCheckNotesCeiling(toolCall: ToolCall): Boolean {
+        if (toolCall.toolName != NotesTool.NAME) {
+            progress.countToolStep()
+            return false
+        }
+        return progress.countNotesCall() > limits.maxNotesCalls
+    }
+
+    private fun notesCeilingReached(): StepResult = failed(
+        ToolOutput.error(
+            "you have used the notes board ${limits.maxNotesCalls} times",
+            "Continue with your task using your other tools, or answer now with what you have.",
+        ),
+    )
 
     private class StepResult(val output: ToolOutput, val status: SubagentStepStatus)
 

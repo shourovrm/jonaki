@@ -49,7 +49,7 @@ class SettingsSearchTest {
     @Test
     fun subagentSettingsOpenTheSubagentsPage() {
         assertEquals(
-            listOf("Subagents", "Each subagent", "Add subagent").map { title -> SettingsSearchEntry(title, SettingsPage.SUBAGENTS) },
+            listOf("Subagents", "Add subagent").map { title -> SettingsSearchEntry(title, SettingsPage.SUBAGENTS) },
             search("subagent"),
         )
         assertEquals(listOf(SettingsSearchEntry("Researcher", SettingsPage.SUBAGENTS)), search("researcher"))

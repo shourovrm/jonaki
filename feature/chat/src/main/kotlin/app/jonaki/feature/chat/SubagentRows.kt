@@ -32,6 +32,13 @@ data class SubagentUi(
     val stepLimit: Int = DEFAULT_STEP_LIMIT,
     val costLimitUsd: Double = DEFAULT_COST_LIMIT_USD,
 ) {
+    /**
+     * Steps that used up the budget: the notes board costs none (D-015), so it
+     * is shown among [steps] but not counted here.
+     */
+    val stepsUsed: Int
+        get() = steps.count { step -> step.toolName != NOTES_TOOL }
+
     /** Calls whose approval card went unanswered for 3 minutes (D-062). */
     val skippedSteps: List<StepUi>
         get() = steps.filter { step -> step.status == StepUiStatus.SKIPPED }
@@ -40,6 +47,7 @@ data class SubagentUi(
         get() = status == SubagentUiStatus.RUNNING
 
     companion object {
+        private const val NOTES_TOOL = "notes"
         const val DEFAULT_STEP_LIMIT = 10
         const val DEFAULT_COST_LIMIT_USD = 0.10
     }
@@ -122,6 +130,10 @@ object SubagentRows {
     }
 
     private fun endedRow(subagent: SubagentUi): SubagentRow {
+        // A subagent at its step limit still returned an answer, so its row reads as work done, not as a failure.
+        if (subagent.status == SubagentUiStatus.STEP_LIMIT) {
+            return SubagentRow(SubagentRowIcon.DONE, SubagentNow.Ended(subagent.status), needsLook = false)
+        }
         if (subagent.status != SubagentUiStatus.DONE) {
             return SubagentRow(SubagentRowIcon.WARNING, SubagentNow.Ended(subagent.status), needsLook = true)
         }

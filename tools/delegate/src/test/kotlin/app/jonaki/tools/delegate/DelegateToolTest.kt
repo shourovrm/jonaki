@@ -2,6 +2,7 @@ package app.jonaki.tools.delegate
 
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentReport
@@ -174,11 +175,71 @@ class DelegateToolTest {
     }
 
     @Test
-    fun theTimeLimitIsOneMinuteMoreThanASubagents() {
-        val tool = DelegateTool(FakeLauncher(SubagentLimitSettings(minutes = 20)))
+    fun theTimeLimitIsOneMinuteMoreThanTheLongestSubagentLimit() {
+        val slowWriter = SubagentLimitSettings(budgets = mapOf("writer" to SubagentBudget(10, 10, 20)))
 
-        assertEquals(21.minutes, tool.timeLimit)
-        assertEquals(11.minutes, DelegateTool(FakeLauncher()).timeLimit)
+        assertEquals(21.minutes, DelegateTool(FakeLauncher(slowWriter)).timeLimit)
+        // The researcher's default of 15 minutes is the longest of the defaults.
+        assertEquals(16.minutes, DelegateTool(FakeLauncher()).timeLimit)
+    }
+
+    @Test
+    fun aCustomTypesMinutesCountForTheTimeLimit() {
+        val settings = SubagentLimitSettings(budgets = mapOf("price-checker" to SubagentBudget(10, 10, 30)))
+        val launcher = FakeLauncher(settings, extraTypes = listOf(SubagentTypeInfo("price-checker", "Checks prices.")))
+
+        assertEquals(31.minutes, DelegateTool(launcher).timeLimit)
+    }
+
+    @Test
+    fun theGuidelinesStateEachTypesStepBudgetAndWhatAStepIs() {
+        val guideline = tool.guidelines.single { it.startsWith("Each subagent has a budget of tool steps") }
+
+        assertTrue(guideline.contains("researcher 20, scout 10, writer 10, worker 10"))
+        assertTrue(guideline.contains("One step is one tool call"))
+        assertTrue(guideline.contains("one narrow question"))
+        assertTrue(guideline.contains("Never guess links"))
+    }
+
+    @Test
+    fun theStepBudgetsInTheGuidelinesAreTheUsersAndCoverCustomTypes() {
+        val settings = SubagentLimitSettings(
+            budgets = mapOf("scout" to SubagentBudget(5, 10, 10), "price-checker" to SubagentBudget(7, 10, 10)),
+        )
+        val launcher = FakeLauncher(settings, extraTypes = listOf(SubagentTypeInfo("price-checker", "Checks prices.")))
+
+        val guideline = DelegateTool(launcher).guidelines.single { it.startsWith("Each subagent has a budget") }
+
+        assertTrue(guideline.contains("researcher 20, scout 5, writer 10, worker 10, price-checker 7"))
+    }
+
+    /** The prompt cache needs the same bytes on every request of a run (D-005). */
+    @Test
+    fun theGuidelinesDoNotChangeWhenTheRunsCountChanges() {
+        val before = tool.guidelines
+        launcher.started = 4
+
+        assertEquals(before, tool.guidelines)
+    }
+
+    @Test
+    fun theGuidelinesTellTheCapPerMessage() {
+        assertTrue(tool.guidelines.any { it.startsWith("Start at most 5 subagents per user message") })
+        val cap = DelegateTool(FakeLauncher(SubagentLimitSettings(maxPerMessage = 8)))
+        assertTrue(cap.guidelines.any { it.startsWith("Start at most 8 subagents per user message") })
+    }
+
+    @Test
+    fun aCallThatGoesOverTheCapNeedsTheUserEvenWhenTheAutomaticLimitIsAboveIt() {
+        val limits = SubagentLimitSettings(startedWithoutAsking = 8, perCall = 3, maxPerMessage = 5)
+        val launcher = FakeLauncher(limits)
+        val tool = DelegateTool(launcher)
+        val two = arguments("""{"tasks":[{"agent":"scout","task":"a"},{"agent":"scout","task":"b"}]}""")
+
+        launcher.started = 3
+        assertEquals(SideEffect.READ_ONLY, tool.sideEffectOf(two))
+        launcher.started = 4
+        assertEquals(SideEffect.NEEDS_USER, tool.sideEffectOf(two))
     }
 
     @Test

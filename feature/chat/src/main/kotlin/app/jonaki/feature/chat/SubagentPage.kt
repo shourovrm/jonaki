@@ -179,7 +179,7 @@ private fun PageTitle(subagent: SubagentUi) {
 @Composable
 private fun Meters(subagent: SubagentUi) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        val stepsUsed = subagent.steps.size
+        val stepsUsed = subagent.stepsUsed
         Meter(
             label = stringResource(R.string.subagents_steps),
             amount = stringResource(R.string.subagents_used_of_limit, stepsUsed.toString(), subagent.stepLimit.toString()),

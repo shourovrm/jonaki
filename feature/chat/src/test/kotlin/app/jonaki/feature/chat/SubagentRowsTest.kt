@@ -99,7 +99,6 @@ class SubagentRowsTest {
     fun everyEarlyStopIsAWarningThatNeedsALook() {
         val earlyStops = listOf(
             SubagentUiStatus.COST_LIMIT,
-            SubagentUiStatus.STEP_LIMIT,
             SubagentUiStatus.TIME_LIMIT,
             SubagentUiStatus.FAILED,
             SubagentUiStatus.STOPPED,
@@ -111,6 +110,30 @@ class SubagentRowsTest {
             assertEquals(SubagentNow.Ended(status), row.now)
             assertTrue(row.needsLook)
         }
+    }
+
+    @Test
+    fun aSubagentAtItsStepLimitReadsAsWorkDoneNotAsAWarning() {
+        val row = SubagentRows.rowOf(subagent(status = SubagentUiStatus.STEP_LIMIT, finishedAtMillis = 5_000))
+
+        assertEquals(SubagentRowIcon.DONE, row.icon)
+        assertEquals(SubagentNow.Ended(SubagentUiStatus.STEP_LIMIT), row.now)
+        assertFalse(row.needsLook)
+    }
+
+    @Test
+    fun theNotesBoardIsShownAsAStepButNotCountedAgainstTheBudget() {
+        val steps = listOf(
+            step("a", "web_search", StepUiStatus.DONE),
+            step("b", "notes", StepUiStatus.DONE),
+            step("c", "notes", StepUiStatus.DONE),
+            step("d", "web_fetch", StepUiStatus.DONE),
+        )
+
+        val used = subagent(steps = steps)
+
+        assertEquals(4, used.steps.size)
+        assertEquals(2, used.stepsUsed)
     }
 
     @Test

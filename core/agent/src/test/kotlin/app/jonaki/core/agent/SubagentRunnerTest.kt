@@ -6,6 +6,7 @@ import app.jonaki.core.providerapi.FinishReason
 import app.jonaki.core.providerapi.StreamEvent
 import app.jonaki.core.providerapi.Usage
 import app.jonaki.core.toolapi.SideEffect
+import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.SubagentTask
@@ -46,7 +47,7 @@ class SubagentRunnerTest {
         providers: Map<String, ChatProvider>,
         approver: ApprovalRequester = FixedApprover(ApprovalDecision.ALLOW_ONCE),
         limitSettings: SubagentLimitSettings = SubagentLimitSettings(),
-        limits: SubagentLimits = SubagentLimits.from(limitSettings),
+        limits: SubagentLimits? = null,
         customTypes: List<AgentType> = emptyList(),
         acceptsImages: Boolean = false,
         pricePerCall: Double? = 0.01,
@@ -81,7 +82,7 @@ class SubagentRunnerTest {
             skillSection = "Skills:\n- report: writes reports (/skills/report/SKILL.md)",
             now = { ZonedDateTime.of(2026, 10, 3, 9, 0, 0, 0, ZoneOffset.UTC) },
             limitSettings = limitSettings,
-            limits = limits,
+            limitsOverride = limits,
             customTypes = customTypes,
             timer = clock,
             newId = { "s${nextId++}" },
@@ -127,12 +128,38 @@ class SubagentRunnerTest {
     @Test
     fun theUsersLimitsReachTheSubagent() = runBlocking {
         val provider = ScriptedProvider(textTurn("Done."))
-        val settings = SubagentLimitSettings(toolSteps = 4, costCapCents = 25, minutes = 3)
+        val budget = SubagentBudget(toolSteps = 4, costCapCents = 25, minutes = 3)
+        val settings = SubagentLimitSettings(budgets = mapOf("scout" to budget))
 
         runner(mapOf("scout" to provider), limitSettings = settings).launch(listOf(SubagentTask("scout", "Find a.md")), context)
 
         assertTrue(provider.requests.single().systemPrompt.contains("4 tool steps and $0.25 of model cost"))
-        assertEquals(SubagentLimits(maxToolSteps = 4, costCapUsd = 0.25, timeLimit = 3.minutes), SubagentLimits.from(settings))
+        assertEquals(SubagentLimits(maxToolSteps = 4, costCapUsd = 0.25, timeLimit = 3.minutes), SubagentLimits.from(budget))
+    }
+
+    @Test
+    fun eachTypeRunsWithItsOwnBudget() = runBlocking {
+        val researcher = ScriptedProvider(textTurn("Done."))
+        val writer = ScriptedProvider(textTurn("Done."))
+        val settings = SubagentLimitSettings(budgets = mapOf("writer" to SubagentBudget(toolSteps = 6, costCapCents = 15, minutes = 5)))
+
+        runner(mapOf("researcher" to researcher, "writer" to writer), limitSettings = settings).launch(
+            listOf(SubagentTask("researcher", "Find a"), SubagentTask("writer", "Write b")),
+            context,
+        )
+
+        assertTrue(researcher.requests.single().systemPrompt.contains("20 tool steps and $0.20 of model cost"))
+        assertTrue(writer.requests.single().systemPrompt.contains("6 tool steps and $0.15 of model cost"))
+    }
+
+    @Test
+    fun aCustomTypeHasTheStandardBudgetUntilTheUserChangesIt() = runBlocking {
+        val provider = ScriptedProvider(textTurn("| Shop | Price |"))
+        val runner = runner(mapOf("price-checker" to provider), customTypes = listOf(priceChecker))
+
+        runner.launch(listOf(SubagentTask("price-checker", "Find the X1 price")), context)
+
+        assertTrue(provider.requests.single().systemPrompt.contains("10 tool steps and $0.10 of model cost"))
     }
 
     @Test
@@ -283,8 +310,8 @@ class SubagentRunnerTest {
                 StreamEvent.Finished(FinishReason.TOOL_CALLS, Usage(100, 10)),
             ),
         )
-        val text = runner(mapOf("researcher" to provider), pricePerCall = 0.06)
-            .launch(listOf(SubagentTask("researcher", "Search")), context).single().text
+        val text = runner(mapOf("scout" to provider), pricePerCall = 0.06)
+            .launch(listOf(SubagentTask("scout", "Search")), context).single().text
 
         assertEquals(1, webSearch.receivedArguments.size)
         assertEquals(2, provider.requests.size)
@@ -327,7 +354,7 @@ class SubagentRunnerTest {
             memorySection = "",
             skillSection = "",
             now = { ZonedDateTime.now(ZoneOffset.UTC) },
-            limits = SubagentLimits(timeLimit = 200.milliseconds),
+            limitsOverride = SubagentLimits(timeLimit = 200.milliseconds),
         )
         val text = slowRunner.launch(listOf(SubagentTask("researcher", "Search")), context).single().text
 
@@ -375,6 +402,50 @@ class SubagentRunnerTest {
         assertEquals(java.io.File(folder, "notes.md"), java.io.File(threadFolder, SubagentRunner.notesBoardPath("delegate-1")))
         assertTrue(first.requests.first().tools.any { it.name == "notes" })
         assertEquals(listOf("delegate-1", "delegate-1"), recorder.starts.map { it.parentToolCallId })
+    }
+
+    @Test
+    fun callsOfTheNotesBoardDoNotUseUpSteps() = runBlocking {
+        val provider = ScriptedProvider(
+            usageTurn(call("n1", "notes", "action" to "post", "text" to "a"), call("n2", "notes", "action" to "read")),
+            usageTurn(call("r1", "read_file", "path" to "a.md")),
+            textTurn("Answered."),
+        )
+        val other = ScriptedProvider(textTurn("Other."))
+
+        val reports = runner(mapOf("researcher" to provider, "scout" to other), limits = SubagentLimits(maxToolSteps = 2))
+            .launch(listOf(SubagentTask("researcher", "Find"), SubagentTask("scout", "Find")), context)
+
+        // The read_file fits the two steps even though two notes calls came first.
+        assertEquals(1, readFile.receivedArguments.size)
+        assertEquals(SubagentStop.COMPLETED, recorder.outcomes.first { it.answer == "Answered." }.stop)
+        assertEquals(1, recorder.outcomes.first { it.answer == "Answered." }.toolSteps)
+        // Notes calls are still recorded as steps, so that the chat shows them.
+        assertEquals(listOf("s0/n1", "s0/n2", "s0/r1"), recorder.finishedSteps.map { it.first.id }.filter { it.startsWith("s0/") }.sorted())
+        assertEquals("Answered.", reports.first().text.substringBefore("\n"))
+    }
+
+    @Test
+    fun aNotesCallBeyondTheCeilingFailsAndTellsTheModelToContinue() = runBlocking {
+        val provider = ScriptedProvider(
+            usageTurn(
+                call("n1", "notes", "action" to "read"),
+                call("n2", "notes", "action" to "read"),
+                call("n3", "notes", "action" to "read"),
+            ),
+            textTurn("Done."),
+        )
+        val other = ScriptedProvider(textTurn("Other."))
+
+        runner(mapOf("researcher" to provider, "scout" to other), limits = SubagentLimits(maxNotesCalls = 2))
+            .launch(listOf(SubagentTask("researcher", "Find"), SubagentTask("scout", "Find")), context)
+
+        val results = provider.requests[1].messages.filter { it.role == app.jonaki.core.model.Role.TOOL }.map { it.text }
+        assertEquals("No notes yet.", results[0])
+        assertTrue(results[2].startsWith("Error: you have used the notes board 2 times"))
+        assertTrue(results[2].contains("Continue with your task"))
+        val failed = recorder.finishedSteps.filter { it.first.id == "s0/n3" }.single()
+        assertEquals(SubagentStepStatus.FAILED, failed.second)
     }
 
     @Test
@@ -484,8 +555,8 @@ class SubagentRunnerTest {
         )
         val asker = ParentAsker { _, _, _ -> ParentAnswer.Answered("This one.", costUsd = 0.08) }
 
-        runner(mapOf("researcher" to provider), pricePerCall = 0.01, asker = asker)
-            .launch(listOf(SubagentTask("researcher", "Search")), context)
+        runner(mapOf("scout" to provider), pricePerCall = 0.01, asker = asker)
+            .launch(listOf(SubagentTask("scout", "Search")), context)
 
         assertEquals(SubagentStop.COST_LIMIT, recorder.outcomes.single().stop)
         assertEquals(0.10, recorder.outcomes.single().costUsd!!, 0.0001)

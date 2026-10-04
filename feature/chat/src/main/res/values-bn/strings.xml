@@ -118,7 +118,7 @@
     <string name="chat_incognito_keep">রাখুন</string>
     <string name="chat_subagent_running">কাজ চলছে</string>
     <string name="chat_subagent_done">শেষ</string>
-    <string name="chat_subagent_step_limit">ধাপ শেষ</string>
+    <string name="chat_subagent_step_limit">ধাপের সীমা</string>
     <string name="chat_subagent_cost_limit">বাজেট শেষ</string>
     <string name="chat_subagent_time_limit">সময় শেষ</string>
     <string name="chat_subagent_failed">ব্যর্থ</string>
@@ -154,7 +154,7 @@
         <item quantity="other">এই মেসেজে %1$dটি সাবএজেন্ট</item>
     </plurals>
     <plurals name="chat_approval_subagents_warning">
-        <item quantity="one">%1$dটির বেশি সাবএজেন্ট। প্রতিটির খরচ %2$s পর্যন্ত হতে পারে।</item>
-        <item quantity="other">%1$dটির বেশি সাবএজেন্ট। প্রতিটির খরচ %2$s পর্যন্ত হতে পারে।</item>
+        <item quantity="one">%1$dটি সাবএজেন্টের সীমা ছাড়িয়ে যাবে। প্রতিটির খরচ %2$s পর্যন্ত হতে পারে।</item>
+        <item quantity="other">%1$dটি সাবএজেন্টের সীমা ছাড়িয়ে যাবে। প্রতিটির খরচ %2$s পর্যন্ত হতে পারে।</item>
     </plurals>
 </resources>

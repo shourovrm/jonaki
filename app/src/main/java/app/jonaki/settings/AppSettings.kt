@@ -1,8 +1,10 @@
 package app.jonaki.settings
 
+import app.jonaki.core.agent.AgentTypes
 import app.jonaki.core.agent.AnswerStyle
 import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.providerapi.ThinkingLevel
+import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import android.content.Context
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
@@ -101,6 +103,7 @@ class AppSettings(
             .orEmpty()
         // Services added in a later version are appended so they still appear.
         val searchOrder = savedOrder + SearchService.entries.filter { it !in savedOrder }
+        val customSubagents = CustomSubagents.fromText(preferences.getString(CUSTOM_SUBAGENTS, "").orEmpty())
         return SettingsSnapshot(
             chatModels = readChatModels(presetDefaultModel),
             routing = RoutingSettings(
@@ -122,22 +125,48 @@ class AppSettings(
             refusedPermissions = preferences.getStringSet(REFUSED_PERMISSIONS, emptySet()).orEmpty().toSet(),
             // Missing means never chosen, so the defaults; a saved empty set stays empty.
             localModelTools = preferences.getStringSet(LOCAL_MODEL_TOOLS, null)?.toSet() ?: LocalModelToolList.DEFAULT,
-            subagentLimits = readSubagentLimits(),
-            customSubagents = CustomSubagents.fromText(preferences.getString(CUSTOM_SUBAGENTS, "").orEmpty()),
+            subagentLimits = readSubagentLimits(customSubagents),
+            customSubagents = customSubagents,
         )
     }
 
-    /** A missing value keeps its default; a saved one is moved into its range in case the ranges changed. */
-    private fun readSubagentLimits(): SubagentLimitSettings {
+    /**
+     * A missing value keeps its default; a saved one is moved into its range in case the ranges changed.
+     * Two things come from older versions: the cap per message was "warn above", and every type shared
+     * one budget of steps, cost and minutes.
+     */
+    private fun readSubagentLimits(customSubagents: List<CustomSubagent>): SubagentLimitSettings {
         val defaults = SubagentLimitSettings()
+        val oldWarnAbove = preferences.getInt(SUBAGENTS_WARN_ABOVE, defaults.maxPerMessage)
         return SubagentLimitSettings(
             startedWithoutAsking = preferences.getInt(SUBAGENTS_WITHOUT_ASKING, defaults.startedWithoutAsking),
             perCall = preferences.getInt(SUBAGENTS_PER_CALL, defaults.perCall),
-            warnAbove = preferences.getInt(SUBAGENTS_WARN_ABOVE, defaults.warnAbove),
+            maxPerMessage = preferences.getInt(SUBAGENTS_MAX_PER_MESSAGE, oldWarnAbove),
+            budgets = readSubagentBudgets(customSubagents),
+        ).withinBounds()
+    }
+
+    private fun readSubagentBudgets(customSubagents: List<CustomSubagent>): Map<String, SubagentBudget> {
+        val saved = preferences.getString(SUBAGENT_BUDGETS, null)
+        if (saved != null) {
+            return SubagentBudgets.fromText(saved)
+        }
+        val typeNames = AgentTypes.ALL.map { type -> type.name } + customSubagents.map { subagent -> subagent.name }
+        return SubagentBudgets.migrated(readLegacySubagentBudget(), typeNames)
+    }
+
+    /** The one budget of versions before per-type budgets; null when the user never saved any of its three values. */
+    private fun readLegacySubagentBudget(): SubagentBudget? {
+        val legacyKeys = listOf(SUBAGENT_TOOL_STEPS, SUBAGENT_COST_CENTS, SUBAGENT_MINUTES)
+        if (legacyKeys.none { key -> preferences.contains(key) }) {
+            return null
+        }
+        val defaults = SubagentLimitSettings.DEFAULT_BUDGET
+        return SubagentBudget(
             toolSteps = preferences.getInt(SUBAGENT_TOOL_STEPS, defaults.toolSteps),
             costCapCents = preferences.getInt(SUBAGENT_COST_CENTS, defaults.costCapCents),
             minutes = preferences.getInt(SUBAGENT_MINUTES, defaults.minutes),
-        ).withinBounds()
+        )
     }
 
     private fun readChatModels(presetDefaultModel: (ChatService) -> String): ChatModels {
@@ -193,10 +222,8 @@ class AppSettings(
         val limits = snapshot.subagentLimits
         editor.putInt(SUBAGENTS_WITHOUT_ASKING, limits.startedWithoutAsking)
         editor.putInt(SUBAGENTS_PER_CALL, limits.perCall)
-        editor.putInt(SUBAGENTS_WARN_ABOVE, limits.warnAbove)
-        editor.putInt(SUBAGENT_TOOL_STEPS, limits.toolSteps)
-        editor.putInt(SUBAGENT_COST_CENTS, limits.costCapCents)
-        editor.putInt(SUBAGENT_MINUTES, limits.minutes)
+        editor.putInt(SUBAGENTS_MAX_PER_MESSAGE, limits.maxPerMessage)
+        editor.putString(SUBAGENT_BUDGETS, SubagentBudgets.toText(limits.budgets))
         editor.putString(CUSTOM_SUBAGENTS, CustomSubagents.toText(snapshot.customSubagents))
         editor.apply()
     }
@@ -232,7 +259,11 @@ class AppSettings(
         const val LOCAL_MODEL_TOOLS = "local_model_tools"
         const val SUBAGENTS_WITHOUT_ASKING = "subagents_without_asking"
         const val SUBAGENTS_PER_CALL = "subagents_per_call"
+        const val SUBAGENTS_MAX_PER_MESSAGE = "subagents_max_per_message"
+
+        // Read only, to carry the values of versions before the cap and the per-type budgets over.
         const val SUBAGENTS_WARN_ABOVE = "subagents_warn_above"
+        const val SUBAGENT_BUDGETS = "subagent_budgets"
         const val SUBAGENT_TOOL_STEPS = "subagent_tool_steps"
         const val SUBAGENT_COST_CENTS = "subagent_cost_cents"
         const val SUBAGENT_MINUTES = "subagent_minutes"
