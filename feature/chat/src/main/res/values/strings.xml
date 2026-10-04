@@ -16,6 +16,7 @@
     <string name="chat_stop">Stop</string>
     <string name="chat_queued">Queued</string>
     <string name="chat_queued_cancel">Cancel queued message</string>
+    <string name="chat_queued_edit">Edit queued message</string>
     <string name="chat_run_working">Working</string>
     <string name="chat_run_step">step %1$d</string>
     <plurals name="chat_run_steps">

@@ -100,6 +100,8 @@ fun ChatScreen(
     onStop: () -> Unit,
     /** The cancel mark on a queued message. */
     onCancelQueued: (queuedId: String) -> Unit = {},
+    /** The edit mark on a queued message: its text goes back into the field. */
+    onEditQueued: (queuedId: String) -> Unit = {},
     onApprovalChoice: (approvalId: String, choice: ApprovalChoice) -> Unit,
     onRetry: (errorId: String) -> Unit,
     onWebSearchChange: (enabled: Boolean) -> Unit,
@@ -215,7 +217,11 @@ fun ChatScreen(
                     }
                     for (queued in state.queuedMessages) {
                         key(queued.id) {
-                            QueuedMessageRow(queued, onCancel = { onCancelQueued(queued.id) })
+                            QueuedMessageRow(
+                                queued,
+                                onEdit = { onEditQueued(queued.id) },
+                                onCancel = { onCancelQueued(queued.id) },
+                            )
                         }
                     }
                     Composer(

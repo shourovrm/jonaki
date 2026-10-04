@@ -200,7 +200,7 @@ internal fun EditingBanner(onCancel: () -> Unit) {
 
 /** A message sent during a run, waiting for the agent's next safe point; one line, ending in "…" (D-029). */
 @Composable
-internal fun QueuedMessageRow(message: QueuedMessageUi, onCancel: () -> Unit) {
+internal fun QueuedMessageRow(message: QueuedMessageUi, onEdit: () -> Unit, onCancel: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 4.dp)) {
             Text(
@@ -217,6 +217,14 @@ internal fun QueuedMessageRow(message: QueuedMessageUi, onCancel: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = onEdit) {
+                Icon(
+                    Icons.Filled.Edit,
+                    contentDescription = stringResource(R.string.chat_queued_edit),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             IconButton(onClick = onCancel) {
                 Icon(
                     Icons.Filled.Close,

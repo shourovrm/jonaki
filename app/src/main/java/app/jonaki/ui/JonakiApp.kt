@@ -760,6 +760,12 @@ private fun ChatRoute(
         },
         onStop = { runner.stop(threadId) },
         onCancelQueued = { queuedId -> runner.cancelQueued(threadId, queuedId) },
+        onEditQueued = { queuedId ->
+            val queuedText = runner.takeQueuedForEdit(threadId, queuedId)
+            if (queuedText != null) {
+                draft = if (draft.isBlank()) queuedText else queuedText + "\n\n" + draft.trimStart()
+            }
+        },
         onOpenContext = if (isNew || contextWindowTokens == null) {
             null
         } else {

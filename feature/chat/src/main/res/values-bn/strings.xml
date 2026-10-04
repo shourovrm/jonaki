@@ -16,6 +16,7 @@
     <string name="chat_stop">থামান</string>
     <string name="chat_queued">অপেক্ষায়</string>
     <string name="chat_queued_cancel">অপেক্ষায় থাকা মেসেজ বাতিল করুন</string>
+    <string name="chat_queued_edit">অপেক্ষায় থাকা মেসেজ এডিট করুন</string>
     <string name="chat_run_working">কাজ চলছে</string>
     <string name="chat_run_step">ধাপ %1$d</string>
     <plurals name="chat_run_steps">

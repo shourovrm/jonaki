@@ -260,6 +260,19 @@ class AgentRunner(
         }
     }
 
+    /**
+     * Takes one queued message out so the user can edit it in the field; they
+     * send it again when done, which puts it at the end of the queue. Null
+     * when the agent took the message in the meantime.
+     */
+    fun takeQueuedForEdit(threadId: String, queuedId: String): String? {
+        val before = queues.getAndUpdate { current ->
+            val remaining = current[threadId].orEmpty().filter { queued -> queued.id != queuedId }
+            if (remaining.isEmpty()) current - threadId else current + (threadId to remaining)
+        }
+        return before[threadId].orEmpty().firstOrNull { queued -> queued.id == queuedId }?.text
+    }
+
     /** The chat put the handed-back text into its field. */
     fun takeHandedBackText(threadId: String): String? {
         val text = handedBack.value[threadId] ?: return null
