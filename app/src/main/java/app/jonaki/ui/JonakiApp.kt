@@ -686,6 +686,7 @@ private fun ChatRoute(
             pythonCard = pythonCards.cardFor,
             compaction = compaction,
             subagentLimits = settingsSnapshot.subagentLimits,
+            subagentTypeNames = AgentTypes.ALL.map { type -> type.name } + settingsSnapshot.customSubagents.map { subagent -> subagent.name },
             stepWords = stepDetailWords(),
         ),
         isRunning = isRunning,
@@ -1065,6 +1066,10 @@ private fun SettingsRoute(
         },
         subagentModelOptions = subagentModelOptionsOf(snapshot, application),
         subagentLimits = SubagentLimitRows.of(snapshot.subagentLimits),
+        subagentBudgets = SubagentLimitRows.budgetsOf(
+            snapshot.subagentLimits,
+            AgentTypes.ALL.map { type -> type.name } + snapshot.customSubagents.map { subagent -> subagent.name },
+        ),
         customSubagents = snapshot.customSubagents.map { subagent -> CustomSubagentRowUi(subagent.name, subagent.description) },
         permissions = permissionRows,
         appVersion = appVersion,
@@ -1125,6 +1130,11 @@ private fun SettingsRoute(
         },
         onSubagentLimitChange = { limit, value ->
             settings.update { current -> current.copy(subagentLimits = SubagentLimitRows.changed(current.subagentLimits, limit, value)) }
+        },
+        onSubagentBudgetChange = { agentType, limit, value ->
+            settings.update { current ->
+                current.copy(subagentLimits = SubagentLimitRows.budgetChanged(current.subagentLimits, agentType, limit, value))
+            }
         },
         onOpenCustomSubagent = onOpenCustomSubagent,
         onApprovalModeChange = { choice -> settings.update { current -> current.copy(defaultApprovalMode = approvalModeOf(choice)) } },

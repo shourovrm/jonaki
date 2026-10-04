@@ -7,8 +7,7 @@
     <string name="settings_subagents_per_message">প্রতি মেসেজে</string>
     <string name="settings_subagents_per_call">একসাথে শুরু</string>
     <string name="settings_subagents_in_one_call">এক কলে</string>
-    <string name="settings_subagents_warn_above">এর বেশি হলে সতর্কতা</string>
-    <string name="settings_subagents_section_each">প্রতিটি সাবএজেন্ট</string>
+    <string name="settings_subagents_max_per_message">প্রতি মেসেজে সর্বোচ্চ</string>
     <string name="settings_subagents_tool_steps">টুল ধাপ</string>
     <string name="settings_subagents_cost">খরচ</string>
     <string name="settings_subagents_minutes">মিনিট</string>

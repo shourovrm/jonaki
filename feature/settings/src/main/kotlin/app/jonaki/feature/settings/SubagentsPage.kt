@@ -37,16 +37,16 @@ enum class SubagentLimit {
     /** In one delegate call (D-060). */
     PER_CALL,
 
-    /** Per message, above which the approval card warns about the cost (D-137). */
-    WARN_ABOVE,
+    /** Per message, above which a delegate call always waits for the user. */
+    MAX_PER_MESSAGE,
 
-    /** Each subagent's tool steps (D-061). */
+    /** A type's tool steps (D-061). */
     TOOL_STEPS,
 
-    /** Each subagent's cost cap, in US cents (D-061). */
+    /** A type's cost cap, in US cents (D-061). */
     COST_CENTS,
 
-    /** Each subagent's time limit (D-061). */
+    /** A type's time limit (D-061). */
     MINUTES,
 }
 
@@ -70,10 +70,31 @@ data class SubagentLimitUi(
         val SAMPLE: List<SubagentLimitUi> = listOf(
             SubagentLimitUi(SubagentLimit.WITHOUT_ASKING, value = 2, min = 0, max = 10),
             SubagentLimitUi(SubagentLimit.PER_CALL, value = 3, min = 1, max = 6),
-            SubagentLimitUi(SubagentLimit.WARN_ABOVE, value = 5, min = 2, max = 20),
-            SubagentLimitUi(SubagentLimit.TOOL_STEPS, value = 10, min = 1, max = 30),
-            SubagentLimitUi(SubagentLimit.COST_CENTS, value = 10, min = 5, max = 100, step = 5),
-            SubagentLimitUi(SubagentLimit.MINUTES, value = 10, min = 1, max = 30),
+            SubagentLimitUi(SubagentLimit.MAX_PER_MESSAGE, value = 5, min = 2, max = 20),
+        )
+    }
+}
+
+/** The step, cost and minute limits of one subagent type (D-061). */
+@Immutable
+data class SubagentBudgetUi(
+    /** "researcher", "scout", "writer", "worker", or the name of a type the user made. */
+    val agentType: String,
+    val limits: List<SubagentLimitUi>,
+) {
+    companion object {
+        private fun rows(steps: Int, cents: Int, minutes: Int) = listOf(
+            SubagentLimitUi(SubagentLimit.TOOL_STEPS, value = steps, min = 1, max = 30),
+            SubagentLimitUi(SubagentLimit.COST_CENTS, value = cents, min = 5, max = 100, step = 5),
+            SubagentLimitUi(SubagentLimit.MINUTES, value = minutes, min = 1, max = 30),
+        )
+
+        /** The defaults of the four built-in types, for previews and the summary tests. */
+        val SAMPLE: List<SubagentBudgetUi> = listOf(
+            SubagentBudgetUi("researcher", rows(steps = 20, cents = 20, minutes = 15)),
+            SubagentBudgetUi("scout", rows(steps = 10, cents = 10, minutes = 10)),
+            SubagentBudgetUi("writer", rows(steps = 10, cents = 10, minutes = 10)),
+            SubagentBudgetUi("worker", rows(steps = 10, cents = 10, minutes = 10)),
         )
     }
 }
@@ -85,17 +106,15 @@ data class CustomSubagentRowUi(
     val description: String,
 )
 
-/** The limits that decide how many subagents start, then those that bound each one. */
-private val PER_MESSAGE_LIMITS = listOf(SubagentLimit.WITHOUT_ASKING, SubagentLimit.PER_CALL, SubagentLimit.WARN_ABOVE)
-private val EACH_SUBAGENT_LIMITS = listOf(SubagentLimit.TOOL_STEPS, SubagentLimit.COST_CENTS, SubagentLimit.MINUTES)
-
-/** Settings > Subagents: limits, the built-in types' models, and the user's own types (D-138). */
+/** Settings > Subagents: limits, a budget for each type, the built-in types' models, and the user's own types (D-138). */
 @Composable
 internal fun SubagentsPage(state: SettingsUiState, actions: SettingsActions) {
     SectionLabel(stringResource(R.string.settings_subagents_section_limits))
-    LimitRows(state.subagentLimits.filter { limit -> limit.limit in PER_MESSAGE_LIMITS }, actions.onSubagentLimitChange)
-    SectionLabel(stringResource(R.string.settings_subagents_section_each))
-    LimitRows(state.subagentLimits.filter { limit -> limit.limit in EACH_SUBAGENT_LIMITS }, actions.onSubagentLimitChange)
+    LimitRows(state.subagentLimits) { limit, value -> actions.onSubagentLimitChange(limit, value) }
+    for (budget in state.subagentBudgets) {
+        SectionLabel(agentTypeLabel(budget.agentType))
+        LimitRows(budget.limits) { limit, value -> actions.onSubagentBudgetChange(budget.agentType, limit, value) }
+    }
     if (state.subagentModels.isNotEmpty()) {
         SectionLabel(stringResource(R.string.settings_root_models))
         Group {
@@ -161,18 +180,18 @@ private fun LimitRow(limit: SubagentLimitUi, onChange: (SubagentLimit, Int) -> U
 private fun limitTitle(limit: SubagentLimit): String = when (limit) {
     SubagentLimit.WITHOUT_ASKING -> stringResource(R.string.settings_subagents_without_asking)
     SubagentLimit.PER_CALL -> stringResource(R.string.settings_subagents_per_call)
-    SubagentLimit.WARN_ABOVE -> stringResource(R.string.settings_subagents_warn_above)
+    SubagentLimit.MAX_PER_MESSAGE -> stringResource(R.string.settings_subagents_max_per_message)
     SubagentLimit.TOOL_STEPS -> stringResource(R.string.settings_subagents_tool_steps)
     SubagentLimit.COST_CENTS -> stringResource(R.string.settings_subagents_cost)
     SubagentLimit.MINUTES -> stringResource(R.string.settings_subagents_minutes)
 }
 
-/** The per-message limits say what they count; each subagent's budgets need no second line. */
+/** The first two limits say what they count; the cap's title does, and a type's budgets sit under its name. */
 @Composable
 private fun limitScope(limit: SubagentLimit): String? = when (limit) {
     SubagentLimit.WITHOUT_ASKING -> stringResource(R.string.settings_subagents_per_message)
     SubagentLimit.PER_CALL -> stringResource(R.string.settings_subagents_in_one_call)
-    SubagentLimit.WARN_ABOVE -> stringResource(R.string.settings_subagents_per_message)
+    SubagentLimit.MAX_PER_MESSAGE -> null
     SubagentLimit.TOOL_STEPS -> null
     SubagentLimit.COST_CENTS -> null
     SubagentLimit.MINUTES -> null

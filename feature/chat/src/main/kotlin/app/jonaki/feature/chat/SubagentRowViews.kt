@@ -65,7 +65,7 @@ internal fun SubagentRowView(subagent: SubagentUi, onOpen: (subagentId: String) 
             Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "${subagent.steps.size}/${subagent.stepLimit}",
+                    "${subagent.stepsUsed}/${subagent.stepLimit}",
                     style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
                     color = muted,
                     maxLines = 1,

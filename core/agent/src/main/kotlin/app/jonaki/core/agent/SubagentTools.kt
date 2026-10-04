@@ -133,11 +133,14 @@ internal class NotesTool(
     private val authorLabel: String,
     /** Shared by the subagents of one call, so that two posts never mix. */
     private val lock: Mutex,
+    /** Shown to the model; [SubagentLoop] enforces it. */
+    maxCalls: Int,
 ) : Tool {
-    override val name: String = "notes"
+    override val name: String = NAME
     override val promptLine: String = "notes: post a finding for the other subagents of this task, or read theirs"
     override val guidelines: List<String> = listOf(
         "Post a source or result that the other subagents can reuse, and read the board before you repeat a search.",
+        "Calls of notes cost no tool step, but you may call it at most $maxCalls times.",
     )
     override val parameterSchema: JsonObject = buildJsonObject {
         put("type", "object")
@@ -190,7 +193,8 @@ internal class NotesTool(
         return ToolOutput.success(text.ifBlank { "No notes yet." })
     }
 
-    private companion object {
-        const val MAX_NOTE_CHARACTERS = 2_000
+    companion object {
+        const val NAME = "notes"
+        private const val MAX_NOTE_CHARACTERS = 2_000
     }
 }

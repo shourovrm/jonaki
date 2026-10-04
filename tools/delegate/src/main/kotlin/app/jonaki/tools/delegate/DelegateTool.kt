@@ -50,8 +50,25 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
         "Subagent types: " + launcher.agentTypes.joinToString("; ") { type -> "${type.name}: ${type.description}" },
         "Name a model in delegate only when the user asks for one; otherwise each type uses the model set for it.",
         "A subagent's answer is its own work; check it before you rely on it.",
+        stepBudgetGuideline(),
         approvalGuideline(),
+        messageCapGuideline(),
     )
+
+    /**
+     * What each type can do with its steps. The numbers are the limits read
+     * when the tool was built, so the text stays the same for the whole run
+     * and the prompt cache holds (D-005).
+     */
+    private fun stepBudgetGuideline(): String {
+        val budgets = launcher.agentTypes.joinToString(", ") { type ->
+            "${type.name} ${limits.budgetFor(type.name).toolSteps}"
+        }
+        return "Each subagent has a budget of tool steps: $budgets. One step is one tool call, for example one search " +
+            "or one page read, so a task that needs more calls than its budget ends unfinished. Give each subagent " +
+            "one narrow question that fits its budget, not a whole survey; split a big job over several subagents. " +
+            "Never guess links: give a link only if you have seen it, otherwise tell the subagent to search for it."
+    }
 
     private fun approvalGuideline(): String {
         val automatic = limits.startedWithoutAsking
@@ -61,6 +78,10 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
         return "Up to $automatic subagents per user message start at once; more wait for the user's approval, " +
             "so use more only when the user asks for them."
     }
+
+    private fun messageCapGuideline(): String =
+        "Start at most ${limits.maxPerMessage} subagents per user message, and more only when the user asks for more; " +
+            "a call that would go over always waits for the user's approval."
 
     override val parameterSchema: JsonObject = buildJsonObject {
         put("type", "object")
@@ -108,12 +129,15 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
 
     override fun sideEffectOf(arguments: JsonObject): SideEffect {
         val startedAfter = launcher.startedThisRun + taskObjectsOf(arguments).size
-        return if (startedAfter > limits.startedWithoutAsking) SideEffect.NEEDS_USER else SideEffect.READ_ONLY
+        // The cap is checked on its own: a call over it waits even if the automatic limit were set above it.
+        val needsUser = startedAfter > limits.startedWithoutAsking || startedAfter > limits.maxPerMessage
+        return if (needsUser) SideEffect.NEEDS_USER else SideEffect.READ_ONLY
     }
     override val requiredCapabilities: Set<Capability> = emptySet()
 
-    // One minute longer than a subagent's own limit, so that a subagent at its limit still returns what it has.
-    override val timeLimit: Duration = (limits.minutes + 1).minutes
+    // One minute longer than the longest limit of the types a task may name, so that a subagent at its limit
+    // still returns what it has.
+    override val timeLimit: Duration = (limits.longestMinutes(launcher.agentTypes.map { type -> type.name }) + 1).minutes
 
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput {
         val taskObjects = taskObjectsOf(arguments)

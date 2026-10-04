@@ -7,8 +7,7 @@
     <string name="settings_subagents_per_message">Per message</string>
     <string name="settings_subagents_per_call">Start at once</string>
     <string name="settings_subagents_in_one_call">In one call</string>
-    <string name="settings_subagents_warn_above">Warn above</string>
-    <string name="settings_subagents_section_each">Each subagent</string>
+    <string name="settings_subagents_max_per_message">Most per message</string>
     <string name="settings_subagents_tool_steps">Tool steps</string>
     <string name="settings_subagents_cost">Cost</string>
     <string name="settings_subagents_minutes">Minutes</string>

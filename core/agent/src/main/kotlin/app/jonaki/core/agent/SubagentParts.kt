@@ -4,7 +4,7 @@ import app.jonaki.core.model.ToolCall
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.providerapi.ThinkingLevel
 import app.jonaki.core.providerapi.Usage
-import app.jonaki.core.toolapi.SubagentLimitSettings
+import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentModelInfo
 import app.jonaki.core.toolapi.ToolOutput
 import kotlin.time.Duration
@@ -44,8 +44,13 @@ interface SubagentModels {
 
 /** Budgets of one subagent (M7). */
 data class SubagentLimits(
-    /** Tool calls, counted one by one. */
+    /** Tool calls, counted one by one; calls of the notes board are not counted. */
     val maxToolSteps: Int = 10,
+    /**
+     * Calls of the notes board that one subagent may make. They cost no step,
+     * so this ceiling stops a subagent that posts and reads notes forever.
+     */
+    val maxNotesCalls: Int = 10,
     /** Applies only while the calls' cost is known. */
     val costCapUsd: Double = 0.10,
     /** Long enough for three unanswered 3-minute approvals. */
@@ -54,11 +59,11 @@ data class SubagentLimits(
     val retryDelay: Duration = 2.seconds,
 ) {
     companion object {
-        /** The budgets the user set in Settings > Subagents (D-138). */
-        fun from(settings: SubagentLimitSettings): SubagentLimits = SubagentLimits(
-            maxToolSteps = settings.toolSteps,
-            costCapUsd = settings.costCapUsd,
-            timeLimit = settings.minutes.minutes,
+        /** The budget the user set in Settings > Subagents for one agent type (D-138). */
+        fun from(budget: SubagentBudget): SubagentLimits = SubagentLimits(
+            maxToolSteps = budget.toolSteps,
+            costCapUsd = budget.costCapUsd,
+            timeLimit = budget.minutes.minutes,
         )
     }
 }
@@ -157,8 +162,11 @@ internal class SubagentProgress {
     private val skippedParts = mutableListOf<String>()
     private var knownCostUsd: Double? = null
 
+    /** Calls that count against the step budget; the notes board is not among them. */
     var toolSteps: Int = 0
         private set
+
+    private var notesCalls: Int = 0
 
     val costUsd: Double?
         get() = knownCostUsd
@@ -173,6 +181,13 @@ internal class SubagentProgress {
     @Synchronized
     fun countToolStep() {
         toolSteps += 1
+    }
+
+    /** Counts one call of the notes board and returns how many there are now, this one included. */
+    @Synchronized
+    fun countNotesCall(): Int {
+        notesCalls += 1
+        return notesCalls
     }
 
     @Synchronized

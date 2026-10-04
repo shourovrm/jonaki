@@ -130,8 +130,9 @@ internal fun ModelChoiceRow(
     }
 }
 
+/** A built-in type's name in the app's language; a custom type's name as the user typed it. */
 @Composable
-private fun agentTypeLabel(agentType: String): String = when (agentType) {
+internal fun agentTypeLabel(agentType: String): String = when (agentType) {
     "researcher" -> stringResource(R.string.settings_subagent_researcher)
     "scout" -> stringResource(R.string.settings_subagent_scout)
     "writer" -> stringResource(R.string.settings_subagent_writer)

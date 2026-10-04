@@ -31,8 +31,8 @@
         <item quantity="other">%1$dটি বাজেট ছাড়িয়েছে</item>
     </plurals>
     <plurals name="subagents_work_out_of_steps">
-        <item quantity="one">%1$dটির ধাপ ফুরিয়েছে</item>
-        <item quantity="other">%1$dটির ধাপ ফুরিয়েছে</item>
+        <item quantity="one">%1$dটি ধাপের সীমায়</item>
+        <item quantity="other">%1$dটি ধাপের সীমায়</item>
     </plurals>
     <plurals name="subagents_work_timed_out">
         <item quantity="one">%1$dটির সময় ফুরিয়েছে</item>

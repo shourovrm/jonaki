@@ -33,55 +33,93 @@ interface SubagentLauncher {
 }
 
 /**
+ * What one subagent may use: tool steps, minutes and model cost. Each
+ * subagent type has its own (D-061).
+ */
+data class SubagentBudget(
+    /** Tool calls; the notes board does not count. */
+    val toolSteps: Int,
+    /** Model cost one subagent may spend, in US cents, so that steps of 5 cents add up exactly. */
+    val costCapCents: Int,
+    /** How long one subagent may run. */
+    val minutes: Int,
+) {
+    val costCapUsd: Double
+        get() = costCapCents / 100.0
+
+    fun withinBounds(): SubagentBudget = SubagentBudget(
+        toolSteps = toolSteps.coerceIn(SubagentLimitSettings.TOOL_STEPS_RANGE),
+        costCapCents = costCapCents.coerceIn(SubagentLimitSettings.COST_CAP_CENTS_RANGE),
+        minutes = minutes.coerceIn(SubagentLimitSettings.MINUTES_RANGE),
+    )
+}
+
+/**
  * The subagent limits the user sets in Settings > Subagents. The defaults
- * are the user's rulings: 3 per delegate call (D-060), 10 steps, $0.10 and
- * 10 minutes per subagent (D-061), 2 per message without asking and a
- * warning above 5 (D-137).
+ * are the user's rulings: 3 per delegate call (D-060), 2 per message without
+ * asking (D-137) and at most 5 per message. The budget of one
+ * subagent depends on its type: 10 steps, $0.10 and 10 minutes (D-061), and
+ * for the researcher 20 steps, $0.20 and 15 minutes.
  */
 data class SubagentLimitSettings(
     /** Subagents a model may start per user message before a call waits for the user. */
     val startedWithoutAsking: Int = 2,
     /** Subagents one delegate call may start at once. */
     val perCall: Int = 3,
-    /** Above this many in one message, the approval card warns about the cost. */
-    val warnAbove: Int = 5,
-    /** Tool steps of one subagent. */
-    val toolSteps: Int = 10,
-    /** Model cost one subagent may spend, in US cents, so that steps of 5 cents add up exactly. */
-    val costCapCents: Int = 10,
-    /** How long one subagent may run. */
-    val minutes: Int = 10,
+    /**
+     * The most subagents one user message should start. The thread's agent is
+     * told it; a call that goes over waits for the user, who may allow it.
+     */
+    val maxPerMessage: Int = 5,
+    /** The budgets the user changed, by type name; a type without an entry has its default. */
+    val budgets: Map<String, SubagentBudget> = emptyMap(),
 ) {
-    val costCapUsd: Double
-        get() = costCapCents / 100.0
+    /** The budget of the type named [typeName], built-in or custom. */
+    fun budgetFor(typeName: String): SubagentBudget = budgets[typeName] ?: defaultBudgetFor(typeName)
+
+    /** The longest time limit among [typeNames], which a call that may start any of them must outlast. */
+    fun longestMinutes(typeNames: List<String>): Int =
+        typeNames.maxOfOrNull { typeName -> budgetFor(typeName).minutes } ?: DEFAULT_BUDGET.minutes
+
+    /** The highest cost cap among [typeNames], for a warning that cannot know which type will run. */
+    fun highestCostCapCents(typeNames: List<String>): Int =
+        typeNames.maxOfOrNull { typeName -> budgetFor(typeName).costCapCents } ?: DEFAULT_BUDGET.costCapCents
 
     /**
-     * Every value moved into its range. A warning below the automatic limit
-     * would show on every card, so [warnAbove] is at least
-     * [startedWithoutAsking].
+     * Every value moved into its range. A cap below the automatic limit
+     * would leave calls that wait for no reason, so [maxPerMessage] is at
+     * least [startedWithoutAsking].
      */
     fun withinBounds(): SubagentLimitSettings {
         val automatic = startedWithoutAsking.coerceIn(STARTED_WITHOUT_ASKING_RANGE)
         return SubagentLimitSettings(
             startedWithoutAsking = automatic,
             perCall = perCall.coerceIn(PER_CALL_RANGE),
-            warnAbove = warnAbove.coerceIn(WARN_ABOVE_RANGE).coerceAtLeast(automatic),
-            toolSteps = toolSteps.coerceIn(TOOL_STEPS_RANGE),
-            costCapCents = costCapCents.coerceIn(COST_CAP_CENTS_RANGE),
-            minutes = minutes.coerceIn(MINUTES_RANGE),
+            maxPerMessage = maxPerMessage.coerceIn(MAX_PER_MESSAGE_RANGE).coerceAtLeast(automatic),
+            budgets = budgets.mapValues { (_, budget) -> budget.withinBounds() },
         )
     }
 
     companion object {
         val STARTED_WITHOUT_ASKING_RANGE: IntRange = 0..10
         val PER_CALL_RANGE: IntRange = 1..6
-        val WARN_ABOVE_RANGE: IntRange = 0..20
+        val MAX_PER_MESSAGE_RANGE: IntRange = 1..20
         val TOOL_STEPS_RANGE: IntRange = 1..30
         val COST_CAP_CENTS_RANGE: IntRange = 5..100
         val MINUTES_RANGE: IntRange = 1..30
 
         /** The cost cap moves in steps of 5 cents in Settings. */
         const val COST_CAP_STEP_CENTS = 5
+
+        const val RESEARCHER = "researcher"
+
+        val DEFAULT_BUDGET = SubagentBudget(toolSteps = 10, costCapCents = 10, minutes = 10)
+
+        /** A researcher reads many pages, so it gets twice the steps and cost of the others. */
+        val RESEARCHER_BUDGET = SubagentBudget(toolSteps = 20, costCapCents = 20, minutes = 15)
+
+        fun defaultBudgetFor(typeName: String): SubagentBudget =
+            if (typeName == RESEARCHER) RESEARCHER_BUDGET else DEFAULT_BUDGET
     }
 }
 

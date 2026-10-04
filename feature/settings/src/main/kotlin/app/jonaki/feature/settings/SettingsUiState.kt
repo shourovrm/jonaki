@@ -44,6 +44,8 @@ data class SettingsUiState(
     val subagentModelOptions: List<ModelOptionUi> = emptyList(),
     /** Settings > Subagents' limits, in the order the page shows them (D-138). */
     val subagentLimits: List<SubagentLimitUi> = emptyList(),
+    /** One block of limits for each subagent type, built-in and custom. */
+    val subagentBudgets: List<SubagentBudgetUi> = emptyList(),
     /** Subagent types the user made, in the order they were added (D-138). */
     val customSubagents: List<CustomSubagentRowUi> = emptyList(),
     /** Settings > Permissions, read again each time the screen resumes (D-124). */
@@ -203,6 +205,7 @@ class SettingsActions(
     val onSubagentModelChange: (agentType: String, modelKey: String?) -> Unit = { _, _ -> },
     /** A limit's new value, one step from the old; the app keeps it in range (D-138). */
     val onSubagentLimitChange: (limit: SubagentLimit, value: Int) -> Unit = { _, _ -> },
+    val onSubagentBudgetChange: (agentType: String, limit: SubagentLimit, value: Int) -> Unit = { _, _, _ -> },
     /** Opens a custom subagent's editor; null opens an empty one for a new subagent. */
     val onOpenCustomSubagent: (name: String?) -> Unit = {},
     /** A tap on a permission row or its button; the app asks or opens system settings by [PermissionRowUi.status]. */
@@ -281,6 +284,7 @@ object SettingsSample {
             SubagentModelRowUi("scout", selectedKey = null, defaultIsCheapest = true),
         ),
         subagentLimits = SubagentLimitUi.SAMPLE,
+        subagentBudgets = SubagentBudgetUi.SAMPLE,
         // A 30-character name and a long description check that each keeps one line (D-029).
         customSubagents = listOf(
             CustomSubagentRowUi("price-checker", "Checks laptop prices in Dhaka shops and lists them by price."),

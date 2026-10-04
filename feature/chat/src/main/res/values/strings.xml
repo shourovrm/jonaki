@@ -122,7 +122,7 @@
     <string name="chat_incognito_keep">Keep</string>
     <string name="chat_subagent_running">Working</string>
     <string name="chat_subagent_done">Done</string>
-    <string name="chat_subagent_step_limit">Out of steps</string>
+    <string name="chat_subagent_step_limit">Step limit</string>
     <string name="chat_subagent_cost_limit">Over budget</string>
     <string name="chat_subagent_time_limit">Timed out</string>
     <string name="chat_subagent_failed">Failed</string>
@@ -156,7 +156,7 @@
         <item quantity="other">%1$d subagents in this message</item>
     </plurals>
     <plurals name="chat_approval_subagents_warning">
-        <item quantity="one">Over %1$d subagent. Each can cost up to %2$s.</item>
-        <item quantity="other">Over %1$d subagents. Each can cost up to %2$s.</item>
+        <item quantity="one">Over the limit of %1$d subagent. Each can cost up to %2$s.</item>
+        <item quantity="other">Over the limit of %1$d subagents. Each can cost up to %2$s.</item>
     </plurals>
 </resources>

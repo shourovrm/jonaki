@@ -13,6 +13,7 @@ import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.feature.chat.ChatItem
 import app.jonaki.feature.chat.NotesBoardUi
 import app.jonaki.feature.chat.SubagentCostWarning
+import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.feature.chat.WorkingActivity
 import app.jonaki.feature.chat.StepUiStatus
@@ -349,9 +350,9 @@ class ChatItemsTest {
         )
     }
 
-    /** D-137 with D-138: the card warns above the user's number and names the user's cost cap. */
+    /** The card says it goes over the cap and names the highest cost cap of any type. */
     @Test
-    fun aDelegateCardWarnsAboveTheUsersNumber() {
+    fun aDelegateCardWarnsAboveTheUsersCap() {
         val call = ToolCall("d2", "delegate", """{"agent":"scout","task":"a"}""")
         val rows = listOf(row("u1", "USER", "go"), row("a1", "ASSISTANT", "", calls = listOf(call)))
         val steps = listOf(step("d2", "delegate", "WAITING_FOR_APPROVAL", call.argumentsJson, started = 1_000))
@@ -369,8 +370,13 @@ class ChatItemsTest {
         }
 
         assertEquals(null, cardFor(5, SubagentLimitSettings()).costWarning)
-        assertEquals(SubagentCostWarning(above = 5, costCapUsd = 0.10), cardFor(6, SubagentLimitSettings()).costWarning)
-        val strict = SubagentLimitSettings(startedWithoutAsking = 1, warnAbove = 2, costCapCents = 25)
+        // The researcher's default cap of $0.20 is the highest of the defaults.
+        assertEquals(SubagentCostWarning(above = 5, costCapUsd = 0.20), cardFor(6, SubagentLimitSettings()).costWarning)
+        val strict = SubagentLimitSettings(
+            startedWithoutAsking = 1,
+            maxPerMessage = 2,
+            budgets = mapOf("researcher" to SubagentBudget(10, 10, 10), "writer" to SubagentBudget(10, 25, 10)),
+        )
         assertEquals(SubagentCostWarning(above = 2, costCapUsd = 0.25), cardFor(3, strict).costWarning)
         assertEquals(null, cardFor(2, strict).costWarning)
     }
@@ -386,7 +392,7 @@ class ChatItemsTest {
             steps,
             isRunning = true,
             subagents = listOf(subagent("s1", 0, "researcher", status = "RUNNING")),
-            subagentLimits = SubagentLimitSettings(toolSteps = 20, costCapCents = 50),
+            subagentLimits = SubagentLimitSettings(budgets = mapOf("researcher" to SubagentBudget(20, 50, 15))),
             stepWords = englishStepWords,
         ).filterIsInstance<ChatItem.Run>().single()
 
