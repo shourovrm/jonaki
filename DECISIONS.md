@@ -1901,3 +1901,89 @@ tool list had no delegate or memory; a DeepSeek thread delegated to
 price-checker, whose row showed "Out of steps 10/10 $0.0037"; asking for
 three scouts showed "3 subagents in this message" with only Allow once and
 Deny (denied).
+
+## D-139 · 2026-10-04 · Subagent budgets per type, cap of 5, free notes — proposed
+User ruling after a research run where six subagents all ended at 10 of 10
+steps with tasks too big for them. Each type has its own steps, cost cap and
+minutes in Settings > Subagents: 10, $0.10 and 10 minutes, except the
+researcher at 20, $0.20 and 15. The delegate tool tells the thread's agent
+each type's steps, that one step is one tool call, to give one narrow
+question and never to guess links. Calls of the notes board cost no step
+(ceiling of 10 calls). A subagent at its limit reads "Step limit", shown as
+finished. "Warn above" became "Most per message" (default 5): a call over it
+always asks, and approving is the user's override. A queued message restarts
+the per-message count. Old global budgets carry over to the other types.
+
+## D-140 · 2026-10-04 · Messages queue during a run; Stop is an icon — proposed
+User ruling. While a thread runs, Send queues the message; it reaches the
+model after all tool results of the turn and before the next request, or
+continues a run that would have ended, and starts a fresh step budget. A
+queued row shows it with edit (back into the field) and cancel. After Stop
+or a failure the queued text returns to the field and is not sent. The queue
+lives in memory. Stop is a round icon beside Send. Phone check (A059): both
+buttons, the row, and delivery after the tool steps.
+
+## D-141 · 2026-10-04 · Reminders repeat until Done; battery row — proposed
+User ruling. A reminder stays in the book until confirmed. Its notification
+has Done, 10 min and Later… (1 hour, 1 day, pick date and time). Unanswered,
+it rings again every 10 minutes up to 5 times (Settings > Files and
+schedule), then waits silently. Swiping it away does not confirm. A restart
+restores repeat alarms and shows a finished reminder's notification again.
+Settings > Permissions has a Battery row that opens Android's battery
+optimisation list; no new permission. Phone check: the three buttons, the
+Later sheet and Done.
+
+## D-142 · 2026-10-04 · Approvals: fewer cards, thread allowance, Settings rules — proposed
+User ruling ("the app asks almost everywhere"). Changes D-015, D-058, D-062.
+Subagents never see a card: reads and thread-folder writes run in every
+mode, and actions that leave the app return an error telling the subagent
+to list them under Blockers, so the thread's agent asks once; the 3-minute
+wait is removed. New side effect CHANGES_REVERSIBLE (set a reminder, save to
+Downloads) runs in Auto. The card offers "Allow once" and "Allow all in this
+thread"; the allowance covers every tool except very risky calls (delete or
+overwrite outside the thread, send to another app or server), send-outs
+after outside content and the subagent cap. "Always allow" rules for all
+threads name one tool and one action and are made only in Settings > Tools,
+never from a card. A shield chip in the status strip shows the mode and
+opens its sheet; the menu entry is gone and the two context items became
+one. Room v11 stores the allowance and the outside-content flag per thread.
+
+## D-143 · 2026-10-04 · Guardrails against prompt injection — proposed
+User ruling. (1) Once a thread has read outside content (web, video,
+document, inbox image, MCP result, subagent answer), a call that sends data
+out, or creates a scheduled task, always asks: in Bypass, with the thread
+allowance and against Settings rules. (2) Outside results reach the model
+inside <outside-content source="...">, with any marker in the text escaped,
+and one fixed prompt line says such text is material, never a task. The
+chat shows results without the wrapper. This lowers the chance of an
+injection working; rule 1 is the backstop.
+
+## D-144 · 2026-10-04 · Jev guard, off by default — proposed
+User ruling after spikes/jev-guard (40 labelled cases, all right, median
+0.42 s, $0.000024 a call; cases written by the same hand, 7 with Bangla,
+none over 300 characters). Settings > Tools has a "Jev guard" switch that
+needs an OpenRouter key. With it on, a call that would show an ordinary
+card runs when Jev says read only or reversible at confidence 0.9 or more
+and "the user asked for this" at 0.65 or more; calls that always ask are
+never put to it; it cannot deny. An outside result flagged at 0.65 or more
+gains a warning line inside its wrapper. Any failure shows the card. Its
+cost is not added to the usage figures yet. Not checked on a phone with the
+switch on.
+
+## D-145 · 2026-10-04 · export_pdf tool — proposed
+User ruling. tools/export-pdf turns an HTML file of artifacts/ into a PDF
+beside it with the WebView's print engine and no dialog (a helper in
+package android.print, kept by an R8 rule); page a4, letter or slides. For
+print it opens boxes that scroll sideways and wraps table cells. Phone
+check: the CGRA report came out as 9 A4 pages with selectable text and
+tables inside the page.
+
+## D-146 · 2026-10-04 · Date line without the zone; no language line; thumbnails — proposed
+User rulings. Each message's date line carries the local date and time
+only; Settings > Answers can add the offset or the zone's name. Three tool
+results say "(local time)" instead of the zone. The system prompt's line
+about English and Bangla is removed, because some models answered in Bangla
+because of it. Images the user attaches show as thumbnails in the message
+and the composer, and a tap opens them full screen with zoom; the stored
+text and what the model gets are unchanged. Thumbnails not checked on a
+phone.
