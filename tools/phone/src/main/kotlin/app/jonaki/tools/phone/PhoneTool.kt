@@ -278,7 +278,7 @@ class PhoneTool(
             ReminderTiming.INEXACT -> " Exact alarms are off for Jonaki, so Android may show it some minutes late; " +
                 "the user can turn on Alarms & reminders for Jonaki in Android settings."
         }
-        return ToolOutput.success("Reminder set for $reminderTime: \"$text\".$timingNote")
+        return ToolOutput.success("Reminder set for $reminderTime: \"$text\". It rings again until the user taps Done.$timingNote")
     }
 
     private suspend fun notify(arguments: JsonObject): ToolOutput {
