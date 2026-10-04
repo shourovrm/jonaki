@@ -43,8 +43,20 @@ The size savings of 2 and 3 are therefore not usable.
 
 ## Choice
 
-Design 8. Of the designs whose queries all work, 1 is the smallest (1.72) but is keyed on the implicit rowid of
-`messages`, which SQLite may renumber on `VACUUM` because the primary key is TEXT; after that the index would
-point at the wrong messages. Of the designs keyed on something stable, 8 (1.88) is smaller than 7 (1.91) and
-4 (2.99), and unlike 7 it keeps `snippet()`. It costs 12.6 MB less than 4 at 20,000 messages. The stable key is
+Design 7 (contentless table plus an id map). Of the designs whose queries all work, 1 is the smallest (1.72)
+but is keyed on the implicit rowid of `messages`, which SQLite may renumber on `VACUUM` because the primary
+key is TEXT; after that the index would point at the wrong messages. Of the designs keyed on something
+stable, 8 (1.88) and 7 (1.91) are about 12 MB smaller than 4 (2.99) at 20,000 messages. The stable key is
 `idx_map.indexRowId`, an INTEGER PRIMARY KEY that `VACUUM` keeps, mapped to the message id.
+
+7 was chosen over 8 for two reasons, although 8 is 0.03 smaller and keeps `snippet()`:
+
+- Design 8 needs a view that names `messages`. Room rebuilds a table by creating a new one, dropping the old
+  one and renaming; checked in Python's SQLite 3.53, with a view that names `messages` that rename fails with
+  `error in view v: no such table: main.messages` (it works with `legacy_alter_table=1`). A future migration
+  of `messages` would then fail. Design 7 has only triggers, which go away with the dropped table.
+- `snippet()` takes at most 64 tokens, and a trigram token is one character, so it cannot give the 300
+  characters the tool shows. The tool cuts its excerpt from the message text in Kotlin either way.
+
+Because a table rebuild drops the triggers of design 7 too, `MessageSearchIndex.ensure` rebuilds the index
+on any open where the index table or the insert trigger is missing.

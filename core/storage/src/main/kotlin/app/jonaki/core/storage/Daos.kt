@@ -185,7 +185,33 @@ interface MessageDao {
     /** The full result the model got for one tool call; the step row keeps only a preview. */
     @Query("SELECT * FROM messages WHERE toolCallId = :toolCallId AND role = 'TOOL' LIMIT 1")
     suspend fun findToolResult(toolCallId: String): MessageEntity?
+
+    /** The best matches for search_chats; [match] comes from [FtsQuery.anyWordOf], a null [threadId] searches every thread. */
+    // Room checks queries against its own tables at build time and cannot see the FTS5 table.
+    @SkipQueryVerification
+    @Query(MessageSearchIndex.SEARCH)
+    suspend fun searchMessages(match: String, threadId: String?, limit: Int, offset: Int): List<MessageSearchRow>
+
+    @SkipQueryVerification
+    @Query(MessageSearchIndex.COUNT)
+    suspend fun countSearchMatches(match: String, threadId: String?): Int
+
+    @Query(MessageSearchIndex.PREVIOUS_MESSAGE)
+    suspend fun textBefore(threadId: String, position: Long): String?
+
+    @Query(MessageSearchIndex.NEXT_MESSAGE)
+    suspend fun textAfter(threadId: String, position: Long): String?
 }
+
+data class MessageSearchRow(
+    val messageId: String,
+    val threadId: String,
+    val position: Long,
+    val role: String,
+    val text: String,
+    val createdAtMillis: Long,
+    val threadTitle: String,
+)
 
 data class ModelUsageRow(
     val model: String,
