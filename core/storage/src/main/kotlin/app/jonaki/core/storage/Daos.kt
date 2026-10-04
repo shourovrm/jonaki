@@ -197,11 +197,16 @@ interface MessageDao {
     suspend fun countSearchMatches(match: String, threadId: String?): Int
 
     @Query(MessageSearchIndex.PREVIOUS_MESSAGE)
-    suspend fun textBefore(threadId: String, position: Long): String?
+    suspend fun messageBefore(threadId: String, position: Long): NeighbourMessage?
 
     @Query(MessageSearchIndex.NEXT_MESSAGE)
-    suspend fun textAfter(threadId: String, position: Long): String?
+    suspend fun messageAfter(threadId: String, position: Long): NeighbourMessage?
 }
+
+data class NeighbourMessage(
+    val role: String,
+    val text: String,
+)
 
 data class MessageSearchRow(
     val messageId: String,

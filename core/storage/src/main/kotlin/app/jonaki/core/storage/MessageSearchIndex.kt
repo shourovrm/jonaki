@@ -124,15 +124,15 @@ object MessageSearchIndex {
             "WHERE $TABLE MATCH :match AND threads.incognito = 0 " +
             "AND (:threadId IS NULL OR messages.threadId = :threadId)"
 
-    /** The nearest user or assistant message with text before a position in a thread; parameters :threadId and :position. */
+    /** The role and text of the nearest user or assistant message with text before a position in a thread; parameters :threadId and :position. */
     const val PREVIOUS_MESSAGE =
-        "SELECT text FROM messages WHERE threadId = :threadId AND position < :position " +
+        "SELECT role, text FROM messages WHERE threadId = :threadId AND position < :position " +
             "AND role IN ('USER', 'ASSISTANT') AND isComplete = 1 AND trim(text, ' ' || char(9, 10, 13)) <> '' " +
             "ORDER BY position DESC LIMIT 1"
 
     /** The same after a position. */
     const val NEXT_MESSAGE =
-        "SELECT text FROM messages WHERE threadId = :threadId AND position > :position " +
+        "SELECT role, text FROM messages WHERE threadId = :threadId AND position > :position " +
             "AND role IN ('USER', 'ASSISTANT') AND isComplete = 1 AND trim(text, ' ' || char(9, 10, 13)) <> '' " +
             "ORDER BY position ASC LIMIT 1"
 }

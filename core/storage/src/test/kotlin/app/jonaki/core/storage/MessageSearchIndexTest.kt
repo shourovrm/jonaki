@@ -277,7 +277,7 @@ class MessageSearchIndexTest {
         addMessage(connection, "m4", "t1", "half", role = "ASSISTANT", isComplete = false, position = 4)
 
         assertEquals(
-            listOf("question"),
+            listOf("USER|question"),
             databases.queryStrings(connection, MessageSearchIndex.PREVIOUS_MESSAGE.replace(":threadId", "'t1'").replace(":position", "3")),
         )
         assertEquals(
