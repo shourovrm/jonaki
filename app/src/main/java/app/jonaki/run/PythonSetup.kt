@@ -8,6 +8,7 @@ import app.jonaki.runtimes.pyodide.PinnedWheel
 import app.jonaki.runtimes.pyodide.PyodideRelease
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -200,7 +201,9 @@ class PythonSetup(
         mutableState.update { current ->
             current.copy(download = PythonDownload(packageNames, doneBytes = 0, totalBytes = totalBytes), problem = null)
         }
-        val job = scope.launch {
+        // Started only after downloadJob is set: a download that fails at once would otherwise
+        // compare itself with a still empty downloadJob and never show its problem.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             val ownJob = coroutineContext[Job]
             val result = download(packageNames)
             // A cancelled call can end as an IOException, which is the user's Cancel, not a problem.
@@ -217,6 +220,7 @@ class PythonSetup(
             }
         }
         downloadJob = job
+        job.start()
         return job
     }
 
