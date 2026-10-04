@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
         PersonaEntity::class,
         ProjectEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
@@ -51,6 +51,10 @@ import kotlinx.coroutines.Dispatchers
         // Version 11 adds threads.allowAllInThread and threads.readOutsideContent (both 0 by
         // default); the spec marks the threads whose history already holds outside content.
         AutoMigration(from = 10, to = 11, spec = JonakiDatabase.MarkThreadsThatReadOutsideContent::class),
+        // Version 12 adds memories.keywords (empty by default) and the nullable
+        // memories.supersededAtMillis, messages.promptFactIds and steps.guardNote;
+        // the spec rebuilds the memory search index so that it covers the keywords.
+        AutoMigration(from = 11, to = 12, spec = JonakiDatabase.AddKeywordsToMemorySearchIndex::class),
     ],
 )
 abstract class JonakiDatabase : RoomDatabase() {
@@ -95,10 +99,17 @@ abstract class JonakiDatabase : RoomDatabase() {
         }
     }
 
-    /** A fresh install gets the same FTS5 table that the migration adds to an upgraded one. */
+    /** The index made in version 3 covers the text only; version 12 replaces it with one that covers the keywords too. */
+    class AddKeywordsToMemorySearchIndex : AutoMigrationSpec {
+        override fun onPostMigrate(connection: SQLiteConnection) {
+            MemorySearchIndex.upgradeToKeywords(connection)
+        }
+    }
+
+    /** A fresh install gets the same FTS5 table that the migrations leave in an upgraded one. */
     private class CreateMemorySearchIndex : Callback() {
         override fun onCreate(connection: SQLiteConnection) {
-            MemorySearchIndex.create(connection)
+            MemorySearchIndex.createWithKeywords(connection)
         }
     }
 

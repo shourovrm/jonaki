@@ -138,6 +138,12 @@ data class MessageEntity(
     val firstTextElapsedMillis: Long? = null,
     /** When the chat first drew that text; written by the chat screen. */
     val firstShownElapsedMillis: Long? = null,
+    /**
+     * Ids of the facts in the prompt's memory section for the run this user
+     * message started, comma-separated; null on other rows, on rows saved
+     * before version 12 and when the run had no memory section.
+     */
+    val promptFactIds: String? = null,
 )
 
 /** One tool call as the user sees it in the step track. */
@@ -168,6 +174,11 @@ data class StepEntity(
      * A subagent's steps are shown in its card, not in the run's track.
      */
     val subagentId: String? = null,
+    /**
+     * What the guard said about this call, as one short line for the step's
+     * detail; null when no guard was asked.
+     */
+    val guardNote: String? = null,
 )
 
 enum class StepStatus {
@@ -276,6 +287,19 @@ data class MemoryEntity(
     val updatedAtMillis: Long,
     /** When the fact last went into a prompt or a recall result; null until then. */
     val lastUsedAtMillis: Long? = null,
+    /**
+     * Search words the fact's own text lacks, such as the same word in the
+     * other script ("thesis" for "থিসিস"). Indexed for recall, never shown
+     * to the model or the user.
+     */
+    @ColumnInfo(defaultValue = "")
+    val keywords: String = "",
+    /**
+     * When background extraction replaced or removed the fact; null while it
+     * is in use. A superseded fact stays out of the prompt and of recall, and
+     * the memory screen can restore it.
+     */
+    val supersededAtMillis: Long? = null,
 )
 
 object MemoryScope {
