@@ -4,7 +4,13 @@ Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an
 
 **Download:** [jonaki-v1.4.0.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.0/jonaki-v1.4.0.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
 
-Jonaki needs Android 8.0 or later on a 64-bit ARM phone. The interface is in English and Bangla. This is a pre-release, so expect rough edges.
+<p>
+  <img src="docs/screenshots/chat.png" width="250" alt="A thread where the agent ran two web searches before answering">
+  <img src="docs/screenshots/report.png" width="250" alt="A report with a bar chart, written by the agent">
+  <img src="docs/screenshots/approval.png" width="250" alt="A card asking whether the agent may edit a file">
+</p>
+
+Jonaki needs Android 8.0 or later on a 64-bit ARM phone. The interface is in English and Bangla. This is a pre-release, so expect some rough edges.
 
 ## Getting started
 
@@ -20,11 +26,11 @@ One model key is enough to chat. Some features call a service of their own and s
 | YouTube summaries | Gemini |
 | Jev guard | OpenRouter |
 
-Reading a web page, running code and local models need no key.
+
 
 ## Threads
 
-A conversation in Jonaki is a thread, and each thread has its own messages, files, memory and model. Answers stream in as they are written, and every step the agent takes shows live, with a Stop button. A message you send while the agent is working waits in a queue, where you can still edit or cancel it. Each step is saved as it happens, so nothing is lost if Android closes the app in the middle of an answer. When a thread grows long, the older part is summarised for the model while the original messages stay readable.
+A conversation in Jonaki is a thread, and each thread has its own messages, files, memory and model. A message you send while the agent is working waits in a queue, where you can still edit or cancel it. Each step is saved as it happens, so nothing is lost if Android closes the app in the middle of an answer. When a thread grows long, the older part is summarised for the model while the original messages stay readable.
 
 A project groups related threads and gives them shared files, shared facts and one prompt. Instructions work at three levels: custom instructions apply to every thread, a persona is a saved set of instructions you pick for a thread, and a thread can add its own. The answer style (concise, normal or detailed) is set the same way, for all threads or for one.
 
@@ -41,9 +47,9 @@ Because you pay the services directly, Jonaki shows what each answer cost, with 
 
 ## Tools
 
-**Web.** The agent searches through Tavily, Ollama or Exa, trying them in the order you set, and then reads the pages it finds, including pages that need JavaScript. It summarises YouTube videos through Gemini, either whole or for a time range. Web access can be turned off for a thread.
+**Web.** The agent searches through Tavily, Ollama or Exa, trying them in the order you set, and then reads the pages it finds (including with javascripts). It summarises YouTube videos through Gemini, either whole or for a time range. Web access can be turned off for a thread.
 
-**Files.** You give the agent a file by attaching it, sharing it from another app or taking a photo. It reads text, PDF, Word, Excel, PowerPoint and images. What it produces can be saved to Downloads, shared to another app, or written to one folder you link.
+**Files.** You give the agent a file by attaching it, sharing it from another app or taking a photo. It reads text, PDF, Word, Excel, PowerPoint and images. What it produces can be saved Downloads, shared to another app, or written to one folder you link.
 
 **Code.** The agent runs JavaScript on the phone. Python is an optional download that runs offline once installed.
 
@@ -55,11 +61,11 @@ Because you pay the services directly, Jonaki shows what each answer cost, with 
 
 The agent writes reports and slide decks as HTML pages with charts. They open in an offline viewer, keep every earlier version, and export to PDF with selectable text.
 
-It also writes and edits Word, Excel and PowerPoint files, with native charts in Excel and PowerPoint. These files follow one of three built-in themes or your own `.docx` or `.pptx` template, and an HTML report or deck converts to any of the three formats. Office files need Python and its documents add-on, a 4.5 MB download.
+It also writes and edits Word, Excel and PowerPoint files, with native charts in Excel and PowerPoint. These files follow one of three built-in themes or your own `.docx` or `.pptx` template, and an HTML report or deck converts to any of the three formats. Office files need Python and its documents add-on.
 
 ## Memory
 
-Jonaki keeps facts at three scopes: one thread, one project, or all threads. The agent saves facts during a chat, and a background model picks up what it missed. Each fact carries its date, so when two facts disagree the newer one wins. Recall matches any word, in Bangla or English, and the agent can also search earlier chats in other threads.
+Jonaki keeps facts at three scopes: one thread, one project, or all threads. The agent saves facts during a chat, and a background model picks up what it missed. Each fact carries its date, so when two facts disagree the newer one wins. Recall matches any word, and the agent can also search earlier chats in other threads.
 
 You stay in charge of what is remembered. Every fact can be read, edited, pinned or deleted, and a fact that was replaced can be restored. Two kinds of fact wait for your approval before they are kept: facts meant for all threads, and facts saved after a thread has read a web page. The whole memory exports as a Markdown file.
 
