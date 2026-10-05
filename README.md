@@ -1,119 +1,67 @@
 # Jonaki
 
-An Android app that runs an AI agent in a chat, with your own API keys.
+Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an AI agent in a chat. You bring API keys for the model services you already use, and the agent searches the web, works with your files, runs code and remembers what matters between conversations. There is no account and no Jonaki server: requests go straight from the phone to the services you set up, and your keys stay on the phone.
 
 **Download:** [jonaki-v1.4.0.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.0/jonaki-v1.4.0.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
 
-- Android 8.0 or later, 64-bit ARM
-- Interface in English and Bangla
-- Pre-release: expect rough edges
-- Jonaki (জোনাকি) is Bangla for firefly
+Jonaki needs Android 8.0 or later on a 64-bit ARM phone. The interface is in English and Bangla. This is a pre-release, so expect rough edges.
 
 ## Getting started
 
-1. Install the APK. A newer version installs over an older one and keeps every thread.
-2. Open Settings > Models and save a key for one service.
+1. Install the APK. A newer version installs over an older one and keeps your threads.
+2. Open Settings > Models and save an API key for one service.
 3. Start a thread and send a message.
 
-## Features
+## Threads
 
-The sections follow the order in which you meet each part: the chat, the model behind it, the tools the agent uses, what it produces, what it remembers, and what it may do without asking.
+A conversation in Jonaki is a thread, and each thread has its own messages, files, memory and model. Answers stream in as they are written, and every step the agent takes shows live, with a Stop button. A message you send while the agent is working waits in a queue, where you can still edit or cancel it. Each step is saved as it happens, so nothing is lost if Android closes the app in the middle of an answer. When a thread grows long, the older part is summarised for the model while the original messages stay readable.
 
-### Chat
+A project groups related threads and gives them shared files, shared facts and one prompt. Instructions work at three levels: custom instructions apply to every thread, a persona is a saved set of instructions you pick for a thread, and a thread can add its own. The answer style (concise, normal or detailed) is set the same way, for all threads or for one.
 
-- Each thread has its own messages, files, memory and model
-- Answers stream in, and every tool step shows live with a Stop button
-- A message sent during a run waits in a queue, where you can edit or cancel it
-- Any message can be copied, and a prompt can be edited and sent again
-- Nothing is lost if Android closes the app in the middle of an answer
-- Long threads are summarised, and the original messages stay readable
+An incognito thread uses no memory and is deleted a day after its last message.
 
-### Models and cost
+## Models and cost
 
-- Cloud services: OpenRouter, DeepSeek, Gemini, OpenAI, GLM (Z.ai), Xiaomi MiMo, MiniMax, Qwen and Ollama Cloud
-- Local models: an Ollama server on your network, or GGUF files that run on the phone
-- The model and its thinking level are chosen per thread
-- Cost is shown per answer, per thread and per month
-- A service's card shows its balance where the service reports one (OpenRouter, DeepSeek, MiniMax, Tavily)
+The model and its thinking level are chosen per thread, from any service you have saved a key for:
 
-### Projects, personas and instructions
+- **Cloud:** OpenRouter, DeepSeek, Gemini, OpenAI, GLM (Z.ai), Xiaomi MiMo, MiniMax, Qwen and Ollama Cloud
+- **Local:** an Ollama server on your network, or GGUF model files that run on the phone itself
 
-- A project groups threads and gives them shared files, shared facts and one prompt
-- A persona is a saved set of instructions that a thread can use
-- Custom instructions apply to every thread, and a thread can add its own
-- The answer style (concise, normal or detailed) is set for all threads or for one
+Because you pay the services directly, Jonaki shows what each answer cost, with totals per thread and per month. OpenRouter, DeepSeek, MiniMax and Tavily report a balance, and Jonaki shows it on the service's card.
 
-### Tools
+## Tools
 
-**Web**
-- Search runs through Tavily, Ollama or Exa, tried in your order
-- Pages are fetched and read, including pages that need JavaScript
-- YouTube videos are summarised through Gemini, whole or for a time range
-- Web access can be turned off per thread
+**Web.** The agent searches through Tavily, Ollama or Exa, trying them in the order you set, and then reads the pages it finds, including pages that need JavaScript. It summarises YouTube videos through Gemini, either whole or for a time range. Web access can be turned off for a thread.
 
-**Files**
-- Files come in by sharing from another app, by attaching, or from the camera
-- The agent reads text, PDF, Word, Excel, PowerPoint and images
-- Results go to Downloads, to another app, or to one folder you link
+**Files.** You give the agent a file by attaching it, sharing it from another app or taking a photo. It reads text, PDF, Word, Excel, PowerPoint and images. What it produces can be saved to Downloads, shared to another app, or written to one folder you link.
 
-**Code**
-- The agent runs JavaScript on the phone
-- Python is an optional download and then runs offline
+**Code.** The agent runs JavaScript on the phone. Python is an optional download that runs offline once installed.
 
-**Phone and schedule**
-- Calendar events, reminders and notifications
-- A reminder rings again until you tap Done
-- A scheduled task runs in its thread at the time you set
+**Phone.** The agent creates calendar events, reminders and notifications. A reminder rings again until you tap Done. A scheduled task runs in its thread at the time you set, so the agent can do recurring work without being asked.
 
-**Subagents and MCP**
-- The agent hands parts of a task to subagents, each with a budget of steps, cost and minutes
-- You can add your own subagent types
-- Remote MCP servers add their tools to the agent
+**Subagents and MCP.** For a large task the agent hands parts to subagents, each limited by a budget of steps, cost and minutes, and you can define subagent types of your own. Remote MCP servers (services that offer extra tools over the Model Context Protocol) add their tools to the agent.
 
-### Reports, slides and Office files
+## Reports, slides and Office files
 
-- The agent writes HTML pages with charts, shown in an offline viewer
-- Every version is kept
-- A report or slide deck exports to PDF with selectable text
-- The agent writes and changes Word, Excel and PowerPoint files, with native charts in Excel and PowerPoint
-- Office files follow one of three themes or your own `.docx` or `.pptx` template
-- An HTML report or deck converts to Word, PowerPoint or Excel
-- Office files need Python and its documents add-on, a 4.5 MB download
+The agent writes reports and slide decks as HTML pages with charts. They open in an offline viewer, keep every earlier version, and export to PDF with selectable text.
 
-### Memory
+It also writes and edits Word, Excel and PowerPoint files, with native charts in Excel and PowerPoint. These files follow one of three built-in themes or your own `.docx` or `.pptx` template, and an HTML report or deck converts to any of the three formats. Office files need Python and its documents add-on, a 4.5 MB download.
 
-- Facts are kept for one thread, for one project, or for all threads
-- The agent saves facts during a chat, and a background model saves what it missed
-- Each fact carries its date, so the newer of two facts wins
-- Recall finds facts by any word, in Bangla or English, best match first
-- The agent can search earlier chats in other threads
-- You can read, edit, pin and delete facts, and restore one that was replaced
-- Facts for all threads, and facts saved after a thread read a web page, wait for your approval
-- Memory exports as a Markdown file
+## Memory
 
-### Skills
+Jonaki keeps facts at three scopes: one thread, one project, or all threads. The agent saves facts during a chat, and a background model picks up what it missed. Each fact carries its date, so when two facts disagree the newer one wins. Recall matches any word, in Bangla or English, and the agent can also search earlier chats in other threads.
 
-- A skill is a set of instructions for one kind of task
-- Built in: report, slides, Office documents, YouTube summary, Reddit, formal letter in Bangla
-- Skills import from a file, a link or a GitHub folder
-- The agent can propose a skill after a hard task; it is added only when you approve it
-- Skills switch on or off per thread
+You stay in charge of what is remembered. Every fact can be read, edited, pinned or deleted, and a fact that was replaced can be restored. Two kinds of fact wait for your approval before they are kept: facts meant for all threads, and facts saved after a thread has read a web page. The whole memory exports as a Markdown file.
 
-### Approvals and guardrails
+## Skills
 
-- An action that changes a file outside the thread or leaves the app asks first
-- The approval mode is Ask, Auto or Bypass, for all threads or for one
-- A card offers "Allow once" and "Allow all in this thread"
-- "Always allow" rules for one action are made in Settings
-- Text from web pages, documents and other outside sources reaches the model marked as outside content
-- After a thread has read outside content, sending data out always asks
-- The optional Jev guard skips cards for clearly safe actions and warns about outside text that carries instructions
+A skill is a set of instructions for one kind of task, switched on or off per thread. Jonaki ships with skills for reports, slides, Office documents, YouTube summaries, Reddit and formal letters in Bangla, and you can import more from a file, a link or a GitHub folder. After a hard task the agent may propose a new skill, which is added only when you approve it.
 
-### Privacy
+## Approvals and guardrails
 
-- API keys stay on the phone
-- An incognito thread uses no memory and is deleted a day after its last message
-- There is no account and no Jonaki server; requests go from the phone to the services you set up
+The agent asks before any action that changes a file outside the thread or sends something out of the app. The approval card offers "Allow once" and "Allow all in this thread", and Settings holds "Always allow" rules for single actions. The overall mode is Ask, Auto or Bypass, for all threads or for one.
+
+Text from web pages, documents and other outside sources reaches the model marked as outside content, because such text can carry instructions meant to mislead the agent. After a thread has read outside content, sending data out always asks, whatever the mode. The optional Jev guard skips the card for clearly safe actions and warns when outside text carries instructions.
 
 ## Building
 
@@ -122,6 +70,4 @@ git submodule update --init --depth 1
 gradle testReleaseUnitTest assembleRelease
 ```
 
-- Release builds only
-- Android SDK platform 35, JDK 17 or later, Gradle 9.7
-- Signed with `jonaki.keystore` in the repository root (not committed; see `AGENTS.md`)
+The build needs Android SDK platform 35, JDK 17 or later and Gradle 9.7, and it produces release builds only. The APK is signed with `jonaki.keystore` in the repository root, which is not committed; `AGENTS.md` gives the command that creates it.
