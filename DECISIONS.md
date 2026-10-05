@@ -2162,5 +2162,7 @@ gets `anywhere`. The rules left @media print so the table can be measured
 before printing; the WebView is never shown. Checked in desktop Chromium at
 the A4 width of 717 CSS pixels: the old rule broke "Rank" and "Population"
 in a six-column table, the new one breaks neither, and a ten-column table
-still fits the page. Outcome: not checked on the phone, which was
-disconnected before the new build could be installed. Released as 1.4.1.
+still fits the page. Released as 1.4.1. Outcome (2026-10-05, phone A059,
+build 1.4.1): the same report, its HTML unchanged, exports to a four-page
+PDF whose headers are whole ("RANK", "POPULATION"; pdftotext finds no
+broken word), and the table sits on page 1 with no gap above it.
