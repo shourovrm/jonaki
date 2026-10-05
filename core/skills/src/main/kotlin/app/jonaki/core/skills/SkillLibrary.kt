@@ -128,11 +128,13 @@ class SkillLibrary(val folder: File, private val stateFile: File) {
      * Called on every app start. A built-in skill is installed when missing,
      * updated when its folder still holds what the app installed last time,
      * and left alone when the user edited it, replaced it by an import or
-     * deleted it.
+     * deleted it. A skill the app no longer ships stays in the library as the
+     * user's own skill.
      */
     @Synchronized
     fun installBuiltIns(builtIns: List<BuiltInSkill>) {
-        val state = readState().toMutableMap()
+        val shippedNames = builtIns.map { builtIn -> builtIn.name }.toSet()
+        val state = readState().filterKeys { name -> name in shippedNames }.toMutableMap()
         for (builtIn in builtIns) {
             val shippedHash = hashOf(builtIn.files)
             val record = state[builtIn.name]

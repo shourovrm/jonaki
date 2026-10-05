@@ -163,6 +163,20 @@ class SkillLibraryTest {
     }
 
     @Test
+    fun aSkillTheAppNoLongerShipsStaysAsTheUsersOwnSkill() {
+        library().installBuiltIns(listOf(builtIn("report"), builtIn("letter")))
+        library().delete("report")
+
+        // A new app version ships neither skill any more.
+        library().installBuiltIns(emptyList())
+
+        val entry = library().list().single()
+        assertEquals("letter", entry.name)
+        assertFalse(entry.isBuiltIn)
+        assertEquals(emptyList<String>(), library().deletedBuiltIns())
+    }
+
+    @Test
     fun hiddenFoldersAreNotSkills() {
         File(libraryFolder, ".incoming-report").mkdirs()
         File(libraryFolder, ".incoming-report/SKILL.md").writeText(skillText("report"))

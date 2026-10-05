@@ -2138,3 +2138,15 @@ wheels (MIT and BSD), and it is the shortest to comply with. Rejected for
 now: Apache-2.0 (adds a patent grant, longer), GPL-3.0 (forks must stay
 open). Changing it before others contribute costs one commit. Outcome:
 none yet.
+
+## D-155 · 2026-10-05 · Bangla formal letter skill no longer shipped; About text — proposed
+User ruling ("it's my personal skill, not necessary for the app"). The
+folder assets/skills/bangla-formal-letter is removed, so five skills ship.
+installBuiltIns now forgets the record of a skill the app no longer ships,
+so a phone that already has it keeps it as the user's own skill, with no
+"built-in" mark and no reset. Without this the skill would still show as
+built-in and its reset would do nothing. The About description becomes
+"Jonaki is Bangla for firefly. It is an AI chat app that uses your own API
+keys. There is no Jonaki account or server." (the user found the old one
+generic); agreed with an Opus reviewer, which also changed the Bangla
+developer line. Outcome: see the commit's checks.

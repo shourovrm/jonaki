@@ -1,6 +1,6 @@
 # Jonaki
 
-Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an AI agent in a chat. You bring API keys for the model services you already use, and the agent searches the web, works with your files, runs code and remembers what matters between conversations. There is no account and no Jonaki server: requests go straight from the phone to the services you set up, and your keys stay on the phone.
+Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an AI agent in a chat. You bring API keys for the model services you already use, and the agent searches the web, works with your files, runs code and remembers what matters between conversations. There is no account and no Jonaki server: requests go straight from the phone to the services you set up.
 
 **Download:** [jonaki-v1.4.0.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.0/jonaki-v1.4.0.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
 
@@ -65,7 +65,7 @@ You stay in charge of what is remembered. Every fact can be read, edited, pinned
 
 ## Skills
 
-A skill is a set of instructions for one kind of task, switched on or off per thread. Jonaki ships with skills for reports, slides, Office documents, YouTube summaries, Reddit and formal letters in Bangla, and you can import more from a file, a link or a GitHub folder. After a hard task the agent may propose a new skill, which is added only when you approve it.
+A skill is a set of instructions for one kind of task, switched on or off per thread. Jonaki ships with skills for reports, slides, Office documents, YouTube summaries and Reddit, and you can import more from a file, a link or a GitHub folder. After a hard task the agent may propose a new skill, which is added only when you approve it.
 
 ## Approvals and guardrails
 
