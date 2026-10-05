@@ -2,7 +2,7 @@
 
 Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an AI agent in a chat. You bring API keys for the model services you already use, and the agent searches the web, works with your files, runs code and remembers what matters between conversations. There is no account and no Jonaki server: requests go straight from the phone to the services you set up.
 
-**Download:** [jonaki-v1.4.0.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.0/jonaki-v1.4.0.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
+**Download:** [jonaki-v1.4.1.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.1/jonaki-v1.4.1.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
 
 <p>
   <img src="docs/screenshots/chat.png" width="250" alt="A thread where the agent ran two web searches before answering">

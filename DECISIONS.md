@@ -2150,3 +2150,17 @@ built-in and its reset would do nothing. The About description becomes
 keys. There is no Jonaki account or server." (the user found the old one
 generic); agreed with an Opus reviewer, which also changed the Bangla
 developer line. Outcome: see the commit's checks.
+
+## D-156 · 2026-10-05 · PDF export breaks a word only in a table too wide for the paper — proposed
+The export's fit-to-paper rule gave every table cell `overflow-wrap:
+anywhere`. That value lets the browser size a column narrower than its
+longest word, so a table that fitted the page printed "RAN K" and
+"POPULATIO N" (the agent saw it on the test phone). Cells now get
+`overflow-wrap: break-word`, which keeps a column as wide as its longest
+word, and only a table whose right edge is still past the paper after that
+gets `anywhere`. The rules left @media print so the table can be measured
+before printing; the WebView is never shown. Checked in desktop Chromium at
+the A4 width of 717 CSS pixels: the old rule broke "Rank" and "Population"
+in a six-column table, the new one breaks neither, and a ten-column table
+still fits the page. Outcome: not checked on the phone, which was
+disconnected before the new build could be installed. Released as 1.4.1.

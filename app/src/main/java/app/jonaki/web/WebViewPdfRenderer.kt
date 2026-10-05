@@ -219,8 +219,16 @@ class WebViewPdfRenderer(private val context: Context) : PdfRenderer {
          * Paper cannot scroll sideways. A report made for the phone puts a wide
          * table in a box that scrolls and keeps its cells on one line, and on
          * paper the box cut the table off at the page's edge (seen on the first
-         * report exported on the test phone). For print only, this opens every
-         * box that scrolls sideways and lets table cells wrap.
+         * report exported on the test phone). This opens every box that scrolls
+         * sideways and lets table cells wrap between words.
+         *
+         * Only a table that still runs past the paper's edge may break inside a
+         * word. Allowing that for every table let the browser make a column
+         * narrower than its longest word, so a table that fitted printed "RAN K"
+         * and "POPULATIO N" (seen on the test phone, 2026-10-05).
+         *
+         * The rules are not inside @media print, because the table is measured
+         * before printing and this WebView is never shown.
          */
         const val FIT_TO_PAPER_SCRIPT =
             "(function(){" +
@@ -229,12 +237,17 @@ class WebViewPdfRenderer(private val context: Context) : PdfRenderer {
                 "if(overflowX==='auto'||overflowX==='scroll'){element.classList.add('jonaki-print-open');}" +
                 "});" +
                 "var style=document.createElement('style');" +
-                "style.textContent='@media print{" +
+                "style.textContent='" +
                 ".jonaki-print-open{overflow:visible !important}" +
                 "table{min-width:0 !important;max-width:100% !important}" +
-                "th,td{white-space:normal !important;overflow-wrap:anywhere}" +
-                "}';" +
+                "th,td{white-space:normal !important;overflow-wrap:break-word}" +
+                ".jonaki-print-squeeze th,.jonaki-print-squeeze td{overflow-wrap:anywhere}" +
+                "';" +
                 "document.head.appendChild(style);" +
+                "var paperWidth=document.documentElement.clientWidth;" +
+                "document.querySelectorAll('table').forEach(function(table){" +
+                "if(table.getBoundingClientRect().right>paperWidth){table.classList.add('jonaki-print-squeeze');}" +
+                "});" +
                 "return 'done';" +
                 "})()"
 
