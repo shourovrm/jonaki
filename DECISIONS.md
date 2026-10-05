@@ -2128,3 +2128,13 @@ intended in all three themes, with Bangla text. Rejected: Apache POI (about
 editing), translating CSS. Also fixed: a download that failed at once could
 finish before its job was recorded, so its problem never showed. Outcome:
 not run on a phone or in the WebView worker; not opened in Microsoft Office.
+
+## D-154 · 2026-10-05 · MIT licence — proposed
+The user asked for a licence in the README without naming one. `LICENSE` is
+the MIT text with "Copyright (c) 2026 Riad Mashrub Shourov". Why: the
+repository is public and had no licence, so nobody could legally reuse the
+code; MIT matches llama.cpp (the one submodule) and the documents add-on's
+wheels (MIT and BSD), and it is the shortest to comply with. Rejected for
+now: Apache-2.0 (adds a patent grant, longer), GPL-3.0 (forks must stay
+open). Changing it before others contribute costs one commit. Outcome:
+none yet.

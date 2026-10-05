@@ -12,6 +12,16 @@ Jonaki needs Android 8.0 or later on a 64-bit ARM phone. The interface is in Eng
 2. Open Settings > Models and save an API key for one service.
 3. Start a thread and send a message.
 
+One model key is enough to chat. Some features call a service of their own and stay off until its key is saved:
+
+| Feature | Key it needs |
+| --- | --- |
+| Web search | Tavily, Ollama or Exa (any one) |
+| YouTube summaries | Gemini |
+| Jev guard | OpenRouter |
+
+Reading a web page, running code and local models need no key.
+
 ## Threads
 
 A conversation in Jonaki is a thread, and each thread has its own messages, files, memory and model. Answers stream in as they are written, and every step the agent takes shows live, with a Stop button. A message you send while the agent is working waits in a queue, where you can still edit or cancel it. Each step is saved as it happens, so nothing is lost if Android closes the app in the middle of an answer. When a thread grows long, the older part is summarised for the model while the original messages stay readable.
@@ -63,6 +73,37 @@ The agent asks before any action that changes a file outside the thread or sends
 
 Text from web pages, documents and other outside sources reaches the model marked as outside content, because such text can carry instructions meant to mislead the agent. After a thread has read outside content, sending data out always asks, whatever the mode. The optional Jev guard skips the card for clearly safe actions and warns when outside text carries instructions.
 
+## Permissions
+
+Settings lists these permissions and shows which ones are granted. The camera is absent because Android's own camera app takes the picture.
+
+| Permission | Used for |
+| --- | --- |
+| Internet | Requests to the services you set up |
+| Notifications | Reminders, notifications the agent sends, and the progress of a run or a model download |
+| Calendar (read and write) | Reading and creating events when you ask the agent to |
+| Photos | Attaching pictures from the gallery |
+| Exact alarms | Ringing reminders and starting scheduled tasks on time |
+| Run at startup | Restoring reminders and scheduled tasks after the phone restarts |
+| Foreground service | Letting an answer finish while the app is in the background |
+
+## Code layout
+
+Each swappable part is its own Gradle module, so adding a tool or a model service means adding one module and one line that registers it.
+
+| Folder | Holds |
+| --- | --- |
+| `app/` | The app itself and the tool registry |
+| `core/` | The agent loop, storage and the interfaces the other modules implement |
+| `feature/` | One module per screen |
+| `tools/` | One module per tool, such as `web-search` or `run-code` |
+| `providers/` | Model services, including the on-phone runner built on llama.cpp |
+| `search/` | Search backends |
+| `runtimes/` | JavaScript and Python |
+| `guards/` | The Jev guard |
+
+Dependencies point one way: `app` depends on `feature`, and everything depends on `core`, which depends on none of them. A tool never depends on another tool. `AGENTS.md` has the full rules.
+
 ## Building
 
 ```
@@ -71,3 +112,7 @@ gradle testReleaseUnitTest assembleRelease
 ```
 
 The build needs Android SDK platform 35, JDK 17 or later and Gradle 9.7, and it produces release builds only. The APK is signed with `jonaki.keystore` in the repository root, which is not committed; `AGENTS.md` gives the command that creates it.
+
+## Licence
+
+Jonaki is released under the [MIT licence](LICENSE).
