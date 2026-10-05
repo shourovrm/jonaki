@@ -10,7 +10,7 @@ Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an
   <img src="docs/screenshots/approval.png" width="250" alt="A card asking whether the agent may edit a file">
 </p>
 
-Jonaki needs Android 8.0 or later on a 64-bit ARM phone. The interface is in English and Bangla. This is a pre-release, so expect some rough edges.
+Jonaki needs Android 8.0 or later on a 64-bit ARM phone. The interface is in English and Bangla.
 
 ## Getting started
 
