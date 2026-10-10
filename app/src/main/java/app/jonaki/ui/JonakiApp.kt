@@ -55,6 +55,10 @@ import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.modelcatalog.OpenRouterEndpoints
+import app.jonaki.core.modelcatalog.OpenRouterProviderPolicies
+import app.jonaki.core.modelcatalog.ProviderDataPolicy
+import app.jonaki.core.modelcatalog.ProviderEndpoint
+import app.jonaki.core.modelcatalog.ProviderPrivacy
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.ModelUsageRow
@@ -108,6 +112,7 @@ import app.jonaki.feature.settings.McpServerUi
 import app.jonaki.feature.settings.RoutingUi
 import app.jonaki.feature.settings.SearchServiceRow
 import app.jonaki.feature.settings.ProviderOptionUi
+import app.jonaki.feature.settings.ProviderPrivacyUi
 import app.jonaki.feature.settings.ServiceModelUi
 import app.jonaki.feature.settings.SettingsActions
 import app.jonaki.feature.settings.SettingsHomeScreen
@@ -145,6 +150,8 @@ import java.time.ZoneId
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -1800,25 +1807,48 @@ private fun displayNameOf(service: SearchService): String = when (service) {
 /** The providers of an OpenRouter model for the Providers sheet, cheapest first. */
 private suspend fun loadModelProviders(httpClient: OkHttpClient, modelKey: String): Result<List<ProviderOptionUi>> =
     try {
-        val endpoints = OpenRouterEndpoints.fetch(httpClient, ModelKey.modelOf(modelKey))
-        Result.success(
-            endpoints.map { endpoint ->
-                ProviderOptionUi(
-                    name = endpoint.providerName,
-                    tag = endpoint.tag,
-                    variantTag = endpoint.variantTag,
-                    inputPricePerMillion = endpoint.inputUsdPerMillion,
-                    outputPricePerMillion = endpoint.outputUsdPerMillion,
-                    quantization = endpoint.quantization,
-                )
-            },
-        )
+        // The policy list never throws: when it fails the rows simply get no mark.
+        val (endpoints, policies) = coroutineScope {
+            val endpointsRequest = async { OpenRouterEndpoints.fetch(httpClient, ModelKey.modelOf(modelKey)) }
+            val policiesRequest = async { providerPoliciesOf(httpClient).load() }
+            endpointsRequest.await() to policiesRequest.await()
+        }
+        Result.success(providerOptionsOf(endpoints, policies))
     } catch (cancelled: CancellationException) {
         // A closed sheet cancels its load; that is not a failure to show.
         throw cancelled
     } catch (failure: IOException) {
         Result.failure(failure)
     }
+
+/** One list for the whole process, so that opening a second model's sheet does not download it again. */
+private var sharedProviderPolicies: OpenRouterProviderPolicies? = null
+
+@Synchronized
+private fun providerPoliciesOf(httpClient: OkHttpClient): OpenRouterProviderPolicies =
+    sharedProviderPolicies ?: OpenRouterProviderPolicies(httpClient).also { sharedProviderPolicies = it }
+
+/** The sheet's rows; a provider missing from [policies] (or an empty map) gets no privacy mark. */
+internal fun providerOptionsOf(
+    endpoints: List<ProviderEndpoint>,
+    policies: Map<String, ProviderDataPolicy>,
+): List<ProviderOptionUi> = endpoints.map { endpoint ->
+    ProviderOptionUi(
+        name = endpoint.providerName,
+        tag = endpoint.tag,
+        variantTag = endpoint.variantTag,
+        inputPricePerMillion = endpoint.inputUsdPerMillion,
+        outputPricePerMillion = endpoint.outputUsdPerMillion,
+        quantization = endpoint.quantization,
+        privacy = OpenRouterProviderPolicies.privacyOfTag(policies, endpoint.tag)?.let(::privacyUiOf),
+    )
+}
+
+private fun privacyUiOf(privacy: ProviderPrivacy): ProviderPrivacyUi = when (privacy) {
+    ProviderPrivacy.PRIVATE -> ProviderPrivacyUi.PRIVATE
+    ProviderPrivacy.KEEPS_PROMPTS -> ProviderPrivacyUi.KEEPS_PROMPTS
+    ProviderPrivacy.MAY_TRAIN -> ProviderPrivacyUi.MAY_TRAIN
+}
 
 private fun routingOf(routing: RoutingUi): OpenRouterRouting = when (routing) {
     RoutingUi.PRIVATE_THEN_CHEAPEST -> OpenRouterRouting.PRIVATE_THEN_CHEAPEST

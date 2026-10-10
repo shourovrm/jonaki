@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -33,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.MonospaceFamily
 import app.jonaki.core.ui.UsageFormat
 
@@ -48,7 +51,21 @@ data class ProviderOptionUi(
     val outputPricePerMillion: Double?,
     /** For example "fp4"; null when unknown. */
     val quantization: String?,
+    /** What the provider's data policy says; null when unknown, which shows nothing. */
+    val privacy: ProviderPrivacyUi? = null,
 )
+
+/** What a provider does with prompts, as the row shows it. */
+enum class ProviderPrivacyUi {
+    /** Neither trains on prompts nor keeps them: a shield. */
+    PRIVATE,
+
+    /** Does not train, but keeps prompts. */
+    KEEPS_PROMPTS,
+
+    /** May train on prompts. */
+    MAY_TRAIN,
+}
 
 /** What the sheet shows while it loads a model's providers. */
 internal sealed interface ProvidersLoadState {
@@ -191,6 +208,14 @@ private fun ProviderList(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
     )
+    if (options.any { option -> option.privacy == ProviderPrivacyUi.PRIVATE }) {
+        Text(
+            stringResource(R.string.settings_providers_shield_note),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
+        )
+    }
     for (option in options) {
         ProviderRow(option, isChosen = option.tag in chosenTags, onToggle = { onToggle(option.tag) })
     }
@@ -215,12 +240,25 @@ private fun ProviderRow(option: ProviderOptionUi, isChosen: Boolean, onToggle: (
         // The row takes the tap, so a screen reader announces one control, not two.
         Checkbox(checked = isChosen, onCheckedChange = null)
         Column(Modifier.weight(1f).padding(start = 16.dp)) {
-            Text(
-                option.name,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // The name gives way first: a fixed-size icon is measured before a weighted text,
+            // so a long name ends in "…" and the shield stays whole.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    option.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (option.privacy == ProviderPrivacyUi.PRIVATE) {
+                    Icon(
+                        JonakiIcons.Shield,
+                        contentDescription = stringResource(R.string.settings_providers_private),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 6.dp).size(16.dp),
+                    )
+                }
+            }
             option.variantTag?.let { variantTag ->
                 Text(
                     variantTag,
@@ -235,8 +273,27 @@ private fun ProviderRow(option: ProviderOptionUi, isChosen: Boolean, onToggle: (
                 DetailText(stringResource(R.string.settings_price_in, UsageFormat.price(option.inputPricePerMillion)))
                 DetailText(stringResource(R.string.settings_price_out, UsageFormat.price(option.outputPricePerMillion)))
                 option.quantization?.let { quantization -> DetailText(quantization) }
+                PrivacyNote(option.privacy)
             }
         }
+    }
+}
+
+/** The text for a provider that is not private; a private one shows the shield instead, an unknown one nothing. */
+@Composable
+private fun PrivacyNote(privacy: ProviderPrivacyUi?) {
+    when (privacy) {
+        ProviderPrivacyUi.KEEPS_PROMPTS -> Text(
+            stringResource(R.string.settings_providers_keeps_prompts),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ProviderPrivacyUi.MAY_TRAIN -> Text(
+            stringResource(R.string.settings_providers_may_train),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        ProviderPrivacyUi.PRIVATE, null -> Unit
     }
 }
 

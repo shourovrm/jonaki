@@ -6,11 +6,13 @@ import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
 
 // The D-029 check for the providers sheet: 360 dp wide at font scale 1.3, with
-// a 40-character provider name and a long variant tag.
+// a 40-character provider name and a long variant tag. The five rows show the
+// four privacy states: shield (twice, one with the long name), keeps prompts,
+// may train, and unknown (Reka, nothing).
 
 private val sampleOptions = listOf(
-    ProviderOptionUi("DeepInfra", "deepinfra/fp4", null, 0.075, 0.25, "fp4"),
-    ProviderOptionUi("Fireworks", "fireworks", null, 0.15, 0.50, null),
+    ProviderOptionUi("DeepInfra", "deepinfra/fp4", null, 0.075, 0.25, "fp4", ProviderPrivacyUi.PRIVATE),
+    ProviderOptionUi("Fireworks", "fireworks", null, 0.15, 0.50, null, ProviderPrivacyUi.KEEPS_PROMPTS),
     ProviderOptionUi(
         name = "Northern Lights Inference Cloud Services Ltd",
         tag = "northern-lights-inference-cloud/turbo-eu",
@@ -18,8 +20,9 @@ private val sampleOptions = listOf(
         inputPricePerMillion = 0.1875,
         outputPricePerMillion = 0.625,
         quantization = "nvfp4",
+        privacy = ProviderPrivacyUi.PRIVATE,
     ),
-    ProviderOptionUi("Parasail", "parasail/fast", "parasail/fast", 0.1875, 0.625, "fp4"),
+    ProviderOptionUi("Parasail", "parasail/fast", "parasail/fast", 0.1875, 0.625, "fp4", ProviderPrivacyUi.MAY_TRAIN),
     ProviderOptionUi("Reka", "reka", null, 0.06, 1.60, null),
 )
 
