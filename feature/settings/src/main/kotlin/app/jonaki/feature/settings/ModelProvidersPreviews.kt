@@ -11,7 +11,7 @@ import app.jonaki.core.ui.ThemeMode
 // may train, and unknown (Reka, nothing).
 
 private val sampleOptions = listOf(
-    ProviderOptionUi("DeepInfra", "deepinfra/fp4", null, 0.075, 0.25, "fp4", ProviderPrivacyUi.PRIVATE),
+    ProviderOptionUi("DeepInfra", "deepinfra/fp4", null, 0.075, 0.25, "fp4", ProviderPrivacyUi.PRIVATE, cachedInputPricePerMillion = 0.019),
     ProviderOptionUi("Fireworks", "fireworks", null, 0.15, 0.50, null, ProviderPrivacyUi.KEEPS_PROMPTS),
     ProviderOptionUi(
         name = "Northern Lights Inference Cloud Services Ltd",
@@ -21,6 +21,7 @@ private val sampleOptions = listOf(
         outputPricePerMillion = 0.625,
         quantization = "nvfp4",
         privacy = ProviderPrivacyUi.PRIVATE,
+        cachedInputPricePerMillion = 0.0469,
     ),
     ProviderOptionUi("Parasail", "parasail/fast", "parasail/fast", 0.1875, 0.625, "fp4", ProviderPrivacyUi.MAY_TRAIN),
     ProviderOptionUi("Reka", "reka", null, 0.06, 1.60, null),

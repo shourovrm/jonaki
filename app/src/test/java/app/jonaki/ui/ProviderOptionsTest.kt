@@ -36,4 +36,13 @@ class ProviderOptionsTest {
         options.forEach { assertNull(it.privacy) }
         assertEquals(listOf("deepinfra/fp4", "streamlake", "deepseek", "nobody/fp8"), options.map { it.tag })
     }
+
+    @Test
+    fun aRowCarriesItsProvidersCachePriceAndNoneWhenTheProviderNamesNone() {
+        val withCachePrice = endpoint("deepinfra/fp4").copy(cachedInputUsdPerMillion = 0.03)
+
+        val options = providerOptionsOf(listOf(withCachePrice, endpoint("streamlake")), emptyMap())
+
+        assertEquals(listOf(0.03, null), options.map { it.cachedInputPricePerMillion })
+    }
 }

@@ -2024,6 +2024,7 @@ internal fun providerOptionsOf(
         outputPricePerMillion = endpoint.outputUsdPerMillion,
         quantization = endpoint.quantization,
         privacy = OpenRouterProviderPolicies.privacyOfTag(policies, endpoint.tag)?.let(::privacyUiOf),
+        cachedInputPricePerMillion = endpoint.cachedInputUsdPerMillion,
     )
 }
 

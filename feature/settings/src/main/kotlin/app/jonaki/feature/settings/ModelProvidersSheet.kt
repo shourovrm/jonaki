@@ -58,6 +58,8 @@ data class ProviderOptionUi(
     val quantization: String?,
     /** What the provider's data policy says; null when unknown, which shows nothing. */
     val privacy: ProviderPrivacyUi? = null,
+    /** The price of input read from this provider's prompt cache; null when it names none, which shows a dash. */
+    val cachedInputPricePerMillion: Double? = null,
 )
 
 /** What a provider does with prompts, as the row shows it. */
@@ -270,6 +272,7 @@ private fun ProviderRow(option: ProviderOptionUi, isChosen: Boolean, onToggle: (
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DetailText(stringResource(R.string.settings_price_in, UsageFormat.price(option.inputPricePerMillion)))
                 DetailText(stringResource(R.string.settings_price_out, UsageFormat.price(option.outputPricePerMillion)))
+                DetailText(stringResource(R.string.settings_price_cache, UsageFormat.price(option.cachedInputPricePerMillion)))
                 option.quantization?.let { quantization -> DetailText(quantization) }
             }
         }
