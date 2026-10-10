@@ -27,6 +27,12 @@ interface ChatImages {
 
     /** The picture sized for a screen of this size, with room to zoom; see [ImageViewFit]. */
     suspend fun full(path: String, screenWidthPx: Int, screenHeightPx: Int): ChatImageResult
+
+    /**
+     * The text of an SVG file that generate_vector_image saved (already
+     * sanitised); null when the file is gone, over 2 MB or not readable.
+     */
+    suspend fun svgText(path: String): String?
 }
 
 /** Set by the app around the chat; null in previews, where messages then show their text only. */

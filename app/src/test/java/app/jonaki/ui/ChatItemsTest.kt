@@ -281,6 +281,32 @@ class ChatItemsTest {
         assertTrue(items.indexOf(pictures.single()) > items.indexOfFirst { item -> item is ChatItem.Run })
     }
 
+    @Test
+    fun aFinishedVectorCallBecomesAVectorCardAndARasterCallStaysARasterCard() {
+        val calls = listOf(
+            ToolCall("c1", "generate_vector_image", """{"prompt":"a logo"}"""),
+            ToolCall("c2", "generate_image", """{"prompt":"a door"}"""),
+            ToolCall("c3", "generate_vector_image", """{"prompt":"an icon"}"""),
+            ToolCall("c4", "generate_vector_image", """{"prompt":"a leaf"}"""),
+        )
+        val rows = listOf(
+            row("u", "USER", "draw"),
+            row("a1", "ASSISTANT", "", calls = calls),
+            row("a2", "ASSISTANT", "Done."),
+        )
+        val steps = listOf(
+            StepEntity("c1", "t", "generate_vector_image", """{"prompt":"a logo"}""", "DONE", "Image saved: images/logo.svg\nSize: 512x512 units, 3 KB", 0, 1),
+            StepEntity("c2", "t", "generate_image", """{"prompt":"a door"}""", "DONE", "Image saved: images/door.jpg\nSize: 1 px", 1, 2),
+            StepEntity("c3", "t", "generate_vector_image", """{"prompt":"an icon"}""", "FAILED", "Error: cannot be made safe", 2, 3),
+            StepEntity("c4", "t", "generate_vector_image", """{"prompt":"a leaf"}""", "DONE", "Error: no vector image model is added", 3, 4),
+        )
+
+        val items = ChatItems.build(rows, steps, isRunning = false, stepWords = englishStepWords)
+
+        assertEquals(listOf("images/logo.svg"), items.filterIsInstance<ChatItem.GeneratedVectorImage>().map { it.path })
+        assertEquals(listOf("images/door.jpg"), items.filterIsInstance<ChatItem.GeneratedImage>().map { it.path })
+    }
+
     private fun subagent(id: String, order: Int, type: String, status: String = "DONE", cost: Double? = 0.01) = SubagentEntity(
         id = id, threadId = "t", parentToolCallId = "d1", orderInCall = order, agentType = type, task = "Laptop $order",
         model = "test:m", status = status, resultText = "answer $id", latestText = "Reading reviews\nmore", costUsd = cost,
