@@ -34,6 +34,14 @@ import kotlinx.serialization.json.JsonObject
  */
 class DirectToolRun(private val recorder: StepRecorder) {
     /**
+     * The result of the last call [run] made; null before any call finished.
+     * With no model turn after the call, nobody explains a failure to the
+     * user, so the caller reads it here and shows the reason itself.
+     */
+    var lastOutput: ToolOutput? = null
+        private set
+
+    /**
      * The run's outcome: Completed with no text, or Stopped when the calling coroutine was cancelled.
      * [callId] names the first call; [newCallId] names each follow-up call.
      */
@@ -51,6 +59,7 @@ class DirectToolRun(private val recorder: StepRecorder) {
         var callsMade = 0
         while (true) {
             val output = runOneCall(tool, callArguments, toolContext, currentCallId)
+            lastOutput = output
             callsMade++
             val followUp = if (callsMade < maxCalls) nextCall(output) else null
             if (followUp == null) {

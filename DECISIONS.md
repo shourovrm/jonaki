@@ -2494,19 +2494,37 @@ a video (4 s at 720p, $0.12, 39 s, one call) and a vector image ($0.08,
 11 s) each made by one send. A failed call shows "Failed" with no reason,
 because no chat model is there to explain it; open.
 
-## D-174 · 2026-10-10 · Media settings in the message box — proposed
+## D-174 · 2026-10-10 · Media button, details line and settings sheet — proposed
 User request: the Picture and Video chips should let the user choose the
-quality, and perhaps the model, in place. Proposed (option A of
-docs/mockups/media-controls.html): the chips stay; the details line under
-them becomes a row of pills, one per setting, with the price of the next
-send fixed at its right end. Picture: model, quality (Standard, High),
-shape (aspect ratio). Vector: model, shape. Video: model, length, size. A
-pill opens a menu whose choices show their price where the choice changes
-it; the model pill opens a sheet with only that kind's models and an "Add
-model" row that opens the picker filtered to the kind. A kind with a saved
-key but no model still shows its chip, with "No vector model yet" and "Add
-model" in place of the pills, which answers the report that vector models
-could not be found. The choices are kept per thread and sent as the call's
-arguments, so the tools need no change. The "Image quality" row in Settings
-stays as the default for calls the chat model makes. Option B (one sheet
-per kind) is in the same mockup. Outcome: mockup only; nothing built.
+quality, and perhaps the model, in place; then, as icons on the line of
+the model, context and cost controls. Mockups:
+docs/mockups/media-controls.html (options A and B) and
+docs/mockups/media-icons.html (variants 1 and 2). The user chose variant 2
+with option B and said to build it. Built in 1.4.3: the chips' row is gone.
+The status strip has one media button; while the mode is off it opens a
+menu of the available kinds, each with the model a send would use and its
+price; while a kind is on it shows that kind in the accent colour and a
+tap switches it off. A line above the message box then names the model and
+the settings, with the price at the right, and a tap on it opens one
+sheet: the kind's models, "Add model" (opens Settings > Models), and for a
+picture Quality and Aspect ratio, for a vector image Aspect ratio, for a
+video Length and Size from the model's own lists (at most five lengths,
+spread from the shortest to the longest), and the price of the next send.
+The choices are sent as the call's arguments, so the tools did not change;
+they last while the chat is open and are not saved. A picture's or vector
+image's model is the thread's own (D-167). Three icons on the strip
+(variant 1) were rejected: at 411 dp the model's name is left as its dot.
+With the button the context pill drops the window's size on screens under
+420 dp. Also built: pictures attached in Picture mode go along as the
+call's reference_images (with pictures attached only Picture is offered;
+another file switches the mode off, as before), and a failed media send
+saves the tool's reason as a red error row. Strings reviewed by an Opus
+subagent; nine changed. Outcome: unit tests and the release build pass. On
+the A059 on 2026-10-10: the button, the menu with three kinds and prices,
+the details line and the video sheet were seen; 1 s at 480p changed the
+line to "about $0.02" and the video came back 1 s long for $0.020. On this
+phone the model's name is cut to one or two letters once the cost pill is
+as wide as "$0.011". Not seen: the picture and vector sheets, an attached
+picture as a reference, a failed send's error row, and "Add model"; they
+are covered by unit tests only. The settings sheet does not yet offer a
+kind that has a key and no model (the vector report of D-170).

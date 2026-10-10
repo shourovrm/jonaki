@@ -13,10 +13,12 @@ enum class MediaKind(
     @StringRes val labelRes: Int,
     @StringRes val hintRes: Int,
     @StringRes val sendDescriptionRes: Int,
+    /** The label of the price at the bottom of the settings sheet, for example "Next picture". */
+    @StringRes val nextSendRes: Int,
 ) {
-    PICTURE(R.string.chat_media_picture, R.string.chat_picture_hint, R.string.chat_picture_send),
-    VECTOR(R.string.chat_media_vector, R.string.chat_vector_hint, R.string.chat_vector_send),
-    VIDEO(R.string.chat_media_video, R.string.chat_video_hint, R.string.chat_video_send),
+    PICTURE(R.string.chat_media_picture, R.string.chat_picture_hint, R.string.chat_picture_send, R.string.chat_media_next_picture),
+    VECTOR(R.string.chat_media_vector, R.string.chat_vector_hint, R.string.chat_vector_send, R.string.chat_media_next_vector),
+    VIDEO(R.string.chat_media_video, R.string.chat_video_hint, R.string.chat_video_send, R.string.chat_media_next_video),
     ;
 
     val icon: ImageVector
@@ -49,7 +51,67 @@ data class MediaModeUi(
     val videoResolution: String? = null,
     /** Video: the estimated cost, for example "about $0.12"; null when no estimate can be made. */
     val videoCostText: String? = null,
+    /** One row per available kind for the media button's menu, in [availableKinds] order. */
+    val kindRows: List<MediaKindRowUi> = emptyList(),
+    /** What the settings sheet of the selected kind offers; null while the mode is off. */
+    val settings: MediaSettingsUi? = null,
 )
+
+/** One kind in the media button's menu: the model a send would use and what it costs. */
+@Immutable
+data class MediaKindRowUi(
+    val kind: MediaKind,
+    /** Null when the model could not be named. */
+    val modelName: String? = null,
+    /** For example "$0.007 per image" or "about $0.12"; null when it is not known. */
+    val priceText: String? = null,
+)
+
+/** One model of the selected kind in the settings sheet. */
+@Immutable
+data class MediaModelRowUi(
+    /** "service:modelId". */
+    val key: String,
+    val name: String,
+    /** The price in the unit billed, for example "$0.02 to $0.14 per second"; null while unknown. */
+    val priceText: String? = null,
+)
+
+/**
+ * The settings sheet of the selected kind. A list that is empty, or a value
+ * that is null where the kind has no such setting, leaves its section out.
+ */
+@Immutable
+data class MediaSettingsUi(
+    val models: List<MediaModelRowUi>,
+    val selectedModelKey: String?,
+    /** Picture: true for High; null for a kind with no quality setting. */
+    val isHighQuality: Boolean? = null,
+    /** The shapes to offer, for example "1:1"; the sheet adds the model's own shape as the first choice. */
+    val shapes: List<String> = emptyList(),
+    /** Null for the model's own shape. */
+    val selectedShape: String? = null,
+    /** Video: the lengths the model supports, in seconds. */
+    val lengthsSeconds: List<Int> = emptyList(),
+    val selectedLengthSeconds: Int? = null,
+    /** Video: the resolutions the model supports, for example "720p". */
+    val sizes: List<String> = emptyList(),
+    val selectedSize: String? = null,
+)
+
+/** One change made in the settings sheet. */
+sealed interface MediaSettingChange {
+    data class Model(val modelKey: String) : MediaSettingChange
+
+    data class Quality(val isHigh: Boolean) : MediaSettingChange
+
+    /** [shape] is null for the model's own shape. */
+    data class Shape(val shape: String?) : MediaSettingChange
+
+    data class Length(val seconds: Int) : MediaSettingChange
+
+    data class Size(val size: String) : MediaSettingChange
+}
 
 /**
  * The rules of media mode, without any screen: the user's text goes straight
@@ -66,12 +128,30 @@ object MediaMode {
         )
 
     /**
-     * True when the mode may be switched on. A later change will pass attached
-     * pictures to the image model as references; until then files and media
-     * mode do not combine, and nothing the user attached is dropped.
+     * True when the mode may be switched on. [hasAttachments] means files that
+     * no kind can take; attached pictures do not count, because Picture mode
+     * sends them along as references (see [kindsWithAttachments]). Nothing the
+     * user attached is ever dropped.
      */
     fun canChange(hasAttachments: Boolean, isEditing: Boolean, isRunning: Boolean): Boolean =
         !hasAttachments && !isEditing && !isRunning
+
+    /**
+     * True when every attached file is a picture an image model can take as a
+     * reference (png, jpeg or webp, which is what generate_image accepts).
+     * False for an empty list.
+     */
+    fun areReferencePictures(fileNames: List<String>): Boolean =
+        fileNames.isNotEmpty() && fileNames.all { name -> name.substringAfterLast('.', "").lowercase() in REFERENCE_PICTURE_ENDINGS }
+
+    /**
+     * The kinds that can be switched on while files are attached: with
+     * pictures attached only Picture, whose tool takes reference pictures.
+     */
+    fun kindsWithAttachments(availableKinds: List<MediaKind>, attachedFileNames: List<String>): List<MediaKind> =
+        if (areReferencePictures(attachedFileNames)) availableKinds.filter { kind -> kind == MediaKind.PICTURE } else availableKinds
+
+    private val REFERENCE_PICTURE_ENDINGS = setOf("png", "jpg", "jpeg", "webp")
 
     /**
      * The kind that is on after a tap on [tapped]. A tap on the selected chip
@@ -115,5 +195,33 @@ object MediaMode {
             MediaKind.VIDEO -> listOf(ui.modelName, ui.videoLengthText, ui.videoResolution, ui.videoCostText ?: priceUnknown)
         }
         return parts.filterNotNull().joinToString(" · ").ifEmpty { null }
+    }
+
+    /**
+     * The left part of the details line: the model and the settings that are
+     * not the model's defaults ([highQuality] is the word for High quality),
+     * without the price, which [priceOf] gives. Null while the mode is off or
+     * when nothing can be named.
+     */
+    fun detailsText(ui: MediaModeUi, highQuality: String): String? {
+        val settings = ui.settings
+        val parts = when (ui.selected) {
+            null -> return null
+            MediaKind.PICTURE -> listOf(ui.modelName, highQuality.takeIf { settings?.isHighQuality == true }, settings?.selectedShape)
+            MediaKind.VECTOR -> listOf(ui.modelName, settings?.selectedShape)
+            MediaKind.VIDEO -> listOf(ui.modelName, ui.videoLengthText, ui.videoResolution)
+        }
+        return parts.filterNotNull().joinToString(" · ").ifEmpty { null }
+    }
+
+    /**
+     * The price beside the details: a picture's or vector image's price when
+     * known, a video's estimate or [priceUnknown], because a send in this mode
+     * shows no approval card. Null while the mode is off.
+     */
+    fun priceOf(ui: MediaModeUi, priceUnknown: String): String? = when (ui.selected) {
+        null -> null
+        MediaKind.PICTURE, MediaKind.VECTOR -> ui.priceText
+        MediaKind.VIDEO -> ui.videoCostText ?: priceUnknown
     }
 }

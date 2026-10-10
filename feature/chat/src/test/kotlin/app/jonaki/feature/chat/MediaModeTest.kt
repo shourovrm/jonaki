@@ -152,4 +152,46 @@ class MediaModeTest {
         val line = MediaMode.detailsLine(ui(MediaKind.VIDEO) { it.copy(modelName = "google/veo-3.1-lite") }, "price unknown")
         assertEquals("google/veo-3.1-lite · price unknown", line)
     }
+
+    @Test
+    fun theDetailsTextOfAPictureNamesOnlyWhatDiffersFromTheDefaults() {
+        val plain = ui(MediaKind.PICTURE) { it.copy(modelName = "FLUX.2 Klein", settings = MediaSettingsUi(emptyList(), null, isHighQuality = false)) }
+        val changed = plain.copy(settings = MediaSettingsUi(emptyList(), null, isHighQuality = true, selectedShape = "16:9"))
+
+        assertEquals("FLUX.2 Klein", MediaMode.detailsText(plain, "High"))
+        assertEquals("FLUX.2 Klein · High · 16:9", MediaMode.detailsText(changed, "High"))
+    }
+
+    @Test
+    fun theDetailsTextOfAVideoHasItsLengthAndSizeButNoPrice() {
+        val video = ui(MediaKind.VIDEO) {
+            it.copy(modelName = "Grok Imagine Video 1.5 Lite", videoLengthText = "4 s", videoResolution = "720p", videoCostText = "about $0.12")
+        }
+
+        assertEquals("Grok Imagine Video 1.5 Lite · 4 s · 720p", MediaMode.detailsText(video, "High"))
+        assertEquals("about $0.12", MediaMode.priceOf(video, "price unknown"))
+    }
+
+    @Test
+    fun thePriceOfAVideoWithoutAnEstimateSaysSoAndAPictureWithoutAPriceShowsNone() {
+        assertEquals("price unknown", MediaMode.priceOf(ui(MediaKind.VIDEO), "price unknown"))
+        assertNull(MediaMode.priceOf(ui(MediaKind.PICTURE), "price unknown"))
+        assertNull(MediaMode.priceOf(ui(null), "price unknown"))
+        assertNull(MediaMode.detailsText(ui(null), "High"))
+    }
+
+    @Test
+    fun onlyPicturesAnImageModelTakesCountAsReferences() {
+        assertTrue(MediaMode.areReferencePictures(listOf("photo.JPG", "sketch.png", "a.b.webp")))
+        assertFalse(MediaMode.areReferencePictures(listOf("photo.jpg", "notes.pdf")))
+        assertFalse(MediaMode.areReferencePictures(listOf("noending")))
+        assertFalse(MediaMode.areReferencePictures(emptyList()))
+    }
+
+    @Test
+    fun withPicturesAttachedOnlyPictureModeIsOffered() {
+        assertEquals(listOf(MediaKind.PICTURE), MediaMode.kindsWithAttachments(allKinds, listOf("photo.jpg")))
+        assertEquals(allKinds, MediaMode.kindsWithAttachments(allKinds, emptyList()))
+        assertEquals(emptyList<MediaKind>(), MediaMode.kindsWithAttachments(listOf(MediaKind.VIDEO), listOf("photo.jpg")))
+    }
 }

@@ -26,4 +26,19 @@
     <string name="chat_vector_send">Make vector image</string>
     <string name="chat_video_hint">Describe a video</string>
     <string name="chat_video_send">Make video</string>
+    <string name="chat_media_button">Make picture, vector or video</string>
+    <string name="chat_media_button_on">Turn off %1$s</string>
+    <string name="chat_media_settings_open">Settings</string>
+    <string name="chat_media_add_model">Add model</string>
+    <string name="chat_media_quality">Quality</string>
+    <string name="chat_media_quality_standard">Standard</string>
+    <string name="chat_media_quality_high">High</string>
+    <string name="chat_media_shape">Aspect ratio</string>
+    <string name="chat_media_shape_auto">Auto</string>
+    <string name="chat_media_length">Length</string>
+    <string name="chat_media_seconds">%1$d s</string>
+    <string name="chat_media_size">Size</string>
+    <string name="chat_media_next_picture">Next picture</string>
+    <string name="chat_media_next_vector">Next vector</string>
+    <string name="chat_media_next_video">Next video</string>
 </resources>

@@ -59,6 +59,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -171,8 +172,10 @@ fun ChatScreen(
      * more than once; the app keeps the first call's time for the request log (D-132).
      */
     onAnswerDrawn: (messageId: String) -> Unit = {},
-    /** A kind chip above the field was tapped; [selected] is the kind that is on afterwards, null for off. */
+    /** The media button or a row of its menu was tapped; [selected] is the kind that is on afterwards, null for off. */
     onMediaModeChange: (selected: MediaKind?) -> Unit = {},
+    /** A model or a setting was chosen in the settings sheet of the kind that is on. */
+    onMediaSettingChange: (MediaSettingChange) -> Unit = {},
     /** The app keeps the list's position while a file viewer opened from the chat is in front. */
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -219,6 +222,8 @@ fun ChatScreen(
                             approvalMode = state.threadApprovalMode ?: state.defaultApprovalMode,
                             allowAllInThread = state.allowAllInThread,
                             onApprovalClick = { openSheet = ChatSheet.APPROVALS },
+                            mediaMode = state.mediaMode,
+                            onMediaModeChange = onMediaModeChange,
                         )
                     }
                     if (state.attachments.isNotEmpty()) {
@@ -237,8 +242,8 @@ fun ChatScreen(
                         }
                     }
                     val mediaMode = state.mediaMode
-                    if (mediaMode != null) {
-                        MediaModeRow(mediaMode, onMediaModeChange)
+                    if (mediaMode?.selected != null) {
+                        MediaDetailsLine(mediaMode, onOpenSettings = { openSheet = ChatSheet.MEDIA })
                     }
                     Composer(
                         draft = state.draft,
@@ -324,6 +329,27 @@ fun ChatScreen(
                 onDismiss = { openSheet = ChatSheet.NONE },
                 guardState = state.guardState,
             )
+            openSheet == ChatSheet.MEDIA -> {
+                val mediaMode = state.mediaMode
+                val mediaKind = mediaMode?.selected
+                val mediaSettings = mediaMode?.settings
+                if (mediaMode == null || mediaKind == null || mediaSettings == null) {
+                    // The mode was switched off (a send, a run starting) while the sheet was open.
+                    SideEffect { openSheet = ChatSheet.NONE }
+                } else {
+                    MediaSettingsSheet(
+                        kind = mediaKind,
+                        settings = mediaSettings,
+                        priceText = MediaMode.priceOf(mediaMode, stringResource(R.string.chat_media_price_unknown)),
+                        onChange = onMediaSettingChange,
+                        onAddModel = {
+                            openSheet = ChatSheet.NONE
+                            onEditModels()
+                        },
+                        onDismiss = { openSheet = ChatSheet.NONE },
+                    )
+                }
+            }
         }
         val openWork = state.items.firstOrNull { item -> item.id == openWorkId } as? ChatItem.SubagentWork
         if (openWork != null) {
@@ -361,6 +387,7 @@ private enum class ChatSheet {
     USAGE,
     APPROVALS,
     CONTEXT,
+    MEDIA,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

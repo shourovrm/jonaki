@@ -3,6 +3,9 @@ package app.jonaki.ui
 import app.jonaki.feature.chat.ImageModelChoiceUi
 import app.jonaki.feature.chat.MediaKind
 import app.jonaki.feature.chat.MediaModeUi
+import app.jonaki.feature.chat.MediaModelRowUi
+import app.jonaki.feature.chat.MediaSettingChange
+import app.jonaki.run.MediaCallOptions
 import app.jonaki.core.toolapi.VideoModelFacts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -33,11 +36,22 @@ class MediaModeUiBuilderTest {
         displayNamesByModelKey = mapOf(videoKey to "Grok Imagine"),
     )
 
+    private val otherVideoKey = "openrouter:minimax/hailuo"
+    private val videoRows = listOf(
+        MediaModelRowUi(videoKey, "Grok Imagine", "\$0.03 per second"),
+        MediaModelRowUi(otherVideoKey, "Hailuo", "\$0.08 per second"),
+    )
+
     private fun build(
         selected: MediaKind?,
         kinds: List<MediaKind> = MediaKind.entries.toList(),
         videoModelKey: String? = videoKey,
+        choices: MediaChoices = MediaChoices(),
+        defaultIsHighQuality: Boolean = false,
     ): MediaModeUi? = MediaModeUiBuilder.build(
+        videoModels = videoRows,
+        choices = choices,
+        defaultIsHighQuality = defaultIsHighQuality,
         availableKinds = kinds,
         selected = selected,
         canChange = true,
@@ -90,5 +104,85 @@ class MediaModeUiBuilderTest {
         assertEquals("other/model", ui.modelName)
         assertNull(ui.videoLengthText)
         assertNull(ui.videoCostText)
+    }
+
+    @Test
+    fun theMenuNamesEachKindsModelAndPriceEvenWhileTheModeIsOff() {
+        val rows = build(selected = null)!!.kindRows
+
+        assertEquals(MediaKind.entries.toList(), rows.map { it.kind })
+        assertEquals(listOf("FLUX.2 Klein", "Recraft V3 Vector", "Grok Imagine"), rows.map { it.modelName })
+        assertEquals(listOf("\$0.08 per image", null, "about \$0.12"), rows.map { it.priceText })
+    }
+
+    @Test
+    fun aPictureSheetListsOnlyRasterModelsAndFollowsTheDefaultQualityUntilOneIsPicked() {
+        val followsDefault = build(MediaKind.PICTURE, defaultIsHighQuality = true)!!.settings!!
+        val picked = build(MediaKind.PICTURE, defaultIsHighQuality = true, choices = MediaChoices(isHighQuality = false))!!.settings!!
+
+        assertEquals(listOf(flux.key, gemini.key), followsDefault.models.map { it.key })
+        assertEquals(flux.key, followsDefault.selectedModelKey)
+        assertEquals(true, followsDefault.isHighQuality)
+        assertEquals(false, picked.isHighQuality)
+        assertNull(followsDefault.selectedShape)
+    }
+
+    @Test
+    fun aVectorSheetListsOnlyVectorModelsAndHasNoQuality() {
+        val settings = build(MediaKind.VECTOR, choices = MediaChoices(vectorShape = "16:9"))!!.settings!!
+
+        assertEquals(listOf(recraft.key), settings.models.map { it.key })
+        assertNull(settings.isHighQuality)
+        assertEquals("16:9", settings.selectedShape)
+    }
+
+    @Test
+    fun aVideoSheetOffersTheModelsLengthsAndTheEstimateFollowsTheChosenLength() {
+        val defaults = build(MediaKind.VIDEO)!!
+        val longer = build(MediaKind.VIDEO, choices = MediaChoices(videoLengthSeconds = 8))!!
+
+        assertEquals(listOf(4, 8), defaults.settings!!.lengthsSeconds)
+        assertEquals(4, defaults.settings!!.selectedLengthSeconds)
+        assertEquals("about \$0.12", defaults.videoCostText)
+        assertEquals(8, longer.settings!!.selectedLengthSeconds)
+        assertEquals("8 s", longer.videoLengthText)
+        assertEquals("about \$0.24", longer.videoCostText)
+    }
+
+    @Test
+    fun aVideoModelPickedInTheSheetIsUsedWhileItIsStillAdded() {
+        assertEquals(otherVideoKey, build(MediaKind.VIDEO, choices = MediaChoices(videoModelKey = otherVideoKey))!!.settings!!.selectedModelKey)
+        assertEquals(videoKey, build(MediaKind.VIDEO, choices = MediaChoices(videoModelKey = "openrouter:removed"))!!.settings!!.selectedModelKey)
+    }
+
+    @Test
+    fun aLongListOfLengthsIsSpreadOverFiveChoicesThatKeepTheEndsAndTheOneInUse() {
+        val everySecond = (2..30).toList()
+
+        assertEquals(listOf(2, 9, 16, 23, 30), MediaModeUiBuilder.spread(everySecond, 5, mustInclude = null))
+        assertEquals(listOf(2, 5, 16, 23, 30), MediaModeUiBuilder.spread(everySecond, 5, mustInclude = 5))
+        assertEquals(listOf(4, 8), MediaModeUiBuilder.spread(listOf(4, 8), 5, mustInclude = 4))
+    }
+
+    @Test
+    fun aChangeInTheSheetSetsTheChoiceOfItsKindAndANewVideoModelResetsLengthAndSize() {
+        val choices = MediaChoices(videoLengthSeconds = 8, videoResolution = "720p")
+
+        assertEquals("16:9", choices.after(MediaKind.PICTURE, MediaSettingChange.Shape("16:9")).pictureShape)
+        assertEquals("3:4", choices.after(MediaKind.VECTOR, MediaSettingChange.Shape("3:4")).vectorShape)
+        assertEquals(true, choices.after(MediaKind.PICTURE, MediaSettingChange.Quality(isHigh = true)).isHighQuality)
+        assertEquals(
+            MediaChoices(videoModelKey = otherVideoKey),
+            choices.after(MediaKind.VIDEO, MediaSettingChange.Model(otherVideoKey)),
+        )
+    }
+
+    @Test
+    fun theCallOptionsCarryOnlyWhatTheUserSetAndDropAVideoModelThatWasRemoved() {
+        val choices = MediaChoices(isHighQuality = true, pictureShape = "9:16", videoModelKey = "openrouter:removed", videoLengthSeconds = 8)
+
+        assertEquals(MediaCallOptions(isHighQuality = true, aspectRatio = "9:16"), choices.callOptionsFor(MediaKind.PICTURE, listOf(videoKey)))
+        assertEquals(MediaCallOptions(), choices.callOptionsFor(MediaKind.VECTOR, listOf(videoKey)))
+        assertEquals(MediaCallOptions(durationSeconds = 8), choices.callOptionsFor(MediaKind.VIDEO, listOf(videoKey)))
     }
 }

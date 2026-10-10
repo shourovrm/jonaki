@@ -9,14 +9,15 @@ decision named here has its full entry in `DECISIONS.md`.
 - `main` is at the commit that adds this file, about 98 commits ahead of
   `origin/main`. Nothing is pushed. No release was made: v1.4.2 has no tag and
   no GitHub release, and the README still links v1.4.1.
-- The test phone (A059) runs v1.4.2, version code 15, built from the last
-  commit of the afternoon and installed with `adb install -r`, so its
+- The test phone (A059) runs v1.4.3, version code 16, built from the last
+  commit of the evening and installed with `adb install -r`, so its
   threads, keys and settings were kept.
 - `gradle testReleaseUnitTest test assembleRelease --offline` exits with 0 on
   that commit.
 - Decisions D-157 to D-174 are all `proposed`. Only the user changes a status.
-- Spend on paid test requests: about $0.05 in the morning and $0.25 in the
-  afternoon, each against a $0.50 allowance from the user.
+- Spend on paid test requests: about $0.05 in the morning and $0.28 in the
+  afternoon and evening (credit used rose from $12.349 to $12.629), each
+  against a $0.50 allowance from the user.
 
 ## Open issues
 
@@ -28,12 +29,11 @@ Providers sheet shows each provider's cache price; a vector picture's
 preview is drawn (it was a blank box); the "Image quality" row is aligned
 with the cards. These remain:
 
-1. **A failed send in media mode gives no reason.** The step shows "Failed"
-   and the model's key, and nothing else, because no chat model is there to
-   explain it. Seen with Recraft V4 Styles Vector, which answers HTTP 400
-   "input_references: must have between 1 and 10 items". A likely fix:
-   `DirectToolRun` hands back the last tool output, and `runMediaMode` saves
-   a red error row when it is an error.
+1. **A failed send in media mode gave no reason.** Fixed in 1.4.3 by the
+   code (the tool's reason is saved as a red error row); covered by unit
+   tests, not yet seen on the phone. It was found with Recraft V4 Styles
+   Vector, which answers HTTP 400 "input_references: must have between 1
+   and 10 items".
 2. **A model that needs a reference picture can be chosen for media mode**,
    where no reference can be sent. The model list declares it
    (`input_references` with `min` 1), so such a model can be left out of the
@@ -54,6 +54,21 @@ with the cards. These remain:
    model's tokens only, not the picture the turn paid for (about $0.04).
 8. **The chat does not always open at its newest message** after the app is
    restarted; seen once in three restarts.
+9. **Claude models through OpenRouter get no prompt cache.** Two messages in
+   a row to Claude Haiku 5.5 sent 12,452 and 12,399 input tokens and the
+   usage sheet showed 0 cached. On DeepSeek V4.1 Flash the second message
+   had 8,960 of about 9,040 input tokens cached, and after a Picture-mode
+   send the next message again had 8,960 of 9,208 cached, so a media send
+   does not break the cache where there is one. Jonaki sends no cache
+   marker; Anthropic models need one (`cache_control`) to cache at all. To
+   check against OpenRouter's documentation before building.
+10. **On the status strip the model's name is cut to one or two letters** on
+    the A059 once the cost pill is as wide as "$0.011". The icon pills are
+    30 dp high and drawn about 34 dp wide, but each takes 48 dp of the row
+    (the minimum touch size), which leaves unused gaps.
+11. **The usage sheet counts a media send as a turn of the chat model** (the
+    row that holds the call carries the thread's model key), and adds the
+    image model's tokens to the thread's output total.
 
 ### Still not seen on a screen
 
@@ -71,11 +86,15 @@ with the cards. These remain:
 - Providers with fallbacks switched off, and the HTTP 404 assumed for "no
   chosen provider available".
 
-### Waiting for the user
+### Built in the evening: D-174 (1.4.3)
 
-- D-174: the settings row under the media chips, drawn in
-  `docs/mockups/media-controls.html` (option A recommended, option B beside
-  it). Nothing is built.
+The user chose the media button on the status strip with one settings sheet
+per kind (`docs/mockups/media-icons.html`, variant 2 with option B). It is
+built and on the phone as 1.4.3; D-174 lists what was seen and what was
+not. Still to see on the phone: the picture and vector sheets, an attached
+picture as a reference in Picture mode, a failed send's error row, and
+"Add model". Still to build: a kind that has a key and no model in the
+menu, and saving the sheet's choices per thread.
 
 ### Owed work
 
@@ -96,7 +115,8 @@ with the cards. These remain:
 - **Leftovers on the phone from testing:** the threads "Firefly
   Bioluminescence Explained", "Firefly Explanation in Bangla" and "Dusk
   Firefly Paper Cut" (a picture, a failed vector, a video, an edited picture
-  and a vector, $0.249); the image models FLUX.2 Klein 4B and Recraft V4.1
+  and a vector, $0.249), "a firefly glows once video" ($0.020) and one
+  thread with five one-word chat messages and a paper boat picture ($0.011); the image models FLUX.2 Klein 4B and Recraft V4.1
   Vector, added for tests; the file a-simple-firefly-icon-two-colours.svg in
   Download/Jonaki; a language fact [41] waiting for approval on the Memory
   screen.

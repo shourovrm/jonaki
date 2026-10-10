@@ -189,7 +189,7 @@ private fun DefaultMark() {
 }
 
 @Composable
-private fun ChoiceRow(
+internal fun ChoiceRow(
     name: String,
     serviceName: String,
     isSelected: Boolean,

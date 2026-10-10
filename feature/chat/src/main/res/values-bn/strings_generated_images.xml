@@ -26,4 +26,19 @@
     <string name="chat_vector_send">ভেক্টর ছবি বানান</string>
     <string name="chat_video_hint">ভিডিওর বর্ণনা লিখুন</string>
     <string name="chat_video_send">ভিডিও বানান</string>
+    <string name="chat_media_button">ছবি, ভেক্টর বা ভিডিও বানান</string>
+    <string name="chat_media_button_on">%1$s বন্ধ করুন</string>
+    <string name="chat_media_settings_open">সেটিংস</string>
+    <string name="chat_media_add_model">মডেল যোগ করুন</string>
+    <string name="chat_media_quality">মান</string>
+    <string name="chat_media_quality_standard">সাধারণ</string>
+    <string name="chat_media_quality_high">উচ্চ</string>
+    <string name="chat_media_shape">আকারের অনুপাত</string>
+    <string name="chat_media_shape_auto">অটো</string>
+    <string name="chat_media_length">সময়কাল</string>
+    <string name="chat_media_seconds">%1$d সে.</string>
+    <string name="chat_media_size">সাইজ</string>
+    <string name="chat_media_next_picture">পরের ছবি</string>
+    <string name="chat_media_next_vector">পরের ভেক্টর</string>
+    <string name="chat_media_next_video">পরের ভিডিও</string>
 </resources>

@@ -314,9 +314,18 @@ class AgentRunner(
      * model turn. Pressing Send is the user's approval for this call, so no
      * approval card is made. Only the chat screen's send calls this; the
      * agent, subagents and scheduled tasks never do. While the thread has a
-     * run going nothing happens (the screen disables the mode).
+     * run going nothing happens (the screen disables the mode). [options] are
+     * the settings the user chose in the kind's sheet. [savedText] is what the
+     * thread keeps as the user's message; it differs from [text] only by the
+     * line that names attached pictures, which is not part of the prompt.
      */
-    fun sendAsMedia(threadId: String, text: String, kind: MediaKind) {
+    fun sendAsMedia(
+        threadId: String,
+        text: String,
+        kind: MediaKind,
+        options: MediaCallOptions = MediaCallOptions(),
+        savedText: String = text,
+    ) {
         if (text.isBlank()) {
             return
         }
@@ -324,8 +333,8 @@ class AgentRunner(
             if (threadId in running.value) {
                 return
             }
-            startRun(threadId, runBody = { runMediaMode(threadId, text.trim(), kind) }) {
-                saveUserMessage(threadId, text.trim())
+            startRun(threadId, runBody = { runMediaMode(threadId, text.trim(), kind, options) }) {
+                saveUserMessage(threadId, savedText.trim())
             }
         }
     }
@@ -661,7 +670,7 @@ class AgentRunner(
      * in the same run (see [MediaModeCall.nextCall]), since no chat model is
      * there to do it.
      */
-    private suspend fun runMediaMode(threadId: String, text: String, kind: MediaKind) {
+    private suspend fun runMediaMode(threadId: String, text: String, kind: MediaKind, options: MediaCallOptions) {
         val thread = database.threadDao().find(threadId) ?: return
         val project = projectOf(thread)
         // allToolServicesFor, not toolServicesFor: a thread on a local model still gets the tool here, as no chat model is involved.
@@ -684,7 +693,7 @@ class AgentRunner(
                 stepCounts.update { current -> current + (threadId to (current[threadId] ?: 0) + 1) }
             },
             // Saved on the assistant row that holds the call; with no usage on it, no cost counts to this model.
-            modelKey = modelKeyFor(thread) ?: mediaModelKeyFor(threadId, kind).orEmpty(),
+            modelKey = modelKeyFor(thread) ?: options.modelKey ?: mediaModelKeyFor(threadId, kind).orEmpty(),
             priceOf = { null },
         )
         val toolContext = ToolContext(
@@ -693,14 +702,17 @@ class AgentRunner(
             skillLibrary.folder,
             projectFolder = project?.folder,
         )
-        val outcome = DirectToolRun(session).run(
+        val directRun = DirectToolRun(session)
+        val outcome = directRun.run(
             tool = tool,
-            arguments = MediaModeCall.arguments(text),
+            arguments = MediaModeCall.arguments(text, kind, options),
             toolContext = toolContext,
             callId = UUID.randomUUID().toString(),
             nextCall = { output -> MediaModeCall.nextCall(kind, output) },
             maxCalls = MediaModeCall.maxCalls(kind),
         )
+        // No chat model follows the call, so a failure's reason is shown as an error row, which the user can copy.
+        MediaModeCall.failureText(directRun.lastOutput)?.let { reason -> saveError(threadId, reason) }
         // No memory extraction: a media prompt holds no facts, and the extractor reads only the
         // text rows. No compaction either: no chat request was made, so the context did not grow.
         if (threadId in leftWhileRunning.value) {

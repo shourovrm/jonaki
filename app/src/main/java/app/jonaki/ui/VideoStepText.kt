@@ -12,6 +12,8 @@ import app.jonaki.core.toolapi.intArgument
 import app.jonaki.core.toolapi.stringArgument
 import app.jonaki.feature.chat.StepPromptUi
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /** The words of a generate_video line, from string resources so they follow the app's language. */
 class VideoStepWords(
@@ -30,6 +32,14 @@ class VideoCallDefaults(
     val lengthText: String?,
     val resolution: String?,
     val estimateText: String?,
+    /** The length behind [lengthText], in seconds. */
+    val durationSeconds: Int? = null,
+)
+
+/** The lengths and resolutions a video model supports, for the settings sheet; empty where its list names none. */
+class VideoOptions(
+    val lengthsSeconds: List<Int>,
+    val resolutions: List<String>,
 )
 
 /**
@@ -93,13 +103,33 @@ class VideoStepText(
      * for the line above the message box in video mode (no approval card is shown
      * there). The values are the ones [target] shows for such a call.
      */
-    fun defaultsFor(modelKey: String?): VideoCallDefaults {
+    fun defaultsFor(modelKey: String?): VideoCallDefaults = callFor(modelKey, durationSeconds = null, resolution = null)
+
+    /**
+     * Like [defaultsFor], for a call that also sets a length or a resolution
+     * (the settings sheet of video mode); a null one is filled in as the tool would.
+     */
+    fun callFor(modelKey: String?, durationSeconds: Int?, resolution: String?): VideoCallDefaults {
         val facts = modelKey?.let { key -> factsByModelKey[key] }
-        val choice = chosenValues(facts, JsonObject(emptyMap()))
+        val arguments = buildJsonObject {
+            durationSeconds?.let { seconds -> put("duration_seconds", seconds) }
+            resolution?.let { asked -> put("resolution", asked) }
+        }
+        val choice = chosenValues(facts, arguments)
         return VideoCallDefaults(
             lengthText = choice.durationSeconds?.let(words.seconds),
             resolution = choice.resolution,
             estimateText = estimateText(facts, choice),
+            durationSeconds = choice.durationSeconds,
+        )
+    }
+
+    /** What the settings sheet can offer for [modelKey]; both lists are empty until the model list has loaded. */
+    fun optionsFor(modelKey: String?): VideoOptions {
+        val facts = modelKey?.let { key -> factsByModelKey[key] }
+        return VideoOptions(
+            lengthsSeconds = facts?.supportedDurations.orEmpty().sorted(),
+            resolutions = facts?.supportedResolutions.orEmpty(),
         )
     }
 

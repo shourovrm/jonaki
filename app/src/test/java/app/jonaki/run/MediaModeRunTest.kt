@@ -60,7 +60,9 @@ class MediaModeRunTest {
     fun theTypedTextIsTheExactPromptAndTheGeneratorRunsOnce() = runBlocking {
         val typed = "  a blue door, at dawn \n"
 
-        val outcome = DirectToolRun(recorder).run(toolWith(succeeding), MediaModeCall.arguments(typed), toolContext, "call-1")
+        val run = DirectToolRun(recorder)
+        val outcome = run.run(toolWith(succeeding), MediaModeCall.arguments(typed), toolContext, "call-1")
+        assertNull(MediaModeCall.failureText(run.lastOutput))
 
         assertEquals(RunOutcome.Completed(""), outcome)
         assertEquals(1, requests.size)
@@ -84,8 +86,13 @@ class MediaModeRunTest {
             ImageOutcome.Failed(ImageFailure.BLOCKED, "content policy")
         }
 
-        DirectToolRun(recorder).run(toolWith(failing), MediaModeCall.arguments("a blue door"), toolContext, "call-1")
+        val run = DirectToolRun(recorder)
+        run.run(toolWith(failing), MediaModeCall.arguments("a blue door"), toolContext, "call-1")
 
+        // The reason the chat shows: the tool's text without the mark meant for a chat model.
+        val shown = MediaModeCall.failureText(run.lastOutput)
+        assertTrue(shown!!.contains("content policy"))
+        assertFalse(shown.startsWith("Error"))
         assertEquals(1, requests.size)
         val result = recorder.events.filterIsInstance<AgentEvent.ToolFinished>().single()
         assertTrue(result.output.isError)

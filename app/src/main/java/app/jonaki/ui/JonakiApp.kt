@@ -88,6 +88,8 @@ import app.jonaki.feature.chat.ImageModelChoiceUi
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
 import app.jonaki.feature.chat.MediaKind
+import app.jonaki.feature.chat.MediaModelRowUi
+import app.jonaki.feature.chat.MediaSettingChange
 import app.jonaki.feature.chat.MediaMode
 import app.jonaki.feature.chat.QueuedMessageUi
 import app.jonaki.feature.chat.UsageUi
@@ -697,6 +699,8 @@ private fun ChatRoute(
     var draftBeforeEdit by rememberSaveable(threadId) { mutableStateOf("") }
     // Media mode (the next send goes straight to the picture, vector or video tool): this screen only, never written to disk.
     var mediaKindOn by rememberSaveable(threadId) { mutableStateOf<MediaKind?>(null) }
+    // What the settings sheets of media mode were set to; kept while this chat is open (D-174).
+    var mediaChoices by remember(threadId) { mutableStateOf(MediaChoices()) }
     SaveDraftWhileTyping(
         threadDrafts = application.threadDrafts,
         draftKey = draftKey,
@@ -822,16 +826,21 @@ private fun ChatRoute(
         vectorAvailable = usableVectorModelKeys.isNotEmpty(),
         videoAvailable = usableVideoModelKeys.isNotEmpty(),
     )
+    // Attached pictures go along with a picture as its references, so they leave Picture mode
+    // available; any other file switches media mode off, as before (D-174).
+    val attachedFileNames = attachmentsByThread[threadId].orEmpty().map { file -> file.name }
+    val attachedReferencePictures = MediaMode.areReferencePictures(attachedFileNames)
     val canChangeMediaMode = MediaMode.canChange(
-        hasAttachments = attachmentsByThread[threadId].orEmpty().isNotEmpty(),
+        hasAttachments = attachedFileNames.isNotEmpty() && !attachedReferencePictures,
         isEditing = editingMessageId != null,
         isRunning = isRunning,
     )
+    val selectableMediaKinds = MediaMode.kindsWithAttachments(availableMediaKinds, attachedFileNames)
     // A file attached, an edit begun or a run started while a kind is on, or the key of its model removed, switches it off.
-    LaunchedEffect(availableMediaKinds, canChangeMediaMode) {
-        mediaKindOn = MediaMode.settled(mediaKindOn, availableMediaKinds, canChangeMediaMode)
+    LaunchedEffect(selectableMediaKinds, canChangeMediaMode) {
+        mediaKindOn = MediaMode.settled(mediaKindOn, selectableMediaKinds, canChangeMediaMode)
     }
-    val activeMediaKind = MediaMode.settled(mediaKindOn, availableMediaKinds, canChangeMediaMode)
+    val activeMediaKind = MediaMode.settled(mediaKindOn, selectableMediaKinds, canChangeMediaMode)
     // The model each tool would use for a call that names none, as the runner resolves it (defaultImageModelFor and the like).
     val pictureModelKey = ThreadImageChoices.resolve(
         choice = if (isNew) imageModelForNewThread else imageChoicesByThread[threadId],
@@ -846,6 +855,10 @@ private fun ChatRoute(
     val videoModelKey = VideoToolSetup.modelKeyOfPlainCall(usableVideoModelKeys, settingsSnapshot.videoModels)
     val imageChoices = imageModelChoices(settingsSnapshot.imageModels, imageLabels)
     val videoStepText = rememberVideoStepText(application, settingsSnapshot.videoModels)
+    val usableVideoModelRows = videoGenerationFor(application, settingsSnapshot.videoModels, hasKey = SecretName.OPENROUTER in savedSecretNames)
+        .models
+        .filter { model -> model.key in usableVideoModelKeys }
+        .map { model -> MediaModelRowUi(model.key, model.name, model.priceText) }
     val state = ChatUiState(
         title = thread?.title.orEmpty(),
         webSearchEnabled = webSearchEnabled,
@@ -899,7 +912,7 @@ private fun ChatRoute(
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
         mediaMode = MediaModeUiBuilder.build(
-            availableKinds = availableMediaKinds,
+            availableKinds = selectableMediaKinds,
             selected = activeMediaKind,
             canChange = canChangeMediaMode,
             imageChoices = imageChoices,
@@ -907,8 +920,27 @@ private fun ChatRoute(
             vectorModelKey = vectorModelKey,
             videoModelKey = videoModelKey,
             videoStepText = videoStepText,
+            videoModels = usableVideoModelRows,
+            choices = mediaChoices,
+            defaultIsHighQuality = settingsSnapshot.imageQuality == ImageQuality.HIGH,
         ),
     )
+    // A vector model sets the pick for generate_vector_image, any other for generate_image.
+    val selectImageModel: (String) -> Unit = { imageModelKey ->
+        val isVectorPick = settingsSnapshot.imageModels.isVector(imageModelKey)
+        if (isNew && isVectorPick) {
+            vectorImageModelForNewThread = imageModelKey.takeIf { it != firstVectorModelKey }
+        } else if (isNew) {
+            // Picking the starred default means "follow the default", as in a thread that has a row.
+            imageModelForNewThread = imageModelKey.takeIf { it != starredImageModelKey }
+        } else {
+            val keepOnDisk = thread?.incognito != true
+            val defaultOfKind = if (isVectorPick) firstVectorModelKey else starredImageModelKey
+            scope.launch(Dispatchers.IO) {
+                application.threadImageChoices.choose(threadId, imageModelKey, defaultOfKind, keepOnDisk, isVector = isVectorPick)
+            }
+        }
+    }
     val contextWindowTokens = modelInfo?.contextWindowTokens
     ChatScreen(
         state = state,
@@ -973,8 +1005,15 @@ private fun ChatRoute(
                     application.attachmentDrafts.moveIntoInbox(threadId, runner.threadFolder(targetThreadId))
                 }
                 if (sendAsMediaKind != null) {
-                    // Media mode never holds files (MediaMode.canChange), so the text is sent as typed.
-                    runner.sendAsMedia(targetThreadId, text, sendAsMediaKind)
+                    // The text is the prompt as typed. Files can be attached only in Picture mode, and only
+                    // pictures (MediaMode.kindsWithAttachments); they go along as the picture's references.
+                    runner.sendAsMedia(
+                        targetThreadId,
+                        text,
+                        sendAsMediaKind,
+                        mediaChoices.callOptionsFor(sendAsMediaKind, usableVideoModelKeys).copy(referenceImages = inboxPaths),
+                        savedText = AttachmentDrafts.messageWith(text, inboxPaths),
+                    )
                 } else {
                     runner.send(targetThreadId, AttachmentDrafts.messageWith(text, inboxPaths))
                 }
@@ -985,6 +1024,15 @@ private fun ChatRoute(
         },
         onStop = { runner.stop(threadId) },
         onMediaModeChange = { selected -> mediaKindOn = selected },
+        onMediaSettingChange = { change ->
+            val kind = activeMediaKind
+            if (kind != null && kind != MediaKind.VIDEO && change is MediaSettingChange.Model) {
+                // A picture's or a vector image's model is the thread's own image model (D-167).
+                selectImageModel(change.modelKey)
+            } else if (kind != null) {
+                mediaChoices = mediaChoices.after(kind, change)
+            }
+        },
         onCancelQueued = { queuedId -> runner.cancelQueued(threadId, queuedId) },
         onEditQueued = { queuedId ->
             val queuedText = runner.takeQueuedForEdit(threadId, queuedId)
@@ -1020,22 +1068,7 @@ private fun ChatRoute(
             editingMessageId = messageId
             draft = text
         },
-        onImageModelSelect = { imageModelKey ->
-            // A vector model sets the pick for generate_vector_image, any other for generate_image.
-            val isVectorPick = settingsSnapshot.imageModels.isVector(imageModelKey)
-            if (isNew && isVectorPick) {
-                vectorImageModelForNewThread = imageModelKey.takeIf { it != firstVectorModelKey }
-            } else if (isNew) {
-                // Picking the starred default means "follow the default", as in a thread that has a row.
-                imageModelForNewThread = imageModelKey.takeIf { it != starredImageModelKey }
-            } else {
-                val keepOnDisk = thread?.incognito != true
-                val defaultOfKind = if (isVectorPick) firstVectorModelKey else starredImageModelKey
-                scope.launch(Dispatchers.IO) {
-                    application.threadImageChoices.choose(threadId, imageModelKey, defaultOfKind, keepOnDisk, isVector = isVectorPick)
-                }
-            }
-        },
+        onImageModelSelect = selectImageModel,
         onThinkingChange = { choice ->
             if (isNew) {
                 thinkingForNewThread = choice

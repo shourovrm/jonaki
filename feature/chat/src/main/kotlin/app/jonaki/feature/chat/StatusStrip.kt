@@ -10,13 +10,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
@@ -62,35 +73,126 @@ internal fun StatusStrip(
     /** "Allow all in this thread" is on. */
     allowAllInThread: Boolean = false,
     onApprovalClick: () -> Unit = {},
+    /** The media button and its menu (D-174); null when the thread can make no picture, vector image or video. */
+    mediaMode: MediaModeUi? = null,
+    onMediaModeChange: (selected: MediaKind?) -> Unit = {},
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 2.dp),
-    ) {
-        ModelPill(status.modelName, isRunning, onModelClick)
-        val window = status.contextWindowTokens
-        if (window != null) {
-            // One pill for the window and its use: the strip has no room for the approval chip otherwise at 360 dp.
-            val windowText = UsageFormat.tokenCount(window)
-            val percent = UsageFormat.percentUsed(status.contextUsedTokens, window)
-            Pill(description = stringResource(R.string.chat_status_context, percent, windowText), onClick = onContextClick) {
-                ContextRing(percent)
-                PillNumber("$percent%")
-                PillNumber("/$windowText")
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        // With the media button the strip holds six controls. On a narrow phone the window's size
+        // gives way, so that the model keeps part of its name; the context sheet still shows it.
+        val showsWindowSize = mediaMode == null || maxWidth >= WidthForWindowSize
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 2.dp),
+        ) {
+            ModelPill(status.modelName, isRunning, onModelClick)
+            val window = status.contextWindowTokens
+            if (window != null) {
+                // One pill for the window and its use: the strip has no room for the approval chip otherwise at 360 dp.
+                val windowText = UsageFormat.tokenCount(window)
+                val percent = UsageFormat.percentUsed(status.contextUsedTokens, window)
+                Pill(description = stringResource(R.string.chat_status_context, percent, windowText), onClick = onContextClick) {
+                    ContextRing(percent)
+                    PillNumber("$percent%")
+                    if (showsWindowSize) {
+                        PillNumber("/$windowText")
+                    }
+                }
+            }
+            val costText = UsageFormat.cost(status.costUsd)
+            Pill(description = stringResource(R.string.chat_status_cost, costText), onClick = onCostClick) {
+                Icon(JonakiIcons.Payments, contentDescription = null, modifier = Modifier.size(PillIconSize))
+                PillNumber(costText)
+            }
+            if (mediaMode != null) {
+                MediaPill(mediaMode, onMediaModeChange)
+            }
+            WebSearchPill(webSearchEnabled, onWebSearchChange)
+            ApprovalPill(approvalMode, allowAllInThread, onApprovalClick)
+        }
+    }
+}
+
+/**
+ * One button for the three kinds of media. While the mode is off, a tap opens
+ * a menu that names each kind's model and price; while a kind is on, the
+ * button shows that kind in the accent colour and a tap switches it off.
+ */
+@Composable
+private fun MediaPill(mediaMode: MediaModeUi, onChange: (selected: MediaKind?) -> Unit) {
+    var isMenuOpen by remember { mutableStateOf(false) }
+    val selected = mediaMode.selected
+    val isOn = selected != null
+    val description = if (selected == null) {
+        stringResource(R.string.chat_media_button)
+    } else {
+        stringResource(R.string.chat_media_button_on, stringResource(selected.labelRes))
+    }
+    Box {
+        Surface(
+            onClick = {
+                if (selected != null) {
+                    onChange(MediaMode.afterTap(selected, selected, mediaMode.canChange))
+                } else {
+                    isMenuOpen = true
+                }
+            },
+            // A mode that is on can always be switched off.
+            enabled = mediaMode.canChange || isOn,
+            shape = PillShape,
+            color = if (isOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = if (isOn) MaterialTheme.colorScheme.onPrimary else JonakiTheme.colors.inkSoft,
+            modifier = Modifier.height(PillHeight).clearAndSetSemantics {
+                contentDescription = description
+                role = Role.Button
+            },
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 9.dp)) {
+                Icon(
+                    (selected ?: MediaKind.PICTURE).icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(PillIconSize).then(if (mediaMode.canChange || isOn) Modifier else Modifier.alpha(0.38f)),
+                )
             }
         }
-        val costText = UsageFormat.cost(status.costUsd)
-        Pill(description = stringResource(R.string.chat_status_cost, costText), onClick = onCostClick) {
-            Icon(JonakiIcons.Payments, contentDescription = null, modifier = Modifier.size(PillIconSize))
-            PillNumber(costText)
+        DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+            for (row in mediaMode.kindRows) {
+                DropdownMenuItem(
+                    text = { MediaKindMenuText(row) },
+                    leadingIcon = { Icon(row.kind.icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    trailingIcon = row.priceText?.let { price -> { PillNumber(price) } },
+                    onClick = {
+                        isMenuOpen = false
+                        onChange(MediaMode.afterTap(null, row.kind, mediaMode.canChange))
+                    },
+                )
+            }
         }
-        WebSearchPill(webSearchEnabled, onWebSearchChange)
-        ApprovalPill(approvalMode, allowAllInThread, onApprovalClick)
+    }
+}
+
+@Composable
+private fun MediaKindMenuText(row: MediaKindRowUi) {
+    // The menu's width is bounded, so a long model name ends in "…" and the price beside it stays whole (D-029).
+    Column(Modifier.widthIn(max = 168.dp)) {
+        Text(stringResource(row.kind.labelRes), style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+        row.modelName?.let { modelName ->
+            Text(
+                modelName,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
 private val PillIconSize = 16.dp
+
+/** Narrower than this, the context pill drops the window's size when the media button is shown. */
+private val WidthForWindowSize = 420.dp
 
 private val PillHeight = 30.dp
 
