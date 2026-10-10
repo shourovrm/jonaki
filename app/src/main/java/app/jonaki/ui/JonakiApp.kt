@@ -203,6 +203,20 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             settingsVisit += 1
             route = ROUTE_THREADS
         }
+        // A fresh start shows the thread left a moment ago, or a new thread; saved state skips this.
+        val leftThreadStore = remember { LeftThreadStore(application) }
+        var startResolved by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (startResolved) {
+                return@LaunchedEffect
+            }
+            when (val choice = chooseStart(application, leftThreadStore)) {
+                is StartChoice.ReopenThread -> route = ROUTE_CHAT_PREFIX + choice.threadId
+                StartChoice.NewThread -> route = ROUTE_CHAT_PREFIX + NEW_THREAD
+                StartChoice.KeepGivenDestination -> Unit
+            }
+            startResolved = true
+        }
         RefusedFilesMessage(application)
         val pendingShare by application.incomingShares.pending.collectAsState()
         val share = pendingShare
@@ -223,8 +237,12 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             ToolPickerRoute(application)
             return@JonakiTheme
         }
+        if (!startResolved) {
+            StartBlank()
+            return@JonakiTheme
+        }
         when {
-            route == ROUTE_SETTINGS || route.startsWith(ROUTE_SETTINGS_PAGE_PREFIX) -> {
+            route == ROUTE_SETTINGS|| route.startsWith(ROUTE_SETTINGS_PAGE_PREFIX) -> {
                 val settingsPage = SettingsPage.byKey(route.removePrefix(ROUTE_SETTINGS_PAGE_PREFIX))
                 // A sub-page goes back to the first page; the first page leaves Settings.
                 val goBack: () -> Unit = {
@@ -385,6 +403,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 }
                 BackHandler(onBack = leaveChat)
                 val isNewChat = chatThreadId == NEW_THREAD || chatThreadId == NEW_INCOGNITO_THREAD
+                RecordLeftThread(leftThreadStore, chatThreadId, isNewChat)
                 ProvideChatImages(application, chatThreadId, isNewChat) {
                     ChatRoute(
                         application = application,

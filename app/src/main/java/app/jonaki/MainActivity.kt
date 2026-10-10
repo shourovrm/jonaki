@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         jonaki.visibleActivity.attach(this)
         // A recreated activity has already handled the share that started it.
         if (savedInstanceState == null) {
-            jonaki.incomingShares.receive(intent)
+            jonaki.launchedWithShare = jonaki.incomingShares.receive(intent)
         }
         setContent {
             JonakiApp(

@@ -144,6 +144,9 @@ class JonakiApplication : Application() {
     lateinit var incomingShares: IncomingShares
         private set
 
+    /** True when the launching intent was a share from another app, which picks its own screen. */
+    var launchedWithShare = false
+
     /** Reminders the phone tool set, kept in a file until they fire (D-097). */
     lateinit var reminders: Reminders
         private set
