@@ -1,4 +1,4 @@
-# Status — 2026-10-10 (v1.4.1, unreleased work on main)
+# Status — 2026-10-10 (v1.4.2 on the phone, not released)
 
 Phase:        After v1.4.1, not released: D-157 to D-173 (names, fresh install, providers, images,
               wake lock, start screen and drafts, multi-select, errors and :batch, language rule).
