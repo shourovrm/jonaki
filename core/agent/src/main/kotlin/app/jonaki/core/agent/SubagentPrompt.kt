@@ -49,8 +49,9 @@ ${type.instructions}"""
         }
         parts += outcome.answer.ifBlank { "(No answer.)" }
         val answerPart = limitAnswer(parts.joinToString("\n\n"))
-        val ending = endingOf(outcome, limits) ?: return answerPart
-        return "$answerPart\n\n$ending"
+        val withModelNote = if (outcome.modelNote == null) answerPart else "${outcome.modelNote}\n\n$answerPart"
+        val ending = endingOf(outcome, limits) ?: return withModelNote
+        return "$withModelNote\n\n$ending"
     }
 
     private fun endingOf(outcome: SubagentOutcome, limits: SubagentLimits): String? = when (outcome.stop) {
@@ -58,7 +59,7 @@ ${type.instructions}"""
         SubagentStop.STEP_LIMIT -> "Stopped by the step limit of ${limits.maxToolSteps} tool steps."
         SubagentStop.COST_LIMIT -> "Stopped by the cost limit of ${dollars(limits.costCapUsd)}."
         SubagentStop.TIME_LIMIT -> "Stopped by the time limit of ${limits.timeLimit.inWholeMinutes} minutes."
-        SubagentStop.FAILED -> SubagentEnding.failureSentence(outcome.failure)
+        SubagentStop.FAILED -> SubagentEnding.failureEnding(outcome.failure)
         SubagentStop.STOPPED -> "Stopped by the user."
     }
 

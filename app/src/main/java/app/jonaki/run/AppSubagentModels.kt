@@ -51,6 +51,13 @@ class AppSubagentModels(
             threadModelKey = threadModelKey,
             backgroundModelKey = backgroundModelKey,
         )
+        return modelOf(key)
+    }
+
+    /** The thread's own model, the fallback when a subagent's configured model has been withdrawn. */
+    override fun threadModel(): SubagentModel? = modelOf(threadModelKey)
+
+    private fun modelOf(key: String): SubagentModel? {
         val provider = providerFor(key) ?: return null
         val info = catalog.find(key)
         // Unknown models count as not taking images (D-049).

@@ -53,7 +53,12 @@ internal class SubagentToolbox(startTools: List<Tool>, requestableTools: List<To
  */
 internal class SubagentLoop(
     private val subagentId: String,
-    private val model: SubagentModel,
+    private var model: SubagentModel,
+    /**
+     * The thread's model, used once if [model] is withdrawn before it has
+     * answered anything; null when there is none or it is the same model.
+     */
+    private var fallbackModel: SubagentModel? = null,
     /** Built once per subagent; never changes between its requests (D-005). */
     private val systemPrompt: String,
     private val toolbox: SubagentToolbox,
@@ -80,6 +85,9 @@ internal class SubagentLoop(
             val tools = if (stepsUsedUp) emptyList() else toolbox.definitions()
             val turn = streamTurn(model.provider, request(conversation, tools), onTextDelta = {}, onReasoningDelta = {})
             if (turn is TurnResult.Failed) {
+                if (switchToFallbackFor(turn, conversation)) {
+                    continue
+                }
                 if (turn.retryable && !retried) {
                     retried = true
                     delay(limits.retryDelay)
@@ -105,6 +113,23 @@ internal class SubagentLoop(
             }
             conversation += runToolCalls(answered.message.toolCalls)
         }
+    }
+
+    /**
+     * True when [turn] says the model is withdrawn, nothing has been answered
+     * yet, and the thread's model has taken its place for the next request.
+     */
+    private fun switchToFallbackFor(turn: TurnResult.Failed, conversation: List<Message>): Boolean {
+        val replacement = fallbackModel ?: return false
+        val isFirstRequest = conversation.size == 1
+        if (!isFirstRequest || !ModelUnavailable.isUnavailable(turn.message)) {
+            return false
+        }
+        progress.modelNote = "The configured model ${model.key} was unavailable; ${replacement.key} answered instead."
+        model = replacement
+        // One switch only: if the thread's model is withdrawn too, the failure is reported as it is.
+        fallbackModel = null
+        return true
     }
 
     private fun request(conversation: List<Message>, tools: List<ToolDefinition>): ChatRequest = ChatRequest(
