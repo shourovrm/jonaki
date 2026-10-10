@@ -24,6 +24,8 @@ data class ChatUiState(
     val imageModelChoices: List<ImageModelChoiceUi> = emptyList(),
     /** The image model generate_image uses in this thread: its own pick, else the starred default. */
     val selectedImageModelKey: String? = null,
+    /** The vector model generate_vector_image uses in this thread: its own pick, else the first vector model. */
+    val selectedVectorImageModelKey: String? = null,
     /** What the usage sheet shows; null disables tapping the cost. */
     val usage: UsageUi? = null,
     /** Files picked or shared for the next message, shown as chips above the field. */
@@ -175,8 +177,10 @@ data class ImageModelChoiceUi(
     val serviceName: String,
     /** The price in the unit billed, for example "$0.014 per megapixel"; null while unknown. */
     val priceText: String? = null,
-    /** True for the model starred in Settings; a thread with no pick uses it. */
+    /** True for the model starred in Settings; a thread with no pick uses it. Never set on a vector model. */
     val isDefault: Boolean = false,
+    /** A vector model (makes SVG files); the row carries an "SVG" tag. */
+    val isVector: Boolean = false,
 )
 
 /** Token and cost totals of one thread for the usage sheet. */
@@ -274,6 +278,9 @@ sealed interface ChatItem {
 
     /** A picture the generate_image tool saved; shown as a thumbnail with Save and Share. [path] is relative to the thread folder. */
     data class GeneratedImage(override val id: String, val path: String) : ChatItem
+
+    /** An SVG the generate_vector_image tool saved; shown as a drawn preview with Save and Share. [path] is relative to the thread folder. */
+    data class GeneratedVectorImage(override val id: String, val path: String) : ChatItem
 
     /** The model's reasoning before an answer: open while it streams, folded afterwards (D-054). */
     data class Reasoning(override val id: String, val text: String, val isStreaming: Boolean) : ChatItem

@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.JonakiTheme
+import app.jonaki.core.ui.ModelTag
 import app.jonaki.core.ui.MonospaceFamily
 
 /** Settings > Models > Image generation: one card per added image service, then "Add service". */
@@ -78,6 +79,8 @@ data class ImageModelRowUi(
     /** "$0.014 per megapixel"; null while it is not loaded or the model has none. */
     val priceText: String? = null,
     val isDefault: Boolean = false,
+    /** A vector model (makes SVG files); its row carries an "SVG" tag. */
+    val isVector: Boolean = false,
 )
 
 /** What the image model picker shows. */
@@ -135,7 +138,7 @@ private fun ImageModelRow(model: ImageModelRowUi, actions: SettingsActions) {
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
         ImageModelStar(model, onMakeDefault = { actions.onImageModelSetDefault(model.key) })
         Column(Modifier.weight(1f).padding(top = 10.dp)) {
-            Text(model.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            NameWithTag(model.name, isVector = model.isVector)
             if (model.name != model.id) {
                 Text(model.id, style = idStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -147,8 +150,25 @@ private fun ImageModelRow(model: ImageModelRowUi, actions: SettingsActions) {
     }
 }
 
+/** The name ends in "…" when long; the "SVG" tag of a vector model keeps its place and its width (D-029). */
 @Composable
-private fun idStyle() = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily)
+private fun NameWithTag(name: String, isVector: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            name,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (isVector) {
+            ModelTag(stringResource(R.string.settings_image_svg_tag), Modifier.padding(start = 8.dp))
+        }
+    }
+}
+
+@Composable
+private fun idStyle() =MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily)
 
 @Composable
 private fun ImageModelStar(model: ImageModelRowUi, onMakeDefault: () -> Unit) {
@@ -310,7 +330,7 @@ private fun ImagePickRow(model: AddableModelUi, isPicked: Boolean, onToggle: () 
             modifier = Modifier.width(48.dp).padding(top = 2.dp),
         )
         Column(Modifier.weight(1f)) {
-            Text(model.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            NameWithTag(model.name, isVector = model.isVector)
             Text(model.id, style = idStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             model.imagePrice?.let { price ->
                 Text(priceLineText(price), style = idStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
