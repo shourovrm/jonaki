@@ -75,7 +75,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.ApprovalModeChoice
@@ -706,6 +708,11 @@ private fun Composer(
 ) {
     // Local to the composer, like the sheet it opens: nothing outside needs to know it is open.
     var addSheetOpen by rememberSaveable { mutableStateOf(false) }
+    // Text set from outside (a saved draft, an edited message, a shared text) puts the cursor at its end.
+    var fieldValue by remember { mutableStateOf(TextFieldValue(draft, TextRange(draft.length))) }
+    if (fieldValue.text != draft) {
+        fieldValue = TextFieldValue(draft, TextRange(draft.length))
+    }
     Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier) {
         Row(
             verticalAlignment = Alignment.Bottom,
@@ -724,8 +731,11 @@ private fun Composer(
             }
             Spacer(Modifier.width(8.dp))
             TextField(
-                value = draft,
-                onValueChange = onDraftChange,
+                value = fieldValue,
+                onValueChange = { changed ->
+                    fieldValue = changed
+                    onDraftChange(changed.text)
+                },
                 placeholder = { Text(stringResource(R.string.chat_message_hint)) },
                 maxLines = 6,
                 shape = RoundedCornerShape(26.dp),

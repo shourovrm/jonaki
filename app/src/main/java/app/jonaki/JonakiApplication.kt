@@ -6,6 +6,7 @@ import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.files.AndroidFileDestinations
 import app.jonaki.files.AttachmentDrafts
 import app.jonaki.files.MediaStorePhotoLibrary
+import app.jonaki.files.ThreadDrafts
 import app.jonaki.files.MediaThumbnails
 import app.jonaki.feature.gallery.GallerySource
 import app.jonaki.files.IncomingShares
@@ -144,6 +145,13 @@ class JonakiApplication : Application() {
     lateinit var incomingShares: IncomingShares
         private set
 
+    /** Text typed in each thread's message box and not yet sent. */
+    lateinit var threadDrafts: ThreadDrafts
+        private set
+
+    /** True when the launching intent was a share from another app, which picks its own screen. */
+    var launchedWithShare = false
+
     /** Reminders the phone tool set, kept in a file until they fire (D-097). */
     lateinit var reminders: Reminders
         private set
@@ -185,6 +193,7 @@ class JonakiApplication : Application() {
         attachmentDrafts = AttachmentDrafts(File(filesDir, "waiting-attachments"))
         // Read before anything is staged, so a share arriving now is not taken for a leftover.
         val leftoverAttachments = attachmentDrafts.restore()
+        threadDrafts = ThreadDrafts(File(filesDir, "thread-drafts.json"))
         incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
         skillProposals = SkillProposals(File(filesDir, "skill-proposals"), skillExists = { name -> skillLibrary.readText(name) != null })
         skillProposalReview = SkillProposalReview(skillLibrary, skillProposals)
@@ -255,6 +264,10 @@ class JonakiApplication : Application() {
         }
         applicationScope.launch {
             restoreNamesCutByOldVersion()
+        }
+        applicationScope.launch(Dispatchers.IO) {
+            // A draft whose thread was deleted while the app was not watching would wait forever.
+            threadDrafts.pruneTo(database.threadDao().observeAll().first().map { thread -> thread.id }.toSet())
         }
         applicationScope.launch(Dispatchers.IO) {
             leftoverAttachments.forEach { folder -> folder.deleteRecursively() }

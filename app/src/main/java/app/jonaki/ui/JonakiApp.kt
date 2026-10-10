@@ -67,6 +67,8 @@ import app.jonaki.feature.chat.ApprovalChoice
 import app.jonaki.feature.chat.AttachmentUi
 import app.jonaki.files.AttachmentDrafts
 import app.jonaki.files.StagedFile
+import app.jonaki.files.ThreadDrafts
+import androidx.compose.runtime.rememberUpdatedState
 import app.jonaki.files.CameraPhotos
 import app.jonaki.files.RefusedFile
 import app.jonaki.feature.chat.ChatScreen
@@ -203,6 +205,20 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             settingsVisit += 1
             route = ROUTE_THREADS
         }
+        // A fresh start shows the thread left a moment ago, or a new thread; saved state skips this.
+        val leftThreadStore = remember { LeftThreadStore(application) }
+        var startResolved by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (startResolved) {
+                return@LaunchedEffect
+            }
+            when (val choice = chooseStart(application, leftThreadStore)) {
+                is StartChoice.ReopenThread -> route = ROUTE_CHAT_PREFIX + choice.threadId
+                StartChoice.NewThread -> route = ROUTE_CHAT_PREFIX + NEW_THREAD
+                StartChoice.KeepGivenDestination -> Unit
+            }
+            startResolved = true
+        }
         RefusedFilesMessage(application)
         val pendingShare by application.incomingShares.pending.collectAsState()
         val share = pendingShare
@@ -223,8 +239,12 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             ToolPickerRoute(application)
             return@JonakiTheme
         }
+        if (!startResolved) {
+            StartBlank()
+            return@JonakiTheme
+        }
         when {
-            route == ROUTE_SETTINGS || route.startsWith(ROUTE_SETTINGS_PAGE_PREFIX) -> {
+            route == ROUTE_SETTINGS|| route.startsWith(ROUTE_SETTINGS_PAGE_PREFIX) -> {
                 val settingsPage = SettingsPage.byKey(route.removePrefix(ROUTE_SETTINGS_PAGE_PREFIX))
                 // A sub-page goes back to the first page; the first page leaves Settings.
                 val goBack: () -> Unit = {
@@ -385,6 +405,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 }
                 BackHandler(onBack = leaveChat)
                 val isNewChat = chatThreadId == NEW_THREAD || chatThreadId == NEW_INCOGNITO_THREAD
+                RecordLeftThread(leftThreadStore, chatThreadId, isNewChat)
                 ProvideChatImages(application, chatThreadId, isNewChat) {
                     ChatRoute(
                         application = application,
@@ -476,6 +497,8 @@ private fun ThreadsRoute(
     val running by application.runner.runningThreadIds.collectAsState()
     val approvals by application.runner.pendingApprovals.collectAsState()
     val stepCounts by application.runner.runStepCounts.collectAsState()
+    val draftsByThread by application.threadDrafts.byThread.collectAsState()
+    val context = LocalContext.current
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var threadToRename by rememberSaveable { mutableStateOf<String?>(null) }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -501,7 +524,9 @@ private fun ThreadsRoute(
         ThreadRow(
             id = summary.thread.id,
             title = summary.thread.title,
-            lastLine = lastLineOf(summary),
+            lastLine = draftsByThread[summary.thread.id]?.let { draftText ->
+                context.getString(R.string.thread_draft_preview, ThreadDrafts.previewLine(draftText))
+            } ?: lastLineOf(summary),
             updatedAtMillis = summary.thread.updatedAtMillis,
             runState = runState,
             costUsd = summary.totalCostUsd,
@@ -530,7 +555,10 @@ private fun ThreadsRoute(
             scope.launch {
                 application.runner.deleteThread(threadId)
                 // Saved chips would otherwise wait forever for a thread that is gone.
-                withContext(Dispatchers.IO) { application.attachmentDrafts.discardAll(threadId) }
+                withContext(Dispatchers.IO) {
+                    application.attachmentDrafts.discardAll(threadId)
+                    application.threadDrafts.clear(threadId)
+                }
             }
         },
         onNewIncognitoThread = onNewIncognitoThread,
@@ -630,9 +658,23 @@ private fun ChatRoute(
     val settingsSnapshot by application.settings.snapshot.collectAsState()
     val attachmentsByThread by application.attachmentDrafts.byThread.collectAsState()
     val sharedTexts by application.incomingShares.textFor.collectAsState()
-    var draft by rememberSaveable(threadId) { mutableStateOf("") }
+    // Drafts of regular threads are kept on disk; an incognito chat's stays in memory (D-111).
+    val draftKey = if (isNew) ThreadDrafts.NEW_THREAD_KEY else threadId
+    val draftIsSaved = !isNewIncognito && (isNew || thread?.incognito == false)
+    var draft by rememberSaveable(threadId) {
+        mutableStateOf(if (isNewIncognito) "" else application.threadDrafts.textFor(draftKey))
+    }
     // The sent prompt being edited (D-056); null when the field holds a new message.
     var editingMessageId by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
+    // What the box held when Edit replaced it, put back when the edit is sent or cancelled.
+    var draftBeforeEdit by rememberSaveable(threadId) { mutableStateOf("") }
+    SaveDraftWhileTyping(
+        threadDrafts = application.threadDrafts,
+        draftKey = draftKey,
+        draft = draft,
+        // The box holds the edited message, not a draft, so it is not saved as one.
+        isSaved = draftIsSaved && editingMessageId == null,
+    )
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         application.incomingShares.attach(threadId, uris)
     }
@@ -762,9 +804,12 @@ private fun ChatRoute(
         onDraftChange = { text -> draft = text },
         onSend = {
             val text = draft
-            draft = ""
             val editedMessageId = editingMessageId
+            draft = if (editedMessageId != null) draftBeforeEdit else ""
             editingMessageId = null
+            if (editedMessageId == null && draftIsSaved) {
+                scope.launch(Dispatchers.IO) { application.threadDrafts.clear(draftKey) }
+            }
             scope.launch {
                 if (editedMessageId != null && !isNew) {
                     val inboxPaths = withContext(Dispatchers.IO) {
@@ -827,6 +872,14 @@ private fun ChatRoute(
             }
         },
         onEditMessage = { messageId, text ->
+            if (editingMessageId == null) {
+                draftBeforeEdit = draft
+                // Saved now, because the debounce may not have written the draft yet.
+                if (draftIsSaved) {
+                    val draftToKeep = draft
+                    scope.launch(Dispatchers.IO) { application.threadDrafts.set(draftKey, draftToKeep) }
+                }
+            }
             editingMessageId = messageId
             draft = text
         },
@@ -844,7 +897,7 @@ private fun ChatRoute(
         },
         onCancelEdit = {
             editingMessageId = null
-            draft = ""
+            draft = draftBeforeEdit
         },
         onWithdrawAllowAll = {
             if (!isNew) {
@@ -1646,4 +1699,35 @@ private fun themeChoiceOf(mode: ThemeMode): ThemeChoice = when (mode) {
     ThemeMode.SYSTEM -> ThemeChoice.SYSTEM
     ThemeMode.LIGHT -> ThemeChoice.LIGHT
     ThemeMode.DARK -> ThemeChoice.DARK
+}
+
+/** How long typing must pause before the draft is written to disk. */
+private const val DRAFT_SAVE_DELAY_MILLIS = 500L
+
+/**
+ * Saves the message box's text as the thread's draft after a pause in typing,
+ * and at once when the chat is left or the app goes to the background.
+ */
+@Composable
+private fun SaveDraftWhileTyping(threadDrafts: ThreadDrafts, draftKey: String, draft: String, isSaved: Boolean) {
+    val application = LocalContext.current.applicationContext as JonakiApplication
+    val latestDraft by rememberUpdatedState(draft)
+    val latestIsSaved by rememberUpdatedState(isSaved)
+    val saveNow = {
+        if (latestIsSaved) {
+            val textToSave = latestDraft
+            application.applicationScope.launch(Dispatchers.IO) { threadDrafts.set(draftKey, textToSave) }
+        }
+    }
+    LaunchedEffect(draftKey, draft, isSaved) {
+        if (!isSaved || threadDrafts.textFor(draftKey) == draft) {
+            return@LaunchedEffect
+        }
+        delay(DRAFT_SAVE_DELAY_MILLIS)
+        withContext(Dispatchers.IO) { threadDrafts.set(draftKey, draft) }
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { saveNow() }
+    DisposableEffect(draftKey) {
+        onDispose { saveNow() }
+    }
 }
