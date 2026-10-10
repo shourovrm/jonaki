@@ -269,6 +269,14 @@ object JonakiIcons {
         )
     }
 
+    /** Material "storage": stacked disks, a provider that keeps prompts (Providers sheet). */
+    val Storage: ImageVector by lazy {
+        icon(
+            "Storage",
+            "M2,20h20v-4H2v4zm2,-3h2v2H4v-2zM2,4v4h20V4H2zm4,3H4V5h2v2zm-4,6h20v-4H2v4zm2,-3h2v2H4v-2z",
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
             .addPath(pathData = addPathNodes(pathData), fill = SolidColor(Color.Black))

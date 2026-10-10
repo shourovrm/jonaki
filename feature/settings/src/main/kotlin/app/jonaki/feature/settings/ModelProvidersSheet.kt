@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -30,12 +32,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
+import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
 import app.jonaki.core.ui.UsageFormat
 
@@ -57,7 +62,7 @@ data class ProviderOptionUi(
 
 /** What a provider does with prompts, as the row shows it. */
 enum class ProviderPrivacyUi {
-    /** Neither trains on prompts nor keeps them: a shield. */
+    /** Neither trains on prompts nor keeps them. */
     PRIVATE,
 
     /** Does not train, but keeps prompts. */
@@ -208,14 +213,7 @@ private fun ProviderList(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
     )
-    if (options.any { option -> option.privacy == ProviderPrivacyUi.PRIVATE }) {
-        Text(
-            stringResource(R.string.settings_providers_shield_note),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
-        )
-    }
+    PrivacyLegend(legendStates(options))
     for (option in options) {
         ProviderRow(option, isChosen = option.tag in chosenTags, onToggle = { onToggle(option.tag) })
     }
@@ -250,11 +248,11 @@ private fun ProviderRow(option: ProviderOptionUi, isChosen: Boolean, onToggle: (
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                if (option.privacy == ProviderPrivacyUi.PRIVATE) {
+                option.privacy?.let { privacy ->
                     Icon(
-                        JonakiIcons.Shield,
-                        contentDescription = stringResource(R.string.settings_providers_private),
-                        tint = MaterialTheme.colorScheme.primary,
+                        privacyIcon(privacy),
+                        contentDescription = stringResource(privacyLabel(privacy)),
+                        tint = privacyColor(privacy),
                         modifier = Modifier.padding(start = 6.dp).size(16.dp),
                     )
                 }
@@ -273,27 +271,60 @@ private fun ProviderRow(option: ProviderOptionUi, isChosen: Boolean, onToggle: (
                 DetailText(stringResource(R.string.settings_price_in, UsageFormat.price(option.inputPricePerMillion)))
                 DetailText(stringResource(R.string.settings_price_out, UsageFormat.price(option.outputPricePerMillion)))
                 option.quantization?.let { quantization -> DetailText(quantization) }
-                PrivacyNote(option.privacy)
             }
         }
     }
 }
 
-/** The text for a provider that is not private; a private one shows the shield instead, an unknown one nothing. */
+private fun privacyIcon(privacy: ProviderPrivacyUi): ImageVector = when (privacy) {
+    ProviderPrivacyUi.PRIVATE -> JonakiIcons.Shield
+    ProviderPrivacyUi.KEEPS_PROMPTS -> JonakiIcons.Storage
+    ProviderPrivacyUi.MAY_TRAIN -> Icons.Filled.Warning
+}
+
+private fun privacyLabel(privacy: ProviderPrivacyUi): Int = when (privacy) {
+    ProviderPrivacyUi.PRIVATE -> R.string.settings_providers_private
+    ProviderPrivacyUi.KEEPS_PROMPTS -> R.string.settings_providers_keeps_prompts
+    ProviderPrivacyUi.MAY_TRAIN -> R.string.settings_providers_may_train
+}
+
+/** Warning uses the deny colour, as the app does for problems elsewhere so that it stands out; the shape alone also tells the three apart. */
 @Composable
-private fun PrivacyNote(privacy: ProviderPrivacyUi?) {
-    when (privacy) {
-        ProviderPrivacyUi.KEEPS_PROMPTS -> Text(
-            stringResource(R.string.settings_providers_keeps_prompts),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        ProviderPrivacyUi.MAY_TRAIN -> Text(
-            stringResource(R.string.settings_providers_may_train),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-        ProviderPrivacyUi.PRIVATE, null -> Unit
+private fun privacyColor(privacy: ProviderPrivacyUi): Color = when (privacy) {
+    ProviderPrivacyUi.PRIVATE -> MaterialTheme.colorScheme.primary
+    ProviderPrivacyUi.KEEPS_PROMPTS -> MaterialTheme.colorScheme.onSurfaceVariant
+    ProviderPrivacyUi.MAY_TRAIN -> JonakiTheme.colors.deny
+}
+
+/** The states to explain in the legend: those in [options], once each, in the order private, keeps, trains. */
+internal fun legendStates(options: List<ProviderOptionUi>): List<ProviderPrivacyUi> {
+    val present = options.mapNotNull { option -> option.privacy }.toSet()
+    return ProviderPrivacyUi.entries.filter { state -> state in present }
+}
+
+/** Icon and label for each state that occurs in the list; nothing when no row has a mark. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun PrivacyLegend(states: List<ProviderPrivacyUi>) {
+    if (states.isEmpty()) return
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
+    ) {
+        for (state in states) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The label below says the same, so the icon is not announced twice.
+                Icon(privacyIcon(state), contentDescription = null, tint = privacyColor(state), modifier = Modifier.size(16.dp))
+                Text(
+                    stringResource(privacyLabel(state)),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
+        }
     }
 }
 

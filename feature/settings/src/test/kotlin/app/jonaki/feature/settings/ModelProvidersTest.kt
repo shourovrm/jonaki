@@ -31,4 +31,31 @@ class ModelProvidersTest {
         assertEquals("deepinfra", providerOfTag("deepinfra/fp4"))
         assertEquals("fireworks", providerOfTag("fireworks"))
     }
+
+    private fun marked(vararg states: ProviderPrivacyUi?) =
+        states.map { state -> option("x").copy(privacy = state) }
+
+    @Test
+    fun theLegendHasEachStateOnceInFixedOrder() {
+        val all = marked(
+            ProviderPrivacyUi.MAY_TRAIN, ProviderPrivacyUi.PRIVATE, null,
+            ProviderPrivacyUi.KEEPS_PROMPTS, ProviderPrivacyUi.PRIVATE,
+        )
+
+        assertEquals(
+            listOf(ProviderPrivacyUi.PRIVATE, ProviderPrivacyUi.KEEPS_PROMPTS, ProviderPrivacyUi.MAY_TRAIN),
+            legendStates(all),
+        )
+    }
+
+    @Test
+    fun theLegendHasOnlyThePresentStates() {
+        assertEquals(listOf(ProviderPrivacyUi.PRIVATE), legendStates(marked(ProviderPrivacyUi.PRIVATE, ProviderPrivacyUi.PRIVATE)))
+    }
+
+    @Test
+    fun noKnownStateGivesNoLegend() {
+        assertEquals(emptyList<ProviderPrivacyUi>(), legendStates(marked(null, null)))
+        assertEquals(emptyList<ProviderPrivacyUi>(), legendStates(emptyList()))
+    }
 }
