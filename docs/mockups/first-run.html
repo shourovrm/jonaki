@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki first run: four setup cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  ::selection { background: #c9e86b; color: #1f2a00; }
+  body { background: #0b0c0b; color: #d9dcd5; font-family: "Geist", system-ui, sans-serif; padding: 44px 32px 90px; }
+  .page-head, .band, .notes { max-width: 1560px; margin-left: auto; margin-right: auto; }
+  .page-head { margin-bottom: 34px; }
+  .page-head h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+  .page-head p { margin-top: 10px; max-width: 72ch; color: #a4aa9d; line-height: 1.6; font-size: 15px; }
+  .band { margin-bottom: 14px; margin-top: 46px; }
+  .band h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+  .band p { margin-top: 6px; max-width: 72ch; color: #a4aa9d; line-height: 1.6; font-size: 14px; }
+  .row-of-phones { max-width: 1560px; margin: 18px auto 0; display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start; }
+  .cell { display: flex; flex-direction: column; gap: 12px; width: 360px; }
+  .cell-label { font-size: 13.5px; color: #c6cbbf; padding-left: 6px; font-weight: 500; }
+  .cell-note { font-size: 13px; color: #9aa094; padding: 0 6px; line-height: 1.55; }
+  .notes { margin-top: 52px; color: #b4b9ad; font-size: 14.5px; line-height: 1.65; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 8px 48px; }
+  .notes h3 { font-size: 15px; color: #e4e7df; font-weight: 600; margin: 18px 0 6px; }
+  .notes p { margin-bottom: 10px; max-width: 68ch; }
+  .notes b { color: #e4e7df; font-weight: 600; }
+
+  .phone {
+    width: 360px; height: 760px; border-radius: 34px; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
+    font-family: "Geist", system-ui, sans-serif; box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080;
+  }
+  .dark  { --bg:#10130e; --ink:#e6e9e0; --ink-2:#c3c9b9; --muted:#8b927f; --line:#262b21; --line-2:#333a2b; --field:#1a1e16; --card:#181c14; --under:#141811; --accent:#c9e86b; --on-accent:#1f2a00; --glow:#d4f06a; --glow-halo:#c9e86b55; --warn:#ffb4ab; --well:#0c0f0a; }
+  .light { --bg:#f3f6ef; --ink:#171b14; --ink-2:#3a4233; --muted:#5f6857; --line:#dde3d5; --line-2:#cdd5c2; --field:#e7ece1; --card:#ffffff; --under:#e9eee3; --accent:#3f5600; --on-accent:#f3f6ef; --glow:#9cc520; --glow-halo:#9cc52066; --warn:#ba1a1a; --well:#eef2e8; }
+  .statusbar { height: 30px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; }
+  .statusbar i { font-size: 13px; margin-left: 4px; }
+  .mono { font-family: "Geist Mono", monospace; font-feature-settings: "tnum"; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; font-size: 21px; color: var(--ink); flex: none; }
+
+  /* Today's first screen, for comparison. */
+  .list-top { height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 20px; }
+  .brand { font-size: 23px; font-weight: 600; letter-spacing: -0.02em; }
+  .brand .j { color: var(--accent); position: relative; }
+  .brand .j::before { content: ""; position: absolute; left: 50%; top: 4px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 9px 2px var(--glow-halo); }
+  .search { margin: 4px 20px 10px; height: 44px; flex: none; border-radius: 22px; background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--muted); font-size: 14.5px; }
+  .empty { flex: 1; display: grid; place-items: center; color: var(--muted); font-size: 15px; }
+  .fab { position: absolute; right: 18px; bottom: 26px; height: 54px; padding: 0 20px 0 16px; border-radius: 18px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+  .fab i { font-size: 20px; }
+
+  /* The setup deck. One card is on top; the edges under it are the cards still to come. */
+  .deck-top { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 22px; }
+  .deck-top .count { font-size: 14px; color: var(--muted); }
+  .deck-top .count b { color: var(--ink); font-weight: 600; }
+  .text-btn { height: 40px; padding: 0 12px; display: flex; align-items: center; font-size: 14.5px; font-weight: 600; color: var(--accent); border-radius: 20px; }
+  .text-btn.quiet { color: var(--ink-2); font-weight: 500; }
+  .deck { flex: 1; position: relative; margin: 2px 14px 0; min-height: 0; }
+  .under { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; border-radius: 26px; background: var(--under); border: 1px solid var(--line); }
+  .under.u1 { left: 10px; right: 10px; bottom: 30px; }
+  .under.u2 { left: 20px; right: 20px; bottom: 20px; }
+  .under.u3 { left: 30px; right: 30px; bottom: 10px; }
+  .card { position: absolute; left: 0; right: 0; top: 0; border-radius: 26px; background: var(--card); border: 1px solid var(--line-2); display: flex; flex-direction: column; overflow: hidden; }
+  .card.left3 { bottom: 42px; } .card.left2 { bottom: 32px; } .card.left1 { bottom: 22px; } .card.left0 { bottom: 12px; }
+  .card h3 { font-size: 23px; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; padding: 24px 22px 0; text-wrap: balance; }
+  .card .lede { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); padding: 8px 22px 0; }
+  .card .body { flex: 1; min-height: 0; padding-top: 14px; }
+  .if-skip { font-size: 13px; line-height: 1.45; color: var(--muted); padding: 10px 22px 0; border-top: 1px solid var(--line); margin-top: auto; }
+  .foot { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 14px 10px; }
+  .btn { height: 46px; padding: 0 22px; border-radius: 23px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .btn.off { background: var(--field); color: var(--muted); }
+
+  .choice { display: grid; grid-template-columns: 24px 1fr; gap: 0 14px; align-items: center; padding: 11px 22px; min-height: 52px; }
+  .choice .t { font-size: 15.5px; font-weight: 500; }
+  .choice .s { grid-column: 2; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .choice.tall { align-items: start; padding-top: 13px; padding-bottom: 13px; }
+  .choice.tall .radio { margin-top: 1px; }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--muted); grid-row: 1 / span 2; }
+  .choice.on .radio { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px); }
+  .choice.on { background: var(--well); }
+  .more-row { padding: 11px 22px 11px 60px; font-size: 14.5px; color: var(--accent); font-weight: 600; }
+
+  .key-label { font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 22px 6px; }
+  .key-field { margin: 0 22px; height: 50px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--well); display: flex; align-items: center; justify-content: space-between; padding: 0 6px 0 14px; font-size: 14.5px; }
+  .key-field.empty { color: var(--muted); }
+  .key-field .paste { height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; font-size: 13.5px; font-weight: 600; color: var(--accent); }
+  .key-state { padding: 8px 22px 0; font-size: 13.5px; color: var(--accent); display: flex; align-items: center; gap: 7px; font-weight: 500; }
+  .key-state .rest { color: var(--muted); font-weight: 400; }
+  .key-help { padding: 8px 22px 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .key-help u { color: var(--ink-2); text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  .sub-label { font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 18px 22px 2px; }
+  .model { display: grid; grid-template-columns: 24px 1fr; gap: 0 14px; padding: 9px 22px; align-items: start; }
+  .model .radio { margin-top: 2px; }
+  .model.on { background: var(--well); }
+  .model.on .radio { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px); }
+  .model .t { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .model .s { grid-column: 2; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .perm { margin: 6px 22px 0; border-radius: 16px; background: var(--well); padding: 14px 16px; }
+  .notif { display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 10px; align-items: center; }
+  .notif .app { font-size: 12px; color: var(--muted); grid-column: 2; }
+  .notif .when { font-size: 12px; color: var(--muted); }
+  .notif .t { grid-column: 2 / span 2; font-size: 14px; font-weight: 600; }
+  .notif .s { grid-column: 2 / span 2; font-size: 13px; color: var(--ink-2); }
+  .notif .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px 2px var(--glow-halo); justify-self: center; grid-row: 1 / span 3; align-self: start; margin-top: 4px; }
+  .notif + .notif { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .notif .tick { font-size: 15px; color: var(--muted); justify-self: center; grid-row: 1 / span 3; align-self: start; margin-top: 1px; }
+
+  /* After the deck. */
+  .chat-top { height: 56px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+  .chat-top .title { flex: 1; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; padding-left: 4px; }
+  .transcript { flex: 1; padding: 0 20px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .strip { display: flex; gap: 8px; padding: 6px 12px; flex: none; }
+  .pill { height: 34px; border-radius: 17px; background: var(--field); display: flex; align-items: center; gap: 7px; padding: 0 12px; font-size: 13px; color: var(--ink-2); white-space: nowrap; min-width: 0; }
+  .pill span { overflow: hidden; text-overflow: ellipsis; }
+  .pill.off { color: var(--muted); }
+  .pill.need { background: transparent; border: 1px solid var(--line-2); color: var(--ink); font-weight: 600; }
+  .composer { display: flex; align-items: flex-end; gap: 8px; padding: 6px 12px 18px; flex: none; }
+  .plus { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--line); display: grid; place-items: center; font-size: 21px; color: var(--ink-2); flex: none; }
+  .field { flex: 1; min-height: 44px; border-radius: 22px; background: var(--field); display: flex; align-items: center; padding: 0 16px; font-size: 14.5px; color: var(--muted); }
+  .field .caret { width: 1.5px; height: 19px; background: var(--accent); margin-right: 2px; }
+  .send { width: 44px; height: 44px; border-radius: 22px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 19px; flex: none; }
+  .send.off { background: var(--field); color: var(--muted); }
+  .blocked { margin: 0 12px 18px; flex: none; border-radius: 22px; border: 1px solid var(--line-2); padding: 14px 8px 8px 18px; }
+  .blocked .t { font-size: 15px; font-weight: 600; }
+  .blocked .s { font-size: 13.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.45; padding-right: 10px; }
+  .blocked .acts { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+  .todo { margin: 2px 20px 0; flex: none; }
+  .todo-head { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .todo-head .t { font-size: 14px; font-weight: 600; }
+  .todo-row { display: grid; grid-template-columns: 1fr auto; gap: 1px 12px; padding: 11px 0; border-top: 1px solid var(--line); align-items: center; }
+  .todo-row .t { font-size: 15px; font-weight: 500; }
+  .todo-row .s { font-size: 13px; color: var(--muted); grid-column: 1; }
+  .todo-row .s.need { color: var(--warn); }
+  .todo-row .go { grid-row: 1 / span 2; grid-column: 2; font-size: 14px; font-weight: 600; color: var(--accent); }
+  .todo-end { border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>First run: four setup cards, each with Skip</h1>
+  <p>A fresh install opens on an empty thread list. Nothing on it says that Jonaki needs an API key and a model before it can answer, so the first message fails. The proposal below asks four questions, one card at a time, on the first launch only. Every card can be skipped, and "Skip all" leaves at any point. Whatever was skipped stays on the thread list as a short to-do until it is done or hidden.</p>
+</header>
+
+<section class="band">
+  <h2>Today, and the first card</h2>
+  <p>The first card is the only one that matters for a first answer: a service, its key and one model. It is two steps on the same card, so the count stays at 1 of 4.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="list-top"><div class="brand"><span class="j">ȷ</span>onaki</div><div class="icon-btn"><i class="ph ph-sliders-horizontal"></i></div></div>
+      <div class="search"><i class="ph ph-magnifying-glass"></i>Search threads</div>
+      <div class="empty">No threads yet</div>
+      <div class="fab"><i class="ph ph-plus"></i>New thread</div>
+    </div>
+    <div class="cell-label">Today's first screen</div>
+    <div class="cell-note">"New thread" opens a chat that cannot answer. The key is three levels down in Settings > Models.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>1</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="under u3"></div><div class="under u2"></div><div class="under u1"></div>
+        <div class="card left3">
+          <h3>Which AI service do you have a key for?</h3>
+          <div class="lede">Jonaki runs on your own key. You pay the service directly.</div>
+          <div class="body">
+            <div class="choice on"><span class="radio"></span><span class="t">OpenRouter</span><span class="s">One key, models from many makers</span></div>
+            <div class="choice"><span class="radio"></span><span class="t">Gemini</span></div>
+            <div class="choice"><span class="radio"></span><span class="t">DeepSeek</span></div>
+            <div class="choice"><span class="radio"></span><span class="t">OpenAI</span></div>
+            <div class="choice"><span class="radio"></span><span class="t">Ollama on this network</span><span class="s">No key, your own computer</span></div>
+            <div class="more-row">7 more services</div>
+          </div>
+          <div class="if-skip">Skip: Jonaki opens, but cannot answer until a model is added.</div>
+          <div class="foot"><div class="text-btn quiet">Skip</div><div class="btn">Next</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 1: the service</div>
+    <div class="cell-note">The five services at the top are a suggestion. "7 more" opens the full list that Settings already has.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>1</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="under u3"></div><div class="under u2"></div><div class="under u1"></div>
+        <div class="card left3">
+          <h3>Your OpenRouter key</h3>
+          <div class="body">
+            <div class="key-field"><span class="mono">sk-or-v1-••••••••3f9a</span><span class="paste">Change</span></div>
+            <div class="key-state"><i class="ph-bold ph-check"></i>Key works <span class="rest mono">· $12.82 left</span></div>
+            <div class="sub-label">Start with</div>
+            <div class="model on"><span class="radio"></span><span class="t">Z.ai: GLM 5.3 Flash</span><span class="s mono">$0.07 in · $0.40 out per 1M</span></div>
+            <div class="model"><span class="radio"></span><span class="t">DeepSeek: DeepSeek V4</span><span class="s mono">$0.28 in · $1.10 out per 1M</span></div>
+            <div class="model"><span class="radio"></span><span class="t">Google: Gemini 3 Flash</span><span class="s mono">$0.30 in · $2.50 out per 1M</span></div>
+            <div class="more-row">All models</div>
+          </div>
+          <div class="if-skip">You can add more models and change this one in Settings.</div>
+          <div class="foot"><div class="text-btn quiet">Back</div><div class="btn">Next</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 1: the key and one model</div>
+    <div class="cell-note">The key is checked as soon as it is pasted. Three low-priced models from the service's own list are offered. Names and prices here are examples.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>1</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="under u3"></div><div class="under u2"></div><div class="under u1"></div>
+        <div class="card left3">
+          <h3>Your OpenRouter key</h3>
+          <div class="body">
+            <div class="key-field empty"><span>Paste the key here</span><span class="paste">Paste</span></div>
+            <div class="key-help">No key yet? Create one at <u>openrouter.ai/keys</u>, copy it, and come back. The key is stored on this phone only.</div>
+          </div>
+          <div class="if-skip">Skip: Jonaki opens, but cannot answer until a model is added.</div>
+          <div class="foot"><div class="text-btn quiet">Back</div><div style="display:flex;gap:2px;align-items:center"><div class="text-btn quiet">Skip</div><div class="btn off">Next</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 1: before a key is pasted</div>
+    <div class="cell-note">"Next" stays grey until a key works. A wrong key says what the service answered, for example "Key not accepted (HTTP 401)".</div>
+  </div>
+</div>
+
+<section class="band">
+  <h2>Cards 2 to 4</h2>
+  <p>These three add something useful but none is needed for a first answer. Each says in one line what skipping costs.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>2</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="under u2"></div><div class="under u1"></div>
+        <div class="card left2">
+          <h3>Should it search the web?</h3>
+          <div class="lede">Search needs a key of its own, from one of these.</div>
+          <div class="body">
+            <div class="choice on"><span class="radio"></span><span class="t">Tavily</span><span class="s">Results with page text</span></div>
+            <div class="choice"><span class="radio"></span><span class="t">Serper</span><span class="s">Google results</span></div>
+            <div class="choice"><span class="radio"></span><span class="t">Exa</span></div>
+            <div class="choice"><span class="radio"></span><span class="t">Ollama</span><span class="s">Uses an Ollama Cloud key</span></div>
+            <div class="key-label" style="padding-top:14px">Tavily key</div>
+            <div class="key-field empty"><span>Paste the key here</span><span class="paste">Paste</span></div>
+          </div>
+          <div class="if-skip">Skip: it answers from what the model knows and from pages you link.</div>
+          <div class="foot"><div class="text-btn quiet">Back</div><div style="display:flex;gap:2px;align-items:center"><div class="text-btn quiet">Skip</div><div class="btn off">Next</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 2: web search</div>
+    <div class="cell-note">One service is enough here. A second one, and their order, stay in Settings > Web.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>3</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="under u1"></div>
+        <div class="card left1">
+          <h3>When should it ask you first?</h3>
+          <div class="lede">Reading and searching never ask. This is about steps that change a file, cost money or send something out.</div>
+          <div class="body">
+            <div class="choice tall on"><span class="radio"></span><span class="t">Ask every time</span><span class="s">A card appears and the run waits for you.</span></div>
+            <div class="choice tall"><span class="radio"></span><span class="t">Ask only for risky steps</span><span class="s">Saving a file in the thread's folder goes ahead. Deleting, paying and sending out still ask.</span></div>
+          </div>
+          <div class="if-skip">Skip keeps "Ask every time". You can change it per thread.</div>
+          <div class="foot"><div class="text-btn quiet">Back</div><div style="display:flex;gap:2px;align-items:center"><div class="text-btn quiet">Skip</div><div class="btn">Next</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 3: approvals</div>
+    <div class="cell-note">The third mode, which never asks, is left out on purpose. It stays in Settings for people who look for it.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>4</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="card left0">
+          <h3>Let it tell you when a task is done?</h3>
+          <div class="lede">A long task keeps running after you leave the app. With notifications on, you see this:</div>
+          <div class="body">
+            <div class="perm">
+              <div class="notif"><span class="dot"></span><span class="app">Jonaki</span><span class="when">now</span><span class="t">Compare three e-readers</span><span class="s">Step 6 · reading help.kobo.com</span></div>
+              <div class="notif"><i class="ph ph-check tick"></i><span class="app">Jonaki</span><span class="when">4 min</span><span class="t">Compare three e-readers</span><span class="s">Done. report.html saved.</span></div>
+            </div>
+            <div class="key-help" style="padding-top:14px">Reminders you ask Jonaki to set arrive the same way.</div>
+          </div>
+          <div class="if-skip">Skip: tasks still run. You see the result when you open the app.</div>
+          <div class="foot"><div class="text-btn quiet">Back</div><div style="display:flex;gap:2px;align-items:center"><div class="text-btn quiet">Skip</div><div class="btn">Allow</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 4: notifications</div>
+    <div class="cell-note">"Allow" opens Android's own permission question. The card shows the two notifications the app really sends.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone light">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>3</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="under u1"></div>
+        <div class="card left1">
+          <h3>When should it ask you first?</h3>
+          <div class="lede">Reading and searching never ask. This is about steps that change a file, cost money or send something out.</div>
+          <div class="body">
+            <div class="choice tall on"><span class="radio"></span><span class="t">Ask every time</span><span class="s">A card appears and the run waits for you.</span></div>
+            <div class="choice tall"><span class="radio"></span><span class="t">Ask only for risky steps</span><span class="s">Saving a file in the thread's folder goes ahead. Deleting, paying and sending out still ask.</span></div>
+          </div>
+          <div class="if-skip">Skip keeps "Ask every time". You can change it per thread.</div>
+          <div class="foot"><div class="text-btn quiet">Back</div><div style="display:flex;gap:2px;align-items:center"><div class="text-btn quiet">Skip</div><div class="btn">Next</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 3 in the light theme</div>
+    <div class="cell-note">Same layout. The card is white on the leaf-tinted background.</div>
+  </div>
+</div>
+
+<section class="band">
+  <h2>After the cards</h2>
+  <p>There is no "all set" screen. The last card closes into a new thread with the cursor in the message field. If cards were skipped, the thread list keeps them as a to-do.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">New thread</div><div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div></div>
+      <div class="transcript"></div>
+      <div class="strip"><div class="pill" style="flex:1"><i class="ph ph-cpu"></i><span>GLM 5.3 Flash</span></div><div class="pill"><i class="ph ph-globe-simple"></i>Web</div></div>
+      <div class="composer"><div class="plus"><i class="ph ph-plus"></i></div><div class="field"><span class="caret"></span>Message</div><div class="send off"><i class="ph-bold ph-arrow-up"></i></div></div>
+    </div>
+    <div class="cell-label">Everything set</div>
+    <div class="cell-note">The model and "Web" in the strip are the two things the cards just set, so the result is visible without a summary screen.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="list-top"><div class="brand"><span class="j">ȷ</span>onaki</div><div class="icon-btn"><i class="ph ph-sliders-horizontal"></i></div></div>
+      <div class="search"><i class="ph ph-magnifying-glass"></i>Search threads</div>
+      <div class="todo">
+        <div class="todo-head"><span class="t">Left to set up</span><span class="text-btn quiet" style="padding-right:0">Hide</span></div>
+        <div class="todo-row"><span class="t">Model</span><span class="s need">Needed before Jonaki can answer</span><span class="go">Add</span></div>
+        <div class="todo-row"><span class="t">Web search</span><span class="s">Off, no search key</span><span class="go">Add</span></div>
+        <div class="todo-row"><span class="t">Notifications</span><span class="s">Off</span><span class="go">Allow</span></div>
+        <div class="todo-end"></div>
+      </div>
+      <div class="empty">No threads yet</div>
+      <div class="fab"><i class="ph ph-plus"></i>New thread</div>
+    </div>
+    <div class="cell-label">After "Skip all"</div>
+    <div class="cell-note">Each row opens its card again. A row leaves when it is done. "Hide" removes the list for good; Settings still has everything.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone dark">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">New thread</div><div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div></div>
+      <div class="transcript"></div>
+      <div class="blocked">
+        <div class="t">No model yet</div>
+        <div class="s">Jonaki needs a service key and one model before it can answer.</div>
+        <div class="acts"><div class="text-btn">Add a model</div></div>
+      </div>
+    </div>
+    <div class="cell-label">A thread opened without a model</div>
+    <div class="cell-note">The message field is replaced by the reason and the one button that fixes it, in place of a send that fails.</div>
+  </div>
+
+  <div class="cell">
+    <div class="phone light">
+      <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+      <div class="deck-top"><div class="count"><b>1</b> of 4</div><div class="text-btn quiet">Skip all</div></div>
+      <div class="deck">
+        <div class="under u3"></div><div class="under u2"></div><div class="under u1"></div>
+        <div class="card left3">
+          <h3>Your OpenRouter key</h3>
+          <div class="body">
+            <div class="key-field"><span class="mono">sk-or-v1-••••••••3f9a</span><span class="paste">Change</span></div>
+            <div class="key-state"><i class="ph-bold ph-check"></i>Key works <span class="rest mono">· $12.82 left</span></div>
+            <div class="sub-label">Start with</div>
+            <div class="model on"><span class="radio"></span><span class="t">Z.ai: GLM 5.3 Flash</span><span class="s mono">$0.07 in · $0.40 out per 1M</span></div>
+            <div class="model"><span class="radio"></span><span class="t">DeepSeek: DeepSeek V4</span><span class="s mono">$0.28 in · $1.10 out per 1M</span></div>
+            <div class="model"><span class="radio"></span><span class="t">Google: Gemini 3 Flash</span><span class="s mono">$0.30 in · $2.50 out per 1M</span></div>
+            <div class="more-row">All models</div>
+          </div>
+          <div class="if-skip">You can add more models and change this one in Settings.</div>
+          <div class="foot"><div class="text-btn quiet">Back</div><div class="btn">Next</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cell-label">Card 1 in the light theme</div>
+    <div class="cell-note">The edges under the card show three cards still to come.</div>
+  </div>
+</div>
+
+<div class="notes">
+  <div>
+    <h3>Why four cards and not more</h3>
+    <p>A model is the only thing Jonaki cannot work without. Web search, approvals and notifications are the three choices that change what the first long task feels like. Pictures, video, subagents, memory and MCP servers all work or stay off without a decision, so they stay in Settings.</p>
+    <h3>What the cards reuse</h3>
+    <p>Each card writes the same settings that Settings already writes: the service list, the key store, the model picker's list, the search order, the approval mode and Android's notification permission. No new kind of data is stored, apart from one flag that says the cards were shown.</p>
+  </div>
+  <div>
+    <h3>Template patterns kept out</h3>
+    <p>There is no welcome screen, no feature tour, no illustration and no "You're all set" page. Choices are plain rows with a radio button, not a grid of icon tiles. The count "1 of 4" is the only progress mark, and the card edges underneath show the same thing physically. The only glow on these screens is the firefly dot of the running task in the notification preview, which is where the app uses it.</p>
+    <h3>What I would like you to decide</h3>
+    <p><b>The services at the top of card 1.</b> I put OpenRouter, Gemini, DeepSeek, OpenAI and Ollama on this network first. <b>The on-phone model</b> could be a sixth row, but it needs a large download, so I left it under "7 more". <b>Card 3</b> offers two of the three approval modes.</p>
+  </div>
+</div>
+</body>
+</html>
