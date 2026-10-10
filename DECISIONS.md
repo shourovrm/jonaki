@@ -2239,3 +2239,16 @@ showed model and prompt, and after Allow once the thumbnail firefly-leaf.jpg
 appeared with Save and Share in 7.8 s; the thread's cost rose to $0.015.
 Not checked: Save, Share, the full-size view, a failed or blocked request. OpenRouter's Batch API (half price, answers within 24
 hours) was looked at and left out by user ruling.
+
+## D-161 · 2026-10-10 · A wake lock while a run is going — proposed
+New permission WAKE_LOCK, approved by the user in chat on 2026-10-10; Android
+grants it without a prompt. AgentService kept the process alive but not the
+processor, so with the screen off the phone could sleep in the middle of a
+run: coroutine timers stop and connections die. Seen on the phone: one
+message's run took 22 min 38 s and its subagent failed, and another thread
+shows "The connection to OpenRouter broke: timeout"; that these came from
+sleep is inferred, not shown. The service now holds one partial wake lock
+from its start to its end. Each new run renews it, and Android releases it
+by itself after 30 minutes, so a run that never ends cannot keep the phone
+awake for good. A scheduled task's run is covered by its worker (D-100).
+Outcome: compiles; the locked-phone test is still to do.
