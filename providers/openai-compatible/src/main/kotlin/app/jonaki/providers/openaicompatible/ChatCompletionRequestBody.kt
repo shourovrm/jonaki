@@ -18,10 +18,10 @@ object ChatCompletionRequestBody {
     fun build(
         request: ChatRequest,
         askForCost: Boolean = false,
-        routing: OpenRouterRouting = OpenRouterRouting.AUTOMATIC,
+        route: OpenRouterRoute = OpenRouterRoute.Automatic,
         thinkingField: ThinkingField = ThinkingField.NONE,
     ): JsonObject = buildJsonObject {
-        routing.providerBlock()?.let { block -> put("provider", block) }
+        route.providerBlock()?.let { block -> put("provider", block) }
         put("model", request.model)
         put("stream", true)
         // Without this the stream carries no token counts.

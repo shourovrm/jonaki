@@ -53,6 +53,7 @@ import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
+import app.jonaki.core.modelcatalog.OpenRouterEndpoints
 import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.ModelUsageRow
@@ -90,6 +91,7 @@ import app.jonaki.feature.settings.LocalModelsSummaryUi
 import app.jonaki.feature.settings.McpServerUi
 import app.jonaki.feature.settings.RoutingUi
 import app.jonaki.feature.settings.SearchServiceRow
+import app.jonaki.feature.settings.ProviderOptionUi
 import app.jonaki.feature.settings.ServiceModelUi
 import app.jonaki.feature.settings.SettingsActions
 import app.jonaki.feature.settings.SettingsHomeScreen
@@ -110,6 +112,7 @@ import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import app.jonaki.run.ChatProviders
 import app.jonaki.settings.ChatModels
 import app.jonaki.settings.ChatService
+import app.jonaki.settings.PinnedProviders
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SettingsSnapshot
@@ -118,6 +121,9 @@ import app.jonaki.settings.ToolGroup
 import app.jonaki.settings.ToolPicker
 import app.jonaki.tools.sharefile.DestinationResult
 import java.io.File
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
+import okhttp3.OkHttpClient
 import java.time.LocalDate
 import java.time.ZoneId
 import androidx.compose.foundation.ScrollState
@@ -1244,7 +1250,16 @@ private fun SettingsRoute(
         onModelRoutingChange = { modelKey, routing ->
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
         },
-        onModelRemove = { modelKey -> settings.updateChatModels { models -> models.removeModel(modelKey) } },
+        onModelRemove = { modelKey ->
+            settings.updateChatModels { models -> models.removeModel(modelKey) }
+            settings.update { current -> current.copy(routing = current.routing.withPinned(modelKey, null)) }
+        },
+        onModelProvidersLoad = { modelKey -> loadModelProviders(modelKey) },
+        onModelProvidersChange = { modelKey, tags, allowFallbacks ->
+            settings.update { current ->
+                current.copy(routing = current.routing.withPinned(modelKey, PinnedProviders(tags, allowFallbacks)))
+            }
+        },
         onSubagentModelChange = { agentType, modelKey ->
             settings.update { current ->
                 val choices = if (modelKey == null) current.subagentModels - agentType else current.subagentModels + (agentType to modelKey)
@@ -1367,6 +1382,8 @@ private fun serviceCards(
                     cachedInputPricePerMillion = info?.cachedInputUsdPerMillion,
                     isDefault = key == chatModels.defaultModelKey,
                     routingOverride = if (isOpenRouter) snapshot.routing.overrides[key]?.let(::routingUiOf) else null,
+                    pinnedProviders = if (isOpenRouter) snapshot.routing.pinned[key]?.tags.orEmpty() else emptyList(),
+                    allowFallbacks = snapshot.routing.pinned[key]?.allowFallbacks ?: true,
                     thinking = if (ThinkingSupport.isSupported(key, info)) thinkingChoiceOf(snapshot.thinkingLevels[key]) else null,
                 )
             },
@@ -1467,6 +1484,31 @@ private fun displayNameOf(service: SearchService): String = when (service) {
     SearchService.OLLAMA -> "Ollama"
     SearchService.EXA -> "Exa"
 }
+
+/** The providers of an OpenRouter model for the Providers sheet, cheapest first. */
+private val providerListClient = OkHttpClient()
+
+private suspend fun loadModelProviders(modelKey: String): Result<List<ProviderOptionUi>> =
+    try {
+        val endpoints = OpenRouterEndpoints.fetch(providerListClient, ModelKey.modelOf(modelKey))
+        Result.success(
+            endpoints.map { endpoint ->
+                ProviderOptionUi(
+                    name = endpoint.providerName,
+                    tag = endpoint.tag,
+                    variantTag = endpoint.variantTag,
+                    inputPricePerMillion = endpoint.inputUsdPerMillion,
+                    outputPricePerMillion = endpoint.outputUsdPerMillion,
+                    quantization = endpoint.quantization,
+                )
+            },
+        )
+    } catch (cancelled: CancellationException) {
+        // A closed sheet cancels its load; that is not a failure to show.
+        throw cancelled
+    } catch (failure: IOException) {
+        Result.failure(failure)
+    }
 
 private fun routingOf(routing: RoutingUi): OpenRouterRouting = when (routing) {
     RoutingUi.PRIVATE_THEN_CHEAPEST -> OpenRouterRouting.PRIVATE_THEN_CHEAPEST

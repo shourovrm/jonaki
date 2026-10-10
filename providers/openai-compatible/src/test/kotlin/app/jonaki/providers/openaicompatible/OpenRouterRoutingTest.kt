@@ -40,13 +40,13 @@ class OpenRouterRoutingTest {
         server.shutdown()
     }
 
-    private fun provider(routing: OpenRouterRouting, preset: ProviderPreset = ProviderPresets.openRouter) =
+    private fun provider(route: OpenRouterRoute, preset: ProviderPreset = ProviderPresets.openRouter) =
         OpenAiCompatibleProvider(
             preset = preset,
             apiKey = "k",
             httpClient = OkHttpClient(),
             baseUrl = server.url("/api/v1").toString(),
-            openRouterRouting = routing,
+            openRouterRoute = route,
             onRoutingFallback = { fallbacks += 1 },
         )
 
@@ -59,7 +59,7 @@ class OpenRouterRoutingTest {
     fun privateThenCheapestDeniesDataCollectionAndSortsByPrice() = runBlocking {
         server.enqueue(MockResponse().setBody(okStream))
 
-        provider(OpenRouterRouting.PRIVATE_THEN_CHEAPEST).stream(request).toList()
+        provider(OpenRouterRoute(OpenRouterRouting.PRIVATE_THEN_CHEAPEST)).stream(request).toList()
 
         assertEquals(
             Json.parseToJsonElement("""{"data_collection":"deny","sort":"price"}"""),
@@ -71,7 +71,7 @@ class OpenRouterRoutingTest {
     fun cheapestOnlySortsByPrice() = runBlocking {
         server.enqueue(MockResponse().setBody(okStream))
 
-        provider(OpenRouterRouting.CHEAPEST).stream(request).toList()
+        provider(OpenRouterRoute(OpenRouterRouting.CHEAPEST)).stream(request).toList()
 
         assertEquals(Json.parseToJsonElement("""{"sort":"price"}"""), bodyOf().getValue("provider"))
     }
@@ -80,7 +80,7 @@ class OpenRouterRoutingTest {
     fun automaticSendsNoProviderBlock() = runBlocking {
         server.enqueue(MockResponse().setBody(okStream))
 
-        provider(OpenRouterRouting.AUTOMATIC).stream(request).toList()
+        provider(OpenRouterRoute(OpenRouterRouting.AUTOMATIC)).stream(request).toList()
 
         assertFalse(bodyOf().containsKey("provider"))
     }
@@ -89,7 +89,7 @@ class OpenRouterRoutingTest {
     fun otherServicesNeverGetAProviderBlock() = runBlocking {
         server.enqueue(MockResponse().setBody(okStream))
 
-        provider(OpenRouterRouting.PRIVATE_THEN_CHEAPEST, preset = ProviderPresets.deepSeek).stream(request).toList()
+        provider(OpenRouterRoute(OpenRouterRouting.PRIVATE_THEN_CHEAPEST), preset = ProviderPresets.deepSeek).stream(request).toList()
 
         assertFalse(bodyOf().containsKey("provider"))
     }
@@ -110,7 +110,7 @@ class OpenRouterRoutingTest {
         server.enqueue(MockResponse().setResponseCode(404).setBody(recordedDataPolicyError))
         server.enqueue(MockResponse().setBody(okStream))
 
-        val events = provider(OpenRouterRouting.PRIVATE_THEN_CHEAPEST).stream(request).toList()
+        val events = provider(OpenRouterRoute(OpenRouterRouting.PRIVATE_THEN_CHEAPEST)).stream(request).toList()
 
         assertEquals(StreamEvent.TextDelta("Hi"), events.first())
         assertEquals(1, fallbacks)
@@ -121,10 +121,78 @@ class OpenRouterRoutingTest {
     fun cheapestRoutingDoesNotRetryADataPolicyError() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(404).setBody(recordedDataPolicyError))
 
-        val events = provider(OpenRouterRouting.CHEAPEST).stream(request).toList()
+        val events = provider(OpenRouterRoute(OpenRouterRouting.CHEAPEST)).stream(request).toList()
 
         assertTrue(events.single() is StreamEvent.Failed)
         assertEquals(0, fallbacks)
         assertEquals(1, server.requestCount)
+    }
+
+    private val pinned = OpenRouterRoute(
+        routing = OpenRouterRouting.PRIVATE_THEN_CHEAPEST,
+        pinnedProviders = listOf("deepinfra/fp4", "fireworks"),
+        allowFallbacks = true,
+    )
+
+    @Test
+    fun pinnedProvidersSendOnlyOrderAndAllowFallbacks() = runBlocking {
+        server.enqueue(MockResponse().setBody(okStream))
+
+        provider(pinned).stream(request).toList()
+
+        assertEquals(
+            Json.parseToJsonElement("""{"order":["deepinfra/fp4","fireworks"],"allow_fallbacks":true}"""),
+            bodyOf().getValue("provider"),
+        )
+    }
+
+    @Test
+    fun pinnedProvidersWithFallbacksOffSendFalse() {
+        val block = pinned.copy(allowFallbacks = false).providerBlock()
+
+        assertEquals(Json.parseToJsonElement("""{"order":["deepinfra/fp4","fireworks"],"allow_fallbacks":false}"""), block)
+    }
+
+    @Test
+    fun anEmptyPinnedListFallsBackToTheRoutingChoice() {
+        assertEquals(
+            Json.parseToJsonElement("""{"data_collection":"deny","sort":"price"}"""),
+            OpenRouterRoute(OpenRouterRouting.PRIVATE_THEN_CHEAPEST).providerBlock(),
+        )
+        assertEquals(null, OpenRouterRoute(OpenRouterRouting.AUTOMATIC).providerBlock())
+    }
+
+    @Test
+    fun pinnedProvidersNeverRetryAsCheapest() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(404).setBody(recordedDataPolicyError))
+
+        val events = provider(pinned).stream(request).toList()
+
+        assertTrue(events.single() is StreamEvent.Failed)
+        assertEquals(0, fallbacks)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun noChosenProviderAvailableIsAReadableFailureThatNamesThem() = runBlocking {
+        val noEndpoints = """{"error":{"message":"No allowed providers are available for the selected model.","code":404}}"""
+        server.enqueue(MockResponse().setResponseCode(404).setBody(noEndpoints))
+
+        val events = provider(pinned.copy(allowFallbacks = false)).stream(request).toList()
+
+        val failure = events.single() as StreamEvent.Failed
+        assertTrue(failure.message, failure.message.contains("None of your chosen providers (deepinfra/fp4, fireworks)"))
+        assertTrue(failure.message, failure.message.contains("No allowed providers are available"))
+        assertFalse(failure.retryable)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun otherServicesIgnoreAPinnedList() = runBlocking {
+        server.enqueue(MockResponse().setBody(okStream))
+
+        provider(pinned, preset = ProviderPresets.deepSeek).stream(request).toList()
+
+        assertFalse(bodyOf().containsKey("provider"))
     }
 }

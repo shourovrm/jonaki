@@ -247,7 +247,9 @@ private fun ModelRow(model: ServiceModelUi, card: ChatServiceCardUi, actions: Se
             }
             ThinkingLine(model.thinking)
             val label = routingLabelFor(model, card.routing)
-            if (label != null) {
+            if (model.pinnedProviders.isNotEmpty()) {
+                PinnedProvidersLine(model.pinnedProviders)
+            } else if (label != null) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
                     Icon(routingIcon(label), contentDescription = null, tint = JonakiTheme.colors.live, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
@@ -262,6 +264,24 @@ private fun ModelRow(model: ServiceModelUi, card: ChatServiceCardUi, actions: Se
             }
         }
         ModelMenu(model, card, actions)
+    }
+}
+
+/** The first chosen provider and how many more follow, in the place a routing override is shown. */
+@Composable
+private fun PinnedProvidersLine(tags: List<String>) {
+    val first = providerOfTag(tags.first())
+    val text = if (tags.size == 1) first else stringResource(R.string.settings_providers_label, first, tags.size - 1)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+        Icon(JonakiIcons.PushPin, contentDescription = null, tint = JonakiTheme.colors.live, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.labelMedium,
+            color = JonakiTheme.colors.live,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -316,6 +336,10 @@ private fun PriceText(labelRes: Int, usdPerMillion: Double?) {
 @Composable
 private fun ModelMenu(model: ServiceModelUi, card: ChatServiceCardUi, actions: SettingsActions) {
     var open by remember { mutableStateOf(false) }
+    var showProviders by remember { mutableStateOf(false) }
+    if (showProviders) {
+        ModelProvidersSheet(model, actions, onDismiss = { showProviders = false })
+    }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.settings_model_options, model.name))
@@ -356,6 +380,14 @@ private fun ModelMenu(model: ServiceModelUi, card: ChatServiceCardUi, actions: S
                         },
                     )
                 }
+                RoutingMenuItem(
+                    text = stringResource(R.string.settings_model_providers),
+                    checked = model.pinnedProviders.isNotEmpty(),
+                    onClick = {
+                        open = false
+                        showProviders = true
+                    },
+                )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
             val thinking = model.thinking

@@ -131,6 +131,7 @@ class AppSettings(
             routing = RoutingSettings(
                 openRouter = enumOrDefault(preferences.getString(OPENROUTER_ROUTING, null), OpenRouterRouting.PRIVATE_THEN_CHEAPEST),
                 overrides = RoutingSettings.overridesFromText(preferences.getString(ROUTING_OVERRIDES, "").orEmpty()),
+                pinned = RoutingSettings.pinnedFromText(preferences.getString(ROUTING_PINNED_PROVIDERS, "").orEmpty()),
             ),
             searchOrder = searchOrder,
             webSearchOffInNewThreads = preferences.getBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, false),
@@ -250,6 +251,7 @@ class AppSettings(
         editor.putString(DEFAULT_MODEL_KEY, chatModels.defaultModelKey)
         editor.putString(OPENROUTER_ROUTING, snapshot.routing.openRouter.name)
         editor.putString(ROUTING_OVERRIDES, RoutingSettings.overridesToText(snapshot.routing.overrides))
+        editor.putString(ROUTING_PINNED_PROVIDERS, RoutingSettings.pinnedToText(snapshot.routing.pinned))
         editor.putString(SEARCH_ORDER, snapshot.searchOrder.joinToString(",") { it.name })
         editor.putBoolean(WEB_SEARCH_OFF_IN_NEW_THREADS, snapshot.webSearchOffInNewThreads)
         editor.putString(THEME, snapshot.theme.name)
@@ -294,6 +296,7 @@ class AppSettings(
         const val DEFAULT_MODEL_KEY = "default_model_key"
         const val OPENROUTER_ROUTING = "openrouter_routing"
         const val ROUTING_OVERRIDES = "routing_overrides"
+        const val ROUTING_PINNED_PROVIDERS = "routing_pinned_providers"
 
         // Settings of version 0.1.0, read once to migrate.
         const val LEGACY_CHAT_SERVICE = "chat_service"
