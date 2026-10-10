@@ -3,6 +3,7 @@ package app.jonaki.feature.chat
 import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -142,6 +143,9 @@ private fun lockedDownSvgWebView(context: Context, allowsZoom: Boolean): View {
         useWideViewPort = true
         loadWithOverviewMode = true
     }
+    // Without this Compose measures the view as "wrap content", and a WebView measured that way
+    // lays its page out with no height, so the picture (height 100%) is drawn zero pixels tall.
+    webView.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     webView.webViewClient = BlockingSvgClient
     webView.setBackgroundColor(AndroidColor.TRANSPARENT)
     webView.isVerticalScrollBarEnabled = false
