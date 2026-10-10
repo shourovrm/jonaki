@@ -10,6 +10,8 @@ import app.jonaki.feature.settings.ApprovalRuleUi
 import app.jonaki.feature.settings.ApprovalRuleChoiceUi
 import app.jonaki.settings.JevStrictness
 import app.jonaki.settings.ApprovalRules
+import app.jonaki.update.ApkInstaller
+import app.jonaki.update.AppUpdateController
 import app.jonaki.core.agent.ApprovalRule
 import androidx.compose.runtime.produceState
 import app.jonaki.core.modelcatalog.ThinkingSupport
@@ -1381,6 +1383,11 @@ private fun SettingsRoute(
         readPermissionRows(context, snapshot.refusedPermissions)
     }
     val appVersion = remember { installedVersionName(context) }
+    val updateScope = rememberCoroutineScope()
+    val updateController = remember {
+        AppUpdateController(updateScope, application.httpClient, appVersion, ApkInstaller(application))
+    }
+    val updateState by updateController.state.collectAsState()
     val jevCostThisMonth by remember {
         application.database.messageDao().observeModelCostSince(GuardRecorder.JEV_MODEL_KEY, startOfThisMonthMillis())
     }.collectAsState(initial = null)
@@ -1481,6 +1488,7 @@ private fun SettingsRoute(
         customSubagents = snapshot.customSubagents.map { subagent -> CustomSubagentRowUi(subagent.name, subagent.description) },
         permissions = permissionRows,
         appVersion = appVersion,
+        update = updateState,
         toolGroupsOn = snapshot.enabledToolGroups.size,
         toolGroupCount = ToolGroup.entries.size,
         factCount = globalFacts.size,
@@ -1665,6 +1673,8 @@ private fun SettingsRoute(
             }
         },
         onOpenGitHub = { openGitHub(context) },
+        onCheckForUpdate = updateController::check,
+        onInstallUpdate = updateController::downloadOrInstall,
     )
     if (page == null) {
         SettingsHomeScreen(

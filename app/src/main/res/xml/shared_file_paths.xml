@@ -6,4 +6,6 @@
     <files-path name="projects" path="projects/" />
     <!-- The system camera app writes the composer's photo here (D-053). -->
     <cache-path name="camera" path="camera/" />
+    <!-- The downloaded app update, handed to Android's installer (Settings > About). -->
+    <cache-path name="update" path="update/" />
 </paths>

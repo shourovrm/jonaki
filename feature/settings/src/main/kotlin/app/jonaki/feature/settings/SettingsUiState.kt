@@ -65,6 +65,8 @@ data class SettingsUiState(
     val permissions: List<PermissionRowUi> = emptyList(),
     /** The installed version name, for example "0.8.0". */
     val appVersion: String = "",
+    /** The About page's update control (checked only when the user taps). */
+    val update: UpdateUiState = UpdateUiState.Idle,
     /** Tool groups switched on, and all of them, for the first page's "12 of 12 tools on" (D-128). */
     val toolGroupsOn: Int = 0,
     val toolGroupCount: Int = 0,
@@ -301,6 +303,10 @@ class SettingsActions(
     val onPermissionTap: (PermissionRow) -> Unit = {},
     /** Opens the project's GitHub page in the browser. */
     val onOpenGitHub: () -> Unit = {},
+    /** Asks GitHub for the latest release. */
+    val onCheckForUpdate: () -> Unit = {},
+    /** Downloads the newer APK if it is not on the phone yet, then opens Android's installer. */
+    val onInstallUpdate: () -> Unit = {},
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

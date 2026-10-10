@@ -98,7 +98,13 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
                 SettingsPage.FILES_SCHEDULE -> FilesAndSchedulePage(state, actions)
                 SettingsPage.THEME -> ThemePage(state, actions)
                 SettingsPage.PERMISSIONS -> PermissionsSection(state.permissions, actions.onPermissionTap)
-                SettingsPage.ABOUT -> AboutSection(state.appVersion, actions.onOpenGitHub)
+                SettingsPage.ABOUT -> AboutSection(
+                    state.appVersion,
+                    actions.onOpenGitHub,
+                    state.update,
+                    actions.onCheckForUpdate,
+                    actions.onInstallUpdate,
+                )
             }
         }
     }
