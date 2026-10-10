@@ -171,6 +171,8 @@ fun ChatScreen(
      * more than once; the app keeps the first call's time for the request log (D-132).
      */
     onAnswerDrawn: (messageId: String) -> Unit = {},
+    /** The picture chip above the field was tapped; the app decides whether the mode may change. */
+    onPictureModeChange: (isOn: Boolean) -> Unit = {},
     /** The app keeps the list's position while a file viewer opened from the chat is in front. */
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -234,9 +236,14 @@ fun ChatScreen(
                             )
                         }
                     }
+                    val pictureMode = state.pictureMode
+                    if (pictureMode != null) {
+                        PictureModeRow(pictureMode, onPictureModeChange)
+                    }
                     Composer(
                         draft = state.draft,
                         canSend = state.draft.isNotBlank() || state.attachments.isNotEmpty(),
+                        pictureModeOn = pictureMode?.isOn == true,
                         isRunning = state.isRunning,
                         onDraftChange = onDraftChange,
                         onSend = onSend,
@@ -723,6 +730,8 @@ private fun Composer(
     onTakePhoto: () -> Unit,
     onPickPhotos: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Picture mode is on: the field asks for a description and Send shows the picture icon. */
+    pictureModeOn: Boolean = false,
 ) {
     // Local to the composer, like the sheet it opens: nothing outside needs to know it is open.
     var addSheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -754,7 +763,10 @@ private fun Composer(
                     fieldValue = changed
                     onDraftChange(changed.text)
                 },
-                placeholder = { Text(stringResource(R.string.chat_message_hint)) },
+                placeholder = {
+                    val hint = if (pictureModeOn) R.string.chat_picture_hint else R.string.chat_message_hint
+                    Text(stringResource(hint))
+                },
                 maxLines = 6,
                 shape = RoundedCornerShape(26.dp),
                 colors = TextFieldDefaults.colors(
@@ -779,7 +791,11 @@ private fun Composer(
                 ),
                 modifier = Modifier.size(52.dp),
             ) {
-                Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
+                if (pictureModeOn) {
+                    Icon(JonakiIcons.Image, contentDescription = stringResource(R.string.chat_picture_send))
+                } else {
+                    Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
+                }
             }
         }
     }

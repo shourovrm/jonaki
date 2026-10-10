@@ -102,4 +102,45 @@ class HistoryMapperTest {
         assertEquals(Role.TOOL, history.last().role)
         assertEquals("a", history.last().toolCallId)
     }
+
+    // The rows a picture-mode send saves: the user's text, one assistant row that holds the
+    // generate_image call and no text, and the tool's result. No model answer follows.
+    private fun pictureModeRows(resultText: String) = listOf(
+        row("USER", "a blue door at dawn"),
+        row("ASSISTANT", "", toolCalls = listOf(ToolCall("call-1", "generate_image", """{"prompt":"a blue door at dawn"}"""))),
+        row("TOOL", resultText, toolCallId = "call-1"),
+    )
+
+    @Test
+    fun aPictureModeSendMapsToAUserMessageACallAndItsResult() {
+        val history = HistoryMapper.toHistory(pictureModeRows("Image saved: images/blue-door.jpg"))
+
+        assertEquals(listOf(Role.USER, Role.ASSISTANT, Role.TOOL), history.map { it.role })
+        assertEquals("", history[1].text)
+        assertEquals("generate_image", history[1].toolCalls.single().toolName)
+        assertEquals("""{"prompt":"a blue door at dawn"}""", history[1].toolCalls.single().argumentsJson)
+        assertEquals("call-1", history[2].toolCallId)
+        assertEquals("Image saved: images/blue-door.jpg", history[2].text)
+    }
+
+    @Test
+    fun anOrdinaryMessageAfterAPictureModeSendFollowsTheToolResultDirectly() {
+        val rows = pictureModeRows("Image saved: images/blue-door.jpg") + row("USER", "make the door red")
+
+        val history = HistoryMapper.toHistory(rows)
+
+        // No stopped result is added: the call has its result, so providers get call, result, user.
+        assertEquals(listOf(Role.USER, Role.ASSISTANT, Role.TOOL, Role.USER), history.map { it.role })
+        assertEquals("make the door red", history.last().text)
+    }
+
+    @Test
+    fun aStoppedPictureModeSendGetsAStoppedResultBeforeTheNextMessage() {
+        val stoppedRows = pictureModeRows("").dropLast(1) + row("USER", "try again")
+
+        val history = HistoryMapper.toHistory(stoppedRows)
+
+        assertEquals(listOf(Role.USER, Role.ASSISTANT, Role.TOOL, Role.USER), history.map { it.role })
+        assertEquals(HistoryMapper.STOPPED_TOOL_RESULT, history[2].text)
+    }
 }

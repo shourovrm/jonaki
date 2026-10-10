@@ -16,4 +16,8 @@
         <item quantity="one">%d টি রেফারেন্স ছবি</item>
         <item quantity="other">%d টি রেফারেন্স ছবি</item>
     </plurals>
+    <string name="chat_picture_mode">ছবি</string>
+    <string name="chat_picture_hint">ছবির বর্ণনা লিখুন</string>
+    <string name="chat_picture_model">মডেল: %1$s</string>
+    <string name="chat_picture_send">ছবি বানান</string>
 </resources>

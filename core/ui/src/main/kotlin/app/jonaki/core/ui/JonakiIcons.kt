@@ -157,6 +157,15 @@ object JonakiIcons {
         )
     }
 
+    /** Material "image": picture mode in the message box. */
+    val Image: ImageVector by lazy {
+        icon(
+            "Image",
+            "M21,19V5c0,-1.1 -0.9,-2 -2,-2H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2z" +
+                "M8.5,13.5l2.5,3.01L14.5,12l4.5,6H5l3.5,-4.5z",
+        )
+    }
+
     /** Material "language" (a globe): the web search pill in the status strip. */
     val Globe: ImageVector by lazy {
         icon(

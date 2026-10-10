@@ -16,4 +16,8 @@
         <item quantity="one">%d reference picture</item>
         <item quantity="other">%d reference pictures</item>
     </plurals>
+    <string name="chat_picture_mode">Picture</string>
+    <string name="chat_picture_hint">Describe a picture</string>
+    <string name="chat_picture_model">Model: %1$s</string>
+    <string name="chat_picture_send">Make picture</string>
 </resources>
