@@ -2331,3 +2331,18 @@ Interactions API first): the imageConfig.aspectRatio field, which suggested
 ids exist, and the real answer and error shapes. Outcome: unit tests and
 the release build pass; installed on the phone; no screen seen and no
 Gemini request made.
+
+## D-167 · 2026-10-10 · A thread's own image model — proposed
+User request. The "Model for this thread" sheet has a second section,
+"Image model", shown when at least one image model is added. It lists the
+added image models with service and price; the starred one carries
+"Default". A tap sets the image model for that thread only; tapping the
+starred one returns the thread to following the default. generate_image
+reads its default at every call, so a choice made during a run applies to
+the next picture, and the approval card names the model really used. A
+removed model falls back to the starred default. Choices are kept in
+files/thread-image-models.json (no Room change), cleared with the thread;
+an incognito thread's choice stays in memory. Known gap: an earlier step
+whose call named no model shows the thread's present model on its line.
+Outcome: unit tests and the release build pass; installed; not seen on a
+phone.
