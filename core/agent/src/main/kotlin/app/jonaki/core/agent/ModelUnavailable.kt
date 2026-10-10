@@ -5,7 +5,7 @@ package app.jonaki.core.agent
  * kind. Only a withdrawn model justifies running the request on another one;
  * a bad key, a quota or a lost network connection would fail there as well.
  */
-internal object ModelUnavailable {
+object ModelUnavailable {
     /** The providers write "<service> answered HTTP <status>: <message>"; see their error mapping. */
     private val statusPattern = Regex("""HTTP (404|400)\b""")
 

@@ -17,6 +17,7 @@ import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ChatService
+import app.jonaki.core.agent.ModelUnavailable
 import app.jonaki.settings.SecretStore
 import java.util.UUID
 import kotlinx.coroutines.withTimeoutOrNull
@@ -65,7 +66,23 @@ class BackgroundModel(
         maxOutputTokens: Int,
     ): BackgroundAnswer {
         val modelKey = modelFor(threadModelKey) ?: return BackgroundAnswer.Failed("no chat model is set up")
-        return completeOn(threadId, modelKey, systemPrompt, listOf(Message(Role.USER, userText)), maxOutputTokens)
+        val messages = listOf(Message(Role.USER, userText))
+        val answer = completeOn(threadId, modelKey, systemPrompt, messages, maxOutputTokens)
+        val fallbackModelKey = fallbackFor(answer, modelKey, threadModelKey) ?: return answer
+        return completeOn(threadId, fallbackModelKey, systemPrompt, messages, maxOutputTokens)
+    }
+
+    /**
+     * The thread's own model when [answer] says the cheapest model has been
+     * withdrawn by its service; null otherwise. Without this, titles,
+     * summaries and memory extraction all fail for as long as the withdrawn
+     * model stays in the user's list.
+     */
+    private fun fallbackFor(answer: BackgroundAnswer, modelKey: String, threadModelKey: String?): String? {
+        if (answer !is BackgroundAnswer.Failed || threadModelKey == modelKey) {
+            return null
+        }
+        return threadModelKey?.takeIf { ModelUnavailable.isUnavailable(answer.message) }
     }
 
     /**
