@@ -116,6 +116,16 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE threadId = :threadId ORDER BY position")
     suspend fun listThread(threadId: String): List<MessageEntity>
 
+    /**
+     * The texts of the user's messages and tool results that contain [needle],
+     * ignoring ASCII case. The caller checks that the match is a whole address.
+     */
+    @Query(
+        "SELECT text FROM messages WHERE threadId = :threadId AND role IN ('USER', 'TOOL') " +
+            "AND instr(lower(text), lower(:needle)) > 0",
+    )
+    suspend fun textsOfUserAndToolMessagesContaining(threadId: String, needle: String): List<String>
+
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM messages WHERE threadId = :threadId")
     suspend fun nextPosition(threadId: String): Long
 

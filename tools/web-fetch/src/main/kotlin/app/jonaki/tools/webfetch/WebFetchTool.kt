@@ -71,6 +71,9 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
 
     override val sideEffect: SideEffect = SideEffect.READ_ONLY
 
+    override fun contactedAddressOf(arguments: JsonObject): String? =
+        (arguments["url"] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { address -> address.isNotEmpty() }
+
     override fun outsideContentSourceOf(arguments: JsonObject): String =
         OutsideSources.hostOf((arguments["url"] as? JsonPrimitive)?.contentOrNull)
     override val requiredCapabilities: Set<Capability> = emptySet()

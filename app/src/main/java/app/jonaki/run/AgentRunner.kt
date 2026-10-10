@@ -874,6 +874,7 @@ class AgentRunner(
             guard = guard,
             userRequest = { latestUserText[threadId].orEmpty() },
             asksAfterOutsideContent = { settings.snapshot.value.askBeforeSendingOutAfterOutsideContent },
+            knownAddresses = ThreadKnownAddresses(threadId, database.messageDao()),
         )
         val memorySection = ThreadMemory.sectionFor(thread) { memorySectionFor(thread, project) }
         val skillSection = skillSectionFor(thread)
@@ -910,6 +911,8 @@ class AgentRunner(
             now = ZonedDateTime::now,
             zoneInMessages = snapshot.zoneInMessages,
             guard = guard,
+            asksAfterOutsideContent = { settings.snapshot.value.askBeforeSendingOutAfterOutsideContent },
+            threadReadOutsideContent = { approvalState.readOutsideContent },
             // Read once here, so delegate's prompt text stays the same for the whole run (D-138).
             limitSettings = snapshot.subagentLimits,
             customTypes = CustomSubagents.agentTypesOf(snapshot.customSubagents),

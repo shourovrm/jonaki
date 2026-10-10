@@ -28,4 +28,16 @@ internal object SubagentPermissions {
         "Do not retry it. Describe the action you needed, with its arguments, in your answer under Blockers, " +
             "so that the agent that gave you the task can ask the user once.",
     )
+
+    /**
+     * What the subagent reads when it tried to contact an address that
+     * appeared nowhere in its task or results, in a thread that read outside
+     * content. The model may have put data into such an address, and a
+     * subagent cannot ask the user.
+     */
+    fun addressNotKnown(toolName: String, address: String): ToolOutput = ToolOutput.error(
+        "$toolName was not run: $address appeared nowhere in your task or in your earlier results",
+        "Use an address from a search result or a page you read. If you need this one, give it in your answer " +
+            "under Blockers, so that the agent that gave you the task can ask the user once.",
+    )
 }

