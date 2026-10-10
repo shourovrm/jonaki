@@ -74,7 +74,7 @@ import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.providers.gemini.GeminiProvider
 import app.jonaki.providers.gemini.VideoSummaryOutcome
 import app.jonaki.providers.gemini.VideoSummaryRequest
-import app.jonaki.providers.openaicompatible.OpenRouterRouting
+import app.jonaki.providers.openaicompatible.OpenRouterRoute
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
@@ -1057,10 +1057,10 @@ class AgentRunner(
     }
 
     /** Null when the service needs a key and none is saved. */
-    private fun chatProvider(service: ChatService, routing: OpenRouterRouting, onRoutingFallback: () -> Unit): ChatProvider? {
+    private fun chatProvider(service: ChatService, route: OpenRouterRoute, onRoutingFallback: () -> Unit): ChatProvider? {
         val secret = service.secret
         val key = if (secret == null) null else secrets.read(secret) ?: return null
-        return ChatProviders.create(service, key, httpClient, routing, onRoutingFallback, localRuntime)
+        return ChatProviders.create(service, key, httpClient, route, onRoutingFallback, localRuntime)
     }
 
     private fun searchBackends(order: List<SearchService>): List<SearchBackend> =
