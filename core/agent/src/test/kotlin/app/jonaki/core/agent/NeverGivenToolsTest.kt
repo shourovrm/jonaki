@@ -6,6 +6,6 @@ import org.junit.Test
 class NeverGivenToolsTest {
     @Test
     fun subagentsGetNeitherNestingNorMemoryNorEarlierChats() {
-        assertEquals(setOf("delegate", "memory", "search_chats", "propose_skill", "generate_image", "generate_video"), AgentTypes.NEVER_GIVEN)
+        assertEquals(setOf("delegate", "memory", "search_chats", "propose_skill", "generate_image", "generate_vector_image", "generate_video"), AgentTypes.NEVER_GIVEN)
     }
 }

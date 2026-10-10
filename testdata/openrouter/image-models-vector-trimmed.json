@@ -1,0 +1,123 @@
+{
+ "data": [
+  {
+   "id": "recraft/recraft-v4.1-flash",
+   "name": "Recraft: Recraft V4.1 Flash",
+   "description": "trimmed",
+   "created": 1790177946,
+   "architecture": {
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "n": {
+     "type": "range",
+     "min": 1,
+     "max": 6
+    }
+   },
+   "supports_streaming": false,
+   "endpoints": "/api/v1/images/models/recraft/recraft-v4.1-flash/endpoints"
+  },
+  {
+   "id": "inclusionai/ming-image-0.1-design",
+   "name": "inclusionAI: Ming Image 0.1 Design",
+   "description": "trimmed",
+   "created": 1790095711,
+   "architecture": {
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "supported_parameters": {
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "png",
+      "jpeg",
+      "webp"
+     ]
+    },
+    "n": {
+     "type": "range",
+     "min": 1,
+     "max": 1
+    },
+    "input_references": {
+     "type": "range",
+     "min": 0,
+     "max": 0
+    },
+    "size": {
+     "type": "boolean"
+    }
+   },
+   "supports_streaming": false,
+   "endpoints": "/api/v1/images/models/inclusionai/ming-image-0.1-design/endpoints"
+  },
+  {
+   "id": "recraft/recraft-v4.1-vector",
+   "name": "Recraft: Recraft V4.1 Vector",
+   "description": "trimmed",
+   "created": 1778707392,
+   "architecture": {
+    "input_modalities": [
+     "text",
+     "image"
+    ],
+    "output_modalities": [
+     "image"
+    ]
+   },
+   "supported_parameters": {
+    "aspect_ratio": {
+     "type": "enum",
+     "values": [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "auto"
+     ]
+    },
+    "output_format": {
+     "type": "enum",
+     "values": [
+      "svg"
+     ]
+    },
+    "n": {
+     "type": "range",
+     "min": 1,
+     "max": 6
+    },
+    "input_references": {
+     "type": "range",
+     "min": 0,
+     "max": 1
+    }
+   },
+   "supports_streaming": false,
+   "endpoints": "/api/v1/images/models/recraft/recraft-v4.1-vector/endpoints"
+  }
+ ]
+}

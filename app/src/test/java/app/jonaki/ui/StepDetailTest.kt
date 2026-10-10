@@ -100,4 +100,26 @@ class StepDetailTest {
         assertEquals("openrouter:a/b · A boat", StepDetail.of("generate_video", """{"prompt":"A boat"}""", words).target)
         assertEquals("Collect j1", StepDetail.of("generate_video", """{"job_id":"j1"}""", words).target)
     }
+
+    @Test
+    fun generateVectorImageNamesTheVectorModelAndThePrompt() {
+        val named = StepDetail.of(
+            "generate_vector_image",
+            """{"prompt":"A firefly logo","model":"openrouter:recraft/recraft-v4-vector"}""",
+            englishStepWords,
+        )
+        assertEquals("openrouter:recraft/recraft-v4-vector · A firefly logo", named.target)
+
+        // With no model in the call, the first vector model is named, not the raster default.
+        val words = StepDetail.Words(
+            readCalendar = "", addToCalendar = "", reminder = "", notify = "", readClipboard = "", copyToClipboard = "", openApp = "",
+            schedule = "", cancelTask = "", listTasks = "", toDownloads = "", saveAs = "", share = "", toLinkedFolder = "",
+            listLinkedFolder = "", fromLinkedFolder = "", lineCount = { lines -> "$lines lines" },
+            defaultImageModel = "openrouter:flux",
+            defaultVectorImageModel = "openrouter:recraft/recraft-v4-pro-vector",
+        )
+        val defaulted = StepDetail.of("generate_vector_image", """{"prompt":"A firefly logo"}""", words)
+        assertEquals("openrouter:recraft/recraft-v4-pro-vector · A firefly logo", defaulted.target)
+        assertEquals("openrouter:flux · A firefly logo", StepDetail.of("generate_image", """{"prompt":"A firefly logo"}""", words).target)
+    }
 }

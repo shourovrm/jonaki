@@ -40,6 +40,24 @@ class OpenRouterImageModelsTest {
     }
 
     @Test
+    fun onlyAModelWhoseOutputFormatIsExactlySvgIsAVectorModel() {
+        val models = OpenRouterImageModels.parse(recorded("image-models-vector-trimmed.json")).associateBy { model -> model.id }
+
+        assertTrue(models.getValue("recraft/recraft-v4.1-vector").isVector)
+        assertTrue("1:1" in models.getValue("recraft/recraft-v4.1-vector").aspectRatios)
+        // This one lists raster formats in output_format; this one has no output_format at all.
+        assertEquals(false, models.getValue("inclusionai/ming-image-0.1-design").isVector)
+        assertEquals(false, models.getValue("recraft/recraft-v4.1-flash").isVector)
+        assertEquals(false, OpenRouterImageModels.parse(recorded("image-models-trimmed.json")).any { model -> model.isVector })
+    }
+
+    @Test
+    fun anOutputFormatWithSvgAndOtherFormatsIsNotVector() {
+        val json = """{"data":[{"id":"a/b","supported_parameters":{"output_format":{"type":"enum","values":["svg","png"]}}}]}"""
+        assertEquals(false, OpenRouterImageModels.parse(json).single().isVector)
+    }
+
+    @Test
     fun theRecordedEndpointsGiveThePricePerMegapixel() {
         val price = OpenRouterImageModels.parsePrice(recorded("image-model-endpoints-flux.2-klein-4b.json"))!!
 

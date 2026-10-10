@@ -22,6 +22,8 @@ data class ImageModelInfo(
     val name: String,
     /** The aspect ratios the model takes, for example "16:9"; empty when the list names none. */
     val aspectRatios: List<String> = emptyList(),
+    /** True when the list says the model's only output format is "svg" (a vector model); false for every other model. */
+    val isVector: Boolean = false,
 )
 
 /** What one model charges, from its endpoints answer. */
@@ -119,7 +121,19 @@ object OpenRouterImageModels {
         val aspectRatioParameter = parameters?.get("aspect_ratio") as? JsonObject
         val ratios = (aspectRatioParameter?.get("values") as? JsonArray).orEmpty()
             .mapNotNull { value -> (value as? JsonPrimitive)?.contentOrNull }
-        return ImageModelInfo(id = id, name = model.text("name") ?: id, aspectRatios = ratios)
+        return ImageModelInfo(id = id, name = model.text("name") ?: id, aspectRatios = ratios, isVector = isVectorModel(parameters))
+    }
+
+    /**
+     * `output_format` is `{"type":"enum","values":["svg"]}` for the Recraft
+     * vector models; other models have no `output_format` or list raster
+     * formats such as "png" and "jpeg" (checked 2026-10-10).
+     */
+    private fun isVectorModel(parameters: JsonObject?): Boolean {
+        val outputFormat = parameters?.get("output_format") as? JsonObject
+        val values = (outputFormat?.get("values") as? JsonArray).orEmpty()
+            .mapNotNull { value -> (value as? JsonPrimitive)?.contentOrNull }
+        return values == listOf("svg")
     }
 
     private fun outputPriceOf(endpoint: JsonObject): ImageModelPrice? {

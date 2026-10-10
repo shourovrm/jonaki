@@ -173,6 +173,20 @@ class ToolRegistryTest {
     }
 
     @Test
+    fun eachImageToolIsOfferedOnlyWithAModelOfItsOwnKind() {
+        val generator = app.jonaki.core.toolapi.ImageGenerator { app.jonaki.core.toolapi.ImageOutcome.Failed(app.jonaki.core.toolapi.ImageFailure.OTHER, "unused") }
+        val rasterOnly = everything.copy(imageGenerator = generator, imageModelKeys = listOf("openrouter:black-forest-labs/flux.2-klein-4b"))
+        val vectorOnly = everything.copy(imageGenerator = generator, vectorImageModelKeys = listOf("openrouter:recraft/recraft-v4-vector"))
+        val both = rasterOnly.copy(vectorImageModelKeys = vectorOnly.vectorImageModelKeys)
+
+        assertEquals(setOf("generate_image"), namesFor(rasterOnly).toSet().intersect(setOf("generate_image", "generate_vector_image")))
+        assertEquals(setOf("generate_vector_image"), namesFor(vectorOnly).toSet().intersect(setOf("generate_image", "generate_vector_image")))
+        assertEquals(setOf("generate_image", "generate_vector_image"), namesFor(both).toSet().intersect(setOf("generate_image", "generate_vector_image")))
+        assertEquals(emptySet<String>(), namesFor(everything).toSet().intersect(setOf("generate_image", "generate_vector_image")))
+        assertEquals(emptySet<String>(), namesFor(both.copy(imageGenerator = null)).toSet().intersect(setOf("generate_image", "generate_vector_image")))
+    }
+
+    @Test
     fun webAccessOffRemovesSearchAndFetchButKeepsYouTube() {
         val names = namesFor(everything.copy(webAccessEnabled = false)).toSet()
         assertEquals(false, "web_search" in names)

@@ -2,8 +2,10 @@ package app.jonaki.tools.generateimage
 
 import app.jonaki.core.toolapi.Capability
 import app.jonaki.core.toolapi.GeneratedImages
-import app.jonaki.core.toolapi.ImageFailure
+import app.jonaki.core.toolapi.ImageFailureTexts
+import app.jonaki.core.toolapi.ImageFileNames
 import app.jonaki.core.toolapi.ImageGenerator
+import app.jonaki.core.toolapi.ImageModelChoice
 import app.jonaki.core.toolapi.ImageOutcome
 import app.jonaki.core.toolapi.ImageRequest
 import app.jonaki.core.toolapi.IncomingFiles
@@ -104,7 +106,7 @@ class GenerateImageTool(
         if (prompt.isEmpty()) {
             return ToolOutput.error("argument prompt is missing", "Call generate_image again with a full description of the picture.")
         }
-        val modelKey = chooseModel(arguments.stringArgument("model"))
+        val modelKey = ImageModelChoice.choose(arguments.stringArgument("model"), modelKeys, defaultModelKey())
             ?: return modelError(arguments.stringArgument("model"))
         val aspectRatio = arguments.stringArgument("aspect_ratio")?.trim()?.ifEmpty { null }
 
@@ -113,24 +115,9 @@ class GenerateImageTool(
         val modelId = modelKey.substringAfter(':')
         val outcome = generator.generate(ImageRequest(serviceKey, modelId, prompt, aspectRatio))
         return when (outcome) {
-            is ImageOutcome.Failed -> failureText(outcome, serviceKey, modelKey)
+            is ImageOutcome.Failed -> ImageFailureTexts.toolOutput(outcome, serviceKey, modelKey)
             is ImageOutcome.Success -> save(outcome, modelKey, prompt, arguments.stringArgument("file_name"), context)
         }
-    }
-
-    /**
-     * The added model the call names: the full "service:model" key, or just
-     * the model id when only one added model has that id. Null when nothing
-     * matches or the bare id is ambiguous.
-     */
-    private fun chooseModel(requested: String?): String? {
-        val wanted = requested?.trim().orEmpty()
-        if (wanted.isEmpty()) {
-            return defaultModelKey()?.takeIf { it in modelKeys } ?: modelKeys.firstOrNull()
-        }
-        modelKeys.firstOrNull { modelKey -> modelKey.equals(wanted, ignoreCase = true) }?.let { return it }
-        val sameId = modelKeys.filter { modelKey -> modelKey.substringAfter(':').equals(wanted, ignoreCase = true) }
-        return sameId.singleOrNull()
     }
 
     private fun modelError(requested: String?): ToolOutput {
@@ -158,7 +145,7 @@ class GenerateImageTool(
                 "the service sent a file of type ${image.mediaType.ifBlank { "unknown" }}, not a png, jpeg or webp picture",
                 "Nothing was saved. Try another model or tell the user; the picture was charged.",
             )
-        val baseName = ImageFiles.baseName(requestedName, prompt)
+        val baseName = ImageFileNames.baseName(requestedName, prompt)
         val file = try {
             withContext(Dispatchers.IO) { write(context.threadFolder, baseName, extension, image.bytes) }
         } catch (problem: IOException) {
@@ -171,9 +158,9 @@ class GenerateImageTool(
     }
 
     private fun write(threadFolder: File, baseName: String, extension: String, bytes: ByteArray): File {
-        val folder = File(threadFolder, ImageFiles.FOLDER)
+        val folder = File(threadFolder, ImageFileNames.FOLDER)
         folder.mkdirs()
-        val file = ImageFiles.freeFile(folder, baseName, extension)
+        val file = ImageFileNames.freeFile(folder, baseName, extension)
         file.writeBytes(bytes)
         return file
     }
@@ -189,40 +176,5 @@ class GenerateImageTool(
             "Cost: $cost",
             "The user sees the picture in the chat.",
         ).joinToString("\n")
-    }
-
-    private fun failureText(failure: ImageOutcome.Failed, serviceKey: String, modelId: String): ToolOutput {
-        val said = failure.message.trim().ifEmpty { "no reason given" }
-        return when (failure.kind) {
-            ImageFailure.KEY_PROBLEM -> ToolOutput.error(
-                "$serviceKey did not accept the request: $said",
-                "Tell the user to save a working key for $serviceKey in Settings. Do not retry.",
-            )
-            ImageFailure.OUT_OF_CREDIT -> ToolOutput.error(
-                "$serviceKey has no credit or quota for this picture: $said",
-                "Tell the user to add credit or check the quota with $serviceKey. Do not retry.",
-            )
-            ImageFailure.SERVICE_LIMIT -> ToolOutput.error(
-                "$modelId is over a limit at the service, not at the user's account: $said",
-                "No picture was made and nothing was charged. The user's key and credit are fine. " +
-                    "Tell the user that, and that they can try again later or pick another image model. Do not retry now.",
-            )
-            ImageFailure.BLOCKED -> ToolOutput.error(
-                "$modelId refused the prompt: $said",
-                "Tell the user. Rephrase the prompt only if it can be done without the refused content; a retry can cost money.",
-            )
-            ImageFailure.TIMED_OUT -> ToolOutput.error(
-                "$modelId did not finish in time: $said",
-                "No picture was saved. Tell the user; try once more, or another image model if they added one.",
-            )
-            ImageFailure.NO_IMAGE -> ToolOutput.error(
-                "the answer of $modelId held no picture: $said",
-                "Try again with a clearer prompt, or another image model; tell the user if it fails twice.",
-            )
-            ImageFailure.OTHER -> ToolOutput.error(
-                "picture generation with $modelId failed: $said",
-                "Tell the user what the service said; try again later or with another image model.",
-            )
-        }
     }
 }

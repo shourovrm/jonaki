@@ -278,12 +278,24 @@ object ChatItems {
         return paths.map { path -> ChatItem.Artifact("artifact-$turnId-$path", path) }
     }
 
-    /** One picture per finished generate_image call; the result's first line names the file. */
+    /**
+     * One picture per finished generate_image or generate_vector_image call;
+     * the result's first line names the file. The tool decides the card: a
+     * raster thumbnail or a drawn SVG.
+     */
     private fun generatedImagesShown(turnSteps: List<StepEntity>, turnId: String): List<ChatItem> =
         turnSteps
-            .filter { step -> step.toolName == GeneratedImages.TOOL_NAME && step.status == "DONE" }
-            .mapNotNull { step -> GeneratedImages.pathIn(step.resultText.orEmpty())?.let { path -> step.toolCallId to path } }
-            .map { (toolCallId, path) -> ChatItem.GeneratedImage("image-$turnId-$toolCallId", path) }
+            .filter { step -> step.status == "DONE" && step.toolName in GENERATED_IMAGE_TOOLS }
+            .mapNotNull { step ->
+                val path = GeneratedImages.pathIn(step.resultText.orEmpty()) ?: return@mapNotNull null
+                if (step.toolName == GeneratedImages.VECTOR_TOOL_NAME) {
+                    ChatItem.GeneratedVectorImage("vector-image-$turnId-${step.toolCallId}", path)
+                } else {
+                    ChatItem.GeneratedImage("image-$turnId-${step.toolCallId}", path)
+                }
+            }
+
+    private val GENERATED_IMAGE_TOOLS = setOf(GeneratedImages.TOOL_NAME, GeneratedImages.VECTOR_TOOL_NAME)
 
     /**
      * One card per finished generate_video call whose result names a saved

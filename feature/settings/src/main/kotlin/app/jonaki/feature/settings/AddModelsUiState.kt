@@ -22,6 +22,8 @@ data class AddableModelUi(
     val isAdded: Boolean = false,
     /** Image model picker only: the price line under the id; null for a service that shows no prices. */
     val imagePrice: ImagePriceUi? = null,
+    /** Image model picker only: the list says the model makes SVG files; the row carries an "SVG" tag. */
+    val isVector: Boolean = false,
 )
 
 /** The price line of an image model row in the picker. */

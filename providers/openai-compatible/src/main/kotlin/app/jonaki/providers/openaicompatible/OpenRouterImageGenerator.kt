@@ -93,11 +93,8 @@ class OpenRouterImageGenerator(
                 val said = errorText ?: "the answer had no image data"
                 return ImageOutcome.Failed(if (errorText == null) ImageFailure.NO_IMAGE else failureKindFor(200, said), said)
             }
-            val bytes = try {
-                Base64.getDecoder().decode(encoded.filterNot { it.isWhitespace() })
-            } catch (notBase64: IllegalArgumentException) {
-                return ImageOutcome.Failed(ImageFailure.NO_IMAGE, "the image data was not valid base64")
-            }
+            val bytes = decodeImageData(encoded)
+                ?: return ImageOutcome.Failed(ImageFailure.NO_IMAGE, "the image data was not valid base64")
             val usage = root["usage"] as? JsonObject
             return ImageOutcome.Success(
                 bytes = bytes,
@@ -106,6 +103,30 @@ class OpenRouterImageGenerator(
                 inputTokens = (usage?.get("prompt_tokens") as? JsonPrimitive)?.intOrNull ?: 0,
                 outputTokens = (usage?.get("completion_tokens") as? JsonPrimitive)?.intOrNull ?: 0,
             )
+        }
+
+        /**
+         * The picture bytes from `b64_json`. Raster models send base64. A
+         * vector model's answer has not been recorded yet, so three forms are
+         * accepted: base64, a `data:...;base64,` URI, and the SVG itself as
+         * plain text (it starts with "<", which base64 never does). Null when
+         * the text is none of these.
+         */
+        private fun decodeImageData(encoded: String): ByteArray? {
+            val text = encoded.trim()
+            if (text.startsWith("<")) {
+                return text.toByteArray(Charsets.UTF_8)
+            }
+            val base64Text = if (text.startsWith("data:", ignoreCase = true) && text.contains(";base64,")) {
+                text.substringAfter(";base64,")
+            } else {
+                text
+            }
+            return try {
+                Base64.getDecoder().decode(base64Text.filterNot { it.isWhitespace() })
+            } catch (notBase64: IllegalArgumentException) {
+                null
+            }
         }
 
         /** `{"error": {"message": "…", "code": 402}}`, or `{"error": "…"}`. */

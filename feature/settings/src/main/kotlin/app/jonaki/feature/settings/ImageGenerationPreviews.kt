@@ -25,6 +25,7 @@ private val sampleImages = ImageGenerationUi(
             models = listOf(
                 ImageModelRowUi("openrouter:$FLUX_ID", FLUX_ID, LONG_IMAGE_MODEL_NAME, "$0.014 per megapixel", isDefault = true),
                 ImageModelRowUi("openrouter:openai/gpt-image-1-mini", "openai/gpt-image-1-mini", "OpenAI: GPT Image 1 Mini", null),
+                ImageModelRowUi("openrouter:recraft/recraft-v4-pro-vector", "recraft/recraft-v4-pro-vector", "Recraft: Recraft V4 Pro Vector Illustration", "\$0.3 per image", isVector = true),
             ),
         ),
         ImageServiceCardUi(
@@ -49,6 +50,7 @@ private val samplePickerModels = listOf(
     AddableModelUi("google/gemini-nano-banana-2.1", "Google: Nano Banana 2.1", imagePrice = ImagePriceUi.Known("$30 per 1M image tokens")),
     AddableModelUi("openai/gpt-image-1-mini", "OpenAI: GPT Image 1 Mini", imagePrice = ImagePriceUi.Loading),
     AddableModelUi("stability/unknown-price", "Stability: Unknown Price", imagePrice = ImagePriceUi.Unknown),
+    AddableModelUi("recraft/recraft-v4-vector", "Recraft: Recraft V4 Vector Illustration", imagePrice = ImagePriceUi.Known("\$0.08 per image"), isVector = true),
 )
 
 private val sampleGeminiSuggestions = listOf(

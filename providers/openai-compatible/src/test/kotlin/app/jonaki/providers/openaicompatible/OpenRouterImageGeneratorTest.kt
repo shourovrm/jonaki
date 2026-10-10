@@ -160,6 +160,45 @@ class OpenRouterImageGeneratorTest {
         assertEquals(ImageFailure.NO_IMAGE, outcome.kind)
     }
 
+    private val smallSvg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0h1v1z"/></svg>"""
+
+    private fun vectorAnswer(imageField: String, mediaType: String? = "image/svg+xml"): String {
+        val mediaTypeField = mediaType?.let { ""","media_type":${Json.encodeToString(kotlinx.serialization.serializer<String>(), it)}""" }.orEmpty()
+        val encodedField = Json.encodeToString(kotlinx.serialization.serializer<String>(), imageField)
+        return """{"data":[{"b64_json":$encodedField$mediaTypeField}],"usage":{"cost":0.08}}"""
+    }
+
+    @Test
+    fun anSvgSentAsBase64IsDecoded() {
+        val base64 = java.util.Base64.getEncoder().encodeToString(smallSvg.toByteArray())
+        val success = OpenRouterImageGenerator.answerFrom(200, vectorAnswer(base64)) as ImageOutcome.Success
+
+        assertEquals(smallSvg, String(success.bytes))
+        assertEquals("image/svg+xml", success.mediaType)
+        assertEquals(0.08, success.costUsd!!, 0.0)
+    }
+
+    @Test
+    fun anSvgSentAsPlainTextInTheDataFieldIsKeptAsItIs() {
+        val success = OpenRouterImageGenerator.answerFrom(200, vectorAnswer("\n  $smallSvg\n")) as ImageOutcome.Success
+        assertEquals(smallSvg, String(success.bytes))
+    }
+
+    @Test
+    fun anSvgSentAsABase64DataUriIsDecoded() {
+        val base64 = java.util.Base64.getEncoder().encodeToString(smallSvg.toByteArray())
+        val success = OpenRouterImageGenerator.answerFrom(200, vectorAnswer("data:image/svg+xml;base64,$base64")) as ImageOutcome.Success
+        assertEquals(smallSvg, String(success.bytes))
+    }
+
+    @Test
+    fun aMissingMediaTypeOnAnSvgAnswerLeavesTheTypeEmptyForTheToolToJudgeByContent() {
+        val base64 = java.util.Base64.getEncoder().encodeToString(smallSvg.toByteArray())
+        val success = OpenRouterImageGenerator.answerFrom(200, vectorAnswer(base64, mediaType = null)) as ImageOutcome.Success
+        assertEquals("", success.mediaType)
+        assertEquals(smallSvg, String(success.bytes))
+    }
+
     @Test
     fun unknownFieldsAndMissingUsageAreTolerated() {
         val body = """{"future":1,"data":[{"b64_json":"/9j/2Q==","media_type":"image/jpeg","revised_prompt":"x"}]}"""

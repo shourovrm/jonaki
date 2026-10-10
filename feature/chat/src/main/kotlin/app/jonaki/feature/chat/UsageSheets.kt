@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiTheme
+import app.jonaki.core.ui.ModelTag
 import app.jonaki.core.ui.MonospaceFamily
 import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.ThinkingChoiceRow
@@ -51,6 +52,7 @@ internal fun ModelSheet(
     selectedKey: String?,
     imageChoices: List<ImageModelChoiceUi>,
     selectedImageKey: String?,
+    selectedVectorImageKey: String? = null,
     thinking: ThinkingChoice,
     onThinkingChange: (ThinkingChoice) -> Unit,
     onSelect: (modelKey: String) -> Unit,
@@ -64,6 +66,7 @@ internal fun ModelSheet(
             selectedKey = selectedKey,
             imageChoices = imageChoices,
             selectedImageKey = selectedImageKey,
+            selectedVectorImageKey = selectedVectorImageKey,
             thinking = thinking,
             onThinkingChange = onThinkingChange,
             onSelect = onSelect,
@@ -80,6 +83,7 @@ internal fun ModelSheetContent(
     selectedKey: String?,
     imageChoices: List<ImageModelChoiceUi>,
     selectedImageKey: String?,
+    selectedVectorImageKey: String? = null,
     thinking: ThinkingChoice,
     onThinkingChange: (ThinkingChoice) -> Unit,
     onSelect: (modelKey: String) -> Unit,
@@ -125,7 +129,7 @@ internal fun ModelSheetContent(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
             SheetTitle(stringResource(R.string.chat_image_model_title))
             for (choice in imageChoices) {
-                ImageModelRow(choice, isSelected = choice.key == selectedImageKey, onClick = { onSelectImage(choice.key) })
+                ImageModelRow(choice, isSelected = choice.key == selectedImageKey || choice.key == selectedVectorImageKey, onClick = { onSelectImage(choice.key) })
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -147,7 +151,11 @@ private fun ImageModelRow(choice: ImageModelChoiceUi, isSelected: Boolean, onCli
         serviceName = choice.serviceName,
         isSelected = isSelected,
         onClick = onClick,
-        trailing = { if (choice.isDefault) DefaultMark() },
+        trailing = {
+            // Outside the weighted name column, so a long name ends in "…" and the tag keeps its width (D-029).
+            if (choice.isVector) ModelTag(stringResource(R.string.chat_image_svg_tag), Modifier.padding(start = 8.dp))
+            if (choice.isDefault) DefaultMark()
+        },
     ) {
         choice.priceText?.let { priceText ->
             Text(

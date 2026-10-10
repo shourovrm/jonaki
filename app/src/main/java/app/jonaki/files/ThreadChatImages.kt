@@ -45,6 +45,20 @@ class ThreadChatImages(threadFolder: File) : ChatImages {
         }
     }
 
+    override suspend fun svgText(path: String): String? {
+        val file = fileFor(path) ?: return null
+        if (file.length() > MAX_SVG_BYTES) {
+            return null
+        }
+        return withContext(decoding) {
+            try {
+                file.readText()
+            } catch (unreadable: java.io.IOException) {
+                null
+            }
+        }
+    }
+
     private fun decodeTile(file: File, sidePx: Int): Bitmap? =
         decodeOrNull { UprightImageDecoder.decode(file, null) { upright -> ImageScale.cover(upright, sidePx) } }
 
@@ -69,6 +83,9 @@ class ThreadChatImages(threadFolder: File) : ChatImages {
 
     private companion object {
         const val PARALLEL_DECODES = 3
+
+        /** The limit generate_vector_image enforces before it saves. */
+        const val MAX_SVG_BYTES = 2L * 1024 * 1024
 
         // A screen of thumbnails starts a dozen decodes at once; three at a time keeps the phone responsive.
         @OptIn(ExperimentalCoroutinesApi::class)

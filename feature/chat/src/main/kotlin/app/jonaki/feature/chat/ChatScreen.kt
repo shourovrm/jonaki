@@ -283,6 +283,7 @@ fun ChatScreen(
                 selectedKey = state.selectedModelKey,
                 imageChoices = state.imageModelChoices,
                 selectedImageKey = state.selectedImageModelKey,
+                selectedVectorImageKey = state.selectedVectorImageModelKey,
                 onSelectImage = { modelKey ->
                     openSheet = ChatSheet.NONE
                     onImageModelSelect(modelKey)
@@ -507,6 +508,7 @@ private fun MessageList(
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
                 is ChatItem.GeneratedImage -> GeneratedImageCard(item.path, onSaveImage, onShareImage)
                 is ChatItem.GeneratedVideo -> GeneratedVideoCard(item.path, onPlayVideo, onSaveImage, onShareImage)
+                is ChatItem.GeneratedVectorImage -> GeneratedVectorImageCard(item.path, onSaveImage, onShareImage)
                 is ChatItem.PythonInstall -> PythonInstallCard(item, canTryAgain, onPythonCard)
                 is ChatItem.SummaryDivider -> SummaryDividerRow(item)
             }

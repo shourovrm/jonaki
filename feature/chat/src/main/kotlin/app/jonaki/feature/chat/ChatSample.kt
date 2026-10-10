@@ -41,6 +41,7 @@ object ChatSample {
         // A 40-character name: checks that long names ellipsize in the image section too.
         ImageModelChoiceUi("openrouter:sourceful/riverflow-v2-pro-preview-x", "sourceful/riverflow-v2-pro-preview-x-092", "OpenRouter", "\$0.007 per image"),
         ImageModelChoiceUi("gemini:gemini-2.5-flash-image", "gemini-2.5-flash-image", "Gemini"),
+        ImageModelChoiceUi("openrouter:recraft/recraft-v4-pro-vector", "recraft/recraft-v4-pro-vector-illustration-x", "OpenRouter", "\$0.3 per image", isVector = true),
     )
 
     /** The running sample with the status strip, model choices and usage filled in (D-027 mockup). */

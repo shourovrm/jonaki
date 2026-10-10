@@ -70,6 +70,13 @@ enum class ImageFailure {
 object GeneratedImages {
     const val TOOL_NAME = "generate_image"
 
+    /**
+     * generate_vector_image uses the same first line, so [pathIn] reads both
+     * results and the chat needs one parser; the tool name tells the chat
+     * which card to show.
+     */
+    const val VECTOR_TOOL_NAME = "generate_vector_image"
+
     private const val RESULT_PREFIX = "Image saved: "
 
     fun firstLine(path: String): String = RESULT_PREFIX + path

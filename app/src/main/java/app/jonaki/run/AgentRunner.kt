@@ -874,8 +874,10 @@ class AgentRunner(
         enabledGroups = settings.snapshot.value.enabledToolGroups,
         video = videoSetup?.servicesFor(thread.id),
         imageGenerator = imageGeneratorFor(thread.id),
-        imageModelKeys = settings.snapshot.value.imageModels.usableModelKeys(::hasImageKey),
+        imageModelKeys = settings.snapshot.value.imageModels.usableRasterModelKeys(::hasImageKey),
         defaultImageModelKey = { defaultImageModelFor(thread.id) },
+        vectorImageModelKeys = settings.snapshot.value.imageModels.usableVectorModelKeys(::hasImageKey),
+        defaultVectorImageModelKey = { defaultVectorImageModelFor(thread.id) },
     )
 
     /**
@@ -883,13 +885,26 @@ class AgentRunner(
      * pick while that model is still added with a saved key, else the starred
      * default. Read at every call, so a pick made during a run counts for the
      * next picture. Subagents never get generate_image (AgentTypes.NEVER_GIVEN),
-     * so this is the thread's agent only.
+     * so this is the thread's agent only. Only raster models count: a starred
+     * or picked vector model is not among [usableKeys], so the tool then falls
+     * back to the first raster model.
      */
     private fun defaultImageModelFor(threadId: String): String? {
         val imageModels = settings.snapshot.value.imageModels
-        val usableKeys = imageModels.usableModelKeys(::hasImageKey)
-        val choices = threadImageChoices ?: return imageModels.defaultModelKey
+        val usableKeys = imageModels.usableRasterModelKeys(::hasImageKey)
+        val choices = threadImageChoices ?: return imageModels.defaultModelKey?.takeIf { it in usableKeys } ?: usableKeys.firstOrNull()
         return choices.effectiveModelKey(threadId, usableKeys, imageModels.defaultModelKey)
+    }
+
+    /**
+     * The model generate_vector_image uses when a call names none: the thread's
+     * vector pick while that model is still added with a saved key, else the
+     * first vector model. The star in Settings does not count here.
+     */
+    private fun defaultVectorImageModelFor(threadId: String): String? {
+        val usableKeys = settings.snapshot.value.imageModels.usableVectorModelKeys(::hasImageKey)
+        val choices = threadImageChoices ?: return usableKeys.firstOrNull()
+        return choices.effectiveVectorModelKey(threadId, usableKeys)
     }
 
     private fun hasImageKey(service: ImageService): Boolean = secrets.read(service.secret) != null
