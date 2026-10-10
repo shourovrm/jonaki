@@ -54,7 +54,7 @@ import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
-import app.jonaki.core.modelcatalog.OpenRouterEndpoints
+import app.jonaki.core.modelcatalog.OpenRouterEndpointCache
 import app.jonaki.core.modelcatalog.OpenRouterProviderPolicies
 import app.jonaki.core.modelcatalog.ProviderDataPolicy
 import app.jonaki.core.modelcatalog.ProviderEndpoint
@@ -1487,7 +1487,7 @@ private fun SettingsRoute(
                 current.copy(routing = current.routing.withPinned(modelKey, null).withOverride(modelKey, null))
             }
         },
-        onModelProvidersLoad = { modelKey -> loadModelProviders(application.httpClient, modelKey) },
+        onModelProvidersLoad = { modelKey -> loadModelProviders(application.httpClient, application.providerEndpoints, modelKey) },
         onModelProvidersChange = { modelKey, tags, allowFallbacks ->
             settings.update { current ->
                 current.copy(routing = current.routing.withPinned(modelKey, PinnedProviders(tags, allowFallbacks)))
@@ -1899,11 +1899,15 @@ private fun displayNameOf(service: SearchService): String = when (service) {
 }
 
 /** The providers of an OpenRouter model for the Providers sheet, cheapest first. */
-private suspend fun loadModelProviders(httpClient: OkHttpClient, modelKey: String): Result<List<ProviderOptionUi>> =
+private suspend fun loadModelProviders(
+    httpClient: OkHttpClient,
+    providerEndpoints: OpenRouterEndpointCache,
+    modelKey: String,
+): Result<List<ProviderOptionUi>> =
     try {
         // The policy list never throws: when it fails the rows simply get no mark.
         val (endpoints, policies) = coroutineScope {
-            val endpointsRequest = async { OpenRouterEndpoints.fetch(httpClient, ModelKey.modelOf(modelKey)) }
+            val endpointsRequest = async { providerEndpoints.load(ModelKey.modelOf(modelKey)) }
             val policiesRequest = async { providerPoliciesOf(httpClient).load() }
             endpointsRequest.await() to policiesRequest.await()
         }
