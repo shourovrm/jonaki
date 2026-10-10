@@ -2346,3 +2346,20 @@ an incognito thread's choice stays in memory. Known gap: an earlier step
 whose call named no model shows the thread's present model on its line.
 Outcome: unit tests and the release build pass; installed; not seen on a
 phone.
+
+## D-168 · 2026-10-10 · Privacy marks in the Providers sheet; a limit that is the service's — proposed
+User request; adds to D-159. Each provider row carries one icon after its
+name: a shield when the provider neither keeps nor trains on prompts, a
+storage mark when it keeps them, a warning triangle in the deny colour when
+it trains on them, and nothing when unknown. A legend above the list names
+only the marks present. The data policy is in no documented OpenRouter
+list; it comes from the list the website itself uses
+(api/frontend/v1/all-providers, read 2026-10-10), matched by the tag before
+the first "/", loaded with the endpoints and cached in memory. If that list
+changes or fails, the marks disappear and nothing else does. Also:
+generate_image now treats OpenRouter's HTTP 429 as a limit at the service
+(ImageFailure.SERVICE_LIMIT) and tells the agent that the user's key and
+credit are fine and nothing was charged; seen with Nano Banana 2.1, whose
+only provider, Google AI Studio, was over its quota (recorded in
+testdata/openrouter/image-error-429-upstream-quota.json). Outcome: unit
+tests pass; no APK built since (user ruling); not seen on a phone.
