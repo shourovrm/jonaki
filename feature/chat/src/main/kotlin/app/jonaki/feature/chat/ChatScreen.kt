@@ -109,6 +109,8 @@ fun ChatScreen(
     modifier: Modifier = Modifier,
     /** A scoped model was picked in the model sheet; it applies from the next message. */
     onModelSelect: (modelKey: String) -> Unit = {},
+    /** An image model was picked in the model sheet; generate_image uses it from the next call in this thread. */
+    onImageModelSelect: (modelKey: String) -> Unit = {},
     /** "Edit list" in the model sheet: open the models in Settings. */
     onEditModels: () -> Unit = {},
     /** Rename in the overflow menu: the app shows the rename dialog. */
@@ -278,6 +280,12 @@ fun ChatScreen(
             openSheet == ChatSheet.MODEL -> ModelSheet(
                 choices = state.modelChoices,
                 selectedKey = state.selectedModelKey,
+                imageChoices = state.imageModelChoices,
+                selectedImageKey = state.selectedImageModelKey,
+                onSelectImage = { modelKey ->
+                    openSheet = ChatSheet.NONE
+                    onImageModelSelect(modelKey)
+                },
                 thinking = state.threadThinking,
                 onThinkingChange = onThinkingChange,
                 onSelect = { modelKey ->

@@ -2,4 +2,6 @@
 <resources>
     <string name="chat_generated_image_save">সেভ করুন</string>
     <string name="chat_generated_image_share">শেয়ার করুন</string>
+    <string name="chat_image_model_title">ছবির মডেল</string>
+    <string name="chat_image_model_default">ডিফল্ট</string>
 </resources>

@@ -2,4 +2,6 @@
 <resources>
     <string name="chat_generated_image_save">Save</string>
     <string name="chat_generated_image_share">Share</string>
+    <string name="chat_image_model_title">Image model</string>
+    <string name="chat_image_model_default">Default</string>
 </resources>

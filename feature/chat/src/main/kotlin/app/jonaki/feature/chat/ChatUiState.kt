@@ -20,6 +20,10 @@ data class ChatUiState(
     /** The scoped models offered in the model sheet, in the user's order. */
     val modelChoices: List<ModelChoiceUi> = emptyList(),
     val selectedModelKey: String? = null,
+    /** The added image models offered below the chat models; empty hides that section. */
+    val imageModelChoices: List<ImageModelChoiceUi> = emptyList(),
+    /** The image model generate_image uses in this thread: its own pick, else the starred default. */
+    val selectedImageModelKey: String? = null,
     /** What the usage sheet shows; null disables tapping the cost. */
     val usage: UsageUi? = null,
     /** Files picked or shared for the next message, shown as chips above the field. */
@@ -160,6 +164,19 @@ data class ModelChoiceUi(
     val cachedInputPricePerMillion: Double? = null,
     /** False when the model takes no thinking level, so the sheet shows no choice (D-057). */
     val supportsThinking: Boolean = false,
+)
+
+/** One added image model in the model sheet. */
+@Immutable
+data class ImageModelChoiceUi(
+    /** "service:modelId", for example "openrouter:black-forest-labs/flux.2-klein-4b". */
+    val key: String,
+    val name: String,
+    val serviceName: String,
+    /** The price in the unit billed, for example "$0.014 per megapixel"; null while unknown. */
+    val priceText: String? = null,
+    /** True for the model starred in Settings; a thread with no pick uses it. */
+    val isDefault: Boolean = false,
 )
 
 /** Token and cost totals of one thread for the usage sheet. */

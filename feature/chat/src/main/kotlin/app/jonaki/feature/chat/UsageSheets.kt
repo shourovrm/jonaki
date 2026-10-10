@@ -7,15 +7,20 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
@@ -32,65 +37,158 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
 import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.ThinkingChoiceRow
 import app.jonaki.core.ui.UsageFormat
 
-/** Picks the model for this thread from the user's scoped models (D-027). */
+/** Picks the model for this thread from the user's scoped models (D-027), and its image model below them. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ModelSheet(
     choices: List<ModelChoiceUi>,
     selectedKey: String?,
+    imageChoices: List<ImageModelChoiceUi>,
+    selectedImageKey: String?,
     thinking: ThinkingChoice,
     onThinkingChange: (ThinkingChoice) -> Unit,
     onSelect: (modelKey: String) -> Unit,
+    onSelectImage: (modelKey: String) -> Unit,
     onEditModels: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .padding(horizontal = 20.dp)
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            SheetTitle(stringResource(R.string.chat_model_sheet_title))
-            for (choice in choices) {
-                val isSelected = choice.key == selectedKey
-                ModelRow(choice, isSelected = isSelected, onClick = { onSelect(choice.key) })
-                if (isSelected && choice.supportsThinking) {
-                    Text(
-                        stringResource(app.jonaki.core.ui.R.string.ui_thinking),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 48.dp, bottom = 4.dp),
-                    )
-                    ThinkingChoiceRow(
-                        selected = thinking,
-                        onSelect = onThinkingChange,
-                        modifier = Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 8.dp),
-                    )
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)) {
+        ModelSheetContent(
+            choices = choices,
+            selectedKey = selectedKey,
+            imageChoices = imageChoices,
+            selectedImageKey = selectedImageKey,
+            thinking = thinking,
+            onThinkingChange = onThinkingChange,
+            onSelect = onSelect,
+            onSelectImage = onSelectImage,
+            onEditModels = onEditModels,
+        )
+    }
+}
+
+/** The sheet's body, apart from the sheet so that previews can show it. One scrolling list holds both sections. */
+@Composable
+internal fun ModelSheetContent(
+    choices: List<ModelChoiceUi>,
+    selectedKey: String?,
+    imageChoices: List<ImageModelChoiceUi>,
+    selectedImageKey: String?,
+    thinking: ThinkingChoice,
+    onThinkingChange: (ThinkingChoice) -> Unit,
+    onSelect: (modelKey: String) -> Unit,
+    onSelectImage: (modelKey: String) -> Unit,
+    onEditModels: () -> Unit,
+) {
+    Column(
+        Modifier
+            .padding(horizontal = 20.dp)
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        SheetTitle(stringResource(R.string.chat_model_sheet_title))
+        for (choice in choices) {
+            val isSelected = choice.key == selectedKey
+            ModelRow(choice, isSelected = isSelected, onClick = { onSelect(choice.key) })
+            if (isSelected && choice.supportsThinking) {
                 Text(
-                    stringResource(R.string.chat_model_sheet_prices),
-                    style = MaterialTheme.typography.bodySmall,
+                    stringResource(app.jonaki.core.ui.R.string.ui_thinking),
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.padding(start = 48.dp, bottom = 4.dp),
                 )
-                TextButton(onClick = onEditModels) {
-                    Text(stringResource(R.string.chat_model_sheet_edit))
-                }
+                ThinkingChoiceRow(
+                    selected = thinking,
+                    onSelect = onThinkingChange,
+                    modifier = Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 8.dp),
+                )
             }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)) {
+            Text(
+                stringResource(R.string.chat_model_sheet_prices),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onEditModels) {
+                Text(stringResource(R.string.chat_model_sheet_edit))
+            }
+        }
+        if (imageChoices.isNotEmpty()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
+            SheetTitle(stringResource(R.string.chat_image_model_title))
+            for (choice in imageChoices) {
+                ImageModelRow(choice, isSelected = choice.key == selectedImageKey, onClick = { onSelectImage(choice.key) })
+            }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
 private fun ModelRow(choice: ModelChoiceUi, isSelected: Boolean, onClick: () -> Unit) {
+    ChoiceRow(name = choice.name, serviceName = choice.serviceName, isSelected = isSelected, onClick = onClick) {
+        ModelPrices(choice)
+    }
+}
+
+/** An image model: its name and service like a chat model's, its price in the unit billed, and a mark on the starred default. */
+@Composable
+private fun ImageModelRow(choice: ImageModelChoiceUi, isSelected: Boolean, onClick: () -> Unit) {
+    ChoiceRow(
+        name = choice.name,
+        serviceName = choice.serviceName,
+        isSelected = isSelected,
+        onClick = onClick,
+        trailing = { if (choice.isDefault) DefaultMark() },
+    ) {
+        choice.priceText?.let { priceText ->
+            Text(
+                priceText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** The star Settings puts on the default image model, with the word beside it. */
+@Composable
+private fun DefaultMark() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(start = 8.dp)) {
+        Icon(
+            Icons.Filled.Star,
+            contentDescription = null,
+            tint = JonakiTheme.colors.live,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            stringResource(R.string.chat_image_model_default),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun ChoiceRow(
+    name: String,
+    serviceName: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    trailing: @Composable () -> Unit = {},
+    details: @Composable () -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -105,21 +203,22 @@ private fun ModelRow(choice: ModelChoiceUi, isSelected: Boolean, onClick: () -> 
         // ellipsizes alone and never pushes the prices off the screen.
         Column(Modifier.weight(1f)) {
             Text(
-                choice.name,
+                name,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                choice.serviceName,
+                serviceName,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            ModelPrices(choice)
+            details()
         }
+        trailing()
     }
 }
 

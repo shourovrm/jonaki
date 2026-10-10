@@ -36,11 +36,20 @@ object ChatSample {
         ModelChoiceUi("gemini:gemini-3.8-flash", "Gemini 3.8 Flash", "Gemini"),
     )
 
+    val imageModels = listOf(
+        ImageModelChoiceUi("openrouter:black-forest-labs/flux.2-klein-4b", "FLUX.2 Klein 4B", "OpenRouter", "\$0.014 per megapixel", isDefault = true),
+        // A 40-character name: checks that long names ellipsize in the image section too.
+        ImageModelChoiceUi("openrouter:sourceful/riverflow-v2-pro-preview-x", "sourceful/riverflow-v2-pro-preview-x-092", "OpenRouter", "\$0.007 per image"),
+        ImageModelChoiceUi("gemini:gemini-2.5-flash-image", "gemini-2.5-flash-image", "Gemini"),
+    )
+
     /** The running sample with the status strip, model choices and usage filled in (D-027 mockup). */
     val withUsage: ChatUiState = running.copy(
         status = ChatStatusUi(modelName = "GLM 5.3 Flash", contextWindowTokens = 200_000, contextUsedTokens = 48_210, costUsd = 0.0134),
         modelChoices = scopedModels,
         selectedModelKey = scopedModels.first().key,
+        imageModelChoices = imageModels,
+        selectedImageModelKey = imageModels.first().key,
         usage = UsageUi(
             totalCostUsd = 0.0134,
             inputTokens = 48_210,
