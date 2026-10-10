@@ -86,6 +86,8 @@ data class SettingsSnapshot(
     val reminderPolicy: ReminderPolicy = ReminderPolicy(),
     /** "Always allow" rules of Settings > Approvals; each names one action of one tool and applies in every thread. */
     val approvalRules: List<ApprovalRule> = emptyList(),
+    /** The video models generate_video may use, and the starred model. */
+    val videoModels: VideoModels = VideoModels(),
     /** The image services and models generate_image may use, and the starred model. */
     val imageModels: ImageModels = ImageModels(),
 ) {
@@ -169,6 +171,10 @@ class AppSettings(
             holdFactsAfterOutsideContent = preferences.getBoolean(HOLD_FACTS_AFTER_OUTSIDE_CONTENT, true),
             zoneInMessages = enumOrDefault(preferences.getString(ZONE_IN_MESSAGES, null), ZoneInMessages.NONE),
             approvalRules = ApprovalRules.fromText(preferences.getString(APPROVAL_RULES, "").orEmpty()),
+            videoModels = VideoModels.fromStored(
+                modelKeysText = preferences.getString(VIDEO_MODEL_KEYS, null),
+                defaultModelKey = preferences.getString(VIDEO_DEFAULT_MODEL_KEY, null),
+            ),
             imageModels = ImageModels.fromStored(
                 servicesText = preferences.getString(IMAGE_SERVICES, null),
                 modelKeysText = preferences.getString(IMAGE_MODEL_KEYS, null),
@@ -294,6 +300,9 @@ class AppSettings(
         editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
         editor.putInt(REMINDER_MAX_REPEATS, snapshot.reminderPolicy.maxRepeats)
         editor.putString(APPROVAL_RULES, ApprovalRules.toText(snapshot.approvalRules))
+        val storedVideoModels = VideoModels.toStored(snapshot.videoModels)
+        editor.putString(VIDEO_MODEL_KEYS, storedVideoModels.modelKeysText)
+        editor.putString(VIDEO_DEFAULT_MODEL_KEY, storedVideoModels.defaultModelKey)
         val storedImageModels = ImageModels.toStored(snapshot.imageModels)
         editor.putString(IMAGE_SERVICES, storedImageModels.servicesText)
         editor.putString(IMAGE_MODEL_KEYS, storedImageModels.modelKeysText)
@@ -356,6 +365,8 @@ class AppSettings(
         const val HOLD_FACTS_AFTER_OUTSIDE_CONTENT = "hold_facts_after_outside_content"
         const val ZONE_IN_MESSAGES = "zone_in_messages"
         const val APPROVAL_RULES = "approval_rules"
+        const val VIDEO_MODEL_KEYS = "video_model_keys"
+        const val VIDEO_DEFAULT_MODEL_KEY = "video_default_model_key"
         // The first version of image generation saved only IMAGE_MODELS and IMAGE_DEFAULT_MODEL (OpenRouter ids); they are left in place and read once.
         const val IMAGE_MODELS = "image_models"
         const val IMAGE_DEFAULT_MODEL = "image_default_model"

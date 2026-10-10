@@ -118,14 +118,20 @@ object VideoChoices {
         return if (resolution.endsWith("k", ignoreCase = true)) digits * 1000 else digits
     }
 
-    /** "4, 6, 8 s", or "1 to 15 s" for an unbroken run of more than three numbers. */
-    fun describeSeconds(seconds: List<Int>): String {
+    /** The first and last second when [seconds] is an unbroken run of more than three numbers, such as 1 to 15; else null. */
+    fun unbrokenRun(seconds: List<Int>): IntRange? {
         val sorted = seconds.sorted()
         val isUnbrokenRun = sorted.size > 3 && sorted.zipWithNext().all { (first, second) -> second == first + 1 }
-        if (isUnbrokenRun) {
-            return "${sorted.first()} to ${sorted.last()} s"
+        return if (isUnbrokenRun) sorted.first()..sorted.last() else null
+    }
+
+    /** "4, 6, 8 s", or "1 to 15 s" for an unbroken run of more than three numbers. */
+    fun describeSeconds(seconds: List<Int>): String {
+        val run = unbrokenRun(seconds)
+        if (run != null) {
+            return "${run.first} to ${run.last} s"
         }
-        return sorted.joinToString(", ") + " s"
+        return seconds.sorted().joinToString(", ") + " s"
     }
 }
 

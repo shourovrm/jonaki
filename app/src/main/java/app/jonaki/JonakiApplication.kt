@@ -3,6 +3,7 @@ package app.jonaki
 import android.app.Application
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.OpenRouterImagePrices
+import app.jonaki.core.modelcatalog.VideoModelList
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.files.AndroidFileDestinations
 import app.jonaki.files.AttachmentDrafts
@@ -104,6 +105,11 @@ class JonakiApplication : Application() {
     /** Downloads and the share sheet, for the chat's Save and Share under a generated image. */
     lateinit var fileDestinations: AndroidFileDestinations
         private set
+
+    /** OpenRouter's video model list (durations, resolutions, prices), kept in one cache file for a day. */
+    val videoModelList: VideoModelList by lazy {
+        VideoModelList(File(cacheDir, "openrouter-video-models.json"), httpClient)
+    }
 
     /** Screens a fact saved after outside content, for the memory tool and for extraction. */
     lateinit var factScreen: FactScreen
@@ -254,6 +260,7 @@ class JonakiApplication : Application() {
             isSkillProposalOn = { settings.snapshot.value.suggestSkills },
             factScreen = factScreen,
             threadImageChoices = threadImageChoices,
+            videoModelList = videoModelList,
         )
         localModelTools = LocalModelTools(settings, runner::toolsForLocalPromptCosts)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
