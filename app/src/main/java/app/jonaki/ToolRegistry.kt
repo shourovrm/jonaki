@@ -5,6 +5,7 @@ import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.toolapi.ImageGenerator
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.SubagentLauncher
+import app.jonaki.run.VideoToolServices
 import app.jonaki.settings.ToolGroup
 import app.jonaki.settings.ToolGroups
 import app.jonaki.tools.artifact.ArtifactTool
@@ -14,6 +15,7 @@ import app.jonaki.tools.exportpdf.ExportPdfTool
 import app.jonaki.tools.exportpdf.PdfRenderer
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.generateimage.GenerateImageTool
+import app.jonaki.tools.generatevideo.GenerateVideoTool
 import app.jonaki.tools.mcp.McpServer
 import app.jonaki.tools.mcp.McpTool
 import app.jonaki.tools.memory.MemoryStore
@@ -69,6 +71,8 @@ data class ToolServices(
     val pageRenderer: PageRenderer? = null,
     /** The off-screen WebView that makes the PDF for export_pdf; null leaves export_pdf out. */
     val pdfRenderer: PdfRenderer? = null,
+    /** What generate_video needs; null leaves it out (no OpenRouter key, or no video model added). */
+    val video: VideoToolServices? = null,
     /** The groups switched on in the picker or Settings > Tools; the tools of the others are left out. */
     val enabledGroups: Set<ToolGroup> = ToolGroup.entries.toSet(),
     /** When set, only these tools are offered; a local model's thread uses ToolGroups.LOCAL_MODEL_TOOLS (D-133). */
@@ -137,6 +141,15 @@ object ToolRegistry {
         }
         if (services.mcpServers.isNotEmpty() && services.mcpToolListFolder != null) {
             tools += McpTool(services.mcpServers, services.mcpToolListFolder)
+        }
+        if (services.video != null) {
+            tools += GenerateVideoTool(
+                generator = services.video.generator,
+                modelKeys = services.video.modelKeys,
+                defaultModelKey = services.video.defaultModelKey,
+                facts = services.video.facts,
+                onJobCompleted = services.video.onJobCompleted,
+            )
         }
         val languages = ToolGroups.codeLanguages(services.enabledGroups)
         val codeRuntimes = services.codeRuntimes.filter { runtime -> runtime.language in languages }

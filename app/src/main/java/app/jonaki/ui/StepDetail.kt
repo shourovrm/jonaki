@@ -34,6 +34,8 @@ data class StepDetail(
         val lineCount: (lines: Int) -> String,
         /** The starred image model, named on generate_image's card when the call names none; null while none is added. */
         val defaultImageModel: String? = null,
+        /** The model, length, resolution and price estimate of a generate_video call; null shows only the prompt. */
+        val video: VideoStepText? = null,
     )
 
     companion object {
@@ -53,6 +55,7 @@ data class StepDetail(
                 "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
                 "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments, words))
                 "generate_image" -> StepDetail(query = null, target = generateImageTarget(arguments, words))
+                "generate_video" -> StepDetail(query = null, target = words.video?.target(arguments) ?: arguments.text("prompt"))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }

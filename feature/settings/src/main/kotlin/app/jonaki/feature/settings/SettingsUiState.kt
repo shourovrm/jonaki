@@ -76,6 +76,8 @@ data class SettingsUiState(
     val localModels: LocalModelsSummaryUi = LocalModelsSummaryUi(),
     /** Settings > Models > Image generation: the services and models generate_image may use. */
     val imageGeneration: ImageGenerationUi = ImageGenerationUi(),
+    /** Settings > Models > Video generation: the video models generate_video may use. */
+    val videoGeneration: VideoGenerationUi = VideoGenerationUi(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -261,6 +263,10 @@ class SettingsActions(
     val onAddImageModels: (serviceKey: String) -> Unit = {},
     val onImageModelSetDefault: (modelKey: String) -> Unit = {},
     val onImageModelRemove: (modelKey: String) -> Unit = {},
+    /** Opens the video model picker. */
+    val onAddVideoModels: () -> Unit = {},
+    val onVideoModelSetDefault: (modelKey: String) -> Unit = {},
+    val onVideoModelRemove: (modelKey: String) -> Unit = {},
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
     /** Adds or edits an MCP server; the dialog has already checked the input. */

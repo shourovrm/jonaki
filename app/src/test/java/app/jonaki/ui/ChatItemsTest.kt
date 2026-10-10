@@ -281,6 +281,31 @@ class ChatItemsTest {
         assertTrue(items.indexOf(pictures.single()) > items.indexOfFirst { item -> item is ChatItem.Run })
     }
 
+    @Test
+    fun aFinishedGenerateVideoCallGetsACardButAStillRunningJobAndAFailureDoNot() {
+        val calls = listOf(
+            ToolCall("c1", "generate_video", """{"prompt":"a boat"}"""),
+            ToolCall("c2", "generate_video", """{"prompt":"a lake"}"""),
+            ToolCall("c3", "generate_video", """{"prompt":"a hill"}"""),
+        )
+        val rows = listOf(
+            row("u", "USER", "make a video"),
+            row("a1", "ASSISTANT", "", calls = calls),
+            row("a2", "ASSISTANT", "Done."),
+        )
+        val steps = listOf(
+            StepEntity("c1", "t", "generate_video", """{"prompt":"a boat"}""", "DONE", "Video saved: videos/boat.mp4\nLength: 4 s, 720p", 0, 1),
+            StepEntity("c2", "t", "generate_video", """{"prompt":"a lake"}""", "DONE", "The video is still being made by openrouter:a/b. Job id: j2.", 2, 3),
+            StepEntity("c3", "t", "generate_video", """{"prompt":"a hill"}""", "FAILED", "Error: refused", 4, 5),
+        )
+
+        val items = ChatItems.build(rows, steps, isRunning = false, stepWords = englishStepWords)
+
+        val videos = items.filterIsInstance<ChatItem.GeneratedVideo>()
+        assertEquals(listOf("videos/boat.mp4"), videos.map { video -> video.path })
+        assertTrue(items.indexOf(videos.single()) > items.indexOfFirst { item -> item is ChatItem.Run })
+    }
+
     private fun subagent(id: String, order: Int, type: String, status: String = "DONE", cost: Double? = 0.01) = SubagentEntity(
         id = id, threadId = "t", parentToolCallId = "d1", orderInCall = order, agentType = type, task = "Laptop $order",
         model = "test:m", status = status, resultText = "answer $id", latestText = "Reading reviews\nmore", costUsd = cost,

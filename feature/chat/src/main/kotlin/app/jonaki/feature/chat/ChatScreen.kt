@@ -259,6 +259,7 @@ fun ChatScreen(
                         onOpenArtifact = onOpenArtifact,
                         onSaveImage = onSaveImage,
                         onShareImage = onShareImage,
+                        onPlayVideo = onOpenFile,
                         onOpenStep = onOpenStep,
                         // Editing while the agent works would change the history under the run.
                         onEditMessage = if (state.isRunning) null else onEditMessage,
@@ -438,6 +439,7 @@ private fun MessageList(
     onOpenArtifact: (path: String) -> Unit,
     onSaveImage: (path: String) -> Unit,
     onShareImage: (path: String) -> Unit,
+    onPlayVideo: (path: String) -> Unit,
     onOpenStep: (stepId: String) -> Unit,
     onEditMessage: ((messageId: String, text: String) -> Unit)?,
     onPythonCard: (ChatItem.PythonInstall, PythonCardAction) -> Unit,
@@ -504,6 +506,7 @@ private fun MessageList(
                 is ChatItem.Note -> NoteRow(item)
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
                 is ChatItem.GeneratedImage -> GeneratedImageCard(item.path, onSaveImage, onShareImage)
+                is ChatItem.GeneratedVideo -> GeneratedVideoCard(item.path, onPlayVideo, onSaveImage, onShareImage)
                 is ChatItem.PythonInstall -> PythonInstallCard(item, canTryAgain, onPythonCard)
                 is ChatItem.SummaryDivider -> SummaryDividerRow(item)
             }

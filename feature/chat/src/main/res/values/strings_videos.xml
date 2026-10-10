@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_video_play">Play</string>
+    <string name="chat_video_missing">Video missing</string>
+    <string name="chat_video_seconds">%1$d s</string>
+</resources>

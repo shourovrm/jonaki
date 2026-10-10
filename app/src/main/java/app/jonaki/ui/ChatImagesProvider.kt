@@ -5,7 +5,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import app.jonaki.JonakiApplication
 import app.jonaki.feature.chat.LocalChatImages
+import app.jonaki.feature.chat.LocalChatVideos
 import app.jonaki.files.ThreadChatImages
+import app.jonaki.files.ThreadChatVideos
 
 /**
  * Gives the chat below it the pictures of one thread. A thread that is not
@@ -18,5 +20,9 @@ internal fun ProvideChatImages(application: JonakiApplication, threadId: String,
         val folder = if (isNewThread) application.cacheDir else application.runner.threadFolder(threadId)
         ThreadChatImages(folder)
     }
-    CompositionLocalProvider(LocalChatImages provides images, content = content)
+    val videos = remember(threadId) {
+        val folder = if (isNewThread) application.cacheDir else application.runner.threadFolder(threadId)
+        ThreadChatVideos(folder)
+    }
+    CompositionLocalProvider(LocalChatImages provides images, LocalChatVideos provides videos, content = content)
 }

@@ -60,6 +60,7 @@ import app.jonaki.search.RoomChatSearchStore
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
+import app.jonaki.core.modelcatalog.VideoModelList
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.skills.SkillLibrary
@@ -156,8 +157,21 @@ class AgentRunner(
     private val factScreen: FactScreen? = null,
     /** The image model each thread picked; null (tests) means every thread follows the starred default. */
     private val threadImageChoices: ThreadImageChoices? = null,
+    /** OpenRouter's video model list for generate_video; null (tests) leaves generate_video out. */
+    private val videoModelList: VideoModelList? = null,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
+
+    private val videoSetup: VideoToolSetup? = videoModelList?.let { list ->
+        VideoToolSetup(
+            readOpenRouterKey = { secrets.read(SecretName.OPENROUTER) },
+            readVideoModels = { settings.snapshot.value.videoModels },
+            httpClient = httpClient,
+            videoModelList = list,
+            scope = scope,
+            saveUsage = backgroundModel::saveUsage,
+        )
+    }
 
     /** The subagent runner of each running thread, so that one subagent can be stopped alone (D-126). */
     private val subagentRunners = ConcurrentHashMap<String, SubagentRunner>()
@@ -858,6 +872,7 @@ class AgentRunner(
         pageRenderer = pageRenderer,
         pdfRenderer = pdfRenderer,
         enabledGroups = settings.snapshot.value.enabledToolGroups,
+        video = videoSetup?.servicesFor(thread.id),
         imageGenerator = imageGeneratorFor(thread.id),
         imageModelKeys = settings.snapshot.value.imageModels.usableModelKeys(::hasImageKey),
         defaultImageModelKey = { defaultImageModelFor(thread.id) },

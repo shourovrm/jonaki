@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="step_video_collects">ভিডিও কাজ %1$s নেওয়া, নতুন খরচ নেই</string>
+    <string name="step_video_cost_about">আনুমানিক %1$s</string>
+    <string name="step_video_cost_per_token">দাম টোকেন হিসেবে, আনুমানিক হিসাব নেই</string>
+    <string name="step_video_seconds">%1$d সেকেন্ড</string>
+    <string name="video_price_range">প্রতি সেকেন্ড %1$s থেকে %2$s</string>
+    <string name="video_price_single">প্রতি সেকেন্ড %1$s</string>
+    <string name="video_price_per_token">প্রতি টোকেন</string>
+    <string name="video_lengths_run">%1$d থেকে %2$d সেকেন্ড</string>
+    <string name="video_lengths_list">%1$s সেকেন্ড</string>
+</resources>

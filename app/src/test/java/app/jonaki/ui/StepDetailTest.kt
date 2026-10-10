@@ -82,4 +82,22 @@ class StepDetailTest {
         val starred = englishStepWords.let { words -> StepDetail.of("generate_image", """{"prompt":"A blue door"}""", words) }
         assertEquals("A blue door", starred.target)
     }
+
+    @Test
+    fun generateVideoShowsTheVideoTextOrElseThePrompt() {
+        assertEquals("A boat", StepDetail.of("generate_video", """{"prompt":"A boat"}""", englishStepWords).target)
+
+        val words = StepDetail.Words(
+            readCalendar = "", addToCalendar = "", reminder = "", notify = "", readClipboard = "", copyToClipboard = "", openApp = "",
+            schedule = "", cancelTask = "", listTasks = "", toDownloads = "", saveAs = "", share = "", toLinkedFolder = "",
+            listLinkedFolder = "", fromLinkedFolder = "", lineCount = { "" },
+            video = VideoStepText(
+                emptyMap(),
+                "openrouter:a/b",
+                VideoStepWords({ jobId -> "Collect $jobId" }, { dollars -> "about $dollars" }, "per token", { seconds -> "$seconds s" }),
+            ),
+        )
+        assertEquals("openrouter:a/b · A boat", StepDetail.of("generate_video", """{"prompt":"A boat"}""", words).target)
+        assertEquals("Collect j1", StepDetail.of("generate_video", """{"job_id":"j1"}""", words).target)
+    }
 }
