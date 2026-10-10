@@ -157,6 +157,15 @@ class ImageModelsTest {
     }
 
     @Test
+    fun onlyModelsOfServicesWithAKeyAreUsable() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, flux).addModel(ImageService.GEMINI, nanoBanana)
+
+        assertEquals(listOf("gemini:$nanoBanana"), models.usableModelKeys { service -> service == ImageService.GEMINI })
+        assertTrue(models.usableModelKeys { false }.isEmpty())
+        assertTrue(ImageModels().addService(ImageService.GEMINI).usableModelKeys { true }.isEmpty())
+    }
+
+    @Test
     fun servicesShareSecretsWithChatServices() {
         assertEquals(ChatService.OPENROUTER.secret, ImageService.OPENROUTER.secret)
         assertEquals(ChatService.GEMINI.secret, ImageService.GEMINI.secret)

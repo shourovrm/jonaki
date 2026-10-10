@@ -13,15 +13,38 @@ enum class ImageService(
      * place removes it in the other (like Ollama Cloud and Ollama web search).
      */
     val secret: SecretName,
+    /**
+     * Image models offered in the picker when the service has no list the app
+     * can read. OpenRouter's picker loads its own public list, so it has none.
+     */
+    val suggestedModels: List<SuggestedImageModel> = emptyList(),
 ) {
     OPENROUTER("openrouter", "OpenRouter", SecretName.OPENROUTER),
-    GEMINI("gemini", "Gemini", SecretName.GEMINI),
+
+    // Google's model list (GET /models) has no field that marks image-output models,
+    // so the ids below are the ones named on https://ai.google.dev/gemini-api/docs/image-generation
+    // and https://ai.google.dev/gemini-api/docs/batch-api (checked 2026-10-10); any other id can be typed.
+    GEMINI(
+        "gemini",
+        "Gemini",
+        SecretName.GEMINI,
+        suggestedModels = listOf(
+            SuggestedImageModel("gemini-2.5-flash-image", "Gemini 2.5 Flash Image"),
+            SuggestedImageModel("gemini-3.1-flash-image", "Gemini 3.1 Flash Image"),
+            SuggestedImageModel("gemini-3.1-flash-lite-image", "Gemini 3.1 Flash Lite Image"),
+            SuggestedImageModel("gemini-3-pro-image", "Gemini 3 Pro Image"),
+            SuggestedImageModel("gemini-3-pro-image-preview", "Gemini 3 Pro Image (preview)"),
+            SuggestedImageModel("gemini-nano-banana-2.1", "Gemini Nano Banana 2.1"),
+        ),
+    ),
     ;
 
     companion object {
         fun byKey(key: String): ImageService? = entries.firstOrNull { service -> service.key == key }
     }
 }
+
+data class SuggestedImageModel(val id: String, val name: String)
 
 /** What [ImageModels] is saved as in preferences: three plain texts. */
 data class StoredImageModels(
@@ -48,6 +71,15 @@ data class ImageModels(
     /** Every model as "service:modelId", in card order. */
     val allModelKeys: List<String>
         get() = addedServices.flatMap { service ->
+            modelsByService[service].orEmpty().map { modelId -> ModelKey.of(service.key, modelId) }
+        }
+
+    /**
+     * The models generate_image may offer: those of services with a saved key.
+     * The tool is offered when this is not empty.
+     */
+    fun usableModelKeys(hasKey: (ImageService) -> Boolean): List<String> =
+        addedServices.filter(hasKey).flatMap { service ->
             modelsByService[service].orEmpty().map { modelId -> ModelKey.of(service.key, modelId) }
         }
 

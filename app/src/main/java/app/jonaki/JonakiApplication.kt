@@ -2,6 +2,7 @@ package app.jonaki
 
 import android.app.Application
 import app.jonaki.core.modelcatalog.ModelCatalog
+import app.jonaki.core.modelcatalog.OpenRouterImagePrices
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.files.AndroidFileDestinations
 import app.jonaki.files.AttachmentDrafts
@@ -88,6 +89,11 @@ class JonakiApplication : Application() {
 
     lateinit var memoryExport: MemoryExport
         private set
+
+    /** OpenRouter's image model prices, kept in one cache file for a day (shared by the picker and Settings). */
+    val imagePrices: OpenRouterImagePrices by lazy {
+        OpenRouterImagePrices(httpClient, File(cacheDir, "openrouter-image-prices.json"))
+    }
 
     /** The one client every call shares; also used for OpenRouter's public image model list. */
     lateinit var httpClient: OkHttpClient

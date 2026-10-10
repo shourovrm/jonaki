@@ -74,7 +74,7 @@ data class SettingsUiState(
     val skillCount: Int = 0,
     /** Settings > Local models' row on the first page (D-133). */
     val localModels: LocalModelsSummaryUi = LocalModelsSummaryUi(),
-    /** Settings > Models > Image generation: the models generate_image may use. */
+    /** Settings > Models > Image generation: the services and models generate_image may use. */
     val imageGeneration: ImageGenerationUi = ImageGenerationUi(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
@@ -254,10 +254,13 @@ class SettingsActions(
     val onModelProvidersLoad: suspend (modelKey: String) -> Result<List<ProviderOptionUi>> = { Result.success(emptyList()) },
     /** [tags] empty returns the model to its routing choice. */
     val onModelProvidersChange: (modelKey: String, tags: List<String>, allowFallbacks: Boolean) -> Unit = { _, _, _ -> },
-    /** Opens the image model picker. */
-    val onAddImageModels: () -> Unit = {},
-    val onImageModelSetDefault: (modelId: String) -> Unit = {},
-    val onImageModelRemove: (modelId: String) -> Unit = {},
+    val onAddImageService: (serviceKey: String) -> Unit = {},
+    /** Removes the image service and its models; the key stays, since a chat service may share it. */
+    val onImageServiceRemove: (serviceKey: String) -> Unit = {},
+    /** Opens the image model picker of the service. */
+    val onAddImageModels: (serviceKey: String) -> Unit = {},
+    val onImageModelSetDefault: (modelKey: String) -> Unit = {},
+    val onImageModelRemove: (modelKey: String) -> Unit = {},
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
     /** Adds or edits an MCP server; the dialog has already checked the input. */

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,17 +49,29 @@ import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
 
-/** Settings > Models > Image generation (the models generate_image may use). */
+/** Settings > Models > Image generation: one card per added image service, then "Add service". */
 @Immutable
 data class ImageGenerationUi(
-    /** False shows "Needs an OpenRouter key."; the models stay listed. */
-    val hasOpenRouterKey: Boolean = false,
+    val services: List<ImageServiceCardUi> = emptyList(),
+    /** Services offered by "Add service": the ones not added yet. */
+    val addableServices: List<AddableServiceUi> = emptyList(),
+)
+
+/** One added image service. Its key is the same secret as a chat service of the same account. */
+@Immutable
+data class ImageServiceCardUi(
+    /** Stable id, for example "openrouter". */
+    val serviceKey: String,
+    val displayName: String,
+    val apiKey: KeySlot,
     val models: List<ImageModelRowUi> = emptyList(),
 )
 
 @Immutable
 data class ImageModelRowUi(
-    /** OpenRouter's id, for example "black-forest-labs/flux.2-klein-4b". */
+    /** "service:modelId", for example "openrouter:black-forest-labs/flux.2-klein-4b". */
+    val key: String,
+    /** The service's id, for example "black-forest-labs/flux.2-klein-4b". */
     val id: String,
     /** The list's name, or the id while the list is not loaded. */
     val name: String,
@@ -74,41 +87,43 @@ sealed interface ImagePickerState {
     /** [reason] is short, for example "HTTP 503". */
     data class Failed(val reason: String) : ImagePickerState
 
-    data class Loaded(val models: List<AddableModelUi>) : ImagePickerState
+    /** [allowsTypedId] is true for a service whose list is only suggestions, so any id can be added by hand. */
+    data class Loaded(val models: List<AddableModelUi>, val allowsTypedId: Boolean = false) : ImagePickerState
 }
 
 @Composable
 internal fun ImageGenerationSection(images: ImageGenerationUi, actions: SettingsActions) {
     SectionLabel(stringResource(R.string.settings_section_images))
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    ) {
-        Column {
-            if (!images.hasOpenRouterKey) {
-                Text(
-                    stringResource(R.string.settings_images_needs_key),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp),
-                )
-            }
-            if (images.models.isEmpty()) {
-                Text(
-                    stringResource(R.string.settings_images_none),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
-                )
-            }
-            for (model in images.models) {
-                ImageModelRow(model, actions)
-            }
-            TextButton(onClick = actions.onAddImageModels, modifier = Modifier.padding(horizontal = 4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        for (card in images.services) {
+            ImageServiceCard(card, actions)
+        }
+        if (images.addableServices.isNotEmpty()) {
+            AddServiceDropdown(images.addableServices, actions.onAddImageService)
+        }
+    }
+}
+
+@Composable
+private fun ImageServiceCard(card: ImageServiceCardUi, actions: SettingsActions) {
+    val summary = collapsedSummary(card.apiKey, card.models.size)
+    ServiceCardFrame("image:${card.serviceKey}", startsOpen = !card.apiKey.isSet, card.displayName, summary, account = null) {
+        KeyField(stringResource(R.string.settings_api_key), card.apiKey, actions)
+        if (card.models.isNotEmpty()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(top = 12.dp))
+        }
+        for (model in card.models) {
+            ImageModelRow(model, actions)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+            TextButton(onClick = { actions.onAddImageModels(card.serviceKey) }) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.settings_images_add))
+                Text(stringResource(R.string.settings_add_model))
+            }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = { actions.onImageServiceRemove(card.serviceKey) }) {
+                Text(stringResource(R.string.settings_remove_service), color = JonakiTheme.colors.deny)
             }
         }
     }
@@ -118,7 +133,7 @@ internal fun ImageGenerationSection(images: ImageGenerationUi, actions: Settings
 @Composable
 private fun ImageModelRow(model: ImageModelRowUi, actions: SettingsActions) {
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
-        ImageModelStar(model, onMakeDefault = { actions.onImageModelSetDefault(model.id) })
+        ImageModelStar(model, onMakeDefault = { actions.onImageModelSetDefault(model.key) })
         Column(Modifier.weight(1f).padding(top = 10.dp)) {
             Text(model.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (model.name != model.id) {
@@ -166,7 +181,7 @@ private fun ImageModelMenu(model: ImageModelRowUi, actions: SettingsActions) {
                     leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null) },
                     onClick = {
                         open = false
-                        actions.onImageModelSetDefault(model.id)
+                        actions.onImageModelSetDefault(model.key)
                     },
                 )
             }
@@ -174,7 +189,7 @@ private fun ImageModelMenu(model: ImageModelRowUi, actions: SettingsActions) {
                 text = { Text(stringResource(R.string.settings_remove_model), color = JonakiTheme.colors.deny) },
                 onClick = {
                     open = false
-                    actions.onImageModelRemove(model.id)
+                    actions.onImageModelRemove(model.key)
                 },
             )
         }
@@ -182,14 +197,16 @@ private fun ImageModelMenu(model: ImageModelRowUi, actions: SettingsActions) {
 }
 
 /**
- * Picks image models from OpenRouter's list by search. The list loads when
- * the screen opens, so it has loading, failed and empty-search states. The
- * list has no prices, so rows show name and id only; [onDone] receives the
- * ids ticked.
+ * Picks image models of one service by search. The list loads when the
+ * screen opens, so it has loading, failed and empty-search states. A row
+ * that has an [AddableModelUi.imagePrice] shows it on a line of its own
+ * under the id; [onDone] receives the ids ticked, including one typed by
+ * hand when the service allows it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddImageModelsScreen(
+    serviceName: String,
     state: ImagePickerState,
     onClose: () -> Unit,
     onRetry: () -> Unit,
@@ -209,7 +226,7 @@ fun AddImageModelsScreen(
                 },
                 title = {
                     Text(
-                        stringResource(R.string.settings_images_picker_title),
+                        stringResource(R.string.settings_add_models_title, serviceName),
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -239,7 +256,14 @@ fun AddImageModelsScreen(
                 is ImagePickerState.Loaded -> {
                     SearchField(query, onQueryChange = { query = it })
                     val visible = remember(state.models, query) { filterModels(state.models, query) }
-                    if (visible.isEmpty()) {
+                    val typedId = if (state.allowsTypedId) freeTextModelId(state.models, query) else null
+                    if (visible.isEmpty() && typedId != null) {
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            item(key = "typed") {
+                                TypedIdRow(typedId, isPicked = typedId in picked, onToggle = { picked = toggled(picked, typedId) })
+                            }
+                        }
+                    } else if (visible.isEmpty()) {
                         CenteredMessage {
                             Text(stringResource(R.string.settings_images_no_match), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -265,7 +289,11 @@ private fun CenteredMessage(content: @Composable () -> Unit) {
     ) { content() }
 }
 
-/** Two lines per row (D-029): the name ends in "…" when long, the id has its own line. */
+/**
+ * Two lines per row (D-029), three with a price: the name ends in "…" when
+ * long, the id and the price each have their own line. The price line keeps
+ * its height while the price loads, so the row does not jump when it arrives.
+ */
 @Composable
 private fun ImagePickRow(model: AddableModelUi, isPicked: Boolean, onToggle: () -> Unit) {
     Row(
@@ -284,6 +312,16 @@ private fun ImagePickRow(model: AddableModelUi, isPicked: Boolean, onToggle: () 
         Column(Modifier.weight(1f)) {
             Text(model.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(model.id, style = idStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            model.imagePrice?.let { price ->
+                Text(priceLineText(price), style = idStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
+}
+
+/** A no-break space while loading, so the line is as tall as one with text. */
+private fun priceLineText(price: ImagePriceUi): String = when (price) {
+    ImagePriceUi.Loading -> "\u00A0"
+    is ImagePriceUi.Known -> price.text
+    ImagePriceUi.Unknown -> "–"
 }

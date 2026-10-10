@@ -7,6 +7,7 @@ import app.jonaki.core.toolapi.ImageOutcome
 import app.jonaki.core.toolapi.ImageRequest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -38,9 +39,21 @@ class RecordingImageGeneratorTest {
     }
 
     @Test
-    fun aFailureOrAnUnpricedPictureSavesNothing() = runBlocking {
+    fun aPictureWithoutAPriceStillSavesItsTokensWithAnUnknownCost() = runBlocking {
+        val outcome = ImageOutcome.Success(ByteArray(1), "image/png", costUsd = null, inputTokens = 7, outputTokens = 1290)
+
+        recording(outcome).generate(ImageRequest("gemini", "gemini-2.5-flash-image", "a door"))
+
+        val row = saved.single()
+        assertEquals("gemini:gemini-2.5-flash-image", row.modelKey)
+        assertNull(row.costUsd)
+        assertEquals(7, row.usage.inputTokens)
+        assertEquals(1290, row.usage.outputTokens)
+    }
+
+    @Test
+    fun aFailureSavesNothing() = runBlocking {
         recording(ImageOutcome.Failed(ImageFailure.OTHER, "x")).generate(request)
-        recording(ImageOutcome.Success(ByteArray(1), "image/png", costUsd = null)).generate(request)
 
         assertTrue(saved.isEmpty())
     }

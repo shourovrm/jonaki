@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_section_images">ছবি তৈরি</string>
-    <string name="settings_images_needs_key">OpenRouter কী লাগবে।</string>
-    <string name="settings_images_none">কোনো ছবির মডেল যোগ করা হয়নি।</string>
-    <string name="settings_images_add">ছবির মডেল যোগ করুন</string>
-    <string name="settings_images_picker_title">ছবির মডেল যোগ করুন</string>
     <string name="settings_images_loading">মডেল আসছে</string>
     <string name="settings_images_failed">তালিকা আনা যায়নি (%1$s)</string>
     <string name="settings_images_retry">আবার চেষ্টা করুন</string>

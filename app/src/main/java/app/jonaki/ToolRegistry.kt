@@ -79,11 +79,11 @@ data class ToolServices(
     val chatSearchStore: ChatSearchStore? = null,
     /** Where propose_skill saves a proposal; null leaves the tool out (off in Settings, incognito, subagents' lists). */
     val skillProposals: SkillProposalSink? = null,
-    /** Makes pictures with the models below; null leaves generate_image out (no OpenRouter key or no image model added). */
+    /** Makes pictures with the models below, routed by service; null leaves generate_image out (no image service has both a key and a model). */
     val imageGenerator: ImageGenerator? = null,
-    /** The image models the user added, and the starred one. */
-    val imageModelIds: List<String> = emptyList(),
-    val defaultImageModelId: String? = null,
+    /** The image models of the services that have a key, as "service:modelId", and the starred one. */
+    val imageModelKeys: List<String> = emptyList(),
+    val defaultImageModelKey: String? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -122,8 +122,8 @@ object ToolRegistry {
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)
         }
-        if (services.imageGenerator != null && services.imageModelIds.isNotEmpty()) {
-            tools += GenerateImageTool(services.imageGenerator, services.imageModelIds, services.defaultImageModelId)
+        if (services.imageGenerator != null && services.imageModelKeys.isNotEmpty()) {
+            tools += GenerateImageTool(services.imageGenerator, services.imageModelKeys, services.defaultImageModelKey)
         }
         if (services.pdfRenderer != null) {
             tools += ExportPdfTool(services.pdfRenderer)

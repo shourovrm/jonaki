@@ -86,7 +86,7 @@ data class SettingsSnapshot(
     val reminderPolicy: ReminderPolicy = ReminderPolicy(),
     /** "Always allow" rules of Settings > Approvals; each names one action of one tool and applies in every thread. */
     val approvalRules: List<ApprovalRule> = emptyList(),
-    /** The OpenRouter image models generate_image may use, and the starred one. */
+    /** The image services and models generate_image may use, and the starred model. */
     val imageModels: ImageModels = ImageModels(),
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
@@ -169,9 +169,13 @@ class AppSettings(
             holdFactsAfterOutsideContent = preferences.getBoolean(HOLD_FACTS_AFTER_OUTSIDE_CONTENT, true),
             zoneInMessages = enumOrDefault(preferences.getString(ZONE_IN_MESSAGES, null), ZoneInMessages.NONE),
             approvalRules = ApprovalRules.fromText(preferences.getString(APPROVAL_RULES, "").orEmpty()),
-            imageModels = ImageModels.fromText(
-                preferences.getString(IMAGE_MODELS, "").orEmpty(),
-                preferences.getString(IMAGE_DEFAULT_MODEL, null),
+            imageModels = ImageModels.fromStored(
+                servicesText = preferences.getString(IMAGE_SERVICES, null),
+                modelKeysText = preferences.getString(IMAGE_MODEL_KEYS, null),
+                defaultModelKey = preferences.getString(IMAGE_DEFAULT_MODEL_KEY, null),
+                // The first version's values; they are read only until the new ones are first saved.
+                legacyModelsText = preferences.getString(IMAGE_MODELS, null),
+                legacyDefaultModel = preferences.getString(IMAGE_DEFAULT_MODEL, null),
             ),
         )
     }
@@ -290,8 +294,10 @@ class AppSettings(
         editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
         editor.putInt(REMINDER_MAX_REPEATS, snapshot.reminderPolicy.maxRepeats)
         editor.putString(APPROVAL_RULES, ApprovalRules.toText(snapshot.approvalRules))
-        editor.putString(IMAGE_MODELS, ImageModels.toText(snapshot.imageModels.modelIds))
-        editor.putString(IMAGE_DEFAULT_MODEL, snapshot.imageModels.defaultModelId)
+        val storedImageModels = ImageModels.toStored(snapshot.imageModels)
+        editor.putString(IMAGE_SERVICES, storedImageModels.servicesText)
+        editor.putString(IMAGE_MODEL_KEYS, storedImageModels.modelKeysText)
+        editor.putString(IMAGE_DEFAULT_MODEL_KEY, storedImageModels.defaultModelKey)
         editor.apply()
     }
 
@@ -350,7 +356,11 @@ class AppSettings(
         const val HOLD_FACTS_AFTER_OUTSIDE_CONTENT = "hold_facts_after_outside_content"
         const val ZONE_IN_MESSAGES = "zone_in_messages"
         const val APPROVAL_RULES = "approval_rules"
+        // The first version of image generation saved only IMAGE_MODELS and IMAGE_DEFAULT_MODEL (OpenRouter ids); they are left in place and read once.
         const val IMAGE_MODELS = "image_models"
         const val IMAGE_DEFAULT_MODEL = "image_default_model"
+        const val IMAGE_SERVICES = "image_services"
+        const val IMAGE_MODEL_KEYS = "image_model_keys"
+        const val IMAGE_DEFAULT_MODEL_KEY = "image_default_model_key"
     }
 }
