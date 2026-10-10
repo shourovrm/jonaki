@@ -2568,3 +2568,24 @@ the release build pass; seen on the A059 in 1.4.4: the whole name and
 "OpenRouter" on one line, the sheet opening from a tap, a new thread's
 bar, and "1% /1M" back in the strip. Not seen: a 40-character name at 360
 dp and font scale 1.3 (a preview covers it; no preview was rendered).
+
+## D-177 · 2026-10-10 · Serper as a fourth search backend — proposed
+User request. `search/serper/` calls Serper (serper.dev), which returns
+Google's results as JSON; the other three backends search their own
+indexes, so this is the one that gives Google's ranking, which matters
+most for Bangla and local queries. It sends `q`, `num` and, for
+freshness, Google's `tbs` filter (`qdr:d`, `qdr:w`, `qdr:m`, `qdr:y`); a
+site becomes ` site:<domain>` in the query. It reads `organic` (title,
+link, snippet, date). Serper returns snippets only, so `include_content`
+does nothing here and the model reads a page with web_fetch. A new
+install orders the services Tavily, Serper, Ollama, Exa: Tavily first
+because its 1,000 credits renew monthly and it returns page text, while
+Serper's 2,500 free searches are given once (third-party pricing pages,
+not Serper's own). An install with a saved order gets Serper last and the
+user moves it in Settings > Web. Not built: the answer box and knowledge
+panel, the news endpoint, country and language parameters, a balance line
+in Settings. Amends D-011. Outcome: 6 unit tests pass against the
+documented response shape, and `gradle testReleaseUnitTest assembleRelease
+--offline` passes. Not checked: any call to the live service (no key was
+available), so the response fields and the out-of-credits answer (taken
+as HTTP 400 "Not enough credits") are unconfirmed; not seen on the phone.

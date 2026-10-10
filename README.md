@@ -22,7 +22,7 @@ One model key is enough to chat. Some features call a service of their own and s
 
 | Feature | Key it needs |
 | --- | --- |
-| Web search | Tavily, Ollama or Exa (any one) |
+| Web search | Tavily, Serper, Ollama or Exa (any one) |
 | YouTube summaries | Gemini |
 | Jev guard | OpenRouter |
 
@@ -47,7 +47,7 @@ Because you pay the services directly, Jonaki shows what each answer cost, with 
 
 ## Tools
 
-**Web.** The agent searches through Tavily, Ollama or Exa, trying them in the order you set, and then reads the pages it finds (including with javascripts). It summarises YouTube videos through Gemini, either whole or for a time range. Web access can be turned off for a thread.
+**Web.** The agent searches through Tavily, Serper (Google results), Ollama or Exa, trying them in the order you set, and then reads the pages it finds (including with javascripts). It summarises YouTube videos through Gemini, either whole or for a time range. Web access can be turned off for a thread.
 
 **Files.** You give the agent a file by attaching it, sharing it from another app or taking a photo. It reads text, PDF, Word, Excel, PowerPoint and images. What it produces can be saved Downloads, shared to another app, or written to one folder you link.
 

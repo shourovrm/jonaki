@@ -69,6 +69,7 @@ dependencies {
     implementation(project(":providers:gemini"))
     implementation(project(":providers:local-llama"))
     implementation(project(":search:tavily"))
+    implementation(project(":search:serper"))
     implementation(project(":search:ollama"))
     implementation(project(":search:exa"))
     implementation(libs.okhttp)

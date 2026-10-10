@@ -26,6 +26,7 @@ enum class ThemeChoice {
 /** Search services the user can order; each needs its own key. */
 enum class SearchService(val secret: SecretName) {
     TAVILY(SecretName.TAVILY),
+    SERPER(SecretName.SERPER),
     OLLAMA(SecretName.OLLAMA),
     EXA(SecretName.EXA),
 }

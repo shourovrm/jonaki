@@ -2012,6 +2012,7 @@ private fun hintFor(service: ChatService): String = when (service) {
 
 private fun displayNameOf(service: SearchService): String = when (service) {
     SearchService.TAVILY -> "Tavily"
+    SearchService.SERPER -> "Serper"
     SearchService.OLLAMA -> "Ollama"
     SearchService.EXA -> "Exa"
 }

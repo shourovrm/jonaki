@@ -84,6 +84,7 @@ import app.jonaki.providers.openaicompatible.OpenRouterImageGenerator
 import app.jonaki.providers.openaicompatible.OpenRouterRoute
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
+import app.jonaki.search.serper.SerperSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
 import app.jonaki.feature.chat.MediaKind
 import app.jonaki.feature.settings.ApprovalRuleChoiceUi
@@ -1336,6 +1337,7 @@ class AgentRunner(
             val key = secrets.read(service.secret) ?: return@mapNotNull null
             when (service) {
                 SearchService.TAVILY -> TavilySearchBackend(key, httpClient)
+                SearchService.SERPER -> SerperSearchBackend(key, httpClient)
                 SearchService.OLLAMA -> OllamaSearchBackend(key, httpClient)
                 SearchService.EXA -> ExaSearchBackend(key, httpClient)
             }

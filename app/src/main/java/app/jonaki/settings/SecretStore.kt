@@ -28,6 +28,7 @@ enum class SecretName {
     EXA,
     MINIMAX,
     QWEN,
+    SERPER,
 }
 
 /**
