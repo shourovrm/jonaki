@@ -105,6 +105,7 @@ object SettingsSearch {
         SettingsPage.PERMISSIONS to permissionTitles(),
         SettingsPage.ABOUT to listOf(
             R.string.settings_about_github,
+            R.string.settings_update_check,
         ),
     )
 

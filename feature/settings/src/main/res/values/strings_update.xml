@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings > About > Check for update. Nothing is checked until the user taps. -->
+<resources>
+    <string name="settings_update_check">Check for update</string>
+    <string name="settings_update_checking">Checking GitHub…</string>
+    <string name="settings_update_up_to_date">Up to date. Version %1$s.</string>
+    <string name="settings_update_available">Version %1$s is available.</string>
+    <string name="settings_update_download_install">Download and install</string>
+    <string name="settings_update_downloading">Downloading… %1$d%%</string>
+    <string name="settings_update_downloading_unknown">Downloading…</string>
+    <string name="settings_update_ready">Version %1$s is ready to install.</string>
+    <string name="settings_update_install">Install</string>
+    <string name="settings_update_allow_installs">Allow Jonaki to install apps on the next screen, then come back and tap Install.</string>
+    <string name="settings_update_failed_no_network">No network. Could not reach GitHub.</string>
+    <string name="settings_update_failed_http">GitHub answered HTTP %1$d.</string>
+    <string name="settings_update_failed_unreadable">GitHub\'s answer had no APK.</string>
+    <string name="settings_update_failed_download">The download was broken.</string>
+</resources>

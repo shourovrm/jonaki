@@ -16,6 +16,7 @@ dependencyResolutionManagement {
 rootProject.name = "Jonaki"
 
 include(":app")
+include(":core:app-update")
 include(":core:model")
 include(":core:tool-api")
 include(":core:provider-api")

@@ -119,7 +119,13 @@ private fun statusColor(status: PermissionStatus): Color = when (status) {
  * a list of rows, because nothing here is a setting.
  */
 @Composable
-internal fun AboutSection(appVersion: String, onOpenGitHub: () -> Unit) {
+internal fun AboutSection(
+    appVersion: String,
+    onOpenGitHub: () -> Unit,
+    update: UpdateUiState = UpdateUiState.Idle,
+    onCheckForUpdate: () -> Unit = {},
+    onInstallUpdate: () -> Unit = {},
+) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             JonakiMark()
@@ -139,6 +145,8 @@ internal fun AboutSection(appVersion: String, onOpenGitHub: () -> Unit) {
         }
         Spacer(Modifier.height(20.dp))
         Text(stringResource(R.string.settings_about_description), style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(16.dp))
+        UpdateSection(update, onCheckForUpdate, onInstallUpdate)
         Spacer(Modifier.height(20.dp))
         Text(
             stringResource(R.string.settings_about_developer),

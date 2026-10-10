@@ -23,6 +23,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:app-update"))
     implementation(project(":core:model"))
     implementation(project(":core:tool-api"))
     implementation(project(":core:agent"))

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_update_check">আপডেট আছে কি না দেখুন</string>
+    <string name="settings_update_checking">GitHub দেখা হচ্ছে…</string>
+    <string name="settings_update_up_to_date">আপ টু ডেট। ভার্সন %1$s।</string>
+    <string name="settings_update_available">ভার্সন %1$s পাওয়া গেছে।</string>
+    <string name="settings_update_download_install">ডাউনলোড ও ইনস্টল</string>
+    <string name="settings_update_downloading">ডাউনলোড হচ্ছে… %1$d%%</string>
+    <string name="settings_update_downloading_unknown">ডাউনলোড হচ্ছে…</string>
+    <string name="settings_update_ready">ভার্সন %1$s ইনস্টলের জন্য তৈরি।</string>
+    <string name="settings_update_install">ইনস্টল</string>
+    <string name="settings_update_allow_installs">পরের স্ক্রিনে জোনাকিকে অ্যাপ ইনস্টল করার অনুমতি দিন, তারপর ফিরে এসে ইনস্টল চাপুন।</string>
+    <string name="settings_update_failed_no_network">নেটওয়ার্ক নেই। GitHub-এ পৌঁছানো যায়নি।</string>
+    <string name="settings_update_failed_http">GitHub HTTP %1$d উত্তর দিয়েছে।</string>
+    <string name="settings_update_failed_unreadable">GitHub-এর উত্তরে কোনো APK নেই।</string>
+    <string name="settings_update_failed_download">ডাউনলোড ঠিকভাবে হয়নি।</string>
+</resources>
