@@ -4,6 +4,7 @@ import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.feature.chat.SubagentCostWarning
 import app.jonaki.core.model.Role
 import app.jonaki.core.toolapi.GeneratedImages
+import app.jonaki.core.toolapi.GeneratedVideos
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.storage.CompactionEntity
 import app.jonaki.core.storage.HistoryMapper
@@ -224,6 +225,7 @@ object ChatItems {
         val stepsOfTurn = turnSteps + turnSubagents.flatMap { subagent -> subagentParts.stepsOf(subagent) }
         items += artifactsShown(stepsOfTurn, turnId)
         items += generatedImagesShown(turnSteps, turnId)
+        items += generatedVideosShown(turnSteps, turnId)
         for (row in turn) {
             when (row.role) {
                 Role.ASSISTANT.name -> items += assistantItems(row, isActiveTurn)
@@ -282,6 +284,17 @@ object ChatItems {
             .filter { step -> step.toolName == GeneratedImages.TOOL_NAME && step.status == "DONE" }
             .mapNotNull { step -> GeneratedImages.pathIn(step.resultText.orEmpty())?.let { path -> step.toolCallId to path } }
             .map { (toolCallId, path) -> ChatItem.GeneratedImage("image-$turnId-$toolCallId", path) }
+
+    /**
+     * One card per finished generate_video call whose result names a saved
+     * file. A call that handed over a still-running job has no file line, so
+     * it shows no card until a later job_id call collects the video.
+     */
+    private fun generatedVideosShown(turnSteps: List<StepEntity>, turnId: String): List<ChatItem> =
+        turnSteps
+            .filter { step -> step.toolName == GeneratedVideos.TOOL_NAME && step.status == "DONE" }
+            .mapNotNull { step -> GeneratedVideos.pathIn(step.resultText.orEmpty())?.let { path -> step.toolCallId to path } }
+            .map { (toolCallId, path) -> ChatItem.GeneratedVideo("video-$turnId-$toolCallId", path) }
 
     private fun artifactPathOf(argumentsJson: String): String? {
         val arguments = runCatching { Json.parseToJsonElement(argumentsJson) as? JsonObject }.getOrNull() ?: return null
