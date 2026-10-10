@@ -2548,3 +2548,23 @@ Other models and services are sent nothing. Outcome: unit tests pass. On
 the A059, three messages in a row to Claude Haiku 5.5: 0, then 12,362 of
 12,399, then 12,395 of 12,432 input tokens cached; the thread's cost went
 $0.0015, $0.0017, $0.0018, against $0.0012 a message before.
+
+## D-176 · 2026-10-10 · The model's name under the thread title — proposed
+User request: with the media button (D-174) the status strip holds six
+controls and the model's name was cut to one or two letters. Six
+alternatives are in docs/mockups/status-bar.html; the user chose the
+fourth. The model leaves the strip. The top bar shows it as a second line
+under the thread title: the glow dot (glowing while the thread's agent
+works), the short name (the part after "Maker: ", so "Claude Haiku 5.5"),
+" · " and the service, and a drop-down arrow. The title and the line
+together are one button that opens the model sheet, which gives the small
+line a 48 dp touch height. A new thread shows the line alone. The strip
+now holds context and cost at the left and the media button, web search
+and approvals at the right, and shows the window's size again from 400 dp
+of width. Amends D-123 (the model as a pill in the strip). With the status
+strip switched off in Settings the line is hidden too, as the pill was.
+Built by a Sonnet subagent, reviewed and adjusted. Outcome: unit tests and
+the release build pass; seen on the A059 in 1.4.4: the whole name and
+"OpenRouter" on one line, the sheet opening from a tap, a new thread's
+bar, and "1% /1M" back in the strip. Not seen: a 40-character name at 360
+dp and font scale 1.3 (a preview covers it; no preview was rendered).

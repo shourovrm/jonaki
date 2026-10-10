@@ -2,6 +2,7 @@ package app.jonaki.feature.chat
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -72,6 +75,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
@@ -87,6 +94,8 @@ import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.approvalModeLabel
 import app.jonaki.core.ui.ThinkingChoice
 import app.jonaki.core.ui.JonakiTheme
+import app.jonaki.core.ui.DotStyle
+import app.jonaki.core.ui.GlowDot
 import app.jonaki.core.ui.MarkdownText
 import app.jonaki.core.ui.MonospaceFamily
 import app.jonaki.core.ui.UsageFormat
@@ -194,6 +203,7 @@ fun ChatScreen(
                         onOpenMemory = onOpenMemory,
                         onOpenSkills = onOpenSkills,
                         onOpenStyle = onOpenStyle,
+                        onModelClick = { openSheet = ChatSheet.MODEL },
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     if (state.incognito) {
@@ -208,8 +218,6 @@ fun ChatScreen(
                     if (status != null) {
                         StatusStrip(
                             status = status,
-                            isRunning = state.isRunning,
-                            onModelClick = { openSheet = ChatSheet.MODEL },
                             onCostClick = if (state.usage == null) null else ({ openSheet = ChatSheet.USAGE }),
                             webSearchEnabled = state.webSearchEnabled,
                             onWebSearchChange = onWebSearchChange,
@@ -390,6 +398,53 @@ private enum class ChatSheet {
     MEDIA,
 }
 
+/**
+ * The model's short name and service under the thread title. The title and this line together are
+ * the button that opens the model sheet (see [ChatTopBar]), so the line itself takes no tap.
+ * The text gives way before the arrow does, so the arrow stays whole at any width (D-029).
+ */
+@Composable
+private fun ModelLine(modelName: String, serviceName: String?, isRunning: Boolean) {
+    val description = stringResource(R.string.chat_status_model, modelName)
+    val shortName = ModelShortName.of(modelName)
+    val lineText = if (serviceName.isNullOrBlank()) shortName else "$shortName · $serviceName"
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            // The dot keeps room around itself for its glow; this puts the dot itself under the title's first letter.
+            .offset(x = -GlowDotInset)
+            .heightIn(min = ModelLineHeight)
+            .clearAndSetSemantics { contentDescription = description },
+    ) {
+        // The dot glows while this thread's agent works, like the thread list's dot.
+        GlowDot(
+            color = JonakiTheme.colors.live,
+            style = if (isRunning) DotStyle.GLOWING else DotStyle.QUIET,
+            dotSize = 8.dp,
+        )
+        Text(
+            lineText,
+            style = MaterialTheme.typography.labelMedium,
+            color = JonakiTheme.colors.inkSoft,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 6.dp).weight(1f, fill = false),
+        )
+        Icon(
+            Icons.Filled.ArrowDropDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+/** Close under the 24 dp title line, so that the two read as one block inside the 64 dp bar. */
+private val ModelLineHeight = 24.dp
+
+/** How far the glow dot's own margin pushes the dot to the right of where its box starts. */
+private val GlowDotInset = 4.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatTopBar(
@@ -399,6 +454,7 @@ private fun ChatTopBar(
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenStyle: () -> Unit,
+    onModelClick: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     TopAppBar(
@@ -407,15 +463,39 @@ private fun ChatTopBar(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.chat_back))
             }
         },
-        // The title only: the model and web search are pills in the status strip (D-123).
+        // The model is a second line under the title (D-176); web search is a pill in the status strip (D-123).
         title = {
-            Text(
-                state.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            val status = state.status
+            // The title and the model line are one button, which gives the small line a 48 dp touch height.
+            val opensModelSheet = if (status == null) {
+                Modifier
+            } else {
+                // Not clipped: a clip would cut the dot's glow, which reaches past the block's left edge.
+                Modifier.clickable(role = Role.Button, onClick = onModelClick)
+            }
+            Column(
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.heightIn(min = 48.dp).then(opensModelSheet),
+            ) {
+                // A new thread has no title yet; the model line then stands alone.
+                if (state.title.isNotBlank()) {
+                    Text(
+                        state.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                val selectedChoice = state.modelChoices.firstOrNull { choice -> choice.key == state.selectedModelKey }
+                if (status != null) {
+                    ModelLine(
+                        modelName = status.modelName,
+                        serviceName = selectedChoice?.serviceName,
+                        isRunning = state.isRunning,
+                    )
+                }
+            }
         },
         actions = {
             Box {

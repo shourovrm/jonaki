@@ -2,7 +2,7 @@
 
 Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an AI agent in a chat. You bring API keys for the model services you already use, and the agent searches the web, works with your files, runs code and remembers what matters between conversations. There is no account and no Jonaki server: requests go straight from the phone to the services you set up.
 
-**Download:** [jonaki-v1.4.1.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.1/jonaki-v1.4.1.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
+**Download:** [jonaki-v1.4.4.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.4/jonaki-v1.4.4.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
 
 <p>
   <img src="docs/screenshots/chat.png" width="250" alt="A thread where the agent ran two web searches before answering">
@@ -51,6 +51,8 @@ Because you pay the services directly, Jonaki shows what each answer cost, with 
 
 **Files.** You give the agent a file by attaching it, sharing it from another app or taking a photo. It reads text, PDF, Word, Excel, PowerPoint and images. What it produces can be saved Downloads, shared to another app, or written to one folder you link.
 
+**Pictures and video.** With an OpenRouter key and an added model, the agent makes pictures, vector images (SVG) and short videos, and can change an existing picture by taking it as a reference. A media button beside the message box sends your words straight to the image or video model, without the chat model, and shows the model and the price before you send.
+
 **Code.** The agent runs JavaScript on the phone. Python is an optional download that runs offline once installed.
 
 **Phone.** The agent creates calendar events, reminders and notifications. A reminder rings again until you tap Done. A scheduled task runs in its thread at the time you set, so the agent can do recurring work without being asked.
@@ -92,6 +94,7 @@ Settings lists these permissions and shows which ones are granted. The camera is
 | Exact alarms | Ringing reminders and starting scheduled tasks on time |
 | Run at startup | Restoring reminders and scheduled tasks after the phone restarts |
 | Foreground service | Letting an answer finish while the app is in the background |
+| Keep awake | Keeping a run going while the screen is off |
 
 ## Code layout
 

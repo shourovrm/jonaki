@@ -6,15 +6,15 @@ decision named here has its full entry in `DECISIONS.md`.
 
 ## State at the end of the session
 
-- `main` is at the commit that adds this file, about 98 commits ahead of
-  `origin/main`. Nothing is pushed. No release was made: v1.4.2 has no tag and
-  no GitHub release, and the README still links v1.4.1.
-- The test phone (A059) runs v1.4.3, version code 16, built from the last
+- In the evening the user asked for a release: `main` and the tag `v1.4.4`
+  are pushed, and the GitHub release "Jonaki 1.4.4" carries
+  `jonaki-v1.4.4.apk`. The README links it.
+- The test phone (A059) runs v1.4.4, version code 17, built from the last
   commit of the evening and installed with `adb install -r`, so its
   threads, keys and settings were kept.
 - `gradle testReleaseUnitTest test assembleRelease --offline` exits with 0 on
   that commit.
-- Decisions D-157 to D-175 are all `proposed`. Only the user changes a status.
+- Decisions D-157 to D-176 are all `proposed`. Only the user changes a status.
 - Spend on paid test requests: about $0.05 in the morning and $0.28 in the
   afternoon and evening (credit used rose from $12.349 to $12.629), each
   against a $0.50 allowance from the user.
@@ -62,7 +62,8 @@ with the cards. These remain:
    send the next message again had 8,960 of 9,208 cached, so a media send
    does not break the cache where there is one. Jonaki sends no cache
    marker of its own for other models.
-10. **On the status strip the model's name is cut to one or two letters** on
+10. **On the status strip the model's name was cut to one or two letters**
+    (answered by D-176: the model is now a line under the thread title) on
     the A059 once the cost pill is as wide as "$0.011". The icon pills are
     30 dp high and drawn about 34 dp wide, but each takes 48 dp of the row
     (the minimum touch size), which leaves unused gaps.

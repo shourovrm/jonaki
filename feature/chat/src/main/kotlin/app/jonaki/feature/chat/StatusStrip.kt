@@ -3,13 +3,12 @@ package app.jonaki.feature.chat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -36,14 +35,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.ui.ContextRing
-import app.jonaki.core.ui.DotStyle
-import app.jonaki.core.ui.GlowDot
 import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
@@ -51,17 +46,16 @@ import app.jonaki.core.ui.UsageFormat
 import app.jonaki.core.ui.approvalModeLabel
 
 /**
- * The status strip above the message field (D-027): model, context window
- * with the share of it in use, this thread's cost, its web search switch
- * (D-123) and its approval mode.
+ * The status strip above the message field (D-027): context window with the
+ * share of it in use, this thread's cost, then at the right the media button
+ * (D-174), the web search switch (D-123) and the approval mode. The model is in
+ * the top bar (D-176).
  * Each pill is labelled for screen readers; Settings has a page that
  * explains the icons.
  */
 @Composable
 internal fun StatusStrip(
     status: ChatStatusUi,
-    isRunning: Boolean,
-    onModelClick: () -> Unit,
     onCostClick: (() -> Unit)?,
     webSearchEnabled: Boolean,
     onWebSearchChange: (enabled: Boolean) -> Unit,
@@ -78,15 +72,13 @@ internal fun StatusStrip(
     onMediaModeChange: (selected: MediaKind?) -> Unit = {},
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        // With the media button the strip holds six controls. On a narrow phone the window's size
-        // gives way, so that the model keeps part of its name; the context sheet still shows it.
-        val showsWindowSize = mediaMode == null || maxWidth >= WidthForWindowSize
+        // The context sheet shows the window's size too, so the pill can drop it on a narrow phone.
+        val showsWindowSize = maxWidth >= WidthForWindowSize
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 2.dp),
         ) {
-            ModelPill(status.modelName, isRunning, onModelClick)
             val window = status.contextWindowTokens
             if (window != null) {
                 // One pill for the window and its use: the strip has no room for the approval chip otherwise at 360 dp.
@@ -105,6 +97,8 @@ internal fun StatusStrip(
                 Icon(JonakiIcons.Payments, contentDescription = null, modifier = Modifier.size(PillIconSize))
                 PillNumber(costText)
             }
+            // The numbers sit at the left and the switches at the right.
+            Spacer(Modifier.weight(1f))
             if (mediaMode != null) {
                 MediaPill(mediaMode, onMediaModeChange)
             }
@@ -191,8 +185,8 @@ private fun MediaKindMenuText(row: MediaKindRowUi) {
 
 private val PillIconSize = 16.dp
 
-/** Narrower than this, the context pill drops the window's size when the media button is shown. */
-private val WidthForWindowSize = 420.dp
+/** Narrower than this, the context pill drops the window's size: on a 360 dp phone the six-control row would push the approvals button off the edge. */
+private val WidthForWindowSize = 400.dp
 
 private val PillHeight = 30.dp
 
@@ -232,48 +226,6 @@ private fun CrossedOutGlobe() {
                 drawLine(muted, start, end, strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round)
             },
     )
-}
-
-@Composable
-private fun RowScope.ModelPill(modelName: String, isRunning: Boolean, onClick: () -> Unit) {
-    val description = stringResource(R.string.chat_status_model, modelName)
-    Surface(
-        onClick = onClick,
-        shape = PillShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = JonakiTheme.colors.inkSoft,
-        // The model name gives way first, so the numbers always fit on a 360 dp phone.
-        modifier = Modifier
-            .weight(1f, fill = false)
-            .height(PillHeight)
-            .semantics {
-                contentDescription = description
-                role = Role.Button
-            },
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 6.dp, end = 4.dp)) {
-            // The dot glows while this thread's agent works, like the thread list's dot.
-            GlowDot(
-                color = JonakiTheme.colors.live,
-                style = if (isRunning) DotStyle.GLOWING else DotStyle.QUIET,
-                dotSize = 8.dp,
-            )
-            Text(
-                modelName,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 6.dp).weight(1f, fill = false),
-            )
-            Icon(
-                Icons.Filled.ArrowDropDown,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
 }
 
 @Composable

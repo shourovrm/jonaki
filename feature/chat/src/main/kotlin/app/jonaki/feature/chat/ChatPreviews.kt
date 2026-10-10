@@ -63,12 +63,10 @@ private fun StatusStripPreviewContent() {
     )
     Surface {
         Column {
-            StatusStrip(status, isRunning = true, onModelClick = {}, onCostClick = {}, webSearchEnabled = true, onWebSearchChange = {})
-            StatusStrip(status, isRunning = false, onModelClick = {}, onCostClick = {}, webSearchEnabled = false, onWebSearchChange = {})
+            StatusStrip(status, onCostClick = {}, webSearchEnabled = true, onWebSearchChange = {})
+            StatusStrip(status, onCostClick = {}, webSearchEnabled = false, onWebSearchChange = {})
             StatusStrip(
                 status,
-                isRunning = false,
-                onModelClick = {},
                 onCostClick = {},
                 webSearchEnabled = false,
                 onWebSearchChange = {},
