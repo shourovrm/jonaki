@@ -102,6 +102,7 @@ class OpenAiCompatibleProvider(
             askForCost = preset.reportsCost,
             route = route,
             thinkingField = preset.thinkingField,
+            marksPromptCache = ChatCompletionRequestBody.needsPromptCacheMark(isOpenRouter, request.model),
         ).toString()
         val builder = Request.Builder()
             .url(baseUrl.trimEnd('/') + "/chat/completions")

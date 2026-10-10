@@ -2528,3 +2528,23 @@ as wide as "$0.011". Not seen: the picture and vector sheets, an attached
 picture as a reference, a failed send's error row, and "Add model"; they
 are covered by unit tests only. The settings sheet does not yet offer a
 kind that has a key and no model (the vector report of D-170).
+
+## D-175 · 2026-10-10 · A prompt cache field for Claude models through OpenRouter — proposed
+Found while measuring D-174: Claude Haiku 5.5 through OpenRouter cached
+nothing (two messages in a row, 12,452 and 12,399 input tokens, 0 cached),
+because Anthropic's models cache only when the request asks. The user
+agreed to add the field. A chat request to OpenRouter whose model id starts
+with "anthropic/" now carries the top-level field `"cache_control":
+{"type":"ephemeral"}`, OpenRouter's automatic mode
+(openrouter.ai/docs/features/prompt-caching, read 2026-10-10): the service
+places the cache point and moves it forward as the thread grows, so the
+messages are sent unchanged. The cache lasts 5 minutes; a write costs 1.25
+times the input price and a read 0.1 times. So a message sent after a
+pause of more than 5 minutes costs a quarter more for its input than
+before, and every message within 5 minutes costs about a tenth. Not
+chosen: the 1-hour cache (a write costs twice the input price), and
+marking single blocks (at most four, and the app would have to move them).
+Other models and services are sent nothing. Outcome: unit tests pass. On
+the A059, three messages in a row to Claude Haiku 5.5: 0, then 12,362 of
+12,399, then 12,395 of 12,432 input tokens cached; the thread's cost went
+$0.0015, $0.0017, $0.0018, against $0.0012 a message before.

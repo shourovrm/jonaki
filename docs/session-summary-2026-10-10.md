@@ -14,7 +14,7 @@ decision named here has its full entry in `DECISIONS.md`.
   threads, keys and settings were kept.
 - `gradle testReleaseUnitTest test assembleRelease --offline` exits with 0 on
   that commit.
-- Decisions D-157 to D-174 are all `proposed`. Only the user changes a status.
+- Decisions D-157 to D-175 are all `proposed`. Only the user changes a status.
 - Spend on paid test requests: about $0.05 in the morning and $0.28 in the
   afternoon and evening (credit used rose from $12.349 to $12.629), each
   against a $0.50 allowance from the user.
@@ -54,14 +54,14 @@ with the cards. These remain:
    model's tokens only, not the picture the turn paid for (about $0.04).
 8. **The chat does not always open at its newest message** after the app is
    restarted; seen once in three restarts.
-9. **Claude models through OpenRouter get no prompt cache.** Two messages in
+9. **Claude models through OpenRouter got no prompt cache.** Fixed in D-175
+   (a top-level `cache_control` field; seen working on the phone). Two messages in
    a row to Claude Haiku 5.5 sent 12,452 and 12,399 input tokens and the
    usage sheet showed 0 cached. On DeepSeek V4.1 Flash the second message
    had 8,960 of about 9,040 input tokens cached, and after a Picture-mode
    send the next message again had 8,960 of 9,208 cached, so a media send
    does not break the cache where there is one. Jonaki sends no cache
-   marker; Anthropic models need one (`cache_control`) to cache at all. To
-   check against OpenRouter's documentation before building.
+   marker of its own for other models.
 10. **On the status strip the model's name is cut to one or two letters** on
     the A059 once the cost pill is as wide as "$0.011". The icon pills are
     30 dp high and drawn about 34 dp wide, but each takes 48 dp of the row

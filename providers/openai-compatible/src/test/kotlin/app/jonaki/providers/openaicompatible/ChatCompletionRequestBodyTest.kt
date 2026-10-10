@@ -59,4 +59,24 @@ class ChatCompletionRequestBodyTest {
         // The same tool list, so the prompt cache prefix matches the thread's requests.
         assertEquals(offered["tools"], shownOnly["tools"])
     }
+
+    @Test
+    fun theCacheMarkIsOneTopLevelFieldAndIsLeftOutByDefault() {
+        val request = ChatRequest("anthropic/claude-haiku-5.5", "system", listOf(Message(Role.USER, "hello")))
+
+        val marked = ChatCompletionRequestBody.build(request, marksPromptCache = true)
+        val plain = ChatCompletionRequestBody.build(request)
+
+        assertEquals("""{"type":"ephemeral"}""", marked["cache_control"].toString())
+        assertEquals(null, plain["cache_control"])
+        // The messages are untouched, so the bytes a cache compares do not change.
+        assertEquals(plain["messages"], marked["messages"])
+    }
+
+    @Test
+    fun onlyAnthropicModelsThroughOpenRouterNeedTheCacheMark() {
+        assertTrue(ChatCompletionRequestBody.needsPromptCacheMark(isOpenRouter = true, modelId = "anthropic/claude-haiku-5.5"))
+        assertEquals(false, ChatCompletionRequestBody.needsPromptCacheMark(isOpenRouter = true, modelId = "deepseek/deepseek-v4.1-flash"))
+        assertEquals(false, ChatCompletionRequestBody.needsPromptCacheMark(isOpenRouter = false, modelId = "anthropic/claude-haiku-5.5"))
+    }
 }

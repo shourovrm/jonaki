@@ -15,14 +15,31 @@ import kotlinx.serialization.json.putJsonObject
 
 /** Builds the JSON body of a streaming chat completions request. */
 object ChatCompletionRequestBody {
+    /**
+     * True for a model that caches a prompt only when the request asks for it:
+     * Anthropic's models through OpenRouter. On the A059 on 2026-10-10, two
+     * messages in a row to Claude Haiku 5.5 without the field had 0 cached
+     * tokens. Other models cache by themselves or not at all, and are sent
+     * nothing, since OpenRouter's documentation names the field for Anthropic only.
+     */
+    fun needsPromptCacheMark(isOpenRouter: Boolean, modelId: String): Boolean =
+        isOpenRouter && modelId.startsWith(ANTHROPIC_MODEL_PREFIX)
+
+    private const val ANTHROPIC_MODEL_PREFIX = "anthropic/"
+
     fun build(
         request: ChatRequest,
         askForCost: Boolean = false,
         route: OpenRouterRoute = OpenRouterRoute.Automatic,
         thinkingField: ThinkingField = ThinkingField.NONE,
+        marksPromptCache: Boolean = false,
     ): JsonObject = buildJsonObject {
         route.providerBlock()?.let { block -> put("provider", block) }
         put("model", request.model)
+        if (marksPromptCache) {
+            // OpenRouter's automatic mode: one field, and the service moves the cache point forward as the thread grows.
+            putJsonObject("cache_control") { put("type", "ephemeral") }
+        }
         put("stream", true)
         // Without this the stream carries no token counts.
         putJsonObject("stream_options") { put("include_usage", true) }
