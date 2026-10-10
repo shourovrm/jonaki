@@ -131,4 +131,99 @@ class ThreadImageChoicesTest {
 
         assertFalse(file.exists())
     }
+
+    private val vectorV4 = "openrouter:recraft/recraft-v4-vector"
+    private val vectorPro = "openrouter:recraft/recraft-v4-pro-vector"
+    private val rasterKeys = listOf(flux, gemini)
+    private val vectorKeys = listOf(vectorV4, vectorPro)
+
+    @Test
+    fun `a starred vector model is not the raster default and the first raster model takes over`() {
+        val choices = ThreadImageChoices(file)
+
+        // AgentRunner passes only the raster keys; the star is a vector model, so it is not among them.
+        assertEquals(flux, choices.effectiveModelKey("thread-1", rasterKeys, starredDefault = vectorV4))
+    }
+
+    @Test
+    fun `a thread's vector pick never becomes the raster model and the other way round`() {
+        val choices = ThreadImageChoices(file)
+        choices.choose("thread-1", vectorPro, starredDefault = vectorV4, isVector = true)
+
+        assertEquals(flux, choices.effectiveModelKey("thread-1", rasterKeys, starredDefault = flux))
+        assertEquals(vectorPro, choices.effectiveVectorModelKey("thread-1", vectorKeys))
+    }
+
+    @Test
+    fun `a raster choice found among the vector models is ignored by the vector tool`() {
+        val choices = ThreadImageChoices(file)
+        // A pick stored by an older version for a model that is now known to be vector, or the wrong kind by any cause.
+        choices.choose("thread-1", gemini, starredDefault = flux)
+
+        assertEquals(vectorV4, choices.effectiveVectorModelKey("thread-1", vectorKeys))
+        assertEquals(gemini, choices.effectiveModelKey("thread-1", rasterKeys, starredDefault = flux))
+    }
+
+    @Test
+    fun `a wrong-kind choice falls back to the default of the right kind`() {
+        val choices = ThreadImageChoices(file)
+        choices.choose("thread-1", vectorPro, starredDefault = flux)
+
+        // The stored raster slot holds a vector model: the raster tool does not list it, so it falls back to the star.
+        assertEquals(flux, choices.effectiveModelKey("thread-1", rasterKeys, starredDefault = flux))
+    }
+
+    @Test
+    fun `both picks of a thread live side by side and survive a restart`() {
+        val choices = ThreadImageChoices(file)
+        choices.choose("thread-1", gemini, starredDefault = flux)
+        choices.choose("thread-1", vectorPro, starredDefault = vectorV4, isVector = true)
+
+        val restored = reopened()
+        assertEquals(gemini, restored.effectiveModelKey("thread-1", rasterKeys, starredDefault = flux))
+        assertEquals(vectorPro, restored.effectiveVectorModelKey("thread-1", vectorKeys))
+    }
+
+    @Test
+    fun `choosing the first vector model returns to following the default`() {
+        val choices = ThreadImageChoices(file)
+        choices.choose("thread-1", vectorPro, starredDefault = vectorV4, isVector = true)
+        choices.choose("thread-1", vectorV4, starredDefault = vectorV4, isVector = true)
+
+        assertNull(choices.vectorChoiceFor("thread-1"))
+        assertEquals(vectorV4, choices.effectiveVectorModelKey("thread-1", vectorKeys))
+    }
+
+    @Test
+    fun `a vector pick whose model was removed falls back to the first vector model`() {
+        val choices = ThreadImageChoices(file)
+        choices.choose("thread-1", vectorPro, starredDefault = vectorV4, isVector = true)
+
+        assertEquals(vectorV4, choices.effectiveVectorModelKey("thread-1", listOf(vectorV4)))
+        assertNull(choices.effectiveVectorModelKey("thread-1", emptyList()))
+    }
+
+    @Test
+    fun `clearing and pruning treat both picks of a thread`() {
+        val choices = ThreadImageChoices(file)
+        choices.choose("thread-1", gemini, starredDefault = flux)
+        choices.choose("thread-1", vectorPro, starredDefault = vectorV4, isVector = true)
+        choices.choose("thread-2", vectorPro, starredDefault = vectorV4, isVector = true)
+
+        choices.pruneTo(setOf("thread-1"))
+        assertEquals(setOf("thread-1", ThreadImageChoices.vectorKeyOf("thread-1")), choices.byThread.value.keys)
+
+        choices.clear("thread-1")
+        assertTrue(choices.byThread.value.isEmpty())
+        assertTrue(reopened().byThread.value.isEmpty())
+    }
+
+    @Test
+    fun `an incognito vector pick stays in memory only`() {
+        val choices = ThreadImageChoices(file)
+        choices.choose("thread-1", vectorPro, starredDefault = vectorV4, keepOnDisk = false, isVector = true)
+
+        assertEquals(vectorPro, choices.vectorChoiceFor("thread-1"))
+        assertTrue(reopened().byThread.value.isEmpty())
+    }
 }
