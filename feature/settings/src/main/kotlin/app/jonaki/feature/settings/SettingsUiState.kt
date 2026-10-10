@@ -316,6 +316,8 @@ class SettingsActions(
     val onCheckForUpdate: () -> Unit = {},
     /** Downloads the newer APK if it is not on the phone yet, then opens Android's installer. */
     val onInstallUpdate: () -> Unit = {},
+    /** Shows the first-run setup cards again (D-184). */
+    val onOpenSetup: () -> Unit = {},
     // Kept for the app's current wiring; the screen no longer calls them.
     val onProviderSelect: (providerKey: String) -> Unit = {},
     val onModelChange: (model: String) -> Unit = {},

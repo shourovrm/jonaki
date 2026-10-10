@@ -28,7 +28,8 @@
     <string name="settings_permissions_keep_awake">জাগিয়ে রাখা</string>
     <string name="settings_permissions_keep_awake_purpose">নির্ধারিত কাজ শেষ করা</string>
     <string name="settings_about_app_name">জোনাকি</string>
-    <string name="settings_about_description">নিজের API key দিয়ে AI চ্যাটের অ্যাপ। জোনাকির কোনো অ্যাকাউন্ট বা সার্ভার নেই।</string>
+    <string name="settings_about_setup">সেটআপ কার্ড দেখুন</string>
+    <string name="settings_about_description">চ্যাট ইন্টারফেসের AI এজেন্ট অ্যাপ, যেখানে নিজের API key ব্যবহার করা যায়।</string>
     <string name="settings_about_version">ভার্সন %1$s</string>
     <string name="settings_about_developer">Riad Mashrub Shourov-এর তৈরি</string>
     <string name="settings_about_github">GitHub</string>

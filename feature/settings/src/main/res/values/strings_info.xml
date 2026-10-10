@@ -29,7 +29,8 @@
     <string name="settings_permissions_keep_awake">Keep awake</string>
     <string name="settings_permissions_keep_awake_purpose">Finish scheduled tasks</string>
     <string name="settings_about_app_name">Jonaki</string>
-    <string name="settings_about_description">Jonaki is Bangla for firefly. It is an AI chat app that uses your own API keys. There is no Jonaki account or server.</string>
+    <string name="settings_about_setup">Show setup cards</string>
+    <string name="settings_about_description">Jonaki is Bangla for firefly. It is an AI agent app with a chat interface where you can use your own API keys.</string>
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_developer">Made by Riad Mashrub Shourov</string>
     <string name="settings_about_github">GitHub</string>

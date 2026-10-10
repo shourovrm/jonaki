@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_count">%1$d of %2$d</string>
+    <string name="setup_skip_all">Skip all</string>
+    <string name="setup_skip">Skip</string>
+    <string name="setup_back">Back</string>
+    <string name="setup_next">Next</string>
+    <string name="setup_allow">Allow</string>
+    <string name="setup_model_title">Which AI service do you have a key for?</string>
+    <string name="setup_more_services">More services</string>
+    <string name="setup_model_needed">Jonaki cannot answer without a model.</string>
+    <string name="setup_model_key_title">%1$s key</string>
+    <string name="setup_key_label">Key</string>
+    <string name="setup_key_placeholder">Paste</string>
+    <string name="setup_key_site">Get a key at %1$s</string>
+    <string name="setup_model_label">Model</string>
+    <string name="setup_model_none">None</string>
+    <string name="setup_model_choose">Choose</string>
+    <string name="setup_model_change">Change</string>
+    <string name="setup_search_title">Web search</string>
+    <string name="setup_approvals_title">Ask before a change?</string>
+    <string name="setup_approvals_always">Every time</string>
+    <string name="setup_approvals_outside">Only outside the thread\'s folder</string>
+    <string name="setup_approvals_outside_detail">Small undoable changes, like reminders, don\'t ask either.</string>
+    <string name="setup_notifications_title">Notify when a task is done?</string>
+    <string name="setup_notifications_detail">Reminders need this too.</string>
+</resources>

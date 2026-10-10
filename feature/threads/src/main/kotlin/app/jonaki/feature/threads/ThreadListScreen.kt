@@ -106,6 +106,9 @@ fun ThreadListScreen(
     onMoveThread: (threadId: String, projectId: String?) -> Unit = { _, _ -> },
     /** Threads selected at the start; only the previews set it. */
     initialSelectedIds: Set<String> = emptySet(),
+    /** A row of "Left to set up" was tapped: the app opens its setup card. */
+    onSetUp: (SetupLeft) -> Unit = {},
+    onHideSetupLeft: () -> Unit = {},
 ) {
     var threadToDelete by remember { mutableStateOf<ThreadRow?>(null) }
     // Threads waiting for a project; one when moved from the row's own action, the selection otherwise.
@@ -202,6 +205,9 @@ fun ThreadListScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            if (state.setupLeft.isNotEmpty() && !selecting) {
+                SetupLeftList(state.setupLeft, onSetUp, onHideSetupLeft)
+            }
             if (state.threads.isNotEmpty()) {
                 // Disabled while selecting: a changed search would hide threads that are selected.
                 SearchField(state.searchQuery, onSearchQueryChange, enabled = !selecting)

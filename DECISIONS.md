@@ -2690,3 +2690,22 @@ load with every service that already has a model of that kind, so nothing
 the user added disappears. The image star can no longer land on a vector
 model. Amends D-182 (its "add OpenRouter under Image generation first"
 hint is gone). Outcome: unit tests and the release build pass.
+
+## D-184 · 2026-10-10 · First run shows four setup cards, each with Skip — proposed
+User request: a fresh install opened on an empty thread list and nothing
+said that a key and a model were needed. Now the first launch without a
+model shows four cards, one at a time (mockup: docs/mockups/first-run.html):
+a model service with its key and one model, a web search service with its
+key, whether changes inside the thread's folder ask (Ask or Auto), and
+notifications. Every card has Skip, and "Skip all" ends the deck. The
+cards write the settings that Settings already has; the model is chosen in
+the existing model picker. What was skipped stays on the thread list as
+"Left to set up" until it is done or hidden. An install that already has a
+model gets neither the cards nor the list. Settings > About has "Show
+setup cards". Services that need more than a key (Ollama on this network,
+the on-phone model) are not on the model card; they stay in Settings. The
+tool picker of M8 still comes first. Card text was cut to titles and the
+facts that matter (user, same day). The About line and the README now say
+"an AI agent app with a chat interface where you can use your own API
+keys", and the "no Jonaki account or server" sentence is gone (user).
+Outcome: unit tests and the release build pass.

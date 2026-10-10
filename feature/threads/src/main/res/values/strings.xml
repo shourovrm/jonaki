@@ -54,4 +54,12 @@
     <string name="threads_project_files_empty">No files yet</string>
     <string name="threads_project_files_delete_title">Delete file?</string>
     <string name="threads_back">Back</string>
+    <string name="threads_setup_left">Left to set up</string>
+    <string name="threads_setup_hide">Hide</string>
+    <string name="threads_setup_model">Model</string>
+    <string name="threads_setup_model_needed">Needed to answer</string>
+    <string name="threads_setup_web_search">Web search</string>
+    <string name="threads_setup_notifications">Notifications</string>
+    <string name="threads_setup_add">Add</string>
+    <string name="threads_setup_allow">Allow</string>
 </resources>

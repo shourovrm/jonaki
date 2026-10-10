@@ -131,6 +131,8 @@ import app.jonaki.feature.settings.StatusIconsScreen
 import app.jonaki.feature.settings.moveInOrder
 import app.jonaki.feature.threads.ProjectModelOption
 import app.jonaki.feature.threads.RenameThreadDialog
+import app.jonaki.feature.onboarding.SetupCard
+import app.jonaki.feature.threads.SetupLeft
 import app.jonaki.feature.threads.ShareTargetRow
 import app.jonaki.feature.threads.ShareTargetScreen
 import app.jonaki.feature.threads.ThreadListScreen
@@ -158,6 +160,7 @@ import okhttp3.OkHttpClient
 import java.time.LocalDate
 import java.time.ZoneId
 import androidx.compose.foundation.ScrollState
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.foundation.lazy.LazyListState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -170,6 +173,7 @@ import kotlinx.coroutines.withContext
 /** Routes are plain strings so they survive process death through rememberSaveable. */
 private const val ROUTE_THREADS = "threads"
 private const val ROUTE_SETTINGS = "settings"
+private const val ROUTE_SETUP = "setup"
 
 /** "settings:<page key>", one Settings sub-page (D-128). */
 private const val ROUTE_SETTINGS_PAGE_PREFIX = "settings:"
@@ -234,6 +238,9 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
         // A fresh start shows the thread left a moment ago, or a new thread; saved state skips this.
         val leftThreadStore = remember { LeftThreadStore(application) }
         var startResolved by rememberSaveable { mutableStateOf(false) }
+        // The first-run cards (D-184); the place survives the model picker being in front.
+        val setupPlace = rememberSaveable(saver = SetupPlace.Saver) { SetupPlace() }
+        var setupOpen by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             if (startResolved) {
                 return@LaunchedEffect
@@ -242,6 +249,16 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 is StartChoice.ReopenThread -> route = ROUTE_CHAT_PREFIX + choice.threadId
                 StartChoice.NewThread -> route = ROUTE_CHAT_PREFIX + NEW_THREAD
                 StartChoice.KeepGivenDestination -> Unit
+            }
+            val startSettings = application.settings.snapshot.value
+            if (!startSettings.setupDeckSeen) {
+                if (startSettings.chatModels.allModelKeys.isNotEmpty()) {
+                    // An install that already has a model was set up in Settings; it gets neither the cards nor their list.
+                    application.settings.update { current -> current.copy(setupDeckSeen = true, setupListHidden = true) }
+                } else if (!application.launchedWithShare) {
+                    setupOpen = true
+                    route = ROUTE_SETUP
+                }
             }
             startResolved = true
         }
@@ -294,6 +311,11 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenPage = { page -> route = settingsPageRoute(page) },
                     onBack = goBack,
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
+                    onOpenSetup = {
+                        setupPlace.openAt(SetupCard.MODEL)
+                        setupOpen = true
+                        route = ROUTE_SETUP
+                    },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onAddImageModels = { serviceKey -> route = ROUTE_ADD_IMAGE_MODELS_PREFIX + serviceKey },
                     onAddVectorModels = { serviceKey -> route = ROUTE_ADD_VECTOR_MODELS_PREFIX + serviceKey },
@@ -425,8 +447,18 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 // OpenRouter is the one image service whose list has vector models (D-170).
                 AddImageModelsRoute(application, route.removePrefix(ROUTE_ADD_VECTOR_MODELS_PREFIX), vectorOnly = true, onFinished = { route = backRoute })
             }
+            route == ROUTE_SETUP -> SetupRoute(
+                application = application,
+                place = setupPlace,
+                onChooseModel = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
+                onFinished = {
+                    setupOpen = false
+                    val hasModel = application.settings.snapshot.value.chatModels.allModelKeys.isNotEmpty()
+                    route = if (hasModel) ROUTE_CHAT_PREFIX + NEW_THREAD else ROUTE_THREADS
+                },
+            )
             route.startsWith(ROUTE_ADD_MODELS_PREFIX) -> {
-                val backRoute = settingsPageRoute(SettingsPage.MODELS)
+                val backRoute = if (setupOpen) ROUTE_SETUP else settingsPageRoute(SettingsPage.MODELS)
                 BackHandler { route = backRoute }
                 AddModelsRoute(
                     application = application,
@@ -473,6 +505,11 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 onProjectSelect = { projectId -> selectedProjectId = projectId },
                 onOpenProjectMemory = { projectId -> route = ROUTE_MEMORY_PROJECT_PREFIX + projectId },
                 onOpenProjectFiles = { projectId -> route = ROUTE_PROJECT_FILES_PREFIX + projectId },
+                onSetUp = { item ->
+                    setupPlace.openAt(Setup.cardOf(item))
+                    setupOpen = true
+                    route = ROUTE_SETUP
+                },
             )
         }
     }
@@ -527,6 +564,7 @@ private fun ThreadsRoute(
     onProjectSelect: (String?) -> Unit,
     onOpenProjectMemory: (projectId: String) -> Unit,
     onOpenProjectFiles: (projectId: String) -> Unit,
+    onSetUp: (SetupLeft) -> Unit,
 ) {
     val database = application.database
     val summaries by remember { database.threadDao().observeSummaries() }.collectAsState(initial = emptyList())
@@ -538,6 +576,14 @@ private fun ThreadsRoute(
     val stepCounts by application.runner.runStepCounts.collectAsState()
     val draftsByThread by application.threadDrafts.byThread.collectAsState()
     val context = LocalContext.current
+    val savedSecrets by application.secrets.names.collectAsState()
+    val setupLeft = Setup.left(
+        deckSeen = settingsSnapshot.setupDeckSeen,
+        listHidden = settingsSnapshot.setupListHidden,
+        hasModel = settingsSnapshot.chatModels.allModelKeys.isNotEmpty(),
+        hasSearchKey = SearchService.entries.any { service -> service.secret in savedSecrets },
+        notificationsOn = NotificationManagerCompat.from(context).areNotificationsEnabled(),
+    )
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var threadToRename by rememberSaveable { mutableStateOf<String?>(null) }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -583,12 +629,15 @@ private fun ThreadsRoute(
             selectedProjectId = selectedProjectId,
             projectModelOptions = modelChoices(settingsSnapshot.chatModels, application.catalog, application, rememberLocalModelKeys(application))
                 .map { choice -> ProjectModelOption(choice.key, choice.name) },
+            setupLeft = setupLeft,
         ),
         nowMillis = nowMillis,
         onSearchQueryChange = { query -> searchQuery = query },
         onThreadClick = onOpenThread,
         onNewThread = onNewThread,
         onOpenSettings = onOpenSettings,
+        onSetUp = onSetUp,
+        onHideSetupLeft = { application.settings.update { current -> current.copy(setupListHidden = true) } },
         onRename = { threadId -> threadToRename = threadId },
         onDelete = { threadId ->
             scope.launch {
@@ -1340,6 +1389,7 @@ private fun SettingsRoute(
     onOpenPage: (SettingsPage) -> Unit,
     onBack: () -> Unit,
     onOpenStatusIcons: () -> Unit,
+    onOpenSetup: () -> Unit,
     onAddModels: (String) -> Unit,
     onAddImageModels: (String) -> Unit,
     onAddVectorModels: (String) -> Unit,
@@ -1709,6 +1759,7 @@ private fun SettingsRoute(
         onOpenGitHub = { openGitHub(context) },
         onCheckForUpdate = updateController::check,
         onInstallUpdate = updateController::downloadOrInstall,
+        onOpenSetup = onOpenSetup,
     )
     if (page == null) {
         SettingsHomeScreen(
@@ -2061,7 +2112,7 @@ private fun serviceNameOf(service: ChatService, application: JonakiApplication):
     return service.displayName
 }
 
-private fun hintFor(service: ChatService): String = when (service) {
+internal fun hintFor(service: ChatService): String = when (service) {
     ChatService.OPENROUTER -> "openrouter.ai"
     ChatService.DEEPSEEK -> "deepseek.com"
     ChatService.GEMINI -> "Google"
@@ -2075,7 +2126,7 @@ private fun hintFor(service: ChatService): String = when (service) {
     ChatService.LOCAL -> "llama.cpp"
 }
 
-private fun displayNameOf(service: SearchService): String = when (service) {
+internal fun displayNameOf(service: SearchService): String = when (service) {
     SearchService.TAVILY -> "Tavily"
     SearchService.SERPER -> "Serper"
     SearchService.OLLAMA -> "Ollama"

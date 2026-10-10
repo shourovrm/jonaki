@@ -54,4 +54,12 @@
     <string name="threads_project_files_empty">এখনো কোনো ফাইল নেই</string>
     <string name="threads_project_files_delete_title">ফাইল মুছবেন?</string>
     <string name="threads_back">ফিরে যান</string>
+    <string name="threads_setup_left">সেটআপ বাকি</string>
+    <string name="threads_setup_hide">লুকান</string>
+    <string name="threads_setup_model">মডেল</string>
+    <string name="threads_setup_model_needed">উত্তর দিতে লাগবে</string>
+    <string name="threads_setup_web_search">ওয়েব সার্চ</string>
+    <string name="threads_setup_notifications">নোটিফিকেশন</string>
+    <string name="threads_setup_add">যোগ করুন</string>
+    <string name="threads_setup_allow">অনুমতি দিন</string>
 </resources>

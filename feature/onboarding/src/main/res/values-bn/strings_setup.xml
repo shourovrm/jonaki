@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_count">%1$d/%2$d</string>
+    <string name="setup_skip_all">সব বাদ দিন</string>
+    <string name="setup_skip">বাদ দিন</string>
+    <string name="setup_back">ফিরে যান</string>
+    <string name="setup_next">পরের</string>
+    <string name="setup_allow">অনুমতি দিন</string>
+    <string name="setup_model_title">কোন AI সার্ভিসের key আপনার আছে?</string>
+    <string name="setup_more_services">আরও সার্ভিস</string>
+    <string name="setup_model_needed">মডেল ছাড়া জোনাকি উত্তর দিতে পারে না।</string>
+    <string name="setup_model_key_title">%1$s key</string>
+    <string name="setup_key_label">key</string>
+    <string name="setup_key_placeholder">পেস্ট করুন</string>
+    <string name="setup_key_site">%1$s থেকে key নিন</string>
+    <string name="setup_model_label">মডেল</string>
+    <string name="setup_model_none">নেই</string>
+    <string name="setup_model_choose">বাছুন</string>
+    <string name="setup_model_change">বদলান</string>
+    <string name="setup_search_title">ওয়েব সার্চ</string>
+    <string name="setup_approvals_title">বদলানোর আগে জিজ্ঞেস করবে?</string>
+    <string name="setup_approvals_always">প্রতিবার</string>
+    <string name="setup_approvals_outside">শুধু থ্রেডের ফোল্ডারের বাইরে</string>
+    <string name="setup_approvals_outside_detail">রিমাইন্ডারের মতো ছোট বদলও জিজ্ঞেস না করেই চলে।</string>
+    <string name="setup_notifications_title">কাজ শেষ হলে জানাবে?</string>
+    <string name="setup_notifications_detail">রিমাইন্ডারেও লাগে।</string>
+</resources>

@@ -1,8 +1,8 @@
 # Jonaki
 
-Jonaki (জোনাকি, Bangla for "firefly") is an Android app that runs an AI agent in a chat. You bring API keys for the model services you already use, and the agent searches the web, works with your files, runs code and remembers what matters between conversations. There is no account and no Jonaki server: requests go straight from the phone to the services you set up.
+Jonaki (জোনাকি, Bangla for "firefly") is an AI agent app for Android with a chat interface where you can use your own API keys. The agent searches the web, works with your files, runs code and remembers what matters between conversations. Requests go straight from the phone to the services you set up.
 
-**Download:** [jonaki-v1.4.4.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.4/jonaki-v1.4.4.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
+**Download:** [jonaki-v1.4.7.apk](https://github.com/shourovrm/jonaki/releases/download/v1.4.7/jonaki-v1.4.7.apk) · [all releases](https://github.com/shourovrm/jonaki/releases)
 
 <p>
   <img src="docs/screenshots/chat.png" width="250" alt="A thread where the agent ran two web searches before answering">
@@ -15,7 +15,7 @@ Jonaki needs Android 8.0 or later on a 64-bit ARM phone. The interface is in Eng
 ## Getting started
 
 1. Install the APK. A newer version installs over an older one and keeps your threads.
-2. Open Settings > Models and save an API key for one service.
+2. On the first launch, four cards ask for a model key, a web search key, when the agent should ask before a change, and notifications. Each card can be skipped, and Settings has all of it.
 3. Start a thread and send a message.
 
 One model key is enough to chat. Some features call a service of their own and stay off until its key is saved:

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -125,6 +126,7 @@ internal fun AboutSection(
     update: UpdateUiState = UpdateUiState.Idle,
     onCheckForUpdate: () -> Unit = {},
     onInstallUpdate: () -> Unit = {},
+    onOpenSetup: () -> Unit = {},
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -147,6 +149,10 @@ internal fun AboutSection(
         Text(stringResource(R.string.settings_about_description), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(16.dp))
         UpdateSection(update, onCheckForUpdate, onInstallUpdate)
+        // Aligned with the text above: a text button insets its label by 12 dp.
+        TextButton(onClick = onOpenSetup, modifier = Modifier.offset(x = (-12).dp)) {
+            Text(stringResource(R.string.settings_about_setup))
+        }
         Spacer(Modifier.height(20.dp))
         Text(
             stringResource(R.string.settings_about_developer),
