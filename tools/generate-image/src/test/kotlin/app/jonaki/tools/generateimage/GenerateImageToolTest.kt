@@ -3,6 +3,8 @@ package app.jonaki.tools.generateimage
 import app.jonaki.core.toolapi.GeneratedImages
 import app.jonaki.core.toolapi.ImageFailure
 import app.jonaki.core.toolapi.ImageGenerator
+import app.jonaki.core.toolapi.ImageModelFacts
+import app.jonaki.core.toolapi.ImageQuality
 import app.jonaki.core.toolapi.ImageOutcome
 import app.jonaki.core.toolapi.ImageRequest
 import app.jonaki.core.toolapi.SideEffect
@@ -98,7 +100,7 @@ class GenerateImageToolTest {
     fun theDefaultIsAskedAtEveryCallSoAPickDuringARunCountsForTheNextPicture() {
         var currentDefault: String? = models[0]
         val outcome = success()
-        val tool = GenerateImageTool(ImageGenerator { request -> requests += request; outcome }, models) { currentDefault }
+        val tool = GenerateImageTool(ImageGenerator { request -> requests += request; outcome }, models, defaultModelKey = { currentDefault })
 
         run(tool, """{"prompt":"x","file_name":"first"}""")
         currentDefault = models[2]
@@ -190,5 +192,172 @@ class GenerateImageToolTest {
         assertEquals("generate_image", tool.name)
         val schema: JsonObject = tool.parameterSchema
         assertTrue(schema.toString().contains("\"required\":[\"prompt\"]"))
+    }
+
+    // Quality and reference pictures.
+
+    private val gptKey = "openrouter:openai/gpt-image-2.5-sunburst"
+    private val bananaKey = "openrouter:google/gemini-nano-banana-2.1"
+    private val fluxKey = "openrouter:black-forest-labs/flux.2-klein-4b"
+    private val facts = listOf(
+        ImageModelFacts(gptKey, qualityValues = listOf("auto", "low", "medium", "high", "xhigh", "max"), maxReferences = 16),
+        ImageModelFacts(bananaKey, resolutionValues = listOf("1K", "2K", "4K"), maxReferences = 14),
+        ImageModelFacts(fluxKey, maxReferences = 4),
+        ImageModelFacts("openrouter:a/none", maxReferences = 0),
+    ).associateBy { it.modelKey }
+
+    private fun toolWithFacts(
+        default: String = gptKey,
+        defaultQuality: ImageQuality = ImageQuality.STANDARD,
+        factsByKey: Map<String, ImageModelFacts> = facts,
+    ) = GenerateImageTool(
+        ImageGenerator { request -> requests += request; success() },
+        listOf(gptKey, bananaKey, fluxKey, "openrouter:a/none"),
+        { default },
+        factsByKey,
+        { defaultQuality },
+    )
+
+    private fun picture(path: String): String {
+        val file = File(threadFolder, path)
+        file.parentFile.mkdirs()
+        file.writeBytes(ImageDimensionsTest.png(8, 8))
+        return path
+    }
+
+    @Test
+    fun aCallWithOnlyAPromptSendsNoQualityNoResolutionAndNoReferences() {
+        val output = run(toolWithFacts(), """{"prompt":"A blue door"}""")
+
+        assertFalse(output.text, output.isError)
+        assertEquals(ImageRequest("openrouter", "openai/gpt-image-2.5-sunburst", "A blue door"), requests.single())
+        assertFalse(output.text.contains("Quality"))
+        assertFalse(output.text.contains("Reference"))
+    }
+
+    @Test
+    fun highQualityIsTranslatedForTheModelAndTheResultNamesWhatWasSent() {
+        val gpt = run(toolWithFacts(), """{"prompt":"x","quality":"high"}""")
+        assertEquals("high", requests.last().quality)
+        assertEquals(null, requests.last().resolution)
+        assertTrue(gpt.text, gpt.text.contains("Quality: high (sent quality high)"))
+
+        val banana = run(toolWithFacts(), """{"prompt":"x","quality":"high","model":"$bananaKey"}""")
+        assertEquals(null, requests.last().quality)
+        assertEquals("2K", requests.last().resolution)
+        assertTrue(banana.text, banana.text.contains("Quality: high (sent resolution 2K)"))
+    }
+
+    @Test
+    fun highOnAModelWithoutASettingSendsNothingAndSaysSo() {
+        val output = run(toolWithFacts(), """{"prompt":"x","quality":"high","model":"$fluxKey"}""")
+
+        assertEquals(null, requests.last().quality)
+        assertEquals(null, requests.last().resolution)
+        assertTrue(output.text, output.text.contains("this model has no quality setting"))
+    }
+
+    @Test
+    fun withoutAModelListHighSendsNothingAndSaysItWasNotChecked() {
+        val output = run(toolWithFacts(factsByKey = emptyMap()), """{"prompt":"x","quality":"high"}""")
+
+        assertEquals(null, requests.last().quality)
+        assertTrue(output.text, output.text.contains("could not be checked"))
+    }
+
+    @Test
+    fun theSettingsDefaultCountsWhenTheCallNamesNoQualityAndTheCallWinsOtherwise() {
+        run(toolWithFacts(defaultQuality = ImageQuality.HIGH), """{"prompt":"x"}""")
+        assertEquals("high", requests.last().quality)
+
+        run(toolWithFacts(defaultQuality = ImageQuality.HIGH), """{"prompt":"x","quality":"standard"}""")
+        assertEquals(null, requests.last().quality)
+    }
+
+    @Test
+    fun anUnknownQualityWordIsAnErrorBeforeAnyRequest() {
+        val output = run(toolWithFacts(), """{"prompt":"x","quality":"ultra"}""")
+
+        assertTrue(output.isError)
+        assertTrue(output.text.contains("standard or high"))
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun referencesAreReadAndPassedToTheGeneratorAndOnlyPathsAppearInTheResult() {
+        picture("images/firefly.png")
+        picture("inbox/photo.png")
+
+        val output = run(toolWithFacts(), """{"prompt":"make the title bigger","reference_images":["images/firefly.png","inbox/photo.png"]}""")
+
+        assertFalse(output.text, output.isError)
+        val sent = requests.single().references
+        assertEquals(listOf("images/firefly.png", "inbox/photo.png"), sent.map { it.path })
+        assertEquals("image/png", sent[0].mediaType)
+        assertTrue(output.text.contains("Reference pictures: images/firefly.png, inbox/photo.png"))
+        assertFalse(output.text.contains("iVBOR"))
+        assertFalse(output.text.contains("base64"))
+        assertTrue(output.text.length < 600)
+    }
+
+    @Test
+    fun everyReferenceProblemIsRefusedBeforeAnyRequestAndWithoutBase64() {
+        picture("images/a.png")
+        File(threadFolder, "inbox").mkdirs()
+        File(threadFolder, "inbox/logo.svg").writeText("<svg xmlns=\"http://www.w3.org/2000/svg\"/>")
+        File(threadFolder, "inbox/words.txt").writeText("hello")
+        val fiveCopies = List(5) { "\"images/a.png\"" }.joinToString(",")
+        val cases = mapOf(
+            """{"prompt":"x","reference_images":["../outside.png"]}""" to "not inside this thread's folder",
+            """{"prompt":"x","reference_images":["images/missing.png"]}""" to "does not exist",
+            """{"prompt":"x","reference_images":["inbox/words.txt"]}""" to "not a png, jpeg or webp",
+            """{"prompt":"x","reference_images":["inbox/logo.svg"]}""" to "SVG",
+            """{"prompt":"x","model":"$fluxKey","reference_images":[$fiveCopies]}""" to "takes at most 4",
+            """{"prompt":"x","model":"openrouter:a/none","reference_images":["images/a.png"]}""" to "takes no reference pictures",
+        )
+        for ((json, expected) in cases) {
+            val output = run(toolWithFacts(), json)
+            assertTrue(json, output.isError)
+            assertTrue("$json -> ${output.text}", output.text.contains(expected))
+            assertFalse(output.text.contains("base64"))
+        }
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun aModelThatTakesNoPicturesNamesAnAddedModelThatDoes() {
+        picture("images/a.png")
+
+        val output = run(toolWithFacts(), """{"prompt":"x","model":"openrouter:a/none","reference_images":["images/a.png"]}""")
+
+        assertTrue(output.text, output.text.contains(gptKey))
+    }
+
+    @Test
+    fun withoutAModelListReferencesAreRefusedForOpenRouterAndNotCheckedForGemini() {
+        picture("images/a.png")
+
+        val refused = run(toolWithFacts(factsByKey = emptyMap()), """{"prompt":"x","reference_images":["images/a.png"]}""")
+        assertTrue(refused.text, refused.isError && refused.text.contains("could not be loaded"))
+        assertTrue(requests.isEmpty())
+
+        val gemini = GenerateImageTool(
+            ImageGenerator { request -> requests += request; success() },
+            listOf("gemini:gemini-2.5-flash-image"),
+            { "gemini:gemini-2.5-flash-image" },
+        )
+        assertFalse(run(gemini, """{"prompt":"x","reference_images":["images/a.png"]}""").isError)
+        assertEquals(1, requests.single().references.size)
+    }
+
+    @Test
+    fun theSchemaAndGuidelinesCarryTheNewArgumentsAndAdvice() {
+        val tool = toolWithFacts()
+        val schema = tool.parameterSchema.toString()
+        assertTrue(schema.contains("\"quality\""))
+        assertTrue(schema.contains("\"reference_images\""))
+        assertTrue(schema.contains("\"required\":[\"prompt\"]"))
+        val guidelines = tool.guidelines.joinToString("\n")
+        assertTrue(guidelines.contains("reference_images"))
     }
 }

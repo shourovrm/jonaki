@@ -6,12 +6,19 @@ import app.jonaki.core.toolapi.ImageFailureTexts
 import app.jonaki.core.toolapi.ImageFileNames
 import app.jonaki.core.toolapi.ImageGenerator
 import app.jonaki.core.toolapi.ImageModelChoice
+import app.jonaki.core.toolapi.ImageModelFacts
 import app.jonaki.core.toolapi.ImageOutcome
+import app.jonaki.core.toolapi.ImageQuality
+import app.jonaki.core.toolapi.ImageQualityChoices
+import app.jonaki.core.toolapi.ImageQualityPlan
+import app.jonaki.core.toolapi.ImageReference
+import app.jonaki.core.toolapi.ImageReferences
 import app.jonaki.core.toolapi.ImageRequest
 import app.jonaki.core.toolapi.IncomingFiles
 import app.jonaki.core.toolapi.SideEffect
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
+import app.jonaki.core.toolapi.ReferenceResult
 import app.jonaki.core.toolapi.ToolOutput
 import app.jonaki.core.toolapi.stringArgument
 import java.io.File
@@ -39,11 +46,18 @@ import kotlinx.serialization.json.putJsonObject
  * at every call, so the thread's pick made while a run is going counts for the
  * next picture. [generator] routes a request to its service by
  * [ImageRequest.serviceKey].
+ *
+ * [facts] is what the app knows about each added model from the service's
+ * list, by model key; it is empty while no list was ever loaded, and then the
+ * tool sends no quality setting and refuses reference pictures it cannot
+ * check. [defaultQuality] is the Settings choice, asked at every call.
  */
 class GenerateImageTool(
     private val generator: ImageGenerator,
     private val modelKeys: List<String>,
     private val defaultModelKey: () -> String?,
+    private val facts: Map<String, ImageModelFacts> = emptyMap(),
+    private val defaultQuality: () -> ImageQuality = { ImageQuality.STANDARD },
 ) : Tool {
     constructor(generator: ImageGenerator, modelKeys: List<String>, defaultModelKey: String?) :
         this(generator, modelKeys, { defaultModelKey })
@@ -59,6 +73,9 @@ class GenerateImageTool(
             "and never to test or to try variants on your own.",
         "The prompt must describe the picture fully: subject, setting, style, colours, light and any text that must appear. " +
             "The image model sees nothing else of the conversation.",
+        "To change a picture made earlier in this thread, or to build on a picture the user attached, " +
+            "pass that file in reference_images (images/firefly.jpg, inbox/photo.png) instead of describing it from memory. " +
+            "The prompt then says what to change and what to keep.",
         "The picture is saved in images/ and the user sees it in the chat; do not paste its path as a link. " +
             "If a picture was blocked or failed, tell the user before trying again.",
     )
@@ -73,6 +90,29 @@ class GenerateImageTool(
             putJsonObject("aspect_ratio") {
                 put("type", "string")
                 put("description", "Shape of the picture, for example 1:1, 16:9, 9:16, 4:3 or 3:2; the model's default when left out")
+            }
+            putJsonObject("quality") {
+                put("type", "string")
+                putJsonArray("enum") {
+                    add(ImageQuality.STANDARD.word)
+                    add(ImageQuality.HIGH.word)
+                }
+                put(
+                    "description",
+                    "high gives sharper detail and small text and costs several times more on some models; " +
+                        "use it when the user asks for high quality or the picture carries a lot of small text. The user's default when left out",
+                )
+            }
+            putJsonObject("reference_images") {
+                put("type", "array")
+                putJsonObject("items") { put("type", "string") }
+                put(
+                    "description",
+                    "Paths, relative to the thread folder, of pictures to give the image model with the prompt, " +
+                        "for example images/firefly.jpg or inbox/photo.png. Use it to change or restyle an existing picture, " +
+                        "to keep a person, product or style from a picture the user gave, or to edit a picture made earlier " +
+                        "in this thread (\"make the title bigger\"); the prompt then says what to change and what to keep",
+                )
             }
             putJsonObject("file_name") {
                 put("type", "string")
@@ -109,14 +149,71 @@ class GenerateImageTool(
         val modelKey = ImageModelChoice.choose(arguments.stringArgument("model"), modelKeys, defaultModelKey())
             ?: return modelError(arguments.stringArgument("model"))
         val aspectRatio = arguments.stringArgument("aspect_ratio")?.trim()?.ifEmpty { null }
+        val quality = qualityOf(arguments) ?: return qualityError()
+        val modelFacts = facts[modelKey]
+        val references = when (val loaded = loadReferences(arguments, modelKey, modelFacts, context)) {
+            is ReferenceResult.Loaded -> loaded.references
+            is ReferenceResult.Refused -> return loaded.output
+        }
+        val plan = ImageQualityChoices.plan(modelFacts, quality)
 
         // The first colon ends the service key; a model id may hold more colons, such as "x/y:free".
         val serviceKey = modelKey.substringBefore(':')
         val modelId = modelKey.substringAfter(':')
-        val outcome = generator.generate(ImageRequest(serviceKey, modelId, prompt, aspectRatio))
+        val request = ImageRequest(serviceKey, modelId, prompt, aspectRatio, plan.quality, plan.resolution, references)
+        val outcome = generator.generate(request)
         return when (outcome) {
             is ImageOutcome.Failed -> ImageFailureTexts.toolOutput(outcome, serviceKey, modelKey)
-            is ImageOutcome.Success -> save(outcome, modelKey, prompt, arguments.stringArgument("file_name"), context)
+            is ImageOutcome.Success -> save(outcome, modelKey, prompt, arguments.stringArgument("file_name"), context, extraLines(quality, plan, references))
+        }
+    }
+
+    /** The call's quality, else the Settings default; null for a word that is neither standard nor high. */
+    private fun qualityOf(arguments: JsonObject): ImageQuality? {
+        val requested = arguments.stringArgument("quality")?.trim().orEmpty()
+        if (requested.isEmpty()) {
+            return defaultQuality()
+        }
+        return ImageQuality.fromArgument(requested)
+    }
+
+    private fun qualityError(): ToolOutput = ToolOutput.error(
+        "quality must be standard or high",
+        "Call generate_image again with quality standard or high, or leave it out for the user's default.",
+    )
+
+    /** Reads the pictures off the main thread; the checks come before any request, so a wrong path costs nothing. */
+    private suspend fun loadReferences(
+        arguments: JsonObject,
+        modelKey: String,
+        modelFacts: ImageModelFacts?,
+        context: ToolContext,
+    ): ReferenceResult {
+        val paths = ImageReferences.pathsIn(arguments)
+        ImageReferences.minimumProblem(paths.size, modelKey, modelFacts)?.let { return ReferenceResult.Refused(it) }
+        return withContext(Dispatchers.IO) { ImageReferences.load(paths, context.paths, modelKey, modelFacts, facts) }
+    }
+
+    /** What was really sent, so the chat model can tell the user; only paths and names, never picture data. */
+    private fun extraLines(quality: ImageQuality, plan: ImageQualityPlan, references: List<ImageReference>): List<String> {
+        val lines = mutableListOf<String>()
+        if (quality == ImageQuality.HIGH) {
+            lines += qualityLine(plan)
+        }
+        if (references.isNotEmpty()) {
+            lines += "Reference pictures: " + references.joinToString(", ") { reference -> reference.path }
+        }
+        return lines
+    }
+
+    private fun qualityLine(plan: ImageQualityPlan): String {
+        val sent = listOfNotNull(plan.quality?.let { "quality $it" }, plan.resolution?.let { "resolution $it" })
+        if (sent.isNotEmpty()) {
+            return "Quality: high (sent " + sent.joinToString(" and ") + ")"
+        }
+        return when (plan.note) {
+            ImageQualityPlan.Note.NOT_CHECKED -> "Quality: high asked, but the model's settings could not be checked, so none were sent"
+            else -> "Quality: high asked, but this model has no quality setting"
         }
     }
 
@@ -139,6 +236,7 @@ class GenerateImageTool(
         prompt: String,
         requestedName: String?,
         context: ToolContext,
+        extraLines: List<String>,
     ): ToolOutput {
         val extension = ImageFiles.extensionFor(image.mediaType, image.bytes)
             ?: return ToolOutput.error(
@@ -154,7 +252,7 @@ class GenerateImageTool(
                 "Tell the user; the picture was charged and is lost.",
             )
         }
-        return ToolOutput.success(describeResult(context.paths.relativePath(file), file, image, modelKey))
+        return ToolOutput.success(describeResult(context.paths.relativePath(file), file, image, modelKey, extraLines))
     }
 
     private fun write(threadFolder: File, baseName: String, extension: String, bytes: ByteArray): File {
@@ -165,7 +263,7 @@ class GenerateImageTool(
         return file
     }
 
-    private fun describeResult(path: String, file: File, image: ImageOutcome.Success, modelKey: String): String {
+    private fun describeResult(path: String, file: File, image: ImageOutcome.Success, modelKey: String, extraLines: List<String>): String {
         val fileSize = IncomingFiles.describeSize(file.length())
         val size = ImageDimensions.of(image.bytes)?.let { dimensions -> "${dimensions.describe()}, $fileSize" } ?: fileSize
         val cost = image.costUsd?.let { dollars -> String.format(Locale.ENGLISH, "$%.4f", dollars) } ?: "not reported by the service"
@@ -174,7 +272,6 @@ class GenerateImageTool(
             "Size: $size",
             "Model: $modelKey",
             "Cost: $cost",
-            "The user sees the picture in the chat.",
-        ).joinToString("\n")
+        ).plus(extraLines).plus("The user sees the picture in the chat.").joinToString("\n")
     }
 }

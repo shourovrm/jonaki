@@ -1,5 +1,6 @@
 package app.jonaki.tools.generateimage
 
+import app.jonaki.core.toolapi.ImageFormats
 import java.util.Locale
 
 /** The file ending of a picture generate_image saves; names and places are in core/tool-api (ImageFileNames). */
@@ -19,10 +20,10 @@ object ImageFiles {
         }
     }
 
-    private fun extensionFromHeader(bytes: ByteArray): String? = when {
-        bytes.size >= 8 && bytes[0] == 0x89.toByte() && bytes[1] == 'P'.code.toByte() -> "png"
-        bytes.size >= 3 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() -> "jpg"
-        bytes.size >= 12 && String(bytes, 0, 4, Charsets.US_ASCII) == "RIFF" && String(bytes, 8, 4, Charsets.US_ASCII) == "WEBP" -> "webp"
+    private fun extensionFromHeader(bytes: ByteArray): String? = when (ImageFormats.mediaTypeOfHeader(bytes)) {
+        "image/png" -> "png"
+        "image/jpeg" -> "jpg"
+        "image/webp" -> "webp"
         else -> null
     }
 }
