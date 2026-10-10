@@ -2329,8 +2329,10 @@ that marks image models, so its picker offers documented ids and a typed
 id. Not confirmed (Google's pages read 2026-10-10 document the newer
 Interactions API first): the imageConfig.aspectRatio field, which suggested
 ids exist, and the real answer and error shapes. Outcome: unit tests and
-the release build pass; installed on the phone; no screen seen and no
-Gemini request made.
+the release build pass; installed on the phone. Seen on the A059 on
+2026-10-10: the OpenRouter image card with eight models and their prices,
+and prices in the picker. No Gemini image service was added and no Gemini
+request made.
 
 ## D-167 · 2026-10-10 · A thread's own image model — proposed
 User request. The "Model for this thread" sheet has a second section,
@@ -2344,8 +2346,11 @@ removed model falls back to the starred default. Choices are kept in
 files/thread-image-models.json (no Room change), cleared with the thread;
 an incognito thread's choice stays in memory. Known gap: an earlier step
 whose call named no model shows the thread's present model on its line.
-Outcome: unit tests and the release build pass; installed; not seen on a
-phone.
+Outcome: unit tests and the release build pass. Seen on the A059 on
+2026-10-10: the "Image model" section of the thread's model sheet. It
+lists raster and vector models in one list with one selected radio each,
+which reads as two choices in one group; the fully opened sheet also draws
+under the status bar. Both open.
 
 ## D-168 · 2026-10-10 · Privacy marks in the Providers sheet; a limit that is the service's — proposed
 User request; adds to D-159. Each provider row carries one icon after its
@@ -2362,7 +2367,9 @@ generate_image now treats OpenRouter's HTTP 429 as a limit at the service
 credit are fine and nothing was charged; seen with Nano Banana 2.1, whose
 only provider, Google AI Studio, was over its quota (recorded in
 testdata/openrouter/image-error-429-upstream-quota.json). Outcome: unit
-tests pass; no APK built since (user ruling); not seen on a phone.
+tests pass. Seen on the A059 on 2026-10-10: the shields and the legend. The
+sheet showed no cache price although the provider list was read with one;
+fixed the same day (each row now shows in, out and cache).
 
 ## D-169 · 2026-10-10 · Video generation through OpenRouter — proposed
 User request. New tool module tools/generate-video (generate_video). It
@@ -2382,9 +2389,10 @@ as a hidden usage row. Subagents never get it. Settings > Models has "Video
 generation" (add from /api/v1/videos/models, star one; price per second and
 lengths on each row; the list is cached for a day). The chat shows a card
 with a preview frame and Play (the phone's own player), Save and Share.
-No new dependency, permission or Room change. Outcome: unit tests pass; no
-video request was made, so the poll and download answers are from the
-documentation only; no screen seen.
+No new dependency, permission or Room change. Outcome: unit tests pass. On
+the A059 on 2026-10-10 one request (Grok Imagine Video 1.5 Lite, 4 s, 720p)
+was created, polled and downloaded in 39 s for $0.12, and the card played;
+the Settings section was seen. A job that outlives one call is untried.
 
 ## D-170 · 2026-10-10 · Vector images (SVG) through OpenRouter — proposed
 User request. New tool module tools/generate-vector-image
@@ -2405,7 +2413,13 @@ tag under a strict content security policy. Model choice, failure texts
 and file names moved to core/tool-api for both tools. Not confirmed: how a
 vector model returns its SVG (base64, plain text and a data URI are
 accepted), and the XML parser's behaviour on Android. Outcome: unit tests
-pass; no vector request made; no screen seen.
+pass. On the A059 on 2026-10-10 Recraft V4.1 Vector returned an SVG in 11 s
+for $0.08 and the sanitiser kept it. The preview was a blank box: Compose
+measured the WebView as wrap-content, so the page had no height; fixed
+with match-parent layout parameters and seen drawn, small and full size.
+The picker tags the six vector models "SVG", but they are found only by
+search, and "Styles" models refuse a request without a reference (HTTP 400
+"input_references: must have between 1 and 10 items"); see D-174.
 
 ## D-171 · 2026-10-10 · Picture mode: the user's words go straight to the image model — proposed
 User request, after a comparison with the ChatGPT app showed that the chat
@@ -2422,8 +2436,10 @@ assistant text is added. The mode switches off after each send, and when a
 file is attached, an edit begins or a run starts; it is never saved. A new
 thread is named from the message alone. Memory extraction and compaction
 are skipped for such a turn. Not yet: attached pictures as references.
-Outcome: unit tests pass; not seen on a phone; no request made, and
-Gemini's acceptance of a history that ends in a tool result is unchecked.
+Outcome: unit tests pass. On the A059 on 2026-10-10 a picture was made by
+one send, and a chat message after three media sends was answered by
+Claude Haiku 5.5 through OpenRouter. Gemini as the chat model after a
+media send is unchecked.
 
 ## D-172 · 2026-10-10 · Image quality, reference pictures, instructional guidance, the full prompt — proposed
 User request, from the comparison behind D-171. generate_image gains two
@@ -2445,9 +2461,15 @@ grew from about 1,300 to 2,800 characters. A picture or video step's line
 is cut at 120 characters, the approval card shows the whole prompt, and a
 tap on the step opens a sheet with the full prompt, model, quality, aspect
 ratio and references. Also: a model's provider list and prices are cached
-for a day (OpenRouterEndpointCache). Outcome: unit tests pass; no request
-made; no screen seen; the data URL form of a reference and every Gemini
-field are unconfirmed.
+for a day (OpenRouterEndpointCache). Outcome: unit tests pass. On the A059
+on 2026-10-10: a reference picture sent as a data URL was accepted (Nano
+Banana 2.1 changed the leaf's colour and kept the rest, about $0.04);
+Recraft V4.1 Flash, which declares no references, was refused before any
+request; the approval card showed the whole prompt and the prompt sheet
+opened from a step. The card names no price, and the step line and the
+sheet show the model's key ("openrouter:recraft/…"), not its name; open.
+The "Image quality" row touched the screen's edges; its padding is fixed.
+High quality and every Gemini field are untried.
 
 ## D-173 · 2026-10-10 · Media mode: pictures, vector images and videos from the message box — proposed
 User request; extends D-171, whose "picture mode" is now "media mode" in
@@ -2466,5 +2488,25 @@ VideoHandOver. An earlier job still pending is shown as the tool reports
 it and never overridden with new_video. Also: a model with chosen
 providers shows the first chosen provider's price in Settings and in the
 chat's model sheet (amends D-159). Not yet: attached pictures as
-references in this mode. Outcome: unit tests pass; not seen on a phone; no
-request made.
+references in this mode. Outcome: unit tests pass. Seen on the A059 on
+2026-10-10: the three chips and the details line; a picture ($0.007, 6.0 s),
+a video (4 s at 720p, $0.12, 39 s, one call) and a vector image ($0.08,
+11 s) each made by one send. A failed call shows "Failed" with no reason,
+because no chat model is there to explain it; open.
+
+## D-174 · 2026-10-10 · Media settings in the message box — proposed
+User request: the Picture and Video chips should let the user choose the
+quality, and perhaps the model, in place. Proposed (option A of
+docs/mockups/media-controls.html): the chips stay; the details line under
+them becomes a row of pills, one per setting, with the price of the next
+send fixed at its right end. Picture: model, quality (Standard, High),
+shape (aspect ratio). Vector: model, shape. Video: model, length, size. A
+pill opens a menu whose choices show their price where the choice changes
+it; the model pill opens a sheet with only that kind's models and an "Add
+model" row that opens the picker filtered to the kind. A kind with a saved
+key but no model still shows its chip, with "No vector model yet" and "Add
+model" in place of the pills, which answers the report that vector models
+could not be found. The choices are kept per thread and sent as the call's
+arguments, so the tools need no change. The "Image quality" row in Settings
+stays as the default for calls the chat model makes. Option B (one sheet
+per kind) is in the same mockup. Outcome: mockup only; nothing built.

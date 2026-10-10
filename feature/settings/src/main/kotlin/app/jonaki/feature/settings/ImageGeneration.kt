@@ -118,7 +118,7 @@ internal fun ImageGenerationSection(images: ImageGenerationUi, actions: Settings
 /** The quality generate_image uses when the chat model names none: Standard or High. */
 @Composable
 private fun ImageQualityRow(isHigh: Boolean, onChange: (isHigh: Boolean) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         Text(stringResource(R.string.settings_image_quality), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.size(8.dp))
         val choices = listOf(false to R.string.settings_image_quality_standard, true to R.string.settings_image_quality_high)

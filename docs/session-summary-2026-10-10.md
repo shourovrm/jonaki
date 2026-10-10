@@ -9,69 +9,73 @@ decision named here has its full entry in `DECISIONS.md`.
 - `main` is at the commit that adds this file, about 98 commits ahead of
   `origin/main`. Nothing is pushed. No release was made: v1.4.2 has no tag and
   no GitHub release, and the README still links v1.4.1.
-- The test phone (A059) runs v1.4.2, version code 15, installed with
-  `adb install -r`, so its threads, keys and settings were kept.
+- The test phone (A059) runs v1.4.2, version code 15, built from the last
+  commit of the afternoon and installed with `adb install -r`, so its
+  threads, keys and settings were kept.
 - `gradle testReleaseUnitTest test assembleRelease --offline` exits with 0 on
   that commit.
-- Decisions D-157 to D-173 are all `proposed`. Only the user changes a status.
-- Spend on paid test requests: about $0.05 of the $0.50 the user allowed
-  (two pictures of $0.014 each, a few short chat messages, one refused
-  request that cost nothing).
+- Decisions D-157 to D-174 are all `proposed`. Only the user changes a status.
+- Spend on paid test requests: about $0.05 in the morning and $0.25 in the
+  afternoon, each against a $0.50 allowance from the user.
 
 ## Open issues
 
-### Reported by the user on v1.4.2, not yet diagnosed
+### Found in the phone pass of the afternoon, not fixed
 
-1. **No Vector chip and no place to set a vector model.** The user looked for
-   them on the phone and found neither. What the code does: there is no
-   separate vector setting. A vector model is an image model whose OpenRouter
-   entry lists `output_format` as exactly `["svg"]` (six Recraft models). It is
-   added through Settings > Models > Image generation > OpenRouter > Add
-   model, and the Vector chip appears only after one is added. Nothing on any
-   screen says this. To check first in the next session: whether the image
-   model picker lists the Recraft vector models at all and marks them "SVG",
-   and whether adding one makes the chip appear. A likely fix whatever the
-   cause: make vector models findable, for example a "Vector" filter or
-   section in the picker and a hint where the chip would be.
+The afternoon session tested the test build on the A059 for $0.25 of paid
+requests (credit used rose from $12.349 to $12.598). Fixed that day: the
+Providers sheet shows each provider's cache price; a vector picture's
+preview is drawn (it was a blank box); the "Image quality" row is aligned
+with the cards. These remain:
 
-### Built but never seen on a screen
+1. **A failed send in media mode gives no reason.** The step shows "Failed"
+   and the model's key, and nothing else, because no chat model is there to
+   explain it. Seen with Recraft V4 Styles Vector, which answers HTTP 400
+   "input_references: must have between 1 and 10 items". A likely fix:
+   `DirectToolRun` hands back the last tool output, and `runMediaMode` saves
+   a red error row when it is an error.
+2. **A model that needs a reference picture can be chosen for media mode**,
+   where no reference can be sent. The model list declares it
+   (`input_references` with `min` 1), so such a model can be left out of the
+   chips or marked.
+3. **Vector models are found only by searching the picker.** The picker
+   does tag the six Recraft vector models "SVG", and the Vector chip appears
+   once one is added; nothing on a screen says so. D-174 proposes the
+   answer.
+4. **Model keys shown in place of names**: the step line, the approval card
+   and the prompt sheet show "openrouter:recraft/recraft-v4.1-flash".
+   "Running generate_video…" and "Allow generate_image?" show tool ids.
+5. **The approval card for a picture or video names no price.**
+6. **The thread's model sheet**: fully opened it draws under the status
+   bar; "Default" and "Medium" in the Thinking control are cut to "Defa…"
+   and "Medi…" at 360 dp; raster and vector models share one "Image model"
+   list with one selected radio each.
+7. **The steps summary of a turn** ("2 steps 37 s $0.0043") counts the chat
+   model's tokens only, not the picture the turn paid for (about $0.04).
+8. **The chat does not always open at its newest message** after the app is
+   restarted; seen once in three restarts.
 
-None of these has been looked at on a device. Each is covered by unit tests
-only.
+### Still not seen on a screen
 
-- D-164: the copy button on a red error; a failed subagent's reason line;
-  `:batch` models hidden from the picker.
-- D-166: image service cards; prices in the image picker; the Gemini image
-  service.
-- D-167: the "Image model" section in the "Model for this thread" sheet.
-- D-168: privacy icons and legend in the Providers sheet; the chosen
-  provider's price on a model's row (added in D-173).
-- D-169: the video tool, its Settings section and the video card.
-- D-170: the vector tool, the "SVG" tag and the SVG preview in a WebView.
-- D-171 and D-173: the Picture, Vector and Video chips and the details line
-  with the price.
-- D-172: the "Image quality" row; reference pictures; the prompt sheet opened
-  from a picture or video step; the whole prompt on the approval card.
-- D-161: a run with the screen off (the wake lock).
+- D-164: the copy button on a red error; a failed subagent's reason line.
 - D-163: Delete in multi-select, and multi-select in Memory.
-- D-158: a fresh install with no service. Checking it means wiping the app's
-  data, which needs the user's word.
+- D-161: a run with the screen off (the wake lock).
+- D-158: a fresh install with no service. Checking it means wiping the
+  app's data, which needs the user's word.
 
-### Never tried against the real service
+### Still not tried against the real service
 
-- A video request to OpenRouter (`POST /api/v1/videos`, polling, download).
-  The parsing follows the documentation only.
-- A vector request. The form in which the SVG returns is unknown; base64,
-  plain text and a data URI are accepted.
-- A picture with a reference picture. The `data:` URL form is assumed.
-- Any picture through Gemini directly. Google's pages document a newer
-  "Interactions" API first; the field for the aspect ratio and the list of
-  model ids are unconfirmed.
-- A chat request after a media-mode send with Gemini as the chat model. The
-  history then ends in a tool result.
+- Any picture through Gemini directly, and Gemini as the chat model after
+  a media-mode send.
+- High image quality, and a video that outlives one tool call.
 - Providers with fallbacks switched off, and the HTTP 404 assumed for "no
   chosen provider available".
-- One request of each kind would cost about $0.25 in total.
+
+### Waiting for the user
+
+- D-174: the settings row under the media chips, drawn in
+  `docs/mockups/media-controls.html` (option A recommended, option B beside
+  it). Nothing is built.
 
 ### Owed work
 
@@ -90,10 +94,12 @@ only.
 - **A known gap in D-167:** an old picture step whose call named no model
   shows the thread's present image model on its line.
 - **Leftovers on the phone from testing:** the threads "Firefly
-  Bioluminescence Explained" and "Firefly Explanation in Bangla"; the image
-  model FLUX.2 Klein 4B, which ranks 126 of 168 on quality and was added only
-  because it is cheap; a language fact [41] waiting for approval on the
-  Memory screen.
+  Bioluminescence Explained", "Firefly Explanation in Bangla" and "Dusk
+  Firefly Paper Cut" (a picture, a failed vector, a video, an edited picture
+  and a vector, $0.249); the image models FLUX.2 Klein 4B and Recraft V4.1
+  Vector, added for tests; the file a-simple-firefly-icon-two-colours.svg in
+  Download/Jonaki; a language fact [41] waiting for approval on the Memory
+  screen.
 
 ## Work done, in order
 

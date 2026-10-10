@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki — media controls in the message box</title>
+<style>
+@font-face { font-family: "Geist"; src: url("../../core/ui/src/main/res/font/geist.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("../../core/ui/src/main/res/font/geist_mono.ttf"); font-weight: 100 900; }
+
+/* ---------- the page around the phones (not part of the app) ---------- */
+* { box-sizing: border-box; }
+html { background: #e9ece4; }
+body { margin: 0; padding: 48px 40px 96px; font-family: "Geist", system-ui, sans-serif; color: #171b14; line-height: 1.5; }
+::selection { background: #d6ea92; color: #172000; }
+.page { max-width: 1240px; margin: 0 auto; }
+h1 { font-size: 30px; font-weight: 640; letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; }
+h2 { font-size: 20px; font-weight: 620; letter-spacing: -0.01em; margin: 64px 0 6px; }
+.lede, .note { max-width: 72ch; margin: 0 0 8px; color: #3a4233; }
+.note { font-size: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 36px 32px; margin-top: 24px; align-items: flex-start; }
+figure { margin: 0; width: 360px; }
+figcaption { margin-top: 12px; font-size: 14px; color: #3a4233; max-width: 360px; }
+figcaption b { font-weight: 620; color: #171b14; }
+.pick { display: inline-block; font-size: 12px; font-weight: 620; background: #3f5600; color: #f3f6ef; border-radius: 6px; padding: 2px 8px; margin-left: 8px; vertical-align: 3px; }
+
+/* ---------- Leaf tokens, copied from core/ui Theme.kt ---------- */
+.phone {
+  --bg: #f3f6ef; --ink: #171b14; --ink-soft: #3a4233; --muted: #5f6857; --line: #dde3d5; --outline: #7c8572;
+  --field: #e7ecE1; --bubble: #e2e9d6; --card: #ffffff; --accent: #3f5600; --on-accent: #f3f6ef;
+  --sel: #dce4ce; --on-sel: #1c2410; --live: #729600; --sheet: #eef2e8; --scrim: rgba(23,27,20,.38);
+  --fs: 1;
+  width: 360px; background: var(--bg); color: var(--ink); border-radius: 28px; overflow: hidden; position: relative;
+  box-shadow: 0 1px 2px rgba(23,27,20,.08), 0 18px 40px -18px rgba(23,27,20,.35);
+  font-family: "Geist", system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;
+}
+.phone.dark {
+  --bg: #10130e; --ink: #e6e9e0; --ink-soft: #c3c9b9; --muted: #8b927f; --line: #262b21; --outline: #6c7462;
+  --field: #1a1e16; --bubble: #20261a; --card: #151912; --accent: #c9e86b; --on-accent: #1f2a00;
+  --sel: #2a3122; --on-sel: #dde4cf; --live: #d4f06a; --sheet: #1a1e16; --scrim: rgba(0,0,0,.55);
+}
+.phone.scale13 { --fs: 1.3; }
+.phone.h420 { height: 420px; } .phone.h640 { height: 640px; }
+
+.chat { flex: 1; padding: 16px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; min-height: 0; overflow: hidden; }
+.user { align-self: flex-end; max-width: 280px; background: var(--bubble); border-radius: 20px 20px 6px 20px; padding: 10px 14px; font-size: calc(15px * var(--fs)); }
+.steps { border: 1px solid var(--line); background: var(--card); border-radius: 18px; padding: 10px 14px; font-size: calc(13px * var(--fs)); color: var(--muted); }
+.steps span { font-family: "Geist Mono", monospace; }
+.thumb { width: 150px; height: 150px; border-radius: 16px; background: radial-gradient(60px 40px at 55% 45%, #f0b24a 0 12%, transparent 60%), linear-gradient(160deg, #101a36, #2a2c5e 55%, #1c6a4a 56%, #0f4a35); }
+
+.bar { display: flex; gap: 6px; padding: 0 12px; align-items: center; }
+.stat { height: 30px; border-radius: 15px; background: var(--field); display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: calc(12px * var(--fs)); color: var(--ink-soft); white-space: nowrap; }
+.stat i { width: 7px; height: 7px; border-radius: 50%; background: var(--live); }
+.stat.mono { font-family: "Geist Mono", monospace; }
+
+/* media block */
+.media { padding: 8px 12px 0; }
+.kinds { display: flex; gap: 6px; }
+.kind {
+  height: 32px; border-radius: 10px; border: 1px solid var(--outline); background: transparent; color: var(--ink-soft);
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 12px 0 8px; font: 500 calc(12px * var(--fs))/1 "Geist", sans-serif; cursor: pointer;
+}
+.kind svg, .pill svg, .rowicon svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.kind[aria-pressed="true"] { background: var(--sel); border-color: var(--sel); color: var(--on-sel); }
+.kind:focus-visible, .pill:focus-visible, .opt:focus-visible, .mrow:focus-visible, .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.passive { font-size: calc(12px * var(--fs)); color: var(--ink-soft); padding: 4px 4px 0; }
+
+/* the settings row: pills scroll, price stays */
+.set { display: flex; align-items: center; gap: 8px; padding-top: 6px; }
+.pills { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 calc(100% - 14px), transparent); padding-right: 10px; }
+.pills::-webkit-scrollbar { display: none; }
+.pill {
+  height: 32px; flex: none; border: 0; border-radius: 16px; background: var(--field); color: var(--ink);
+  display: inline-flex; align-items: center; gap: 2px; padding: 0 6px 0 12px; font: 500 calc(12px * var(--fs))/1 "Geist", sans-serif; cursor: pointer; white-space: nowrap;
+}
+.pill.model { max-width: 116px; }
+.pill.model span { overflow: hidden; text-overflow: ellipsis; }
+.pill svg { width: 16px; height: 16px; color: var(--muted); }
+.pill[aria-expanded="true"] { background: var(--sel); color: var(--on-sel); }
+.price { flex: none; font: 500 calc(12px * var(--fs))/1 "Geist Mono", monospace; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.price small { font: 400 calc(11px * var(--fs))/1 "Geist", sans-serif; color: var(--muted); }
+.empty { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 0; font-size: calc(12px * var(--fs)); color: var(--ink-soft); min-height: 38px; }
+.link { border: 0; background: none; color: var(--accent); font: 600 calc(13px * var(--fs))/1 "Geist", sans-serif; padding: 10px 8px; cursor: pointer; }
+
+.compose { display: flex; gap: 8px; align-items: center; padding: 10px 12px 14px; }
+.round { width: 46px; height: 46px; border-radius: 50%; flex: none; display: grid; place-items: center; }
+.round.plus { border: 1px solid var(--line); color: var(--ink); }
+.round.send { background: var(--accent); color: var(--on-accent); }
+.round svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.box { flex: 1; min-width: 0; height: 48px; border-radius: 24px; background: var(--field); display: flex; align-items: center; padding: 0 18px; font-size: calc(15px * var(--fs)); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.box.typed { color: var(--ink); }
+
+/* dropdown menu and bottom sheet */
+.menu { position: absolute; left: 118px; bottom: 112px; width: 216px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 6px 0; box-shadow: 0 10px 28px -10px rgba(23,27,20,.45); z-index: 3; }
+.opt { width: 100%; border: 0; background: none; color: var(--ink); display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 14px; font: 400 calc(14px * var(--fs))/1.2 "Geist", sans-serif; text-align: left; cursor: pointer; }
+.opt b { font-weight: 500; flex: 1; }
+.opt small { display: block; font-size: calc(12px * var(--fs)); color: var(--muted); font-weight: 400; margin-top: 2px; }
+.opt code { font: 500 calc(12px * var(--fs))/1 "Geist Mono", monospace; }
+.tick { width: 18px; flex: none; color: var(--accent); }
+.tick svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+.scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 2; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--sheet); border-radius: 28px 28px 0 0; z-index: 3; padding: 10px 0 14px; }
+.grab { width: 32px; height: 4px; border-radius: 2px; background: var(--outline); margin: 0 auto 14px; }
+.sheet h3 { margin: 0 20px 4px; font-size: calc(20px * var(--fs)); font-weight: 620; letter-spacing: -0.01em; }
+.sheet .sub { margin: 0 20px 8px; font-size: calc(12px * var(--fs)); color: var(--muted); }
+.mrow { width: 100%; border: 0; background: none; color: var(--ink); display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 6px 20px; text-align: left; cursor: pointer; font-family: "Geist", sans-serif; }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--outline); flex: none; display: grid; place-items: center; }
+.mrow[aria-checked="true"] .radio { border-color: var(--accent); }
+.mrow[aria-checked="true"] .radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.mname { flex: 1; min-width: 0; }
+.mname b { display: block; font-weight: 500; font-size: calc(15px * var(--fs)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mname small { display: block; font: 400 calc(12px * var(--fs))/1.4 "Geist Mono", monospace; color: var(--muted); }
+.tag { flex: none; font-size: calc(11px * var(--fs)); color: var(--ink-soft); border: 1px solid var(--outline); border-radius: 6px; padding: 2px 6px; }
+.sheet hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
+.sheet .foot { display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+.rowicon { color: var(--accent); display: grid; place-items: center; }
+.group { margin: 14px 20px 6px; font-size: calc(12px * var(--fs)); font-weight: 600; color: var(--muted); }
+.seg { display: flex; margin: 0 20px; border: 1px solid var(--outline); border-radius: 20px; overflow: hidden; }
+.seg span { flex: 1; text-align: center; padding: 10px 4px; font-size: calc(13px * var(--fs)); border-left: 1px solid var(--outline); }
+.seg span:first-child { border-left: 0; }
+.seg span.on { background: var(--sel); color: var(--on-sel); font-weight: 500; }
+.total { display: flex; justify-content: space-between; align-items: center; margin: 16px 20px 0; font-size: calc(13px * var(--fs)); color: var(--ink-soft); }
+.total code { font: 500 calc(14px * var(--fs))/1 "Geist Mono", monospace; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Media controls in the message box</h1>
+  <p class="lede">The Picture, Vector and Video chips stay where they are. The line under them, which today only reports the model and the price, becomes the place to change the model, the quality and the shape or length, with the price of the next send beside it.</p>
+  <p class="note">Mockup at 360 dp. Model names and the $0.007, $0.08 and $0.12 figures are the ones the phone showed on 2026-10-10; the prices for High, 480p and 1080p are placeholders.</p>
+
+  <h2>Working sample</h2>
+  <p class="note">Tap a chip, then a setting. The price follows the choice.</p>
+  <div class="row">
+    <figure>
+      <div class="phone h420" id="live">
+        <div class="chat">
+          <div class="user">a firefly on a green leaf at dusk, paper cut style</div>
+          <div class="steps">1 step <span>6.0 s</span></div>
+          <div class="thumb"></div>
+        </div>
+        <div class="bar"><div class="stat"><i></i>Claude Haiku 5.5</div><div class="stat mono">1% /1M</div><div class="stat mono">$0.0070</div></div>
+        <div class="media">
+          <div class="kinds" id="liveKinds"></div>
+          <div id="liveSet"></div>
+        </div>
+        <div class="compose">
+          <div class="round plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div class="box" id="liveBox">Message</div>
+          <div class="round send"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></div>
+        </div>
+        <div class="menu" id="liveMenu" hidden></div>
+      </div>
+      <figcaption><b>Light theme.</b> Chips never move; only the second line changes.</figcaption>
+    </figure>
+    <figure>
+      <div class="phone dark h420" id="liveDark"></div>
+      <figcaption><b>Dark theme.</b> The same sample; it follows the left one.</figcaption>
+    </figure>
+  </div>
+
+  <h2>Option A: the details line becomes the settings row <span class="pick">Recommended</span></h2>
+  <p class="note">Each value is a pill that opens its choices. The pills scroll sideways when a long name or a large font needs more room; the price is fixed at the right edge and never scrolls away.</p>
+  <div class="row" id="optionA"></div>
+
+  <h2>Option B: one settings sheet per kind</h2>
+  <p class="note">The line stays text. A tap on it opens one sheet with every setting. It shows more at once and costs one more tap for each change.</p>
+  <div class="row" id="optionB"></div>
+</div>
+
+<script>
+const ICON = {
+  picture: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M4.5 16l4.5-4.5 3.5 3.5 2.5-2.5 4.5 4.5"/><circle cx="15.5" cy="9.5" r="1.2"/></svg>',
+  vector: '<svg viewBox="0 0 24 24"><path d="M12 4l4 7H8z"/><rect x="4.5" y="14" width="6" height="6" rx="1"/><circle cx="16.5" cy="17" r="3"/></svg>',
+  video: '<svg viewBox="0 0 24 24"><rect x="3.5" y="6.5" width="12" height="11" rx="2.5"/><path d="M15.5 10.5l5-3v9l-5-3z"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg>',
+  tick: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+};
+const KINDS = {
+  picture: { label: 'Picture', hint: 'Describe a picture', model: 'Recraft V4.1 Flash',
+    settings: [
+      { key: 'quality', value: 'Standard', options: [['Standard', 'The model\'s normal size', 0.007], ['High', '2K or the model\'s high setting', 0.014]] },
+      { key: 'shape', value: '1:1', options: [['1:1', 'Square'], ['4:3', 'Wide'], ['3:4', 'Tall'], ['16:9', 'Screen'], ['9:16', 'Phone']] },
+    ], unit: '' },
+  vector: { label: 'Vector', hint: 'Describe a vector image', model: 'Recraft V4.1 Vector',
+    settings: [{ key: 'shape', value: '1:1', options: [['1:1', 'Square'], ['4:3', 'Wide'], ['3:4', 'Tall'], ['16:9', 'Screen']] }], base: 0.08, unit: '' },
+  video: { label: 'Video', hint: 'Describe a video', model: 'Grok Imagine Video 1.5 Lite',
+    settings: [
+      { key: 'length', value: '4 s', options: [['4 s', ''], ['6 s', ''], ['10 s', ''], ['15 s', 'Longest for this model']] },
+      { key: 'size', value: '720p', options: [['480p', '', 0.02], ['720p', '', 0.03], ['1080p', '', 0.14]] },
+    ], unit: 'about ' },
+};
+function priceOf(kindKey, state) {
+  const kind = KINDS[kindKey];
+  if (kindKey === 'picture') { return kind.settings[0].options.find(o => o[0] === state.quality)[2]; }
+  if (kindKey === 'vector') { return kind.base; }
+  const perSecond = kind.settings[1].options.find(o => o[0] === state.size)[2];
+  return perSecond * parseInt(state.length, 10);
+}
+function money(value) { return '$' + (value < 0.1 && Math.round(value * 1000) % 10 ? value.toFixed(3) : value.toFixed(2)); }
+function initialState(kindKey) { const s = {}; KINDS[kindKey].settings.forEach(x => s[x.key] = x.value); return s; }
+
+function kindsHtml(selected, extra) {
+  return Object.keys(KINDS).map(k => `<button class="kind" data-kind="${k}" aria-pressed="${k === selected}">${ICON[k]}${KINDS[k].label}</button>`).join('') + (extra || '');
+}
+function setRowHtml(kindKey, state, open, modelName) {
+  const kind = KINDS[kindKey];
+  const pills = [`<button class="pill model" data-pill="model" aria-expanded="${open === 'model'}"><span>${modelName || kind.model}</span>${ICON.down}</button>`]
+    .concat(kind.settings.map(s => `<button class="pill" data-pill="${s.key}" aria-expanded="${open === s.key}">${state[s.key]}${ICON.down}</button>`));
+  return `<div class="set"><div class="pills">${pills.join('')}</div><div class="price"><small>${kind.unit}</small>${money(priceOf(kindKey, state))}</div></div>`;
+}
+function menuHtml(kindKey, settingKey, state) {
+  const setting = KINDS[kindKey].settings.find(s => s.key === settingKey);
+  return setting.options.map(o => {
+    const next = Object.assign({}, state, { [settingKey]: o[0] });
+    const priced = o.length > 2 || settingKey === 'length';
+    return `<button class="opt" data-value="${o[0]}"><span class="tick">${o[0] === state[settingKey] ? ICON.tick : ''}</span><b>${o[0]}${o[1] ? `<small>${o[1]}</small>` : ''}</b>${priced ? `<code>${money(priceOf(kindKey, next))}</code>` : ''}</button>`;
+  }).join('');
+}
+function composeHtml(text, typed) {
+  return `<div class="compose"><div class="round plus">${ICON.plus}</div><div class="box${typed ? ' typed' : ''}">${text}</div><div class="round send"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></div></div>`;
+}
+function barHtml() { return '<div class="bar"><div class="stat"><i></i>Claude Haiku 5.5</div><div class="stat mono">1% /1M</div><div class="stat mono">$0.0070</div></div>'; }
+function sheetModels(title, sub, rows, footer) {
+  return `<div class="scrim"></div><div class="sheet"><div class="grab"></div><h3>${title}</h3><p class="sub">${sub}</p>` +
+    rows.map(r => `<button class="mrow" role="radio" aria-checked="${!!r[3]}"><span class="radio"></span><span class="mname"><b>${r[0]}</b><small>${r[1]}</small></span>${r[2] ? `<span class="tag">${r[2]}</span>` : ''}</button>`).join('') +
+    `<hr><div class="foot"><span class="rowicon">${ICON.plus}</span><button class="link">${footer}</button></div></div>`;
+}
+function figure(cls, inner, caption) { return `<figure><div class="phone ${cls}">${inner}</div><figcaption>${caption}</figcaption></figure>`; }
+
+// ---- the working sample ----
+const live = { kind: null, states: {}, open: null };
+Object.keys(KINDS).forEach(k => live.states[k] = initialState(k));
+function renderLive() {
+  const root = document.getElementById('live');
+  root.querySelector('#liveKinds').innerHTML = kindsHtml(live.kind);
+  root.querySelector('#liveSet').innerHTML = live.kind ? setRowHtml(live.kind, live.states[live.kind], live.open) : '';
+  root.querySelector('#liveBox').textContent = live.kind ? KINDS[live.kind].hint : 'Message';
+  const menu = root.querySelector('#liveMenu');
+  const hasMenu = live.kind && live.open && live.open !== 'model';
+  menu.hidden = !hasMenu;
+  menu.innerHTML = hasMenu ? menuHtml(live.kind, live.open, live.states[live.kind]) : '';
+  const dark = document.getElementById('liveDark');
+  dark.innerHTML = root.innerHTML.replace(/id="[^"]*"/g, '');
+}
+document.getElementById('live').addEventListener('click', event => {
+  const kindButton = event.target.closest('.kind');
+  const pill = event.target.closest('.pill');
+  const option = event.target.closest('.opt');
+  if (kindButton) { live.kind = live.kind === kindButton.dataset.kind ? null : kindButton.dataset.kind; live.open = null; }
+  else if (pill) { live.open = live.open === pill.dataset.pill || pill.dataset.pill === 'model' ? null : pill.dataset.pill; }
+  else if (option) { live.states[live.kind][live.open] = option.dataset.value; live.open = null; }
+  else { live.open = null; }
+  renderLive();
+});
+live.kind = 'picture';
+renderLive();
+
+// ---- static frames ----
+const chatStub = '<div class="chat"></div>';
+const pictureState = initialState('picture');
+const videoState = initialState('video');
+document.getElementById('optionA').innerHTML = [
+  figure('h420', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('picture')}</div><div class="passive">Recraft: Recraft V4.1 Flash · $0.007 per image</div></div>` + composeHtml('Describe a picture'),
+    '<b>Today, for comparison.</b> The line is text only. Quality is in Settings, the model in another sheet, and the shape cannot be set.'),
+  figure('h420', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('picture')}</div>${setRowHtml('picture', pictureState, 'quality')}</div>` + composeHtml('Describe a picture') + `<div class="menu">${menuHtml('picture', 'quality', pictureState)}</div>`,
+    '<b>Quality.</b> A tap on the pill opens a menu. Every choice that changes the price shows its price.'),
+  figure('h420', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('video')}</div>${setRowHtml('video', videoState, null)}</div>` + composeHtml('a firefly blinking on a leaf at night', true),
+    '<b>Video.</b> Length and size take the place of quality and shape. The model pill ends in "…" and the rest stays whole.'),
+  figure('h640', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('picture')}</div>${setRowHtml('picture', pictureState, 'model')}</div>` + composeHtml('Describe a picture') +
+    sheetModels('Picture model', 'For this thread', [
+      ['Recraft V4.1 Flash', '$0.007 per image', '', true],
+      ['FLUX.2 Klein 4B', '$0.014 per megapixel', 'References'],
+      ['Grok Imagine Image 2.0', '$0.04 per image', ''],
+      ['Nano Banana 2.1', '$30 per 1M image tokens', 'References'],
+      ['GPT Image 2.5 Sunburst', '$30 per 1M image tokens', 'References'],
+    ], 'Add model'),
+    '<b>Model.</b> The model pill opens a sheet with only that kind\'s models. "Add model" opens the picker already filtered to the kind.'),
+  figure('h420', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('vector')}</div><div class="empty"><span>No vector model yet</span><button class="link">Add model</button></div></div>` + composeHtml('Describe a vector image'),
+    '<b>No model yet.</b> The Vector chip shows as soon as an image service has a key, so the way to add a vector model is on the screen.'),
+  figure('dark h420', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('video')}</div>${setRowHtml('video', Object.assign({}, videoState, { length: '10 s', size: '1080p' }), null)}</div>` + composeHtml('Describe a video'),
+    '<b>Dark theme.</b> A longer and larger video; the price is the first thing to change.'),
+  figure('scale13 h420', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('picture')}</div>${setRowHtml('picture', pictureState, null, 'black-forest-labs/flux.2-klein-4b-preview')}</div>` + composeHtml('Describe a picture'),
+    '<b>Font scale 1.3, a 40-character model name.</b> The name is cut, the pills scroll, and the price stays in view.'),
+].join('');
+
+document.getElementById('optionB').innerHTML = [
+  figure('h640', chatStub + barHtml() + `<div class="media"><div class="kinds">${kindsHtml('video')}</div><div class="passive">Grok Imagine Video 1.5 Lite · 4 s · 720p · about $0.12</div></div>` + composeHtml('Describe a video') +
+    `<div class="scrim"></div><div class="sheet"><div class="grab"></div><h3>Video</h3>
+      <button class="mrow" role="radio" aria-checked="true"><span class="radio"></span><span class="mname"><b>Grok Imagine Video 1.5 Lite</b><small>$0.02 to $0.14 per second</small></span></button>
+      <button class="mrow" role="radio" aria-checked="false"><span class="radio"></span><span class="mname"><b>MiniMax: H3 Max</b><small>$0.05 to $0.08 per second</small></span></button>
+      <div class="group">Length</div><div class="seg"><span class="on">4 s</span><span>6 s</span><span>10 s</span><span>15 s</span></div>
+      <div class="group">Size</div><div class="seg"><span>480p</span><span class="on">720p</span><span>1080p</span></div>
+      <div class="total"><span>Next video</span><code>about $0.12</code></div></div>`,
+    '<b>One sheet.</b> Everything about the kind in one place, with the total at the bottom. The message box is covered while it is open.'),
+].join('');
+</script>
+</body>
+</html>
