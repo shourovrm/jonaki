@@ -28,7 +28,7 @@ class OpenAiCompatibleProvider(
     private val httpClient: OkHttpClient,
     private val baseUrl: String = preset.baseUrl,
     /** Applies to OpenRouter only (D-030); other services ignore it. */
-    private val openRouterRouting: OpenRouterRouting = OpenRouterRouting.AUTOMATIC,
+    private val openRouterRoute: OpenRouterRoute = OpenRouterRoute.Automatic,
     /** Called when a private-only request found no endpoint and was sent again as cheapest. */
     private val onRoutingFallback: () -> Unit = {},
 ) : ChatProvider {
@@ -38,14 +38,13 @@ class OpenAiCompatibleProvider(
         get() = preset.key == ProviderPresets.openRouter.key
 
     override fun stream(request: ChatRequest): Flow<StreamEvent> = flow {
-        val routing = if (isOpenRouter) openRouterRouting else OpenRouterRouting.AUTOMATIC
-        val mayFallBack = routing == OpenRouterRouting.PRIVATE_THEN_CHEAPEST
-        val rejectedByDataPolicy = streamWith(request, routing, mayFallBack)
+        val route = if (isOpenRouter) openRouterRoute else OpenRouterRoute.Automatic
+        val rejectedByDataPolicy = streamWith(request, route, mayFallBack = route.mayRetryAsCheapest)
         if (rejectedByDataPolicy) {
             // No endpoint for this model promises not to keep prompts, so the user's
             // choice (D-030) is to run on the cheapest endpoint and be told.
             onRoutingFallback()
-            streamWith(request, OpenRouterRouting.CHEAPEST, mayFallBack = false)
+            streamWith(request, OpenRouterRoute.Cheapest, mayFallBack = false)
         }
     }.flowOn(Dispatchers.IO)
 
@@ -55,10 +54,10 @@ class OpenAiCompatibleProvider(
      */
     private suspend fun FlowCollector<StreamEvent>.streamWith(
         request: ChatRequest,
-        routing: OpenRouterRouting,
+        route: OpenRouterRoute,
         mayFallBack: Boolean,
     ): Boolean {
-        val call = httpClient.newCall(httpRequestFor(request, routing))
+        val call = httpClient.newCall(httpRequestFor(request, route))
         // Stop's cancellation must abort the blocking read, not wait for the next chunk.
         val cancelHandle = currentCoroutineContext()[Job]?.invokeOnCompletion { call.cancel() }
         try {
@@ -75,7 +74,7 @@ class OpenAiCompatibleProvider(
                     if (mayFallBack && OpenRouterRouting.isDataPolicyRejection(response.code, bodyText)) {
                         return true
                     }
-                    emit(failureFromErrorResponse(response.code, bodyText))
+                    emit(failureFromErrorResponse(response.code, bodyText, route))
                     return false
                 }
                 val assembler = ChatCompletionStreamAssembler()
@@ -97,11 +96,11 @@ class OpenAiCompatibleProvider(
         return false
     }
 
-    private fun httpRequestFor(request: ChatRequest, routing: OpenRouterRouting): Request {
+    private fun httpRequestFor(request: ChatRequest, route: OpenRouterRoute): Request {
         val body = ChatCompletionRequestBody.build(
             request,
             askForCost = preset.reportsCost,
-            routing = routing,
+            route = route,
             thinkingField = preset.thinkingField,
         ).toString()
         val builder = Request.Builder()
@@ -117,8 +116,16 @@ class OpenAiCompatibleProvider(
         return builder.build()
     }
 
-    private fun failureFromErrorResponse(statusCode: Int, bodyText: String): StreamEvent.Failed {
+    private fun failureFromErrorResponse(statusCode: Int, bodyText: String, route: OpenRouterRoute): StreamEvent.Failed {
         val serviceMessage = errorMessageFrom(bodyText)
+        if (route.isPinned && !route.allowFallbacks && statusCode == 404) {
+            // With fallbacks off, "no endpoint" means none of the user's providers can serve the
+            // request. Say so, and never retry on other providers: the user ruled that out.
+            val chosen = route.pinnedProviders.joinToString(", ")
+            val message = "None of your chosen providers ($chosen) can serve this request. " +
+                "${preset.displayName} answered HTTP $statusCode: $serviceMessage"
+            return StreamEvent.Failed(message, retryable = false)
+        }
         val message = "${preset.displayName} answered HTTP $statusCode: $serviceMessage"
         return StreamEvent.Failed(message, retryable = isRetryableHttpStatus(statusCode))
     }
