@@ -22,9 +22,9 @@ object AgentTypes {
     /**
      * Tools no subagent gets: no nesting, facts go back in the answer instead of into memory,
      * earlier chats stay with the main thread, and only the thread's own agent proposes skills,
-     * so that one task gives one proposal.
+     * so that one task gives one proposal. generate_image stays with the thread's own agent because every picture costs money.
      */
-    val NEVER_GIVEN: Set<String> = setOf("delegate", "memory", "search_chats", "propose_skill")
+    val NEVER_GIVEN: Set<String> = setOf("delegate", "memory", "search_chats", "propose_skill", "generate_image")
 
     val RESEARCHER = AgentType(
         name = "researcher",

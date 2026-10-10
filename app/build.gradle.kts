@@ -40,6 +40,7 @@ dependencies {
     implementation(project(":tools:share-file"))
     implementation(project(":tools:export-pdf"))
     implementation(project(":tools:view-image"))
+    implementation(project(":tools:generate-image"))
     implementation(project(":tools:read-document"))
     implementation(project(":tools:phone"))
     implementation(project(":tools:schedule"))

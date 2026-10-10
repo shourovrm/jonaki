@@ -69,11 +69,13 @@ import app.jonaki.core.storage.HistoryMapper
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.ThreadEntity
+import app.jonaki.core.toolapi.ImageGenerator
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.providers.gemini.GeminiProvider
 import app.jonaki.providers.gemini.VideoSummaryOutcome
 import app.jonaki.providers.gemini.VideoSummaryRequest
+import app.jonaki.providers.openaicompatible.OpenRouterImageGenerator
 import app.jonaki.providers.openaicompatible.OpenRouterRouting
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
@@ -801,7 +803,19 @@ class AgentRunner(
         pageRenderer = pageRenderer,
         pdfRenderer = pdfRenderer,
         enabledGroups = settings.snapshot.value.enabledToolGroups,
+        imageGenerator = imageGeneratorFor(thread.id),
+        imageModelIds = settings.snapshot.value.imageModels.modelIds,
+        defaultImageModelId = settings.snapshot.value.imageModels.defaultModelId,
     )
+
+    /** Null without a saved OpenRouter key, which leaves generate_image out; each picture's cost is saved on the thread. */
+    private fun imageGeneratorFor(threadId: String): ImageGenerator? {
+        if (secrets.read(SecretName.OPENROUTER) == null) {
+            return null
+        }
+        val openRouter = OpenRouterImageGenerator({ secrets.read(SecretName.OPENROUTER) }, httpClient)
+        return RecordingImageGenerator(openRouter, threadId, backgroundModel::saveUsage)
+    }
 
     /**
      * The tools a local model could be offered, built with the app's keys
