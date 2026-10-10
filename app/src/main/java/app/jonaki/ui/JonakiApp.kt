@@ -162,6 +162,7 @@ private const val ROUTE_PYTHON = "python"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
 private const val ROUTE_ADD_IMAGE_MODELS_PREFIX = "add-image-models:"
+private const val ROUTE_ADD_VIDEO_MODELS = "add-video-models"
 private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
 private const val ROUTE_MEMORY_PROJECT_PREFIX = "memory-project:"
@@ -277,6 +278,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onAddImageModels = { serviceKey -> route = ROUTE_ADD_IMAGE_MODELS_PREFIX + serviceKey },
+                    onAddVideoModels = { route = ROUTE_ADD_VIDEO_MODELS },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
                     onOpenTools = { route = ROUTE_TOOLS },
@@ -387,6 +389,11 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onShowStatusStripChange = { show -> application.settings.update { it.copy(showStatusStrip = show) } },
                     onBack = { route = backRoute },
                 )
+            }
+            route == ROUTE_ADD_VIDEO_MODELS -> {
+                val backRoute = settingsPageRoute(SettingsPage.MODELS)
+                BackHandler { route = backRoute }
+                AddVideoModelsRoute(application, onFinished = { route = backRoute })
             }
             route.startsWith(ROUTE_ADD_IMAGE_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
@@ -795,7 +802,7 @@ private fun ChatRoute(
             compaction = compaction,
             subagentLimits = settingsSnapshot.subagentLimits,
             subagentTypeNames = AgentTypes.ALL.map { type -> type.name } + settingsSnapshot.customSubagents.map { subagent -> subagent.name },
-            stepWords = stepDetailWords(selectedImageModelKey),
+            stepWords = stepDetailWords(selectedImageModelKey, rememberVideoStepText(application, settingsSnapshot.videoModels)),
         ),
         isRunning = isRunning,
         queuedMessages = queuedByThread[threadId].orEmpty().map { queued -> QueuedMessageUi(queued.id, queued.text) },
@@ -1048,7 +1055,7 @@ private fun previewPathOf(file: StagedFile): String? = file.file.path.takeIf { V
 
 /** The step track's labels in the app's language (M11); [defaultImageModel] is the thread's effective image model. */
 @Composable
-private fun stepDetailWords(defaultImageModel: String?): StepDetail.Words {
+private fun stepDetailWords(defaultImageModel: String?, video: VideoStepText? = null): StepDetail.Words {
     val resources = LocalContext.current.resources
     return StepDetail.Words(
         readCalendar = stringResource(R.string.step_read_calendar),
@@ -1069,6 +1076,7 @@ private fun stepDetailWords(defaultImageModel: String?): StepDetail.Words {
         fromLinkedFolder = stringResource(R.string.step_from_linked_folder),
         lineCount = { lines -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_code_lines, lines, lines) },
         defaultImageModel = defaultImageModel,
+        video = video,
     )
 }
 
@@ -1145,6 +1153,7 @@ private fun SettingsRoute(
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
     onAddImageModels: (String) -> Unit,
+    onAddVideoModels: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenCustomInstructions: () -> Unit,
@@ -1219,6 +1228,7 @@ private fun SettingsRoute(
     )
 
     val imageGeneration = imageGenerationFor(application, snapshot.imageModels, ::slotFor)
+    val videoGeneration = videoGenerationFor(application, snapshot.videoModels, hasKey = SecretName.OPENROUTER in savedKeys)
     val state = SettingsUiState(
         chatServices = serviceCards(snapshot, application, ::slotFor, ::accountFor),
         addableServices = ChatService.entries
@@ -1292,6 +1302,7 @@ private fun SettingsRoute(
         skillCount = skillCount,
         localModels = localModelsSummary,
         imageGeneration = imageGeneration,
+        videoGeneration = videoGeneration,
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -1387,6 +1398,9 @@ private fun SettingsRoute(
         },
         onImageModelSetDefault = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.setDefault(modelKey)) } },
         onImageModelRemove = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.removeModel(modelKey)) } },
+        onAddVideoModels = onAddVideoModels,
+        onVideoModelSetDefault = { modelKey -> settings.update { current -> current.copy(videoModels = current.videoModels.setDefault(modelKey)) } },
+        onVideoModelRemove = { modelKey -> settings.update { current -> current.copy(videoModels = current.videoModels.removeModel(modelKey)) } },
         onModelSetDefault = { modelKey -> settings.updateChatModels { models -> models.setDefault(modelKey) } },
         onModelRoutingChange = { modelKey, routing ->
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
