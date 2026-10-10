@@ -31,8 +31,8 @@ import app.jonaki.core.ui.ThemeMode
  * 360 dp and font scale 1.3.
  */
 @Composable
-internal fun PictureModeRow(
-    pictureMode: PictureModeUi,
+internal fun MediaModeRow(
+    mediaMode: MediaModeUi,
     onChange: (isOn: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -45,15 +45,15 @@ internal fun PictureModeRow(
             .padding(start = 12.dp, end = 12.dp, top = 6.dp),
     ) {
         FilterChip(
-            selected = pictureMode.isOn,
+            selected = mediaMode.isOn,
             // A mode that is on can always be switched off.
-            enabled = pictureMode.canChange || pictureMode.isOn,
-            onClick = { onChange(!pictureMode.isOn) },
+            enabled = mediaMode.canChange || mediaMode.isOn,
+            onClick = { onChange(!mediaMode.isOn) },
             label = { Text(stringResource(R.string.chat_picture_mode), maxLines = 1) },
             leadingIcon = { Icon(JonakiIcons.Image, contentDescription = null, modifier = Modifier.size(18.dp)) },
         )
-        val modelName = pictureMode.modelName
-        if (pictureMode.isOn && modelName != null) {
+        val modelName = mediaMode.modelName
+        if (mediaMode.isOn && modelName != null) {
             Text(
                 stringResource(R.string.chat_picture_model, modelName),
                 style = MaterialTheme.typography.labelMedium,
@@ -69,13 +69,13 @@ internal fun PictureModeRow(
 // The D-029 check: a 360 dp wide phone at font scale 1.3, with a 40-character model name.
 private const val LONG_IMAGE_MODEL_NAME = "black-forest-labs/flux.2-klein-4b-preview"
 
-private val pictureModeOnState = ChatSample.finished.copy(
+private val mediaModeOnState = ChatSample.finished.copy(
     draft = "",
-    pictureMode = PictureModeUi(isOn = true, canChange = true, modelName = LONG_IMAGE_MODEL_NAME),
+    mediaMode = MediaModeUi(isOn = true, canChange = true, modelName = LONG_IMAGE_MODEL_NAME),
 )
 
 @Composable
-private fun PictureModePreviewScreen(state: ChatUiState) {
+private fun MediaModePreviewScreen(state: ChatUiState) {
     ChatScreen(
         state = state,
         onBack = {},
@@ -90,30 +90,30 @@ private fun PictureModePreviewScreen(state: ChatUiState) {
 
 @Preview(name = "Picture mode on, dark", widthDp = 360, heightDp = 640, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-private fun PictureModeOnDarkPreview() {
-    JonakiTheme(ThemeMode.DARK) { PictureModePreviewScreen(pictureModeOnState) }
+private fun MediaModeOnDarkPreview() {
+    JonakiTheme(ThemeMode.DARK) { MediaModePreviewScreen(mediaModeOnState) }
 }
 
 @Preview(name = "Picture mode on, light", widthDp = 360, heightDp = 640, fontScale = 1.3f)
 @Composable
-private fun PictureModeOnLightPreview() {
-    JonakiTheme(ThemeMode.LIGHT) { PictureModePreviewScreen(pictureModeOnState) }
+private fun MediaModeOnLightPreview() {
+    JonakiTheme(ThemeMode.LIGHT) { MediaModePreviewScreen(mediaModeOnState) }
 }
 
 @Preview(name = "Picture mode on, Bangla", locale = "bn", widthDp = 360, heightDp = 640, fontScale = 1.3f)
 @Composable
-private fun PictureModeOnBanglaPreview() {
-    JonakiTheme(ThemeMode.LIGHT) { PictureModePreviewScreen(pictureModeOnState) }
+private fun MediaModeOnBanglaPreview() {
+    JonakiTheme(ThemeMode.LIGHT) { MediaModePreviewScreen(mediaModeOnState) }
 }
 
 @Preview(name = "Picture mode off and typing, Bangla", locale = "bn", widthDp = 360, fontScale = 1.3f)
 @Composable
-private fun PictureModeOffBanglaPreview() {
+private fun MediaModeOffBanglaPreview() {
     JonakiTheme(ThemeMode.LIGHT) {
         Surface {
             Column {
-                PictureModeRow(PictureModeUi(isOn = false, canChange = true, modelName = LONG_IMAGE_MODEL_NAME), onChange = {})
-                PictureModeRow(PictureModeUi(isOn = false, canChange = false, modelName = null), onChange = {})
+                MediaModeRow(MediaModeUi(isOn = false, canChange = true, modelName = LONG_IMAGE_MODEL_NAME), onChange = {})
+                MediaModeRow(MediaModeUi(isOn = false, canChange = false, modelName = null), onChange = {})
             }
         }
     }

@@ -311,7 +311,7 @@ class AgentRunner(
      * this; the agent, subagents and scheduled tasks never do. While the
      * thread has a run going nothing happens (the screen disables the mode).
      */
-    fun sendAsPicture(threadId: String, text: String) {
+    fun sendAsMedia(threadId: String, text: String) {
         if (text.isBlank()) {
             return
         }
@@ -319,7 +319,7 @@ class AgentRunner(
             if (threadId in running.value) {
                 return
             }
-            startRun(threadId, runBody = { runPictureMode(threadId, text.trim()) }) {
+            startRun(threadId, runBody = { runMediaMode(threadId, text.trim()) }) {
                 saveUserMessage(threadId, text.trim())
             }
         }
@@ -653,7 +653,7 @@ class AgentRunner(
      * the Jev guard is not used, because the text is the user's own and not
      * outside content. The result is saved like an agent-made call's.
      */
-    private suspend fun runPictureMode(threadId: String, text: String) {
+    private suspend fun runMediaMode(threadId: String, text: String) {
         val thread = database.threadDao().find(threadId) ?: return
         val project = projectOf(thread)
         // allToolServicesFor, not toolServicesFor: a thread on a local model still gets the image tool here, as no chat model is involved.
@@ -684,7 +684,7 @@ class AgentRunner(
             skillLibrary.folder,
             projectFolder = project?.folder,
         )
-        val outcome = DirectToolRun(session).run(tool, PictureModeCall.arguments(text), toolContext, callId = UUID.randomUUID().toString())
+        val outcome = DirectToolRun(session).run(tool, MediaModeCall.arguments(text), toolContext, callId = UUID.randomUUID().toString())
         // No memory extraction: a picture prompt holds no facts, and the extractor reads only the
         // text rows. No compaction either: no chat request was made, so the context did not grow.
         if (threadId in leftWhileRunning.value) {

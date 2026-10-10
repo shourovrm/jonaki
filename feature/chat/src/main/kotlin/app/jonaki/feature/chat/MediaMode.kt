@@ -7,7 +7,7 @@ import androidx.compose.runtime.Immutable
  * (null) has no toggle, because no image model with a saved key is added.
  */
 @Immutable
-data class PictureModeUi(
+data class MediaModeUi(
     val isOn: Boolean,
     /** False while the box holds files, a sent message is being edited or a run is going. */
     val canChange: Boolean,
@@ -20,7 +20,7 @@ data class PictureModeUi(
  * to the image model, so it needs an image model, an empty file tray, a new
  * message (not an edit) and an idle thread.
  */
-object PictureMode {
+object MediaMode {
     /**
      * True when picture mode may be on. A later change will pass attached
      * pictures to the image model as references; until then files and picture

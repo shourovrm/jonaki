@@ -9,6 +9,6 @@ import kotlinx.serialization.json.put
  * exactly as typed (trimmed), is the prompt, and nothing else is set, so the
  * tool uses the thread's own image model, else the starred one.
  */
-object PictureModeCall {
+object MediaModeCall {
     fun arguments(typedText: String): JsonObject = buildJsonObject { put("prompt", typedText.trim()) }
 }

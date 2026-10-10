@@ -29,7 +29,7 @@ import org.junit.Test
  * A send in picture mode runs the real generate_image tool through [DirectToolRun]:
  * the user's text is the prompt, and no model turn happens.
  */
-class PictureModeRunTest {
+class MediaModeRunTest {
     private val threadFolder: File = Files.createTempDirectory("thread").toFile()
     private val toolContext = ToolContext(threadFolder = threadFolder, httpClient = OkHttpClient())
     private val recorder = InMemoryStepRecorder()
@@ -53,7 +53,7 @@ class PictureModeRunTest {
     fun theTypedTextIsTheExactPromptAndTheGeneratorRunsOnce() = runBlocking {
         val typed = "  a blue door, at dawn \n"
 
-        val outcome = DirectToolRun(recorder).run(toolWith(succeeding), PictureModeCall.arguments(typed), toolContext, "call-1")
+        val outcome = DirectToolRun(recorder).run(toolWith(succeeding), MediaModeCall.arguments(typed), toolContext, "call-1")
 
         assertEquals(RunOutcome.Completed(""), outcome)
         assertEquals(1, requests.size)
@@ -77,7 +77,7 @@ class PictureModeRunTest {
             ImageOutcome.Failed(ImageFailure.BLOCKED, "content policy")
         }
 
-        DirectToolRun(recorder).run(toolWith(failing), PictureModeCall.arguments("a blue door"), toolContext, "call-1")
+        DirectToolRun(recorder).run(toolWith(failing), MediaModeCall.arguments("a blue door"), toolContext, "call-1")
 
         assertEquals(1, requests.size)
         val result = recorder.events.filterIsInstance<AgentEvent.ToolFinished>().single()
@@ -100,7 +100,7 @@ class PictureModeRunTest {
         }
 
         val job = launch {
-            DirectToolRun(recorder).run(toolWith(slow), PictureModeCall.arguments("a blue door"), toolContext, "call-1")
+            DirectToolRun(recorder).run(toolWith(slow), MediaModeCall.arguments("a blue door"), toolContext, "call-1")
         }
         generating.await()
         job.cancel(CancellationException("Stop"))
