@@ -257,6 +257,29 @@ class ChatItemsTest {
         assertTrue(items.indexOf(cards.single()) > items.indexOfFirst { item -> item is ChatItem.Run })
     }
 
+    @Test
+    fun aFinishedGenerateImageCallGetsOnePictureAfterItsRun() {
+        val calls = listOf(
+            ToolCall("c1", "generate_image", """{"prompt":"a door"}"""),
+            ToolCall("c2", "generate_image", """{"prompt":"a window"}"""),
+        )
+        val rows = listOf(
+            row("u", "USER", "draw a door"),
+            row("a1", "ASSISTANT", "", calls = calls),
+            row("a2", "ASSISTANT", "Here it is."),
+        )
+        val steps = listOf(
+            StepEntity("c1", "t", "generate_image", """{"prompt":"a door"}""", "DONE", "Image saved: images/door.jpg\nSize: 1 px", 0, 1),
+            StepEntity("c2", "t", "generate_image", """{"prompt":"a window"}""", "FAILED", "Error: blocked", 2, 3),
+        )
+
+        val items = ChatItems.build(rows, steps, isRunning = false, stepWords = englishStepWords)
+
+        val pictures = items.filterIsInstance<ChatItem.GeneratedImage>()
+        assertEquals(listOf("images/door.jpg"), pictures.map { picture -> picture.path })
+        assertTrue(items.indexOf(pictures.single()) > items.indexOfFirst { item -> item is ChatItem.Run })
+    }
+
     private fun subagent(id: String, order: Int, type: String, status: String = "DONE", cost: Double? = 0.01) = SubagentEntity(
         id = id, threadId = "t", parentToolCallId = "d1", orderInCall = order, agentType = type, task = "Laptop $order",
         model = "test:m", status = status, resultText = "answer $id", latestText = "Reading reviews\nmore", costUsd = cost,

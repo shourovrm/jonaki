@@ -89,6 +89,10 @@ class JonakiApplication : Application() {
     lateinit var memoryExport: MemoryExport
         private set
 
+    /** Downloads and the share sheet, for the chat's Save and Share under a generated image. */
+    lateinit var fileDestinations: AndroidFileDestinations
+        private set
+
     /** Screens a fact saved after outside content, for the memory tool and for extraction. */
     lateinit var factScreen: FactScreen
         private set
@@ -201,7 +205,7 @@ class JonakiApplication : Application() {
         reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json"))) { settings.snapshot.value.reminderPolicy }
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
         runtimePermissions = RuntimePermissions(this, visibleActivity, settings::recordPermissionRefusal)
-        val fileDestinations = AndroidFileDestinations(this, visibleActivity, linkedFolder)
+        fileDestinations = AndroidFileDestinations(this, visibleActivity, linkedFolder)
         memoryExport = MemoryExport(database, fileDestinations, File(cacheDir, "memory-export"))
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
         runner = AgentRunner(

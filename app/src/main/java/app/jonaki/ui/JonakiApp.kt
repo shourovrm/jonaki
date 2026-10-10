@@ -867,6 +867,19 @@ private fun ChatRoute(
         onOpenStep = { stepId -> openCodeStepId = stepId },
         onCloseCodeRun = { openCodeStepId = null },
         onOpenFile = { path -> openSavedFile(context, runner.threadFolder(threadId), path, onOpenArtifact) },
+        onSaveImage = { path ->
+            scope.launch {
+                val result = application.fileDestinations.saveToDownloads(File(runner.threadFolder(threadId), path))
+                val message = when (result) {
+                    is DestinationResult.Done -> context.getString(R.string.memory_export_done, result.location)
+                    else -> context.getString(R.string.memory_export_failed)
+                }
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        },
+        onShareImage = { path ->
+            scope.launch { application.fileDestinations.share(File(runner.threadFolder(threadId), path)) }
+        },
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
@@ -919,6 +932,8 @@ private fun previewPathOf(file: StagedFile): String? = file.file.path.takeIf { V
 @Composable
 private fun stepDetailWords(): StepDetail.Words {
     val resources = LocalContext.current.resources
+    val settings = (LocalContext.current.applicationContext as JonakiApplication).settings
+    val imageModels by settings.snapshot.collectAsState()
     return StepDetail.Words(
         readCalendar = stringResource(R.string.step_read_calendar),
         addToCalendar = stringResource(R.string.step_add_to_calendar),
@@ -937,6 +952,7 @@ private fun stepDetailWords(): StepDetail.Words {
         listLinkedFolder = stringResource(R.string.step_list_linked_folder),
         fromLinkedFolder = stringResource(R.string.step_from_linked_folder),
         lineCount = { lines -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_code_lines, lines, lines) },
+        defaultImageModel = imageModels.imageModels.defaultModelId,
     )
 }
 
