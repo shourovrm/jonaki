@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki — status line alternatives</title>
+<style>
+@font-face { font-family: "Geist"; src: url("../../core/ui/src/main/res/font/geist.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("../../core/ui/src/main/res/font/geist_mono.ttf"); font-weight: 100 900; }
+
+/* ---------- the page around the phones (not part of the app) ---------- */
+* { box-sizing: border-box; }
+html { background: #e9ece4; }
+body { margin: 0; padding: 48px 40px 96px; font-family: "Geist", system-ui, sans-serif; color: #171b14; line-height: 1.5; }
+::selection { background: #d6ea92; color: #172000; }
+.page { max-width: 1320px; margin: 0 auto; }
+h1 { font-size: 30px; font-weight: 640; letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; }
+h2 { font-size: 20px; font-weight: 620; letter-spacing: -0.01em; margin: 64px 0 6px; }
+.lede, .note { max-width: 74ch; margin: 0 0 8px; color: #3a4233; }
+.note { font-size: 14px; }
+.note b { font-weight: 620; color: #171b14; }
+.row { display: flex; flex-wrap: wrap; gap: 36px 32px; margin-top: 22px; align-items: flex-start; }
+figure { margin: 0; }
+figcaption { margin-top: 12px; font-size: 14px; color: #3a4233; max-width: 360px; }
+figcaption b { font-weight: 620; color: #171b14; }
+.pick { display: inline-block; font-size: 12px; font-weight: 620; background: #3f5600; color: #f3f6ef; border-radius: 6px; padding: 2px 8px; margin-left: 8px; vertical-align: 3px; }
+.size { display: block; font: 500 12px/1 "Geist Mono", monospace; color: #5f6857; margin-bottom: 8px; }
+
+/* ---------- Leaf tokens, copied from core/ui Theme.kt ---------- */
+.phone {
+  --bg: #f3f6ef; --ink: #171b14; --ink-soft: #3a4233; --muted: #5f6857; --line: #dde3d5; --outline: #7c8572;
+  --field: #e7ece1; --bubble: #e2e9d6; --card: #ffffff; --accent: #3f5600; --on-accent: #f3f6ef; --live: #729600;
+  width: 411px; height: 470px; background: var(--bg); color: var(--ink); border-radius: 28px; overflow: hidden; position: relative;
+  box-shadow: 0 1px 2px rgba(23,27,20,.08), 0 18px 40px -18px rgba(23,27,20,.35);
+  font-family: "Geist", system-ui, sans-serif; display: flex; flex-direction: column;
+}
+.phone.w360 { width: 360px; }
+.phone.dark {
+  --bg: #10130e; --ink: #e6e9e0; --ink-soft: #c3c9b9; --muted: #8b927f; --line: #262b21; --outline: #6c7462;
+  --field: #1a1e16; --bubble: #20261a; --card: #151912; --accent: #c9e86b; --on-accent: #1f2a00; --live: #d4f06a;
+}
+svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.top { display: flex; align-items: center; gap: 14px; padding: 16px 16px 10px; border-bottom: 1px solid var(--line); flex: none; }
+.top svg { width: 22px; height: 22px; stroke-width: 1.8; }
+.top .titles { flex: 1; min-width: 0; }
+.top b { display: block; font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top .sub { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+.top .sub span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top .sub svg { width: 14px; height: 14px; }
+.chat { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 0 16px 10px; }
+.user { align-self: flex-end; max-width: 78%; background: var(--bubble); border-radius: 20px 20px 6px 20px; padding: 10px 14px; font-size: 15px; line-height: 1.4; }
+.made { display: block; width: 150px; height: 150px; border-radius: 16px; object-fit: cover; }
+
+/* the status line: sizes as in StatusStrip.kt (pill 30 dp high, 6 dp gaps, 14 dp side padding) */
+.bar { display: flex; gap: 6px; padding: 8px 14px 2px; align-items: center; flex: none; }
+.pill { height: 30px; border-radius: 15px; background: var(--field); color: var(--ink-soft); display: flex; align-items: center; gap: 5px; padding: 0 9px; font: 500 12px/1 "Geist", sans-serif; white-space: nowrap; flex: none; }
+.pill.mono, .pill .mono { font-family: "Geist Mono", monospace; font-weight: 400; }
+.pill svg { width: 16px; height: 16px; }
+.pill.model { flex: 0 1 auto; min-width: 40px; padding: 0 4px 0 6px; gap: 6px; }
+.pill.model span { overflow: hidden; text-overflow: ellipsis; }
+.pill.model .arrow { width: 18px; height: 18px; color: var(--muted); fill: currentColor; stroke: none; margin-left: -4px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); flex: none; }
+.badge { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font: 700 10px/18px "Geist", sans-serif; text-align: center; flex: none; }
+.ring { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--live); flex: none; }
+.grow { flex: 1; }
+/* an icon button keeps 48 dp of the row for touch, as the app's do today; the drawn pill is narrower */
+.touch { width: 48px; display: grid; place-items: center; flex: none; }
+.touch .pill { padding: 0 9px; }
+/* one capsule for the three toggles: 40 dp cells */
+.caps { display: flex; height: 30px; border-radius: 15px; background: var(--field); color: var(--ink-soft); flex: none; }
+.caps span { width: 40px; display: grid; place-items: center; }
+.caps svg { width: 16px; height: 16px; }
+.bar.two { padding-bottom: 0; }
+
+.compose { display: flex; gap: 8px; align-items: center; padding: 10px 12px 14px; flex: none; }
+.round { width: 46px; height: 46px; border-radius: 50%; flex: none; display: grid; place-items: center; }
+.round.plus { border: 1px solid var(--line); }
+.round.send { background: var(--accent); color: var(--on-accent); }
+.round svg { width: 20px; height: 20px; stroke-width: 1.8; }
+.box { flex: 1; min-width: 0; height: 48px; border-radius: 24px; background: var(--field); display: flex; align-items: center; gap: 8px; padding: 0 18px; font-size: 15px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.box .who { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); font-size: 12px; font-weight: 500; background: var(--bg); border-radius: 12px; height: 26px; padding: 0 4px 0 8px; margin-left: -8px; flex: 0 1 auto; min-width: 0; }
+.box .who span { overflow: hidden; text-overflow: ellipsis; }
+.box .who svg { width: 16px; height: 16px; fill: currentColor; stroke: none; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Status line alternatives</h1>
+  <p class="lede">Six ways to keep the model's name readable beside the context, cost, media, web search and approvals controls. Each is drawn on the test phone's width (411 dp) with Claude Haiku 5.5 and on a 360 dp phone with a longer name, DeepSeek V4.1 Flash, and a cost as wide as the strip has to hold.</p>
+  <p class="note">The browser lays every row out from the app's own sizes, so a name that is cut here would be cut on a phone of that width. Each icon button keeps the 48 dp of row it takes in the app today, unless the caption says otherwise.</p>
+
+  <h2>Today (1.4.3)</h2>
+  <p class="note">Three icon buttons take 48 dp each for touch, so the name is the part that gives way.</p>
+  <div class="row" id="today"></div>
+
+  <h2>1. Short name with a maker badge</h2>
+  <p class="note">The maker's word leaves the name ("Anthropic: Claude Haiku 5.5" becomes "Claude Haiku 5.5") and a round badge with the maker's initial stands for it. <b>Cost:</b> nothing moves; the badge replaces the green dot, so the "agent is working" glow needs another home (the badge itself can glow).</p>
+  <div class="row" id="v1"></div>
+
+  <h2>2. One capsule for the three toggles</h2>
+  <p class="note">Media, web search and approvals share one capsule with 40 dp cells, which frees about 36 dp for the name. <b>Cost:</b> each cell is 8 dp under Android's 48 dp touch width, and a selected state has to be drawn inside a shared shape.</p>
+  <div class="row" id="v2"></div>
+
+  <h2>3. Context and cost in one meter</h2>
+  <p class="note">The ring and the cost share one pill; a tap opens one sheet with both. <b>Cost:</b> the percent number is gone from the strip (the ring still fills), and two sheets become one.</p>
+  <div class="row" id="v3"></div>
+
+  <h2>4. Model under the thread title <span class="pick">Recommended</span></h2>
+  <p class="note">The name moves to the top bar as a second line under the title, where a whole line is free; a tap there opens the model sheet. The strip keeps only numbers and toggles. <b>Cost:</b> the model is no longer next to the message box, and the top bar grows by about 16 dp.</p>
+  <div class="row" id="v4"></div>
+
+  <h2>5. Model inside the message box</h2>
+  <p class="note">A small chip at the start of the message box names the model; the strip loses its model pill. <b>Cost:</b> the typing area is narrower by the chip's width, and the chip has to hide once text is typed or the box wraps.</p>
+  <div class="row" id="v5"></div>
+
+  <h2>6. Two lines</h2>
+  <p class="note">The model gets its own line with its service; the controls sit on the line below. <b>Cost:</b> 32 dp of chat height on every screen, which is the row the media button just saved.</p>
+  <div class="row" id="v6"></div>
+</div>
+
+<script>
+const ICON = {
+  picture: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M4.5 16l4.5-4.5 3.5 3.5 2.5-2.5 4.500 4.500"/><circle cx="15.5" cy="9.5" r="1.2"/></svg>',
+  globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.600 2.600 2.600 13.400 0 16M12 4c-2.600 2.600-2.600 13.400 0 16"/></svg>',
+  shield: '<svg viewBox="0 0 24 24"><path d="M12 4l6.500 2.500v5c0 4-2.700 7-6.500 8.500-3.800-1.500-6.500-4.500-6.500-8.500v-5z"/></svg>',
+  cash: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><circle cx="12" cy="12" r="2"/></svg>',
+  arrow: '<svg class="arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>',
+  back: '<svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="18" r="1"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+};
+const CASES = {
+  wide: { cls: '', label: '411 dp · Claude Haiku 5.5', full: 'Anthropic: Claude Haiku 5.5', short: 'Claude Haiku 5.5', initial: 'A', service: 'OpenRouter', percent: '1%', cost: '$0.0070', title: 'Dusk Firefly Paper Cut', prompt: 'a firefly on a green leaf at dusk, paper cut style', image: 'assets/firefly-leaf.jpg' },
+  narrow: { cls: 'w360', label: '360 dp · DeepSeek V4.1 Flash', full: 'DeepSeek: DeepSeek V4.1 Flash', short: 'DeepSeek V4.1 Flash', initial: 'D', service: 'OpenRouter', percent: '12%', cost: '$0.0113', title: 'Dusk Firefly Paper Cut', prompt: 'Make the leaf in the first picture red.', image: 'assets/firefly-red-leaf.jpg' },
+};
+
+function iconButton(name) { return `<span class="touch"><span class="pill">${ICON[name]}</span></span>`; }
+function toggles() { return iconButton('picture') + iconButton('globe') + iconButton('shield'); }
+function modelPill(text, lead) { return `<div class="pill model">${lead}<span>${text}</span>${ICON.arrow}</div>`; }
+function contextPill(c, withWindow) { return `<div class="pill mono"><span class="ring"></span>${c.percent}${withWindow ? ' /1M' : ''}</div>`; }
+function costPill(c) { return `<div class="pill mono">${ICON.cash}${c.cost}</div>`; }
+const DOT = '<span class="dot"></span>';
+
+function topBar(c, withModel) {
+  const sub = withModel ? `<span class="sub">${DOT}<span>${c.short} · ${c.service}</span>${ICON.arrow}</span>` : '';
+  return `<div class="top">${ICON.back}<div class="titles"><b>${c.title}</b>${sub}</div>${ICON.more}</div>`;
+}
+function chat(c) { return `<div class="chat"><div class="user">${c.prompt}</div><img class="made" src="${c.image}" alt="The picture made for this prompt"></div>`; }
+function compose(inner) { return `<div class="compose"><div class="round plus">${ICON.plus}</div><div class="box">${inner}</div><div class="round send">${ICON.up}</div></div>`; }
+
+/** One phone frame: [bars] is the status line (one or two rows), [extra] changes the top bar or the message box. */
+function frame(c, bars, caption, extra) {
+  const options = extra || {};
+  const body = topBar(c, options.modelOnTop) + chat(c) + bars + compose(options.boxInner || 'Message');
+  return `<figure><span class="size">${c.label}</span><div class="phone ${c.cls}">${body}</div><figcaption>${caption}</figcaption></figure>`;
+}
+function bar(inner, cls) { return `<div class="bar ${cls || ''}">${inner}</div>`; }
+
+function both(build) { return [build(CASES.wide), build(CASES.narrow)].join(''); }
+
+document.getElementById('today').innerHTML = both(c => frame(c,
+  bar(modelPill(c.full, DOT) + contextPill(c, false) + costPill(c) + toggles()),
+  c === CASES.wide ? '<b>Test phone.</b> One or two letters of the name are left.' : '<b>Narrow phone.</b> Only the dot and the arrow are left.'));
+
+document.getElementById('v1').innerHTML = both(c => frame(c,
+  bar(modelPill(c.short, `<span class="badge">${c.initial}</span>`) + contextPill(c, false) + costPill(c) + toggles()),
+  c === CASES.wide ? '<b>Test phone.</b> The badge always says whose model it is, even when the name is cut.' : '<b>Narrow phone.</b> The badge is all that is left of the model.'));
+
+document.getElementById('v2').innerHTML = both(c => frame(c,
+  bar(modelPill(c.short, DOT) + contextPill(c, false) + costPill(c) + `<span class="grow"></span><div class="caps"><span>${ICON.picture}</span><span>${ICON.globe}</span><span>${ICON.shield}</span></div>`),
+  c === CASES.wide ? '<b>Test phone.</b> "Claude" is readable; the rest is cut.' : '<b>Narrow phone.</b> Still only the dot: the gain is used up by the wider cost.'));
+
+document.getElementById('v3').innerHTML = both(c => frame(c,
+  bar(modelPill(c.short, DOT) + `<div class="pill mono"><span class="ring"></span>${c.cost}</div>` + toggles()),
+  c === CASES.wide ? '<b>Test phone.</b> Nearly the whole name fits.' : '<b>Narrow phone.</b> Three letters of the name are left.'));
+
+document.getElementById('v4').innerHTML = both(c => frame(c,
+  bar(contextPill(c, c === CASES.wide) + costPill(c) + '<span class="grow"></span>' + toggles()),
+  c === CASES.wide ? '<b>Test phone.</b> The whole name and its service fit, and the strip has room for "/1M" again.' : '<b>Narrow phone.</b> The name and its service still fit whole; the strip leaves out "/1M", as it does today.',
+  { modelOnTop: true }));
+
+document.getElementById('v5').innerHTML = both(c => frame(c,
+  bar(contextPill(c, c === CASES.wide) + costPill(c) + '<span class="grow"></span>' + toggles()),
+  c === CASES.wide ? '<b>Test phone.</b> The chip is the model button; the hint beside it stays "Message".' : '<b>Narrow phone.</b> The name fits, and the hint is what gets cut.',
+  { boxInner: `<span class="who">${DOT}<span>${c.short}</span>${ICON.arrow.replace('class="arrow" ', '')}</span>Message` }));
+
+document.getElementById('v6').innerHTML = both(c => frame(c,
+  bar(modelPill(c.short + ' · ' + c.service, DOT), 'two') + bar(contextPill(c, c === CASES.wide) + costPill(c) + '<span class="grow"></span>' + toggles()),
+  c === CASES.wide ? '<b>Test phone.</b> Everything is readable.' : '<b>Narrow phone.</b> Everything is readable here too.'));
+</script>
+</body>
+</html>
