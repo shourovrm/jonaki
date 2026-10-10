@@ -35,6 +35,7 @@
     <string name="files_open_no_app">No app can open this file</string>
     <string name="routing_fallback_note">No private provider for this model. Used the cheapest.</string>
     <string name="python_try_again_message">Installed. Try again.</string>
+    <string name="status_no_model">No model</string>
     <string name="error_no_model">No model. Add one in Settings.</string>
     <string name="error_no_api_key">No %1$s API key. Add one in Settings.</string>
     <string name="service_ollama_local">Ollama on this network</string>

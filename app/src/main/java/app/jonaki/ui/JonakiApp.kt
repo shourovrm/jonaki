@@ -684,8 +684,9 @@ private fun ChatRoute(
     }
     val modelKey = (if (isNew) modelForNewThread ?: newThreadProjectModel else null) ?: runner.modelKeyFor(thread)
     val modelInfo = modelKey?.let(catalog::find)
-    val modelName = modelInfo?.displayName ?: modelKey?.let(ModelKey::modelOf).orEmpty()
-    val status = if (settingsSnapshot.showStatusStrip && modelKey != null) {
+    // With no model the pill says so and still opens the picker, which links to Settings.
+    val modelName = modelInfo?.displayName ?: modelKey?.let(ModelKey::modelOf) ?: stringResource(R.string.status_no_model)
+    val status = if (settingsSnapshot.showStatusStrip) {
         ChatStatusUi(
             modelName = modelName,
             contextWindowTokens = modelInfo?.contextWindowTokens,

@@ -1,7 +1,9 @@
 package app.jonaki.settings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatModelsTest {
@@ -105,6 +107,22 @@ class ChatModelsTest {
         )
 
         assertEquals("openrouter:default-of-openrouter", models.defaultModelKey)
+    }
+
+    @Test
+    fun aFreshInstallHasNoLegacySettings() {
+        assertFalse(ChatModels.hasLegacySettings(chatServiceName = null, savedModels = emptyMap()))
+        assertFalse(ChatModels.hasLegacySettings(chatServiceName = " ", savedModels = mapOf("OPENROUTER" to "", "GEMINI" to "  ")))
+    }
+
+    @Test
+    fun aSavedLegacyServiceNameMeansALegacyInstall() {
+        assertTrue(ChatModels.hasLegacySettings(chatServiceName = "DEEPSEEK", savedModels = emptyMap()))
+    }
+
+    @Test
+    fun aNonBlankLegacyModelTextMeansALegacyInstall() {
+        assertTrue(ChatModels.hasLegacySettings(chatServiceName = null, savedModels = mapOf("GEMINI" to "gemini-pro")))
     }
 
     @Test
