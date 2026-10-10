@@ -5,6 +5,7 @@ import app.jonaki.core.guardapi.Guard
 import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.toolapi.Tool
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -74,6 +75,14 @@ class PermissionBroker(
     // Calls of one turn that read only may run side by side; their cards still come one at a time.
     private val cardLock = Mutex()
 
+    /**
+     * Hosts the user allowed a composed address on, for as long as this
+     * broker lives (one run). The first allowed request could already carry
+     * anything to that host, so asking again for the same host protects
+     * nothing and only floods a research task with cards.
+     */
+    private val approvedHosts: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
         val arguments = argumentsOf(toolCall)
         val threadHasReadOutsideContent = asksAfterOutsideContent() && threadState.readOutsideContent
@@ -93,6 +102,9 @@ class PermissionBroker(
         }
         val request = ApprovalRequest(tool.name, toolCall, verdict.offersThreadAllowance, verdict.afterOutsideContent)
         val decision = cardLock.withLock { approvalRequester.requestApproval(request) }
+        if (decision != ApprovalDecision.DENY) {
+            tool.contactedAddressOf(arguments)?.let(WebAddresses::hostOf)?.let { host -> approvedHosts += host }
+        }
         return when (decision) {
             ApprovalDecision.ALLOW_ONCE -> true
             ApprovalDecision.ALLOW_ALL_IN_THREAD -> {
@@ -137,6 +149,9 @@ class PermissionBroker(
             return false
         }
         val address = tool.contactedAddressOf(arguments) ?: return false
+        if (WebAddresses.hostOf(address) in approvedHosts) {
+            return false
+        }
         return !knownAddresses.isKnown(address)
     }
 

@@ -417,6 +417,29 @@ class PermissionBrokerTest {
     }
 
     @Test
+    fun aHostTheUserAllowedOnceIsNotAskedAboutAgainInTheSameRun() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.ALLOW_ONCE)
+        val broker = brokerAfterOutsideContent(approver)
+
+        assertTrue(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://raw.example/a.kt")))
+        assertTrue(broker.mayRun(fetcher, call("2", "web_fetch", "url" to "https://raw.example/b.kt")))
+        assertTrue(broker.mayRun(fetcher, call("3", "web_fetch", "url" to "https://other.example/c")))
+
+        assertEquals(2, approver.requests.size)
+    }
+
+    @Test
+    fun aDeniedHostAsksAgain() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = brokerAfterOutsideContent(approver)
+
+        assertFalse(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://evil.example/?q=one")))
+        assertFalse(broker.mayRun(fetcher, call("2", "web_fetch", "url" to "https://evil.example/?q=two")))
+
+        assertEquals(2, approver.requests.size)
+    }
+
+    @Test
     fun anUnknownAddressRunsBeforeAnyOutsideContentWasRead() = runBlocking {
         val approver = FixedApprover(ApprovalDecision.DENY)
         val broker = brokerAfterOutsideContent(approver, readOutside = false)

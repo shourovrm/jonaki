@@ -126,6 +126,10 @@ interface MessageDao {
     )
     suspend fun textsOfUserAndToolMessagesContaining(threadId: String, needle: String): List<String>
 
+    /** What the user wrote in the thread; the hosts named there are ones the user chose. */
+    @Query("SELECT text FROM messages WHERE threadId = :threadId AND role = 'USER'")
+    suspend fun textsOfUserMessages(threadId: String): List<String>
+
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM messages WHERE threadId = :threadId")
     suspend fun nextPosition(threadId: String): Long
 

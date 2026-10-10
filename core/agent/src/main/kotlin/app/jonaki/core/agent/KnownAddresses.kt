@@ -24,6 +24,9 @@ object WebAddresses {
     // Where an address ends in running text: whitespace, tags, quotes and square brackets (markdown links) never belong to it.
     private val addressInTextPattern = Regex("""[A-Za-z][A-Za-z0-9+.-]*://[^\s<>"'`\\\[\]]+""")
 
+    // Dotted names that end in letters: "github.com", not "1.4.4". The look-behind keeps a match from starting mid-name.
+    private val hostInTextPattern = Regex("""(?<![A-Za-z0-9.@-])[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}(?![A-Za-z0-9-])""")
+
     private const val TRAILING_PUNCTUATION = ".,;:!?"
 
     /**
@@ -53,6 +56,27 @@ object WebAddresses {
         val wanted = normalise(address) ?: return false
         return addressesIn(text).any { found -> normalise(found) == wanted }
     }
+
+    /**
+     * The host [address] is sent to, in lower case, without a user name or a
+     * port; null when [address] is not a scheme-and-host address.
+     */
+    fun hostOf(address: String): String? {
+        val match = addressPattern.find(address.trim()) ?: return null
+        val host = match.groupValues[2].substringAfterLast('@').substringBefore(':').lowercase()
+        return host.ifEmpty { null }
+    }
+
+    /**
+     * The host names written in [text], with or without a scheme, so that
+     * "github.com/x" in a user's message names the host as "https://github.com/x" does.
+     */
+    fun hostsIn(text: String): Set<String> =
+        hostInTextPattern.findAll(text).map { match -> match.value.lowercase() }.toSet()
+
+    /** True when [host] is one of [namedHosts] or a subdomain of one: "api.github.com" for "github.com". */
+    fun isOnNamedHost(host: String, namedHosts: Set<String>): Boolean =
+        namedHosts.any { named -> host == named || host.endsWith(".$named") }
 
     /** The addresses in [text], without the punctuation of the sentence or markdown around them. */
     fun addressesIn(text: String): List<String> =

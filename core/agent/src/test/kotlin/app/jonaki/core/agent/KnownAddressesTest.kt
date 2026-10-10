@@ -66,4 +66,27 @@ class KnownAddressesTest {
         assertFalse(WebAddresses.appearsIn("https://example.com/a", "no address here"))
         assertFalse(WebAddresses.appearsIn("not an address", "not an address"))
     }
+
+    @Test
+    fun theHostLosesItsUserNameAndPort() {
+        assertEquals("example.org", WebAddresses.hostOf("https://user@Example.org:8443/a?b=c"))
+        assertEquals(null, WebAddresses.hostOf("not an address"))
+    }
+
+    @Test
+    fun hostsAreFoundWithAndWithoutAScheme() {
+        val hosts = WebAddresses.hostsIn("see github.com/shourovrm/jonaki and https://Docs.Example.org/a, version 1.4.4.")
+
+        assertEquals(setOf("github.com", "docs.example.org"), hosts)
+    }
+
+    @Test
+    fun aSubdomainOfANamedHostCountsButALookalikeDoesNot() {
+        val named = setOf("github.com")
+
+        assertTrue(WebAddresses.isOnNamedHost("github.com", named))
+        assertTrue(WebAddresses.isOnNamedHost("api.github.com", named))
+        assertFalse(WebAddresses.isOnNamedHost("evilgithub.com", named))
+        assertFalse(WebAddresses.isOnNamedHost("github.com.evil.example", named))
+    }
 }
