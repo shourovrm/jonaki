@@ -2424,3 +2424,27 @@ thread is named from the message alone. Memory extraction and compaction
 are skipped for such a turn. Not yet: attached pictures as references.
 Outcome: unit tests pass; not seen on a phone; no request made, and
 Gemini's acceptance of a history that ends in a tool result is unchecked.
+
+## D-172 · 2026-10-10 · Image quality, reference pictures, instructional guidance, the full prompt — proposed
+User request, from the comparison behind D-171. generate_image gains two
+optional arguments. quality is "standard" or "high", with a default in
+Settings > Models > Image generation ("Image quality", Standard when
+unset). High is translated per model from what OpenRouter's list declares:
+quality "high" where the model has a quality setting (never "xhigh" or
+"max"), else resolution "2K", else nothing, and the result says which was
+sent. reference_images is a list of pictures in the thread folder (an
+earlier result, a file from inbox/) sent with the prompt, so a picture can
+be changed in a later call; paths outside the folder, files that are not
+png, jpeg or webp, files over 10 MB (20 MB together) and more files than
+the model declares are refused before any request, and no base64 reaches
+text the chat model sees. Only parameters a model declares are sent. The
+tool's guidelines now tell the chat model to plan the layout of an
+instructional picture, to give every text word for word, to keep the user's
+wording, and not to choose a minimal style unasked; its text for the model
+grew from about 1,300 to 2,800 characters. A picture or video step's line
+is cut at 120 characters, the approval card shows the whole prompt, and a
+tap on the step opens a sheet with the full prompt, model, quality, aspect
+ratio and references. Also: a model's provider list and prices are cached
+for a day (OpenRouterEndpointCache). Outcome: unit tests pass; no request
+made; no screen seen; the data URL form of a reference and every Gemini
+field are unconfirmed.
