@@ -16,8 +16,14 @@
         <item quantity="one">%d টি রেফারেন্স ছবি</item>
         <item quantity="other">%d টি রেফারেন্স ছবি</item>
     </plurals>
-    <string name="chat_picture_mode">ছবি</string>
+    <string name="chat_media_picture">ছবি</string>
+    <string name="chat_media_vector">ভেক্টর</string>
+    <string name="chat_media_video">ভিডিও</string>
+    <string name="chat_media_price_unknown">দাম জানা নেই</string>
     <string name="chat_picture_hint">ছবির বর্ণনা লিখুন</string>
-    <string name="chat_picture_model">মডেল: %1$s</string>
     <string name="chat_picture_send">ছবি বানান</string>
+    <string name="chat_vector_hint">ভেক্টর ছবির বর্ণনা লিখুন</string>
+    <string name="chat_vector_send">ভেক্টর ছবি বানান</string>
+    <string name="chat_video_hint">ভিডিওর বর্ণনা লিখুন</string>
+    <string name="chat_video_send">ভিডিও বানান</string>
 </resources>

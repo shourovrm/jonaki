@@ -17,7 +17,6 @@ import app.jonaki.ToolRegistry
 import app.jonaki.ToolServices
 import app.jonaki.core.agent.AgentLoop
 import app.jonaki.core.agent.DirectToolRun
-import app.jonaki.core.toolapi.GeneratedImages
 import app.jonaki.core.agent.ContextBreakdown
 import app.jonaki.core.agent.PromptSkill
 import app.jonaki.core.model.ImagePart
@@ -86,6 +85,7 @@ import app.jonaki.providers.openaicompatible.OpenRouterRoute
 import app.jonaki.search.exa.ExaSearchBackend
 import app.jonaki.search.ollama.OllamaSearchBackend
 import app.jonaki.search.tavily.TavilySearchBackend
+import app.jonaki.feature.chat.MediaKind
 import app.jonaki.feature.settings.ApprovalRuleChoiceUi
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ApprovalRuleChoices
@@ -308,14 +308,15 @@ class AgentRunner(
     }
 
     /**
-     * Picture mode (the message box): saves [text] as the user's message and
-     * sends it, as typed, to the image model as one generate_image call, with
-     * no chat model turn. Pressing Send is the user's approval for this one
-     * call, so no approval card is made. Only the chat screen's send calls
-     * this; the agent, subagents and scheduled tasks never do. While the
-     * thread has a run going nothing happens (the screen disables the mode).
+     * Media mode (the message box): saves [text] as the user's message and
+     * sends it, as typed, to the tool of [kind] (generate_image,
+     * generate_vector_image or generate_video) as its prompt, with no chat
+     * model turn. Pressing Send is the user's approval for this call, so no
+     * approval card is made. Only the chat screen's send calls this; the
+     * agent, subagents and scheduled tasks never do. While the thread has a
+     * run going nothing happens (the screen disables the mode).
      */
-    fun sendAsPicture(threadId: String, text: String) {
+    fun sendAsMedia(threadId: String, text: String, kind: MediaKind) {
         if (text.isBlank()) {
             return
         }
@@ -323,7 +324,7 @@ class AgentRunner(
             if (threadId in running.value) {
                 return
             }
-            startRun(threadId, runBody = { runPictureMode(threadId, text.trim()) }) {
+            startRun(threadId, runBody = { runMediaMode(threadId, text.trim(), kind) }) {
                 saveUserMessage(threadId, text.trim())
             }
         }
@@ -651,20 +652,24 @@ class AgentRunner(
     }
 
     /**
-     * The run of a send in picture mode, after the user's message is saved: one
-     * generate_image call with the user's own text as the prompt. The chat
+     * The run of a send in media mode, after the user's message is saved: a
+     * call of the kind's tool with the user's own text as the prompt. The chat
      * model is not asked, no approval card is made (Send was the approval) and
      * the Jev guard is not used, because the text is the user's own and not
-     * outside content. The result is saved like an agent-made call's.
+     * outside content. The result is saved like an agent-made call's. A video
+     * still being made when the tool hands over is collected by further calls
+     * in the same run (see [MediaModeCall.nextCall]), since no chat model is
+     * there to do it.
      */
-    private suspend fun runPictureMode(threadId: String, text: String) {
+    private suspend fun runMediaMode(threadId: String, text: String, kind: MediaKind) {
         val thread = database.threadDao().find(threadId) ?: return
         val project = projectOf(thread)
-        // allToolServicesFor, not toolServicesFor: a thread on a local model still gets the image tool here, as no chat model is involved.
+        // allToolServicesFor, not toolServicesFor: a thread on a local model still gets the tool here, as no chat model is involved.
+        val toolName = MediaModeCall.toolName(kind)
         val tool = ToolRegistry.tools(allToolServicesFor(thread, modelAcceptsImages = false, project))
-            .firstOrNull { candidate -> candidate.name == GeneratedImages.TOOL_NAME }
+            .firstOrNull { candidate -> candidate.name == toolName }
         if (tool == null) {
-            // The image key or model was removed after the screen showed the mode.
+            // The key or model was removed after the screen showed the chip.
             saveError(threadId, context.getString(R.string.error_no_model))
             return
         }
@@ -679,7 +684,7 @@ class AgentRunner(
                 stepCounts.update { current -> current + (threadId to (current[threadId] ?: 0) + 1) }
             },
             // Saved on the assistant row that holds the call; with no usage on it, no cost counts to this model.
-            modelKey = modelKeyFor(thread) ?: defaultImageModelFor(threadId).orEmpty(),
+            modelKey = modelKeyFor(thread) ?: mediaModelKeyFor(threadId, kind).orEmpty(),
             priceOf = { null },
         )
         val toolContext = ToolContext(
@@ -688,23 +693,38 @@ class AgentRunner(
             skillLibrary.folder,
             projectFolder = project?.folder,
         )
-        val outcome = DirectToolRun(session).run(tool, PictureModeCall.arguments(text), toolContext, callId = UUID.randomUUID().toString())
-        // No memory extraction: a picture prompt holds no facts, and the extractor reads only the
+        val outcome = DirectToolRun(session).run(
+            tool = tool,
+            arguments = MediaModeCall.arguments(text),
+            toolContext = toolContext,
+            callId = UUID.randomUUID().toString(),
+            nextCall = { output -> MediaModeCall.nextCall(kind, output) },
+            maxCalls = MediaModeCall.maxCalls(kind),
+        )
+        // No memory extraction: a media prompt holds no facts, and the extractor reads only the
         // text rows. No compaction either: no chat request was made, so the context did not grow.
         if (threadId in leftWhileRunning.value) {
             // The user left the thread during the run; extraction was promised for the run's end.
             extractMemoryAfterRun(threadId)
         }
         if (outcome is RunOutcome.Completed) {
-            launchNamingFromPromptAlone(threadId)
+            launchNamingFromPromptAlone(threadId, kind)
         }
     }
 
+    /** The model the kind's tool uses by default in the thread, for the row that holds the call. */
+    private fun mediaModelKeyFor(threadId: String, kind: MediaKind): String? = when (kind) {
+        MediaKind.PICTURE -> defaultImageModelFor(threadId)
+        MediaKind.VECTOR -> defaultVectorImageModelFor(threadId)
+        MediaKind.VIDEO -> settings.snapshot.value.videoModels.defaultModelKey
+    }
+
     /**
-     * Like [launchNaming], for a thread whose first turn made a picture and so
-     * has no assistant text: the name is written from the user's message alone.
+     * Like [launchNaming], for a thread whose first turn made a picture, vector
+     * image or video and so has no assistant text: the name is written from the
+     * user's message alone.
      */
-    private fun launchNamingFromPromptAlone(threadId: String) {
+    private fun launchNamingFromPromptAlone(threadId: String, kind: MediaKind) {
         val provisionalTitle = provisionalTitles.remove(threadId) ?: return
         scope.launch {
             val thread = database.threadDao().find(threadId) ?: return@launch
@@ -717,7 +737,7 @@ class AgentRunner(
                 threadModelKey = modelKeyFor(thread),
                 provisionalTitle = provisionalTitle,
                 firstUserMessage = firstUserMessage,
-                firstAnswer = PICTURE_MADE_NOTE,
+                firstAnswer = madeNoteFor(kind),
             )
         }
     }
@@ -1336,6 +1356,14 @@ class AgentRunner(
 
         /** Stands in for the assistant's answer when the naming model reads a thread whose first turn made a picture. */
         const val PICTURE_MADE_NOTE = "(A picture was made from this message.)"
+        const val VECTOR_MADE_NOTE = "(A vector image was made from this message.)"
+        const val VIDEO_MADE_NOTE = "(A video was made from this message.)"
+
+        fun madeNoteFor(kind: MediaKind): String = when (kind) {
+            MediaKind.PICTURE -> PICTURE_MADE_NOTE
+            MediaKind.VECTOR -> VECTOR_MADE_NOTE
+            MediaKind.VIDEO -> VIDEO_MADE_NOTE
+        }
 
         /** The thread id of tools built only for their prompt text; it matches no thread. */
         const val NO_THREAD = ""

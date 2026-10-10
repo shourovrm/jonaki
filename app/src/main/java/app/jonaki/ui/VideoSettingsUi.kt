@@ -70,6 +70,7 @@ internal fun rememberVideoStepText(application: JonakiApplication, videoModels: 
             priceIsPerToken = resources.getString(R.string.step_video_cost_per_token),
             seconds = { seconds -> resources.getString(R.string.step_video_seconds, seconds) },
         ),
+        displayNamesByModelKey = infos.associate { info -> ModelKey.of(VideoToolSetup.OPENROUTER, info.id) to info.name },
     )
 }
 

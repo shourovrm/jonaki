@@ -157,12 +157,30 @@ object JonakiIcons {
         )
     }
 
-    /** Material "image": picture mode in the message box. */
+    /** Material "image": pictures in the message box. */
     val Image: ImageVector by lazy {
         icon(
             "Image",
             "M21,19V5c0,-1.1 -0.9,-2 -2,-2H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2z" +
                 "M8.5,13.5l2.5,3.01L14.5,12l4.5,6H5l3.5,-4.5z",
+        )
+    }
+
+    /** Material "category" (a triangle, a circle and a square): vector images in the message box. */
+    val Shapes: ImageVector by lazy {
+        icon(
+            "Shapes",
+            "M12,2l-5.5,9h11z" +
+                "M17.5,13c-2.49,0 -4.5,2.01 -4.5,4.5s2.01,4.5 4.5,4.5 4.5,-2.01 4.5,-4.5 -2.01,-4.5 -4.5,-4.5z" +
+                "M3,13.5h8v8H3z",
+        )
+    }
+
+    /** Material "videocam": videos in the message box. */
+    val Videocam: ImageVector by lazy {
+        icon(
+            "Videocam",
+            "M17,10.5V7c0,-0.55 -0.45,-1 -1,-1H4c-0.55,0 -1,0.45 -1,1v10c0,0.55 0.45,1 1,1h12c0.55,0 1,-0.45 1,-1v-3.5l4,4v-11l-4,4z",
         )
     }
 
