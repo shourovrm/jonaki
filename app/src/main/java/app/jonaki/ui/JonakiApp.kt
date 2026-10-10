@@ -244,7 +244,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             return@JonakiTheme
         }
         when {
-            route == ROUTE_SETTINGS|| route.startsWith(ROUTE_SETTINGS_PAGE_PREFIX) -> {
+            route == ROUTE_SETTINGS || route.startsWith(ROUTE_SETTINGS_PAGE_PREFIX) -> {
                 val settingsPage = SettingsPage.byKey(route.removePrefix(ROUTE_SETTINGS_PAGE_PREFIX))
                 // A sub-page goes back to the first page; the first page leaves Settings.
                 val goBack: () -> Unit = {
