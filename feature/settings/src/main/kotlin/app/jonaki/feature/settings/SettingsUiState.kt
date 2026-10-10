@@ -156,6 +156,10 @@ data class ServiceModelUi(
     val routingOverride: RoutingUi? = null,
     /** Null when the model takes no thinking level (D-057). */
     val thinking: ThinkingChoice? = null,
+    /** OpenRouter tags the user chose for this model, in the order they are tried; empty means the routing applies. */
+    val pinnedProviders: List<String> = emptyList(),
+    /** Only read when [pinnedProviders] is not empty. */
+    val allowFallbacks: Boolean = true,
 )
 
 /** A service "Add service" can add. */
@@ -244,6 +248,10 @@ class SettingsActions(
     /** [routing] null means "same as the service". */
     val onModelRoutingChange: (modelKey: String, routing: RoutingUi?) -> Unit = { _, _ -> },
     val onModelRemove: (modelKey: String) -> Unit = {},
+    /** Downloads the providers of an OpenRouter model, cheapest first; the sheet shows a retry when it fails. */
+    val onModelProvidersLoad: suspend (modelKey: String) -> Result<List<ProviderOptionUi>> = { Result.success(emptyList()) },
+    /** [tags] empty returns the model to its routing choice. */
+    val onModelProvidersChange: (modelKey: String, tags: List<String>, allowFallbacks: Boolean) -> Unit = { _, _, _ -> },
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
     /** Adds or edits an MCP server; the dialog has already checked the input. */

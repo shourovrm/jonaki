@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_model_providers">প্রোভাইডার</string>
+    <string name="settings_providers_order_note">বেছে নেওয়া প্রোভাইডারে সবচেয়ে সস্তাটি আগে চেষ্টা হয়।</string>
+    <string name="settings_providers_fallbacks">এগুলো ব্যর্থ হলে অন্য প্রোভাইডার ব্যবহার করুন</string>
+    <string name="settings_providers_loading">প্রোভাইডার লোড হচ্ছে…</string>
+    <string name="settings_providers_empty">এই মডেলের জন্য কোনো প্রোভাইডার তালিকায় নেই।</string>
+    <string name="settings_providers_failed">প্রোভাইডার লোড করা যায়নি।</string>
+    <string name="settings_providers_retry">আবার চেষ্টা করুন</string>
+    <string name="settings_providers_label">%1$s +%2$d</string>
+</resources>

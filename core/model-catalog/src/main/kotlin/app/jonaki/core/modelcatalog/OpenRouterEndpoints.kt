@@ -66,10 +66,6 @@ object OpenRouterEndpoints {
             .distinctBy { endpoint -> endpoint.tag }
     }
 
-    /** The chosen tags in price order, taking the order from [endpoints]. Tags no longer listed are dropped. */
-    fun chosenTagsInPriceOrder(chosenTags: Set<String>, endpoints: List<ProviderEndpoint>): List<String> =
-        endpoints.map { endpoint -> endpoint.tag }.filter { tag -> tag in chosenTags }
-
     /**
      * Downloads and parses the providers of [modelId] ("author/slug"). Throws [IOException]
      * on a network failure or a non-success answer, so that the caller can show a retry.

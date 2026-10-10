@@ -84,15 +84,6 @@ class OpenRouterEndpointsTest {
     }
 
     @Test
-    fun chosenTagsFollowThePriceOrderAndDropUnlistedTags() {
-        val endpoints = OpenRouterEndpoints.parse(recorded)
-
-        val ordered = OpenRouterEndpoints.chosenTagsInPriceOrder(setOf("fireworks", "deepinfra/fp4", "gone/fp8"), endpoints)
-
-        assertEquals(listOf("deepinfra/fp4", "fireworks"), ordered)
-    }
-
-    @Test
     fun textThatIsNotTheExpectedJsonGivesAnEmptyList() {
         assertTrue(OpenRouterEndpoints.parse("not json").isEmpty())
         assertTrue(OpenRouterEndpoints.parse("""{"data":[]}""").isEmpty())
