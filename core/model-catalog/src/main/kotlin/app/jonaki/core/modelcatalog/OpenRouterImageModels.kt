@@ -2,7 +2,9 @@ package app.jonaki.core.modelcatalog
 
 import java.io.IOException
 import java.util.Locale
+import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -30,11 +32,33 @@ data class ImageModelPrice(
     val unit: String,
     val costUsd: Double,
 ) {
-    /** "$0.014 per megapixel". */
+    /** "$0.014 per megapixel", "$0.007 per image", or "$30 per 1M image tokens" for a price per token. */
     fun describe(): String {
-        val amount = String.format(Locale.ENGLISH, "%.4f", costUsd).trimEnd('0').trimEnd('.')
-        return "$$amount per $unit"
+        if (unit == "token") {
+            return "${dollars(costUsd * TOKENS_PER_MILLION)} per 1M image tokens"
+        }
+        return "${dollars(costUsd)} per $unit"
     }
+
+    private fun dollars(amount: Double): String {
+        val text = String.format(Locale.ENGLISH, "%.4f", amount).trimEnd('0').trimEnd('.')
+        return "$$text"
+    }
+
+    private companion object {
+        const val TOKENS_PER_MILLION = 1_000_000.0
+    }
+}
+
+/** What loading one model's price gave. */
+sealed interface ImagePriceResult {
+    data class Priced(val price: ImageModelPrice) : ImagePriceResult
+
+    /** The request worked and the answer lists no output image price. */
+    data object NoPrice : ImagePriceResult
+
+    /** The request failed; this is never cached. */
+    data object Failed : ImagePriceResult
 }
 
 sealed interface ImageModelListResult {
@@ -81,10 +105,11 @@ object OpenRouterImageModels {
         return ImageModelListResult.Loaded(models)
     }
 
-    /** One request per model; null when it fails, since a missing price must not block the screen. */
-    suspend fun fetchPrice(httpClient: OkHttpClient, modelId: String, baseUrl: String = BASE_URL): ImageModelPrice? {
-        val answer = get(httpClient, "$baseUrl/images/models/$modelId/endpoints") as? Answer.Body ?: return null
-        return parsePrice(answer.text)
+    /** One request per model; a failure is a result, since a missing price must not block the screen. */
+    suspend fun fetchPrice(httpClient: OkHttpClient, modelId: String, baseUrl: String = BASE_URL): ImagePriceResult {
+        val answer = get(httpClient, "$baseUrl/images/models/$modelId/endpoints") as? Answer.Body ?: return ImagePriceResult.Failed
+        val price = parsePrice(answer.text) ?: return ImagePriceResult.NoPrice
+        return ImagePriceResult.Priced(price)
     }
 
     private fun modelFrom(model: JsonObject?): ImageModelInfo? {
@@ -113,17 +138,29 @@ object OpenRouterImageModels {
         data class Problem(val reason: String) : Answer
     }
 
+    /**
+     * The call is cancelled when the coroutine is, so closing the picker
+     * stops a request already in flight. It uses execute() and not enqueue()
+     * because OkHttp's dispatcher allows only five calls at once to one
+     * host, and the caller sets its own limit.
+     */
     private suspend fun get(httpClient: OkHttpClient, url: String): Answer = withContext(Dispatchers.IO) {
-        try {
-            httpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                if (response.isSuccessful) {
-                    Answer.Body(response.body?.string().orEmpty())
-                } else {
-                    Answer.Problem("HTTP ${response.code}")
+        val call = httpClient.newCall(Request.Builder().url(url).build())
+        // The handler runs on the thread that cancels, while this thread is blocked in execute().
+        suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { call.cancel() }
+            val answer = try {
+                call.execute().use { response ->
+                    if (response.isSuccessful) {
+                        Answer.Body(response.body?.string().orEmpty())
+                    } else {
+                        Answer.Problem("HTTP ${response.code}")
+                    }
                 }
+            } catch (networkError: IOException) {
+                Answer.Problem("no connection")
             }
-        } catch (networkError: IOException) {
-            Answer.Problem("no connection")
+            continuation.resume(answer)
         }
     }
 
