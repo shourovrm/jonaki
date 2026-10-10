@@ -2308,3 +2308,26 @@ subagent prompt, the delegate guideline and the summary prompt carry the
 same wish along. Outcome (2026-10-10, phone A059, Haiku 5.5): asked for
 Bangla, then asked a follow-up in English, the second answer stayed Bangla.
 Not checked: an English request with a link, which was the failing case.
+
+## D-166 · 2026-10-10 · Image services as cards; prices in the image picker — proposed
+User request; amends D-160. Settings > Models > Image generation holds
+image services the user adds, like chat services (D-028): a card per
+service with its key, its models and a star that is one default across all
+image services. A service on the same account as a chat service shares its
+key. Two services ship: OpenRouter (as before) and Gemini, through
+generateContent with the Gemini key. Image models are named
+"service:model" in the tool's model argument, the approval card and the
+usage row; ImageRequest carries the service key and the app dispatches.
+Stored image models from the first version become OpenRouter models with
+the same star. A usage row is saved for every picture; Gemini reports no
+cost, so its row has none. Prices: each row of OpenRouter's picker shows
+the lowest output price in the unit billed ("$0.007 per image", "$0.014 per
+megapixel", "$30 per 1M image tokens"), loaded six at a time from one
+request per model and cached for a day in the cache folder; added models'
+rows read the same cache. Gemini has no public price list and no field
+that marks image models, so its picker offers documented ids and a typed
+id. Not confirmed (Google's pages read 2026-10-10 document the newer
+Interactions API first): the imageConfig.aspectRatio field, which suggested
+ids exist, and the real answer and error shapes. Outcome: unit tests and
+the release build pass; installed on the phone; no screen seen and no
+Gemini request made.
