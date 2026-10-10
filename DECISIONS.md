@@ -2448,3 +2448,23 @@ ratio and references. Also: a model's provider list and prices are cached
 for a day (OpenRouterEndpointCache). Outcome: unit tests pass; no request
 made; no screen seen; the data URL form of a reference and every Gemini
 field are unconfirmed.
+
+## D-173 · 2026-10-10 · Media mode: pictures, vector images and videos from the message box — proposed
+User request; extends D-171, whose "picture mode" is now "media mode" in
+the code. The line above the message box has one chip per kind whose tool
+is available (Picture, Vector, Video), at most one on. The next send takes
+the typed text, unchanged, as the prompt of one call of that kind's tool,
+without the chat model and without an approval card. Because there is no
+card, a second line under the chips names the model that will run and its
+price: for a picture or vector the cached price when known, for a video
+the default length, resolution and estimated cost ("… · 4 s · 720p · about
+$0.12"), or "price unknown". A video can outlive one tool call: when the
+result hands over a job id, the same run calls generate_video again with
+that job_id, up to three calls (about 24 minutes), each saved as its own
+call, step and result; the id is read from the tool's own text by
+VideoHandOver. An earlier job still pending is shown as the tool reports
+it and never overridden with new_video. Also: a model with chosen
+providers shows the first chosen provider's price in Settings and in the
+chat's model sheet (amends D-159). Not yet: attached pictures as
+references in this mode. Outcome: unit tests pass; not seen on a phone; no
+request made.
