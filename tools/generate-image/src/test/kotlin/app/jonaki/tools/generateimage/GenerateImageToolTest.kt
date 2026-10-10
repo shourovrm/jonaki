@@ -361,7 +361,7 @@ class GenerateImageToolTest {
         assertTrue(guidelines.contains("reference_images"))
         assertTrue(guidelines.contains("word for word in quotation marks"))
         assertTrue(guidelines.contains("never invent medical, legal or safety content"))
-        assertTrue(guidelines.contains("unless the user did"))
+        assertTrue(guidelines.contains("unless the user asked"))
         assertTrue(guidelines.contains("quality high"))
     }
 }
