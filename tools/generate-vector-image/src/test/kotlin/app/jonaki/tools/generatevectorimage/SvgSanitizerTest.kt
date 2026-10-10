@@ -342,6 +342,16 @@ class SvgSanitizerTest {
     }
 
     @Test
+    fun aPrefixDeclaredOnlyBelowTheRootIsAlsoDeclaredOnTheRootAndTheOutputParses() {
+        val result = SvgSanitizer.sanitize(
+            """<svg xmlns="http://www.w3.org/2000/svg"><defs><g id="a" xmlns:xlink="http://www.w3.org/1999/xlink"/></defs><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#a"/></svg>""",
+        ) as SvgSanitizing.Clean
+
+        assertTrue(result.svg, result.svg.startsWith("""<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="""))
+        assertEquals("#a", (elements(result.svg, "use").item(0) as Element).getAttributeNS("http://www.w3.org/1999/xlink", "href"))
+    }
+
+    @Test
     fun theOutputIsWellFormedAndStable() {
         val first = SvgSanitizer.sanitize("""<svg xmlns="http://www.w3.org/2000/svg"><text x="1" y="2" data-note="a &lt; b &amp; &quot;c&quot;">1 &lt; 2 &amp; 3</text></svg>""") as SvgSanitizing.Clean
         val second = SvgSanitizer.sanitize(first.svg) as SvgSanitizing.Clean

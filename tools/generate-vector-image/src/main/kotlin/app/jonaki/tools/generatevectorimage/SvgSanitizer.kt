@@ -99,7 +99,9 @@ object SvgSanitizer {
         }
         val removed = mutableListOf<String>()
         val output = StringBuilder()
-        writeElement(root, output, removed, depth = 0)
+        val usedPrefixes = mutableMapOf<String, String>()
+        writeElement(root, output, removed, usedPrefixes, depth = 0)
+        declareMissingPrefixes(output, root, usedPrefixes)
         val width = lengthOf(root.getAttribute("width"))
         val height = lengthOf(root.getAttribute("height"))
         val viewBox = viewBoxSize(root.getAttribute("viewBox"))
@@ -148,16 +150,22 @@ object SvgSanitizer {
         override fun fatalError(problem: SAXParseException): Unit = throw problem
     }
 
-    private fun writeNode(node: Node, output: StringBuilder, removed: MutableList<String>, depth: Int) {
+    private fun writeNode(node: Node, output: StringBuilder, removed: MutableList<String>, usedPrefixes: MutableMap<String, String>, depth: Int) {
         when (node.nodeType) {
-            Node.ELEMENT_NODE -> writeElement(node as Element, output, removed, depth)
+            Node.ELEMENT_NODE -> writeElement(node as Element, output, removed, usedPrefixes, depth)
             Node.TEXT_NODE, Node.CDATA_SECTION_NODE -> output.append(escapedText(node.nodeValue))
             // Comments and processing instructions carry nothing that draws; xml-stylesheet can load a file.
             else -> Unit
         }
     }
 
-    private fun writeElement(element: Element, output: StringBuilder, removed: MutableList<String>, depth: Int) {
+    private fun writeElement(
+        element: Element,
+        output: StringBuilder,
+        removed: MutableList<String>,
+        usedPrefixes: MutableMap<String, String>,
+        depth: Int,
+    ) {
         if (depth > MAX_DEPTH) {
             throw TooDeep()
         }
@@ -167,11 +175,12 @@ object SvgSanitizer {
             removed += reasonToDrop
             return
         }
-        val attributes = keptAttributes(element, name, removed)
+        val attributes = keptAttributes(element, name, removed, usedPrefixes)
         if (attributes == null) {
             removed += "$name element without a usable address"
             return
         }
+        rememberPrefix(element.prefix, element.namespaceURI, usedPrefixes)
         output.append('<').append(element.nodeName)
         if (depth == 0 && attributes.none { (attributeName, _) -> attributeName == "xmlns" }) {
             // A file with no xmlns is not an image to a browser; the root is an svg element by the check above.
@@ -186,7 +195,7 @@ object SvgSanitizer {
         } else {
             var child = element.firstChild
             while (child != null) {
-                writeNode(child, output, removed, depth + 1)
+                writeNode(child, output, removed, usedPrefixes, depth + 1)
                 child = child.nextSibling
             }
         }
@@ -216,7 +225,12 @@ object SvgSanitizer {
      * The attributes to write, as name and value pairs. Null when the element
      * is a `use`, `image` or `feImage` that had an address and lost it.
      */
-    private fun keptAttributes(element: Element, elementName: String, removed: MutableList<String>): List<Pair<String, String>>? {
+    private fun keptAttributes(
+        element: Element,
+        elementName: String,
+        removed: MutableList<String>,
+        usedPrefixes: MutableMap<String, String>,
+    ): List<Pair<String, String>>? {
         val kept = mutableListOf<Pair<String, String>>()
         var lostAddress = false
         val attributes = element.attributes
@@ -225,6 +239,7 @@ object SvgSanitizer {
             val attributeName = attribute.nodeName
             val local = localNameOf(attribute)
             val value = attribute.nodeValue.orEmpty()
+            rememberPrefix(attribute.prefix, attribute.namespaceURI, usedPrefixes)
             when {
                 attributeName == "xmlns" || attributeName.startsWith("xmlns:") -> kept += attributeName to value
                 local.startsWith("on") -> removed += "event handler $attributeName"
@@ -257,6 +272,27 @@ object SvgSanitizer {
             return null
         }
         return kept
+    }
+
+    private fun rememberPrefix(prefix: String?, namespaceUri: String?, usedPrefixes: MutableMap<String, String>) {
+        if (prefix == null || namespaceUri == null || prefix == "xmlns" || prefix == "xml") {
+            return
+        }
+        usedPrefixes[prefix] = namespaceUri
+    }
+
+    /**
+     * Writes a declaration on the root for each prefix the output uses and the
+     * root does not declare. A parser that keeps every xmlns attribute (the
+     * JDK's does) makes this a no-op for the usual file; one that drops them
+     * would otherwise leave `xlink:href` with an unbound prefix, which is not
+     * well-formed XML.
+     */
+    private fun declareMissingPrefixes(output: StringBuilder, root: Element, usedPrefixes: Map<String, String>) {
+        val insertAt = 1 + root.nodeName.length
+        val missing = usedPrefixes.filterKeys { prefix -> !root.hasAttribute("xmlns:$prefix") }
+        val declarations = missing.entries.joinToString("") { (prefix, uri) -> " xmlns:$prefix=\"${escapedAttribute(uri)}\"" }
+        output.insert(insertAt, declarations)
     }
 
     /** `use` may point only inside the document; other elements may also carry a data:image/ URI. */
