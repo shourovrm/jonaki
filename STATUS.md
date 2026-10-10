@@ -1,9 +1,7 @@
 # Status — 2026-10-10 (v1.4.1, unreleased work on main)
 
-Phase:        After v1.4.1, not released: short generated thread names and a one-line list
-              (D-157), an empty fresh install (D-158), chosen providers per OpenRouter model
-              (D-159), image generation with generate_image (D-160). The user will add more
-              before the next release.
+Phase:        After v1.4.1, not released: short thread names (D-157), empty fresh install
+              (D-158), chosen OpenRouter providers (D-159), generate_image (D-160). More to come.
 Active plan:  docs/plans/2026-10-02-v1-plan.md; its resume line lists the open checks.
 Decisions:    D-001 to D-015, D-017 to D-033, D-048, D-128, D-129, D-135 to D-137 accepted;
               D-016 superseded. Proposed: D-034 to D-047, D-049 to D-070, D-080, D-081, D-085,
