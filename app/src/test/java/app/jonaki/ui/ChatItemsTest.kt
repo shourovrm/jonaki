@@ -17,6 +17,7 @@ import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.feature.chat.WorkingActivity
 import app.jonaki.feature.chat.StepUiStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -285,6 +286,35 @@ class ChatItemsTest {
         model = "test:m", status = status, resultText = "answer $id", latestText = "Reading reviews\nmore", costUsd = cost,
         startedAtMillis = order.toLong(), finishedAtMillis = 9,
     )
+
+    private fun failedSubagentRows(resultText: String?): List<ChatItem> {
+        val delegateCall = ToolCall("d1", "delegate", """{"tasks":[{"agent":"researcher","task":"a"}]}""")
+        val rows = listOf(
+            row("u1", "USER", "compare"),
+            row("a1", "ASSISTANT", "", calls = listOf(delegateCall)),
+            row("r1", "TOOL", "answers", callId = "d1"),
+            row("a2", "ASSISTANT", "Report ready."),
+        )
+        val steps = listOf(step("d1", "delegate", "DONE", delegateCall.argumentsJson, started = 1, finished = 5))
+        val failed = subagent("s1", 0, "researcher", status = "FAILED").copy(resultText = resultText)
+        return ChatItems.build(rows, steps, isRunning = false, subagents = listOf(failed), stepWords = englishStepWords)
+    }
+
+    @Test
+    fun aFailedSubagentCarriesTheFailureSavedInItsResultText() {
+        val saved = "Found two shops.\n\nStopped because the model call failed: Could not reach OpenRouter: Unable to resolve host"
+
+        val run = failedSubagentRows(saved).filterIsInstance<ChatItem.Run>().single()
+
+        assertEquals("Could not reach OpenRouter: Unable to resolve host", run.subagents.single().failure)
+    }
+
+    @Test
+    fun aFailedSubagentSavedBeforeTheEndingExistedHasNoFailure() {
+        val run = failedSubagentRows("answer s1").filterIsInstance<ChatItem.Run>().single()
+
+        assertNull(run.subagents.single().failure)
+    }
 
     @Test
     fun subagentsShowAsRowsInTheRunAndTheirStepsStayOutOfTheTrack() {

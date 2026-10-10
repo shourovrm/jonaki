@@ -76,6 +76,7 @@ object ChatSample {
                 isStreaming = false,
             ),
             ChatItem.Error("e1", "DeepSeek is busy (503).", canRetry = true),
+            ChatItem.Error("e2", LONG_ERROR_MESSAGE, canRetry = true),
         ),
     )
 
@@ -87,3 +88,8 @@ object ChatSample {
         items = emptyList(),
     )
 }
+
+/** A real provider error: long, with an id that has no spaces, to check wrapping at 360 dp. */
+private const val LONG_ERROR_MESSAGE =
+    "OpenRouter answered HTTP 404: anthropic/claude-haiku-5.5:batch cannot be used with the " +
+        "chat/completions endpoint (adapter AnthropicBatchAdapter)."

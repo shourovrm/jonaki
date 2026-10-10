@@ -2,6 +2,7 @@ package app.jonaki.run
 
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
+import app.jonaki.core.modelcatalog.BatchModels
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
@@ -179,7 +180,9 @@ class BackgroundModel(
             pricePerMillion: (String) -> Double?,
             threadModelKey: String?,
         ): String? {
+            // A batch model the user added earlier stays in their list but never does background work.
             val priced = scopedModelKeys
+                .filterNot(BatchModels::isBatchKey)
                 .filter(hasKey)
                 .mapNotNull { modelKey -> pricePerMillion(modelKey)?.let { price -> modelKey to price } }
             // minByOrNull keeps the first of equal prices, so the user's order breaks ties.

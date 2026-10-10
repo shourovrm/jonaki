@@ -21,7 +21,7 @@ object ConversationSummary {
     val SYSTEM_PROMPT = """
         You summarise a conversation between a user and an AI assistant so that the assistant can continue it without the original messages.
         Write these sections as Markdown headings, in this order: ${SECTIONS.joinToString(", ")}.
-        Under each heading, write short bullet points. Keep names, numbers, file paths, URLs, dates and the user's exact wording of requirements. Leave out greetings and anything already finished that no later step depends on.
+        Under each heading, write short bullet points. Keep names, numbers, file paths, URLs, dates and the user's exact wording of requirements, including any language the user asked answers to be written in. Leave out greetings and anything already finished that no later step depends on.
         If a summary so far is given, merge the new conversation into it and return one complete summary.
         Write in the language the user writes in. Return only the summary.
     """.trimIndent()

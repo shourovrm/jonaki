@@ -1,5 +1,7 @@
 package app.jonaki.settings
 
+import app.jonaki.core.modelcatalog.BatchModels
+
 /** Which model each subagent type runs on (D-065). */
 object SubagentModelChoice {
     const val SCOUT = "scout"
@@ -18,11 +20,12 @@ object SubagentModelChoice {
         threadModelKey: String,
         backgroundModelKey: String?,
     ): String {
-        if (requestedModelKey != null) {
+        // A batch model the user added earlier stays in their list, but no subagent runs on it.
+        if (requestedModelKey != null && !BatchModels.isBatchKey(requestedModelKey)) {
             return requestedModelKey
         }
         val saved = savedChoices[agentType]
-        if (saved != null && saved in scopedModelKeys) {
+        if (saved != null && saved in scopedModelKeys && !BatchModels.isBatchKey(saved)) {
             return saved
         }
         if (agentType == SCOUT && backgroundModelKey != null) {

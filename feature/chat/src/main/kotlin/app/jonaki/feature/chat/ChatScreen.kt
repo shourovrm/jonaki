@@ -676,13 +676,18 @@ private fun NoteRow(note: ChatItem.Note) {
 
 @Composable
 private fun ErrorRow(error: ChatItem.Error, onRetry: (String) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text(
-            error.message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = JonakiTheme.colors.deny,
-            modifier = Modifier.weight(1f),
-        )
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+            SelectionContainer(Modifier.weight(1f)) {
+                Text(
+                    error.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = JonakiTheme.colors.deny,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+            CopyButton(error.message)
+        }
         if (error.canRetry) {
             TextButton(onClick = { onRetry(error.id) }) {
                 Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))

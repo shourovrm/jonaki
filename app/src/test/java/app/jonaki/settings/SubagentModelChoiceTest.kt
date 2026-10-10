@@ -44,4 +44,24 @@ class SubagentModelChoiceTest {
         val saved = mapOf("scout" to "ollama-local:qwen3:8b", "writer" to "openrouter:b")
         assertEquals(saved, SubagentModelChoice.fromText(SubagentModelChoice.toText(saved)))
     }
+
+    @Test
+    fun aSavedBatchModelIsIgnored() {
+        val batch = "openrouter:anthropic/claude-haiku-5.5:batch"
+        val chosen = SubagentModelChoice.choose(
+            "writer", null, mapOf("writer" to batch), scoped + batch, threadModelKey = "openrouter:a", backgroundModelKey = null,
+        )
+
+        assertEquals("openrouter:a", chosen)
+    }
+
+    @Test
+    fun aBatchModelNamedInTheCallIsIgnored() {
+        val batch = "openrouter:anthropic/claude-haiku-5.5:batch"
+        val chosen = SubagentModelChoice.choose(
+            "writer", batch, emptyMap(), scoped + batch, threadModelKey = "openrouter:a", backgroundModelKey = null,
+        )
+
+        assertEquals("openrouter:a", chosen)
+    }
 }

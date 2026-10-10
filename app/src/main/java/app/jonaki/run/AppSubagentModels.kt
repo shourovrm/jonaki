@@ -4,6 +4,7 @@ import app.jonaki.core.agent.AgentType
 import app.jonaki.core.agent.ImageMessages
 import app.jonaki.core.agent.SubagentModel
 import app.jonaki.core.agent.SubagentModels
+import app.jonaki.core.modelcatalog.BatchModels
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
@@ -27,7 +28,7 @@ class AppSubagentModels(
     private val providerFor: (modelKey: String) -> ChatProvider?,
     private val imageMessagesFor: (acceptsImages: Boolean) -> ImageMessages,
 ) : SubagentModels {
-    override val scoped: List<SubagentModelInfo> = snapshot.chatModels.allModelKeys.map { key ->
+    override val scoped: List<SubagentModelInfo> = snapshot.chatModels.allModelKeys.filterNot(BatchModels::isBatchKey).map { key ->
         SubagentModelInfo(key, catalog.find(key)?.displayName ?: ModelKey.modelOf(key))
     }
 

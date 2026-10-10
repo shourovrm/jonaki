@@ -106,6 +106,26 @@ class OpenAiCompatibleProviderTest {
     }
 
     @Test
+    fun aBatchModelThatAnswers404GetsAHintToPickAnother() = runBlocking {
+        val serviceText = "anthropic/claude-haiku-5.5:batch cannot be used with the chat/completions endpoint (adapter AnthropicBatchAdapter)."
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":{"message":"$serviceText","code":404}}"""))
+
+        val failure = provider.stream(request.copy(model = "anthropic/claude-haiku-5.5:batch")).toList().single() as StreamEvent.Failed
+
+        assertEquals("OpenRouter answered HTTP 404: $serviceText Batch models do not work in chat. Pick another model.", failure.message)
+        assertFalse(failure.retryable)
+    }
+
+    @Test
+    fun aNormalModelThatAnswers404GetsNoBatchHint() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":{"message":"No such model","code":404}}"""))
+
+        val failure = provider.stream(request).toList().single() as StreamEvent.Failed
+
+        assertEquals("OpenRouter answered HTTP 404: No such model", failure.message)
+    }
+
+    @Test
     fun overloadFailsAsRetryable() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(503).setBody("busy"))
 

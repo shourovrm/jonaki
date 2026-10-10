@@ -129,4 +129,42 @@ class ModelCatalogTest {
 
         assertEquals(listOf("anthropic/claude-sonnet-5.5"), found.map { it.modelId })
     }
+
+    private val withBatchModels = """
+        {"data": [
+          {"id": "anthropic/claude-haiku-5.5", "name": "Claude Haiku 5.5", "context_length": 200000,
+           "pricing": {"prompt": "0.000001", "completion": "0.000005"}},
+          {"id": "anthropic/claude-haiku-5.5:batch", "name": "Claude Haiku 5.5 (batch)", "context_length": 200000,
+           "pricing": {"prompt": "0.0000005", "completion": "0.0000025"}},
+          {"id": "meta/llama-4:free", "name": "Llama 4 (free)", "context_length": 128000,
+           "pricing": {"prompt": "0", "completion": "0"}}
+        ]}
+    """.trimIndent()
+
+    @Test
+    fun parserLeavesOutModelsThatOnlyWorkThroughTheBatchApi() {
+        val ids = OpenRouterModels.parse(withBatchModels).map { it.modelId }
+
+        assertEquals(listOf("anthropic/claude-haiku-5.5", "meta/llama-4:free"), ids)
+    }
+
+    @Test
+    fun theBatchRuleKnowsOnlyOpenRouterKeysEndingInBatch() {
+        assertTrue(BatchModels.isBatchKey("openrouter:anthropic/claude-haiku-5.5:batch"))
+        assertFalse(BatchModels.isBatchKey("openrouter:anthropic/claude-haiku-5.5"))
+        assertFalse(BatchModels.isBatchKey("openrouter:meta/llama-4:free"))
+        // An Ollama tag may end in anything; only OpenRouter's :batch is the Batch API.
+        assertFalse(BatchModels.isBatchKey("ollama-local:qwen3:batch"))
+    }
+
+    @Test
+    fun theCatalogOffersNoBatchModelAfterADownload() = runBlocking {
+        server.enqueue(MockResponse().setBody(withBatchModels))
+        val catalog = catalog()
+        catalog.refreshIfStale()
+
+        assertEquals(2, catalog.models("openrouter").size)
+        assertNull(catalog.find("openrouter:anthropic/claude-haiku-5.5:batch"))
+        assertTrue(catalog.search("openrouter", "haiku").none { BatchModels.isBatchKey(it.key) })
+    }
 }
