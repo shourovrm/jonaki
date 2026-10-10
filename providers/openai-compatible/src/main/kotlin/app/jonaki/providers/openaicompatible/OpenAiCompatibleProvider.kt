@@ -74,7 +74,7 @@ class OpenAiCompatibleProvider(
                     if (mayFallBack && OpenRouterRouting.isDataPolicyRejection(response.code, bodyText)) {
                         return true
                     }
-                    emit(failureFromErrorResponse(response.code, bodyText, route))
+                    emit(failureFromErrorResponse(response.code, bodyText, route, request.model))
                     return false
                 }
                 val assembler = ChatCompletionStreamAssembler()
@@ -116,7 +116,7 @@ class OpenAiCompatibleProvider(
         return builder.build()
     }
 
-    private fun failureFromErrorResponse(statusCode: Int, bodyText: String, route: OpenRouterRoute): StreamEvent.Failed {
+    private fun failureFromErrorResponse(statusCode: Int, bodyText: String, route: OpenRouterRoute, modelId: String): StreamEvent.Failed {
         val serviceMessage = errorMessageFrom(bodyText)
         if (route.isPinned && !route.allowFallbacks && statusCode == 404) {
             // With fallbacks off, "no endpoint" means none of the user's providers can serve the
@@ -126,7 +126,10 @@ class OpenAiCompatibleProvider(
                 "${preset.displayName} answered HTTP $statusCode: $serviceMessage"
             return StreamEvent.Failed(message, retryable = false)
         }
-        val message = "${preset.displayName} answered HTTP $statusCode: $serviceMessage"
+        val serviceText = "${preset.displayName} answered HTTP $statusCode: $serviceMessage"
+        // A model already in the user's list may still be a batch model; tell them what to do (it never retries).
+        val isBatchModel = isOpenRouter && modelId.endsWith(BATCH_MODEL_SUFFIX)
+        val message = if (statusCode == 404 && isBatchModel) "$serviceText $BATCH_MODEL_HINT" else serviceText
         return StreamEvent.Failed(message, retryable = isRetryableHttpStatus(statusCode))
     }
 
@@ -141,5 +144,9 @@ class OpenAiCompatibleProvider(
 
     private companion object {
         val jsonMediaType = "application/json".toMediaType()
+
+        /** OpenRouter's ":batch" models work only through its Batch API (see BatchModels in core/model-catalog). */
+        const val BATCH_MODEL_SUFFIX = ":batch"
+        const val BATCH_MODEL_HINT = "Batch models do not work in chat. Pick another model."
     }
 }

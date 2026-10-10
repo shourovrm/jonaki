@@ -22,6 +22,8 @@ object OpenRouterModels {
     private fun modelFrom(model: JsonObject?): ModelInfo? {
         if (model == null) return null
         val id = model.text("id") ?: return null
+        // The one place batch models are dropped: the picker, the cache and every lookup read this list.
+        if (BatchModels.isBatchId(id)) return null
         val pricing = model["pricing"] as? JsonObject
         return ModelInfo(
             serviceKey = SERVICE_KEY,

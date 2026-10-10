@@ -59,4 +59,17 @@ class BackgroundModelTest {
         )
         assertEquals("b:two", chosen)
     }
+
+    @Test
+    fun neverPicksABatchModelEvenWhenItIsTheCheapest() {
+        val cheapBatch = "openrouter:anthropic/claude-haiku-5.5:batch"
+        val chosen = BackgroundModel.choose(
+            scopedModelKeys = listOf(cheapBatch, "deepseek:deepseek-chat"),
+            hasKey = { true },
+            pricePerMillion = { modelKey -> if (modelKey == cheapBatch) 0.1 else 1.37 },
+            threadModelKey = null,
+        )
+
+        assertEquals("deepseek:deepseek-chat", chosen)
+    }
 }
