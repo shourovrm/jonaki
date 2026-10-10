@@ -44,18 +44,18 @@ object ImageReferences {
 
     /**
      * [facts] is what the model declares, null when the model list is not
-     * available; [allFacts] holds every added model's facts, to name another
-     * model that takes pictures. Gemini has no such list, so its models are
-     * not checked for a count.
+     * available; [otherModelsWithReferences] are the other added models that
+     * take pictures, named when this one does not. Gemini has no such list,
+     * so its models are not checked for a count.
      */
     fun load(
         paths: List<String>,
         threadPaths: ThreadPaths,
         modelKey: String,
         facts: ImageModelFacts?,
-        allFacts: Map<String, ImageModelFacts>,
+        otherModelsWithReferences: List<String>,
     ): ReferenceResult {
-        countProblem(paths.size, modelKey, facts, allFacts)?.let { return ReferenceResult.Refused(it) }
+        countProblem(paths.size, modelKey, facts, otherModelsWithReferences)?.let { return ReferenceResult.Refused(it) }
         if (paths.isEmpty()) {
             return ReferenceResult.Loaded(emptyList())
         }
@@ -144,7 +144,7 @@ object ImageReferences {
         count: Int,
         modelKey: String,
         facts: ImageModelFacts?,
-        allFacts: Map<String, ImageModelFacts>,
+        otherModelsWithReferences: List<String>,
     ): ToolOutput? {
         if (facts == null) {
             if (count == 0 || isGemini(modelKey)) {
@@ -160,7 +160,7 @@ object ImageReferences {
             return null
         }
         if (maximum == null || maximum == 0) {
-            return ToolOutput.error("$modelKey takes no reference pictures", noReferenceAdvice(modelKey, allFacts))
+            return ToolOutput.error("$modelKey takes no reference pictures", noReferenceAdvice(otherModelsWithReferences))
         }
         if (count > maximum) {
             return ToolOutput.error(
@@ -171,8 +171,7 @@ object ImageReferences {
         return null
     }
 
-    private fun noReferenceAdvice(modelKey: String, allFacts: Map<String, ImageModelFacts>): String {
-        val others = allFacts.values.filter { other -> other.modelKey != modelKey && (other.maxReferences ?: 0) > 0 }.map { other -> other.modelKey }
+    private fun noReferenceAdvice(others: List<String>): String {
         if (others.isEmpty()) {
             return "Leave reference_images out. None of the user's added image models takes reference pictures; they can add one under Settings > Models > Image generation."
         }

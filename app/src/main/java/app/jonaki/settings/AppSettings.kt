@@ -6,6 +6,7 @@ import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.agent.ZoneInMessages
 import app.jonaki.core.agent.ApprovalRule
 import app.jonaki.core.providerapi.ThinkingLevel
+import app.jonaki.core.toolapi.ImageQuality
 import app.jonaki.core.toolapi.SubagentBudget
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.guard.JevOptions
@@ -90,6 +91,8 @@ data class SettingsSnapshot(
     val videoModels: VideoModels = VideoModels(),
     /** The image services and models generate_image may use, and the starred model. */
     val imageModels: ImageModels = ImageModels(),
+    /** The quality generate_image uses when a call names none; Standard until the user picks High in Settings > Models. */
+    val imageQuality: ImageQuality = ImageQuality.STANDARD,
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -185,6 +188,7 @@ class AppSettings(
                 // Absent before vector models existed; then no model is a stored vector model.
                 vectorModelKeysText = preferences.getString(IMAGE_VECTOR_MODEL_KEYS, null),
             ),
+            imageQuality = ImageQuality.fromStored(preferences.getString(IMAGE_QUALITY, null)),
         )
     }
 
@@ -310,6 +314,7 @@ class AppSettings(
         editor.putString(IMAGE_MODEL_KEYS, storedImageModels.modelKeysText)
         editor.putString(IMAGE_DEFAULT_MODEL_KEY, storedImageModels.defaultModelKey)
         editor.putString(IMAGE_VECTOR_MODEL_KEYS, storedImageModels.vectorModelKeysText)
+        editor.putString(IMAGE_QUALITY, snapshot.imageQuality.word)
         editor.apply()
     }
 
@@ -377,5 +382,6 @@ class AppSettings(
         const val IMAGE_MODEL_KEYS = "image_model_keys"
         const val IMAGE_DEFAULT_MODEL_KEY = "image_default_model_key"
         const val IMAGE_VECTOR_MODEL_KEYS = "image_vector_model_keys"
+        const val IMAGE_QUALITY = "image_quality"
     }
 }

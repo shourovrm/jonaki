@@ -66,6 +66,7 @@ import app.jonaki.core.storage.ThreadSummary
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
 import app.jonaki.core.ui.resolvesToDark
+import app.jonaki.core.toolapi.ImageQuality
 import app.jonaki.core.toolapi.IncomingFiles
 import app.jonaki.core.toolapi.ViewedImages
 import app.jonaki.feature.chat.ApprovalChoice
@@ -1266,7 +1267,7 @@ private fun SettingsRoute(
         balance = BalanceText.of(balances[secret], balanceWords),
     )
 
-    val imageGeneration = imageGenerationFor(application, snapshot.imageModels, ::slotFor)
+    val imageGeneration = imageGenerationFor(application, snapshot.imageModels, ::slotFor, snapshot.imageQuality == ImageQuality.HIGH)
     val videoGeneration = videoGenerationFor(application, snapshot.videoModels, hasKey = SecretName.OPENROUTER in savedKeys)
     val state = SettingsUiState(
         chatServices = serviceCards(snapshot, application, ::slotFor, ::accountFor),
@@ -1437,6 +1438,9 @@ private fun SettingsRoute(
         },
         onImageModelSetDefault = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.setDefault(modelKey)) } },
         onImageModelRemove = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.removeModel(modelKey)) } },
+        onImageQualityChange = { isHigh ->
+            settings.update { current -> current.copy(imageQuality = if (isHigh) ImageQuality.HIGH else ImageQuality.STANDARD) }
+        },
         onAddVideoModels = onAddVideoModels,
         onVideoModelSetDefault = { modelKey -> settings.update { current -> current.copy(videoModels = current.videoModels.setDefault(modelKey)) } },
         onVideoModelRemove = { modelKey -> settings.update { current -> current.copy(videoModels = current.videoModels.removeModel(modelKey)) } },
@@ -1743,6 +1747,7 @@ private fun imageGenerationFor(
     application: JonakiApplication,
     imageModels: ImageModels,
     slotFor: (SecretName) -> KeySlot,
+    isHighQuality: Boolean = false,
 ): ImageGenerationUi {
     val openRouterIds = imageModels.modelsByService[ImageService.OPENROUTER].orEmpty()
     val labels = rememberOpenRouterImageLabels(application, openRouterIds)
@@ -1764,7 +1769,7 @@ private fun imageGenerationFor(
     val addable = ImageService.entries
         .filter { service -> service !in imageModels.addedServices }
         .map { service -> AddableServiceUi(service.key, service.displayName, imageServiceHint(service)) }
-    return ImageGenerationUi(cards, addable)
+    return ImageGenerationUi(cards, addable, isHighQuality)
 }
 
 /** OpenRouter's display names and price lines for the added image models, filled in as they load (cached for a day). */

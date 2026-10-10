@@ -28,6 +28,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +59,8 @@ data class ImageGenerationUi(
     val services: List<ImageServiceCardUi> = emptyList(),
     /** Services offered by "Add service": the ones not added yet. */
     val addableServices: List<AddableServiceUi> = emptyList(),
+    /** True when the quality default is High; false is Standard. */
+    val isHighQuality: Boolean = false,
 )
 
 /** One added image service. Its key is the same secret as a chat service of the same account. */
@@ -103,6 +108,30 @@ internal fun ImageGenerationSection(images: ImageGenerationUi, actions: Settings
         }
         if (images.addableServices.isNotEmpty()) {
             AddServiceDropdown(images.addableServices, actions.onAddImageService)
+        }
+        if (images.services.isNotEmpty()) {
+            ImageQualityRow(images.isHighQuality, actions.onImageQualityChange)
+        }
+    }
+}
+
+/** The quality generate_image uses when the chat model names none: Standard or High. */
+@Composable
+private fun ImageQualityRow(isHigh: Boolean, onChange: (isHigh: Boolean) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
+        Text(stringResource(R.string.settings_image_quality), style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.size(8.dp))
+        val choices = listOf(false to R.string.settings_image_quality_standard, true to R.string.settings_image_quality_high)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            choices.forEachIndexed { index, (choiceIsHigh, labelResource) ->
+                SegmentedButton(
+                    selected = choiceIsHigh == isHigh,
+                    onClick = { onChange(choiceIsHigh) },
+                    shape = SegmentedButtonDefaults.itemShape(index, choices.size),
+                    icon = {},
+                    label = { Text(stringResource(labelResource), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                )
+            }
         }
     }
 }

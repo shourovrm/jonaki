@@ -3,6 +3,8 @@ package app.jonaki
 import app.jonaki.core.runtimeapi.CodeRuntime
 import app.jonaki.core.searchapi.SearchBackend
 import app.jonaki.core.toolapi.ImageGenerator
+import app.jonaki.core.toolapi.ImageModelFacts
+import app.jonaki.core.toolapi.ImageQuality
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.SubagentLauncher
 import app.jonaki.run.VideoToolServices
@@ -90,6 +92,10 @@ data class ToolServices(
     val imageModelKeys: List<String> = emptyList(),
     /** The model used when a call names none: the thread's pick or the starred one; asked at every call. */
     val defaultImageModelKey: () -> String? = { null },
+    /** What OpenRouter's list says about each image model by key (quality, resolution, reference pictures); empty while no list is cached. */
+    val imageModelFacts: Map<String, ImageModelFacts> = emptyMap(),
+    /** The quality generate_image uses when a call names none (Settings > Models > Image generation); asked at every call. */
+    val defaultImageQuality: () -> ImageQuality = { ImageQuality.STANDARD },
     /** The vector (SVG) image models of the services that have a key; with [imageGenerator] they switch generate_vector_image on. */
     val vectorImageModelKeys: List<String> = emptyList(),
     /** The vector model used when a call names none; asked at every call. */
@@ -133,7 +139,13 @@ object ToolRegistry {
             tools += ShareFileTool(services.fileDestinations)
         }
         if (services.imageGenerator != null && services.imageModelKeys.isNotEmpty()) {
-            tools += GenerateImageTool(services.imageGenerator, services.imageModelKeys, services.defaultImageModelKey)
+            tools += GenerateImageTool(
+                services.imageGenerator,
+                services.imageModelKeys,
+                services.defaultImageModelKey,
+                services.imageModelFacts,
+                services.defaultImageQuality,
+            )
         }
         if (services.imageGenerator != null && services.vectorImageModelKeys.isNotEmpty()) {
             tools += GenerateVectorImageTool(services.imageGenerator, services.vectorImageModelKeys, services.defaultVectorImageModelKey)

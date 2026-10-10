@@ -6,4 +6,7 @@
     <string name="settings_images_retry">আবার চেষ্টা করুন</string>
     <string name="settings_images_no_match">কোনো মডেল মেলেনি</string>
     <string name="settings_image_svg_tag">SVG</string>
+    <string name="settings_image_quality">ছবির মান</string>
+    <string name="settings_image_quality_standard">সাধারণ</string>
+    <string name="settings_image_quality_high">উচ্চ</string>
 </resources>

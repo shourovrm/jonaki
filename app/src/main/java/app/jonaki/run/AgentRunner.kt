@@ -60,6 +60,7 @@ import app.jonaki.search.RoomChatSearchStore
 import app.jonaki.core.modelcatalog.CostCalculator
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
+import app.jonaki.core.modelcatalog.ImageModelList
 import app.jonaki.core.modelcatalog.VideoModelList
 import app.jonaki.core.providerapi.ChatProvider
 import app.jonaki.core.searchapi.SearchBackend
@@ -71,6 +72,7 @@ import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.core.storage.MessageEntity
 import app.jonaki.core.storage.ThreadEntity
 import app.jonaki.core.toolapi.ImageGenerator
+import app.jonaki.core.toolapi.ImageModelFacts
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.providers.gemini.GeminiImageGenerator
@@ -159,6 +161,8 @@ class AgentRunner(
     private val threadImageChoices: ThreadImageChoices? = null,
     /** OpenRouter's video model list for generate_video; null (tests) leaves generate_video out. */
     private val videoModelList: VideoModelList? = null,
+    /** OpenRouter's image model list for the quality and reference checks of generate_image; null (tests) means no list. */
+    private val imageModelList: ImageModelList? = null,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -876,6 +880,8 @@ class AgentRunner(
         imageGenerator = imageGeneratorFor(thread.id),
         imageModelKeys = settings.snapshot.value.imageModels.usableRasterModelKeys(::hasImageKey),
         defaultImageModelKey = { defaultImageModelFor(thread.id) },
+        imageModelFacts = imageModelFacts(),
+        defaultImageQuality = { settings.snapshot.value.imageQuality },
         vectorImageModelKeys = settings.snapshot.value.imageModels.usableVectorModelKeys(::hasImageKey),
         defaultVectorImageModelKey = { defaultVectorImageModelFor(thread.id) },
     )
@@ -905,6 +911,17 @@ class AgentRunner(
         val usableKeys = settings.snapshot.value.imageModels.usableVectorModelKeys(::hasImageKey)
         val choices = threadImageChoices ?: return usableKeys.firstOrNull()
         return choices.effectiveVectorModelKey(threadId, usableKeys)
+    }
+
+    /**
+     * What OpenRouter's cached image list says about the added models. The list is never awaited
+     * here: a refresh starts in the background, so with no cache yet generate_image sends no
+     * quality setting and refuses reference pictures it cannot check.
+     */
+    private fun imageModelFacts(): Map<String, ImageModelFacts> {
+        val list = imageModelList ?: return emptyMap()
+        scope.launch { list.load() }
+        return ImageModelFactsBuilder.byKey(list.cachedModels())
     }
 
     private fun hasImageKey(service: ImageService): Boolean = secrets.read(service.secret) != null

@@ -197,7 +197,14 @@ class GenerateImageTool(
     ): ReferenceResult {
         val paths = ImageReferences.pathsIn(arguments)
         ImageReferences.minimumProblem(paths.size, modelKey, modelFacts)?.let { return ReferenceResult.Refused(it) }
-        return withContext(Dispatchers.IO) { ImageReferences.load(paths, context.paths, modelKey, modelFacts, facts) }
+        return withContext(Dispatchers.IO) { ImageReferences.load(paths, context.paths, modelKey, modelFacts, otherModelsWithReferences(modelKey)) }
+    }
+
+    /** The other added models that take reference pictures: by their list, or Gemini, whose models are not listed. */
+    private fun otherModelsWithReferences(modelKey: String): List<String> = modelKeys.filter { key ->
+        val modelFacts = facts[key]
+        val takesThem = if (modelFacts == null) key.substringBefore(':') == "gemini" else (modelFacts.maxReferences ?: 0) > 0
+        key != modelKey && takesThem
     }
 
     /** What was really sent, so the chat model can tell the user; only paths and names, never picture data. */

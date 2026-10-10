@@ -3,6 +3,7 @@ package app.jonaki
 import android.app.Application
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.OpenRouterImagePrices
+import app.jonaki.core.modelcatalog.ImageModelList
 import app.jonaki.core.modelcatalog.VideoModelList
 import app.jonaki.core.storage.JonakiDatabase
 import app.jonaki.files.AndroidFileDestinations
@@ -109,6 +110,11 @@ class JonakiApplication : Application() {
     /** OpenRouter's video model list (durations, resolutions, prices), kept in one cache file for a day. */
     val videoModelList: VideoModelList by lazy {
         VideoModelList(File(cacheDir, "openrouter-video-models.json"), httpClient)
+    }
+
+    /** OpenRouter's image model list (quality, resolution, reference pictures), kept in one cache file for a day. */
+    val imageModelList: ImageModelList by lazy {
+        ImageModelList(File(cacheDir, "openrouter-image-models.json"), httpClient)
     }
 
     /** Screens a fact saved after outside content, for the memory tool and for extraction. */
@@ -261,6 +267,7 @@ class JonakiApplication : Application() {
             factScreen = factScreen,
             threadImageChoices = threadImageChoices,
             videoModelList = videoModelList,
+            imageModelList = imageModelList,
         )
         localModelTools = LocalModelTools(settings, runner::toolsForLocalPromptCosts)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))

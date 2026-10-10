@@ -6,4 +6,7 @@
     <string name="settings_images_retry">Try again</string>
     <string name="settings_images_no_match">No model matches</string>
     <string name="settings_image_svg_tag">SVG</string>
+    <string name="settings_image_quality">Image quality</string>
+    <string name="settings_image_quality_standard">Standard</string>
+    <string name="settings_image_quality_high">High</string>
 </resources>

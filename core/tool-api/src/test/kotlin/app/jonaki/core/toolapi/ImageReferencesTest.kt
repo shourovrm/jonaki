@@ -28,8 +28,8 @@ class ImageReferencesTest {
         return file
     }
 
-    private fun load(vararg given: String, facts: ImageModelFacts? = takesSixteen, all: Map<String, ImageModelFacts> = emptyMap(), key: String = modelKey) =
-        ImageReferences.load(given.toList(), paths, key, facts, all)
+    private fun load(vararg given: String, facts: ImageModelFacts? = takesSixteen, others: List<String> = emptyList(), key: String = modelKey) =
+        ImageReferences.load(given.toList(), paths, key, facts, others)
 
     private fun refusal(result: ReferenceResult): String {
         val refused = result as ReferenceResult.Refused
@@ -130,9 +130,9 @@ class ImageReferencesTest {
     @Test
     fun aModelWithMaximumZeroOrNoRangeRefusesAndNamesAModelThatAccepts() {
         file("images/a.png", png)
-        val all = listOf(takesNone, takesFour).associateBy { it.modelKey }
+        val others = listOf(takesFour.modelKey)
 
-        val text = refusal(load("images/a.png", facts = takesNone, all = all, key = takesNone.modelKey))
+        val text = refusal(load("images/a.png", facts = takesNone, others = others, key = takesNone.modelKey))
         assertTrue(text, text.contains("takes no reference pictures"))
         assertTrue(text, text.contains("openrouter:black-forest-labs/flux.2-klein-4b"))
 
@@ -143,7 +143,7 @@ class ImageReferencesTest {
     @Test
     fun whenNoAddedModelTakesPicturesTheHintSaysWhereToAddOne() {
         file("images/a.png", png)
-        val text = refusal(load("images/a.png", facts = takesNone, all = mapOf(takesNone.modelKey to takesNone), key = takesNone.modelKey))
+        val text = refusal(load("images/a.png", facts = takesNone, key = takesNone.modelKey))
         assertTrue(text, text.contains("Settings > Models > Image generation"))
     }
 
