@@ -2,7 +2,6 @@
 <resources>
     <string name="chat_back">ফিরে যান</string>
     <string name="chat_more">আরও অপশন</string>
-    <string name="chat_menu_web_search">ওয়েব সার্চ</string>
     <string name="chat_menu_rename">নাম বদলান</string>
     <string name="chat_menu_memory">মেমরি</string>
     <string name="chat_menu_skills">স্কিল</string>

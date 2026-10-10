@@ -53,7 +53,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -178,7 +177,6 @@ fun ChatScreen(
                     ChatTopBar(
                         state = state,
                         onBack = onBack,
-                        onWebSearchChange = onWebSearchChange,
                         onRename = onRename,
                         onOpenMemory = onOpenMemory,
                         onOpenSkills = onOpenSkills,
@@ -345,7 +343,6 @@ private enum class ChatSheet {
 private fun ChatTopBar(
     state: ChatUiState,
     onBack: () -> Unit,
-    onWebSearchChange: (Boolean) -> Unit,
     onRename: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
@@ -374,13 +371,6 @@ private fun ChatTopBar(
                     Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.chat_more))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.chat_menu_web_search)) },
-                        trailingIcon = {
-                            Switch(checked = state.webSearchEnabled, onCheckedChange = null)
-                        },
-                        onClick = { onWebSearchChange(!state.webSearchEnabled) },
-                    )
                     // A thread that has no message yet has no name to change.
                     if (state.title.isNotBlank()) {
                         DropdownMenuItem(
