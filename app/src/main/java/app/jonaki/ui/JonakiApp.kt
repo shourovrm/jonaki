@@ -179,6 +179,7 @@ private const val ROUTE_PYTHON = "python"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
 private const val ROUTE_ADD_IMAGE_MODELS_PREFIX = "add-image-models:"
+private const val ROUTE_ADD_VECTOR_MODELS = "add-vector-models"
 private const val ROUTE_ADD_VIDEO_MODELS = "add-video-models"
 private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
@@ -295,6 +296,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onAddImageModels = { serviceKey -> route = ROUTE_ADD_IMAGE_MODELS_PREFIX + serviceKey },
+                    onAddVectorModels = { route = ROUTE_ADD_VECTOR_MODELS },
                     onAddVideoModels = { route = ROUTE_ADD_VIDEO_MODELS },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
@@ -415,7 +417,13 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             route.startsWith(ROUTE_ADD_IMAGE_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
                 BackHandler { route = backRoute }
-                AddImageModelsRoute(application, route.removePrefix(ROUTE_ADD_IMAGE_MODELS_PREFIX), onFinished = { route = backRoute })
+                AddImageModelsRoute(application, route.removePrefix(ROUTE_ADD_IMAGE_MODELS_PREFIX), vectorOnly = false, onFinished = { route = backRoute })
+            }
+            route == ROUTE_ADD_VECTOR_MODELS -> {
+                val backRoute = settingsPageRoute(SettingsPage.MODELS)
+                BackHandler { route = backRoute }
+                // OpenRouter is the one image service whose list has vector models (D-170).
+                AddImageModelsRoute(application, ImageService.OPENROUTER.key, vectorOnly = true, onFinished = { route = backRoute })
             }
             route.startsWith(ROUTE_ADD_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
@@ -1335,6 +1343,7 @@ private fun SettingsRoute(
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
     onAddImageModels: (String) -> Unit,
+    onAddVectorModels: () -> Unit,
     onAddVideoModels: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
@@ -1586,6 +1595,8 @@ private fun SettingsRoute(
         },
         onAddModels = onAddModels,
         onAddImageModels = onAddImageModels,
+        onAddVectorModels = onAddVectorModels,
+        onVectorModelSetDefault = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.setVectorDefault(modelKey)) } },
         onAddImageService = { serviceKey ->
             ImageService.byKey(serviceKey)?.let { service ->
                 settings.update { current -> current.copy(imageModels = current.imageModels.addService(service)) }
@@ -1812,7 +1823,7 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
 }
 
 @Composable
-private fun AddImageModelsRoute(application: JonakiApplication, serviceKey: String, onFinished: () -> Unit) {
+private fun AddImageModelsRoute(application: JonakiApplication, serviceKey: String, vectorOnly: Boolean, onFinished: () -> Unit) {
     val service = ImageService.byKey(serviceKey)
     if (service == null) {
         LaunchedEffect(Unit) { onFinished() }
@@ -1832,7 +1843,7 @@ private fun AddImageModelsRoute(application: JonakiApplication, serviceKey: Stri
         onFinished()
     }
     if (service == ImageService.OPENROUTER) {
-        AddOpenRouterImageModelsScreen(application, alreadyAdded, onFinished, onDone)
+        AddOpenRouterImageModelsScreen(application, alreadyAdded, vectorOnly, onFinished, onDone)
         return
     }
     // Gemini has no list that marks image models, so the picker offers documented ids and any id typed by hand.
@@ -1853,6 +1864,8 @@ private fun AddImageModelsRoute(application: JonakiApplication, serviceKey: Stri
 private fun AddOpenRouterImageModelsScreen(
     application: JonakiApplication,
     alreadyAdded: Set<String>,
+    /** The picker of Vector image generation lists the SVG models, the one of an image service's card the others. */
+    vectorOnly: Boolean,
     onFinished: () -> Unit,
     onDone: (modelIds: List<String>, vectorIds: Set<String>) -> Unit,
 ) {
@@ -1863,7 +1876,7 @@ private fun AddOpenRouterImageModelsScreen(
         value = OpenRouterImageModels.fetchList(application.httpClient)
     }
     val prices = remember { mutableStateMapOf<String, ImagePriceResult>() }
-    val loadedModels = (listResult as? ImageModelListResult.Loaded)?.models
+    val loadedModels = (listResult as? ImageModelListResult.Loaded)?.models?.filter { model -> model.isVector == vectorOnly }
     // Leaving the screen cancels this effect, which cancels the requests still in flight.
     LaunchedEffect(loadedModels) {
         if (loadedModels != null) {
@@ -1876,7 +1889,7 @@ private fun AddOpenRouterImageModelsScreen(
         null -> ImagePickerState.Loading
         is ImageModelListResult.Failed -> ImagePickerState.Failed(result.reason)
         is ImageModelListResult.Loaded -> ImagePickerState.Loaded(
-            result.models.map { model ->
+            loadedModels.orEmpty().map { model ->
                 AddableModelUi(
                     id = model.id,
                     name = model.name,
@@ -1921,25 +1934,38 @@ private fun imageGenerationFor(
 ): ImageGenerationUi {
     val openRouterIds = imageModels.modelsByService[ImageService.OPENROUTER].orEmpty()
     val labels = rememberOpenRouterImageLabels(application, openRouterIds)
-    val cards = imageModels.addedServices.map { service ->
-        val rows = imageModels.modelsByService[service].orEmpty().map { modelId ->
+    val firstVectorModelKey = imageModels.allModelKeys.firstOrNull(imageModels::isVector)
+    val rowsByService = imageModels.addedServices.associateWith { service ->
+        imageModels.modelsByService[service].orEmpty().map { modelId ->
             val modelKey = ModelKey.of(service.key, modelId)
             val isOpenRouter = service == ImageService.OPENROUTER
+            val isVector = imageModels.isVector(modelKey)
             ImageModelRowUi(
                 key = modelKey,
                 id = modelId,
                 name = if (isOpenRouter) labels.names[modelId] ?: modelId else modelId,
                 priceText = if (isOpenRouter) labels.priceTexts[modelId] else null,
-                isDefault = modelKey == imageModels.defaultModelKey,
-                isVector = imageModels.isVector(modelKey),
+                // A vector model's star is "first vector model"; the stored star belongs to generate_image.
+                isDefault = if (isVector) modelKey == firstVectorModelKey else modelKey == imageModels.defaultModelKey,
+                isVector = isVector,
             )
         }
-        ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), rows)
     }
+    val cards = imageModels.addedServices.map { service ->
+        val rasterRows = rowsByService[service].orEmpty().filter { row -> !row.isVector }
+        ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), rasterRows)
+    }
+    val vectorRows = rowsByService.values.flatten().filter { row -> row.isVector }
     val addable = ImageService.entries
         .filter { service -> service !in imageModels.addedServices }
         .map { service -> AddableServiceUi(service.key, service.displayName, imageServiceHint(service)) }
-    return ImageGenerationUi(cards, addable, isHighQuality)
+    return ImageGenerationUi(
+        services = cards,
+        addableServices = addable,
+        isHighQuality = isHighQuality,
+        vectorModels = vectorRows,
+        canAddVectorModels = ImageService.OPENROUTER in imageModels.addedServices,
+    )
 }
 
 /** OpenRouter's display names and price lines for the added image models, filled in as they load (cached for a day). */

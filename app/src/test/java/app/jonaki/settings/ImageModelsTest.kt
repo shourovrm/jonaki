@@ -296,4 +296,19 @@ class ImageModelsTest {
         assertEquals(ChatService.OPENROUTER.secret, ImageService.OPENROUTER.secret)
         assertEquals(ChatService.GEMINI.secret, ImageService.GEMINI.secret)
     }
+
+    @Test
+    fun theVectorDefaultIsTheFirstVectorModelAndCanBeChanged() {
+        val models = ImageModels()
+            .addModel(ImageService.OPENROUTER, "maker/raster-one")
+            .addModel(ImageService.OPENROUTER, "maker/first-vector", isVector = true)
+            .addModel(ImageService.OPENROUTER, "maker/second-vector", isVector = true)
+
+        val changed = models.setVectorDefault("openrouter:maker/second-vector")
+
+        assertEquals("openrouter:maker/first-vector", models.usableVectorModelKeys { true }.first())
+        assertEquals("openrouter:maker/second-vector", changed.usableVectorModelKeys { true }.first())
+        assertEquals(models.defaultModelKey, changed.defaultModelKey)
+        assertEquals(models, models.setVectorDefault("openrouter:maker/not-listed"))
+    }
 }

@@ -25,7 +25,6 @@ private val sampleImages = ImageGenerationUi(
             models = listOf(
                 ImageModelRowUi("openrouter:$FLUX_ID", FLUX_ID, LONG_IMAGE_MODEL_NAME, "$0.014 per megapixel", isDefault = true),
                 ImageModelRowUi("openrouter:openai/gpt-image-1-mini", "openai/gpt-image-1-mini", "OpenAI: GPT Image 1 Mini", null),
-                ImageModelRowUi("openrouter:recraft/recraft-v4-pro-vector", "recraft/recraft-v4-pro-vector", "Recraft: Recraft V4 Pro Vector Illustration", "\$0.3 per image", isVector = true),
             ),
         ),
         ImageServiceCardUi(
@@ -35,6 +34,13 @@ private val sampleImages = ImageGenerationUi(
             models = listOf(ImageModelRowUi("gemini:gemini-2.5-flash-image", "gemini-2.5-flash-image", "gemini-2.5-flash-image")),
         ),
     ),
+    vectorModels = listOf(
+        ImageModelRowUi(
+            "openrouter:recraft/recraft-v4-pro-vector", "recraft/recraft-v4-pro-vector", "Recraft: Recraft V4 Pro Vector Illustration",
+            "\$0.3 per image", isDefault = true, isVector = true,
+        ),
+    ),
+    canAddVectorModels = true,
 )
 
 private val sampleImagesWithoutKey = ImageGenerationUi(
@@ -64,6 +70,7 @@ private fun SectionPreview(images: ImageGenerationUi, mode: ThemeMode) {
         Surface {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 ImageGenerationSection(images, SettingsActions({}, { _, _ -> }, {}, { _, _ -> }, {}, {}))
+                VectorImageGenerationSection(images, SettingsActions({}, { _, _ -> }, {}, { _, _ -> }, {}, {}))
             }
         }
     }

@@ -61,6 +61,10 @@ data class ImageGenerationUi(
     val addableServices: List<AddableServiceUi> = emptyList(),
     /** True when the quality default is High; false is Standard. */
     val isHighQuality: Boolean = false,
+    /** The added vector (SVG) models of every service, shown in their own section; the cards hold the others. */
+    val vectorModels: List<ImageModelRowUi> = emptyList(),
+    /** False until the service that has vector models (OpenRouter) is added above. */
+    val canAddVectorModels: Boolean = false,
 )
 
 /** One added image service. Its key is the same secret as a chat service of the same account. */
@@ -145,7 +149,11 @@ private fun ImageServiceCard(card: ImageServiceCardUi, actions: SettingsActions)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(top = 12.dp))
         }
         for (model in card.models) {
-            ImageModelRow(model, actions)
+            ImageModelRow(
+                model,
+                onMakeDefault = { actions.onImageModelSetDefault(model.key) },
+                onRemove = { actions.onImageModelRemove(model.key) },
+            )
         }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
             TextButton(onClick = { actions.onAddImageModels(card.serviceKey) }) {
@@ -163,9 +171,9 @@ private fun ImageServiceCard(card: ImageServiceCardUi, actions: SettingsActions)
 
 /** The name keeps one line and ends in "…", the id and the price get lines of their own (D-029). */
 @Composable
-private fun ImageModelRow(model: ImageModelRowUi, actions: SettingsActions) {
+internal fun ImageModelRow(model: ImageModelRowUi, onMakeDefault: () -> Unit, onRemove: () -> Unit) {
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
-        ImageModelStar(model, onMakeDefault = { actions.onImageModelSetDefault(model.key) })
+        ImageModelStar(model, onMakeDefault)
         Column(Modifier.weight(1f).padding(top = 10.dp)) {
             NameWithTag(model.name, isVector = model.isVector)
             if (model.name != model.id) {
@@ -175,7 +183,7 @@ private fun ImageModelRow(model: ImageModelRowUi, actions: SettingsActions) {
                 Text(price, style = idStyle(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        ImageModelMenu(model, actions)
+        ImageModelMenu(model, onMakeDefault, onRemove)
     }
 }
 
@@ -217,7 +225,7 @@ private fun ImageModelStar(model: ImageModelRowUi, onMakeDefault: () -> Unit) {
 }
 
 @Composable
-private fun ImageModelMenu(model: ImageModelRowUi, actions: SettingsActions) {
+private fun ImageModelMenu(model: ImageModelRowUi, onMakeDefault: () -> Unit, onRemove: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
@@ -230,7 +238,7 @@ private fun ImageModelMenu(model: ImageModelRowUi, actions: SettingsActions) {
                     leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null) },
                     onClick = {
                         open = false
-                        actions.onImageModelSetDefault(model.key)
+                        onMakeDefault()
                     },
                 )
             }
@@ -238,7 +246,7 @@ private fun ImageModelMenu(model: ImageModelRowUi, actions: SettingsActions) {
                 text = { Text(stringResource(R.string.settings_remove_model), color = JonakiTheme.colors.deny) },
                 onClick = {
                     open = false
-                    actions.onImageModelRemove(model.key)
+                    onRemove()
                 },
             )
         }

@@ -9,4 +9,6 @@
     <string name="settings_image_quality">ছবির মান</string>
     <string name="settings_image_quality_standard">সাধারণ</string>
     <string name="settings_image_quality_high">উচ্চ</string>
+    <string name="settings_section_vector_images">ভেক্টর ছবি তৈরি</string>
+    <string name="settings_vector_images_needs_service">আগে ছবি তৈরিতে OpenRouter যোগ করুন</string>
 </resources>

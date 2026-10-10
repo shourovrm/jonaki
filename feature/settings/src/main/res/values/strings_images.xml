@@ -9,4 +9,6 @@
     <string name="settings_image_quality">Image quality</string>
     <string name="settings_image_quality_standard">Standard</string>
     <string name="settings_image_quality_high">High</string>
+    <string name="settings_section_vector_images">Vector image generation</string>
+    <string name="settings_vector_images_needs_service">Add OpenRouter under Image generation first</string>
 </resources>

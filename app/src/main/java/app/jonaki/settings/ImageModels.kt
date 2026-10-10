@@ -151,6 +151,21 @@ data class ImageModels(
     }
 
     /**
+     * Makes [modelKey] the vector model used when a call names none. That
+     * model is the first vector model in card order, so the model moves to
+     * the front of its service's list; a key that is not listed changes nothing.
+     */
+    fun setVectorDefault(modelKey: String): ImageModels {
+        val service = ImageService.byKey(ModelKey.serviceOf(modelKey)) ?: return this
+        val modelId = ModelKey.modelOf(modelKey)
+        val listed = modelsByService[service].orEmpty()
+        if (modelId !in listed) {
+            return this
+        }
+        return copy(modelsByService = modelsByService + (service to listOf(modelId) + (listed - modelId)))
+    }
+
+    /**
      * Keeps the star on a listed model (the current one if still listed, else
      * the first, else none) and drops vector flags of models that are gone.
      */

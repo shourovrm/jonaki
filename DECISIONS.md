@@ -2659,3 +2659,18 @@ user's own subagent starts with "Edit subagent" and its description, which
 opens the editor; its model can be changed in either place. "Add
 subagent" is the last row. Amends D-138. No new strings. Outcome: unit
 tests and the release build pass; see STATUS for the phone check.
+
+## D-182 · 2026-10-10 · Vector image models get their own section in Settings — proposed
+User request: Settings > Models had sections for image and video models
+but none for vector images; SVG models were added through an image
+service's picker and listed in its card with an "SVG" tag. Now "Vector
+image generation" stands between Image generation and Video generation,
+laid out like the video section: the added SVG models, each with a star
+and a menu, and "Add model". Its picker lists only OpenRouter's SVG
+models, and an image service's picker lists only the others. The star
+marks the model generate_vector_image uses when a call names none, which
+is still the first vector model in the list (D-170); starring one moves it
+to the front of its service's list. The models run on the image service's
+key, so the service and its key stay under Image generation; until
+OpenRouter is added there the section says so. Amends D-170. Outcome: unit
+tests and the release build pass. Not seen on a phone (none connected).

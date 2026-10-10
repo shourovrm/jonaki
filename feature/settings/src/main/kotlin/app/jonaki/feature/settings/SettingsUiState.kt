@@ -265,6 +265,8 @@ class SettingsActions(
     val onAddImageModels: (serviceKey: String) -> Unit = {},
     val onImageModelSetDefault: (modelKey: String) -> Unit = {},
     val onImageModelRemove: (modelKey: String) -> Unit = {},
+    val onAddVectorModels: () -> Unit = {},
+    val onVectorModelSetDefault: (modelKey: String) -> Unit = {},
     /** The default quality of generate_image: true is High, false is Standard. */
     val onImageQualityChange: (isHigh: Boolean) -> Unit = {},
     /** Opens the video model picker. */
