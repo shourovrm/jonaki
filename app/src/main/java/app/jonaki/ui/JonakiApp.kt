@@ -1252,7 +1252,10 @@ private fun SettingsRoute(
         },
         onModelRemove = { modelKey ->
             settings.updateChatModels { models -> models.removeModel(modelKey) }
-            settings.update { current -> current.copy(routing = current.routing.withPinned(modelKey, null)) }
+            // A model added again later starts from the service's routing, not from a choice left behind.
+            settings.update { current ->
+                current.copy(routing = current.routing.withPinned(modelKey, null).withOverride(modelKey, null))
+            }
         },
         onModelProvidersLoad = { modelKey -> loadModelProviders(modelKey) },
         onModelProvidersChange = { modelKey, tags, allowFallbacks ->
