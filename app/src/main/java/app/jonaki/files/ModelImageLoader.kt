@@ -45,16 +45,24 @@ class ModelImageLoader(threadFolder: File, private val cacheFolder: File) : Imag
         val pageSuffix = if (pdfPage == null) "" else "-page$pdfPage"
         val cached = File(cacheFolder, contentHash(file) + pageSuffix + ".jpg")
         if (cached.isFile) {
-            return cached.readBytes()
+            val cachedBytes = cached.readBytes()
+            // An empty or cut-off file from an earlier failed run is encoded again, not trusted for ever.
+            if (EncodedJpeg.isComplete(cachedBytes)) {
+                return cachedBytes
+            }
         }
         val bitmap = if (pdfPage == null) decodeUpright(file) else renderPdfPage(file, pdfPage)
         if (bitmap == null) {
             return null
         }
         val output = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
+        val encoded = bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
         bitmap.recycle()
         val jpegBytes = output.toByteArray()
+        if (!encoded || !EncodedJpeg.isComplete(jpegBytes)) {
+            // The caller turns this into "could not be opened as an image" instead of sending an empty picture.
+            throw IOException("JPEG encoding of ${file.name} failed")
+        }
         cacheFolder.mkdirs()
         // Written aside, then renamed, so a half-written file is never read as the cached image.
         val partial = File(cacheFolder, cached.name + ".partial")
