@@ -47,7 +47,7 @@ class DelegateTool(private val launcher: SubagentLauncher) : Tool {
     override val guidelines: List<String> = listOf(
         "Use delegate for reasoning-heavy work such as research and writing, not to run a single search or fetch in parallel.",
         "Subagents have NO context from this conversation: put everything they need in the task (facts, file paths, " +
-            "the user's wishes, the form of the answer).",
+            "the user's wishes, the answer language when the user asked for one, the form of the answer).",
         "Subagent types: " + launcher.agentTypes.joinToString("; ") { type -> "${type.name}: ${type.description}" },
         "Name a model in delegate only when the user asks for one; otherwise each type uses the model set for it.",
         "A subagent's answer is its own work; check it before you rely on it.",

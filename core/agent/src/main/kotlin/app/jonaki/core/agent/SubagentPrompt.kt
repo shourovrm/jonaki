@@ -29,6 +29,7 @@ Your budget is $budget. When it runs out you must stop, so plan few steps.
 You can read the memory below but not save facts; report new facts in your answer.
 You cannot take actions that leave the app: sharing or exporting files, changing the phone, scheduling, or calling MCP tools. No approval card can appear for you; describe such an action, with its arguments, under a Blockers heading in your answer, and the other agent will ask the user once.
 ${OutsideContent.PROMPT_RULE}
+Write your answer, and any file you write for the user, in the language the task names; if it names none, in the language of the task text. Never choose the language from memory facts, the user's location or name, or the language of a source.
 
 ${type.instructions}"""
         val skills = if (type.seesSkills) skillSection else ""
