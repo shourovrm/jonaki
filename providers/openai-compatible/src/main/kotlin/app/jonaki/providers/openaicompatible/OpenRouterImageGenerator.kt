@@ -80,7 +80,8 @@ class OpenRouterImageGenerator(
             val errorText = root?.let(::errorMessageIn)
             if (httpCode !in 200..299) {
                 val said = errorText ?: body.trim().take(MAX_BODY_CHARACTERS_IN_ERROR).ifEmpty { "no text" }
-                return ImageOutcome.Failed(failureKindFor(httpCode, said), "HTTP $httpCode: $said")
+                val from = root?.let(::providerNameIn)?.let { providerName -> " from $providerName" }.orEmpty()
+                return ImageOutcome.Failed(failureKindFor(httpCode, said), "HTTP $httpCode$from: $said")
             }
             if (root == null) {
                 return ImageOutcome.Failed(ImageFailure.NO_IMAGE, "the answer was not readable JSON")
@@ -116,11 +117,20 @@ class OpenRouterImageGenerator(
             return (error as? JsonPrimitive)?.contentOrNull
         }
 
+        /** The company OpenRouter passed the request to, from `error.metadata.provider_name`. */
+        private fun providerNameIn(root: JsonObject): String? {
+            val metadata = (root["error"] as? JsonObject)?.get("metadata") as? JsonObject
+            return (metadata?.get("provider_name") as? JsonPrimitive)?.contentOrNull?.ifBlank { null }
+        }
+
         private val blockedWords = Regex("moderat|safety|policy|flagged|blocked|prohibited|not allowed", RegexOption.IGNORE_CASE)
 
         private fun failureKindFor(httpCode: Int, said: String): ImageFailure = when {
             httpCode == 401 -> ImageFailure.KEY_PROBLEM
             httpCode == 402 -> ImageFailure.OUT_OF_CREDIT
+            // OpenRouter answers 402 when the user's own credit is used up, so 429 is a limit further up:
+            // its own, or the quota of the company that serves the model (seen with Google AI Studio).
+            httpCode == 429 -> ImageFailure.SERVICE_LIMIT
             httpCode == 408 || httpCode == 504 -> ImageFailure.TIMED_OUT
             blockedWords.containsMatchIn(said) -> ImageFailure.BLOCKED
             httpCode == 403 -> ImageFailure.KEY_PROBLEM

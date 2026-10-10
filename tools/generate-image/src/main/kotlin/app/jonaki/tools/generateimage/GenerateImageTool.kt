@@ -202,6 +202,11 @@ class GenerateImageTool(
                 "$serviceKey has no credit or quota for this picture: $said",
                 "Tell the user to add credit or check the quota with $serviceKey. Do not retry.",
             )
+            ImageFailure.SERVICE_LIMIT -> ToolOutput.error(
+                "$modelId is over a limit at the service, not at the user's account: $said",
+                "No picture was made and nothing was charged. The user's key and credit are fine. " +
+                    "Tell the user that, and that they can try again later or pick another image model. Do not retry now.",
+            )
             ImageFailure.BLOCKED -> ToolOutput.error(
                 "$modelId refused the prompt: $said",
                 "Tell the user. Rephrase the prompt only if it can be done without the refused content; a retry can cost money.",

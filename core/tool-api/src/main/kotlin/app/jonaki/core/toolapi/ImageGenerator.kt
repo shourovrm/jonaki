@@ -45,6 +45,12 @@ enum class ImageFailure {
     /** The account has no credit left. */
     OUT_OF_CREDIT,
 
+    /**
+     * The service, or the company it passes the request to, is over a limit of
+     * its own. The user's key and credit are fine, and nothing was charged.
+     */
+    SERVICE_LIMIT,
+
     /** The service refused the prompt or the picture for its content rules. */
     BLOCKED,
 

@@ -97,6 +97,25 @@ class OpenRouterImageGeneratorTest {
     }
 
     @Test
+    fun aLimitAtTheCompanyBehindOpenRouterIsNotTheUsersCredit() {
+        // Recorded on 2026-10-10 for google/gemini-nano-banana-2.1, whose only provider had used up its own quota.
+        val recorded = File("../../testdata/openrouter/image-error-429-upstream-quota.json").readText()
+
+        val outcome = failed(OpenRouterImageGenerator.answerFrom(429, recorded))
+
+        assertEquals(ImageFailure.SERVICE_LIMIT, outcome.kind)
+        assertTrue(outcome.message, outcome.message.startsWith("HTTP 429 from Google AI Studio: You exceeded your current quota"))
+    }
+
+    @Test
+    fun aLimitWithoutAProviderNameIsStillAServiceLimit() {
+        val outcome = failed(OpenRouterImageGenerator.answerFrom(429, """{"error":{"message":"Rate limit exceeded","code":429}}"""))
+
+        assertEquals(ImageFailure.SERVICE_LIMIT, outcome.kind)
+        assertEquals("HTTP 429: Rate limit exceeded", outcome.message)
+    }
+
+    @Test
     fun aRefusedKeyAndABlockedPromptAreTold() {
         assertEquals(
             ImageFailure.KEY_PROBLEM,

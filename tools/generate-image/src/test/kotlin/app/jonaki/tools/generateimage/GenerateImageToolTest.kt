@@ -158,6 +158,7 @@ class GenerateImageToolTest {
         val expectations = mapOf(
             ImageFailure.KEY_PROBLEM to "key for openrouter",
             ImageFailure.OUT_OF_CREDIT to "add credit",
+            ImageFailure.SERVICE_LIMIT to "key and credit are fine",
             ImageFailure.BLOCKED to "refused the prompt",
             ImageFailure.TIMED_OUT to "did not finish in time",
             ImageFailure.NO_IMAGE to "held no picture",
