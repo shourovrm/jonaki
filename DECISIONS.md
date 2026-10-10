@@ -2166,3 +2166,66 @@ still fits the page. Released as 1.4.1. Outcome (2026-10-05, phone A059,
 build 1.4.1): the same report, its HTML unchanged, exports to a four-page
 PDF whose headers are whole ("RANK", "POPULATION"; pdftotext finds no
 broken word), and the table sits on page 1 with no gap above it.
+
+## D-157 · 2026-10-10 · Short generated thread names; one line in the list — proposed
+Amends D-029 and reverses the choice recorded in D-127; the user approved
+both in chat on 2026-10-10 ("like ChatGPT"). A new thread still gets the
+first line of its first message at once. After the first answer finishes,
+one call to the background model (the cheapest priced model with a saved
+key, D-036) writes a name of 3 to 6 words in the language of the message,
+cleaned by ThreadTitles.fromGenerated and cut at 60 characters. It replaces
+the name only while the name is still the first-line one, so a rename by
+the user wins; a failed call is logged and not retried. Incognito threads
+are not named this way. The thread list shows the name on one line ending
+in "…"; the rename dialog still shows it whole. The first-line name is
+remembered in memory only, so a thread whose first answer never finished
+before the app was closed keeps it. Also in this change: "Web search" left
+the thread's ⋮ menu, because the status strip's globe pill does the same
+(D-123). Tests: ThreadTitlesTest, ThreadNamerTest. Outcome: unit tests
+pass; not seen on a phone.
+
+## D-158 · 2026-10-10 · A fresh install has no service and no model — proposed
+User request. With no saved settings the 0.1.0 migration ran and left an
+OpenRouter card with z-ai/glm-5.3-flash starred. The migration now runs only
+when a 0.1.0 preference exists (ChatModels.hasLegacySettings); otherwise the
+app starts with no service. With no model the status strip stays, its model
+pill reads "No model" and opens the picker, and a sent message gets the
+existing "No model. Add one in Settings." Outcome: unit tests pass; not
+seen on a phone.
+
+## D-159 · 2026-10-10 · Chosen providers for an OpenRouter model — proposed
+Amends D-030; the user approved it in chat on 2026-10-10. A model's ⋮ menu
+in Settings has "Providers": a sheet lists who serves the model (GET
+/api/v1/models/{id}/endpoints, no key, loaded when opened), cheapest first,
+with input and output price and quantization. Ticked providers are sent as
+provider.order with their tags (for example "deepinfra/fp4") and
+allow_fallbacks from the sheet's switch (on by default); nothing else goes
+in the provider block, because OpenRouter does not document how order
+combines with sort or data_collection. A model with chosen providers ignores
+its routing choice and gets no private-then-cheapest retry. With fallbacks
+off, an HTTP 404 becomes "None of your chosen providers (…) can serve this
+request". Stored as text under routing_pinned_providers; no Room change.
+Removing a model clears its providers and its routing override. Outcome:
+unit tests pass; no request with order was sent to OpenRouter, and the 404
+for "no chosen provider available" is assumed, not recorded.
+
+## D-160 · 2026-10-10 · Image generation through OpenRouter — proposed
+User request. New tool module tools/generate-image (generate_image: prompt,
+aspect_ratio, file_name, model). It calls POST /api/v1/images through an
+ImageGenerator interface in core/tool-api, implemented in
+providers/openai-compatible, saves the picture in the thread's images/
+folder and returns the path, size, model and cost, never base64. The file
+type comes from the answer's media_type, then from the first bytes: a real
+request (flux.2-klein-4b, $0.014, 6.4 s, recorded in testdata/openrouter)
+returned a JPEG although no format was asked for. The tool changes
+something (it spends money and writes a file), so every call asks for
+approval, and subagents never get it. The cost is saved as a hidden row of
+the thread like a background call. Settings > Models has "Image
+generation": image models are added from /api/v1/images/models, one is
+starred, and the tool is offered only with an OpenRouter key and at least
+one image model. The chat shows a thumbnail with Save and Share under the
+run. Rejected: picking an image model as a thread's chat model; a price in
+the picker (one request per model). No new dependency, permission or Room
+change. Outcome: unit tests pass; not seen on a phone; no picture made
+through the app yet. OpenRouter's Batch API (half price, answers within 24
+hours) was looked at and left out by user ruling.
