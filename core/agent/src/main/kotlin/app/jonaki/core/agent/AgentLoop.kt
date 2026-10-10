@@ -162,7 +162,11 @@ class AgentLoop(
         val finishedCalls = try {
             scheduler.runAll(
                 toolCalls = toolCalls,
-                runsAlongsideOthers = { toolCall -> ToolCallScheduler.readsOnly(toolsByName[toolCall.toolName], toolCall) },
+                runsAlongsideOthers = { toolCall ->
+                    val tool = toolsByName[toolCall.toolName]
+                    val mayAsk = tool != null && permissionBroker.mayAskAboutAddress(tool, toolCall)
+                    ToolCallScheduler.readsOnly(tool, toolCall, mayAskAboutAddress = mayAsk)
+                },
                 run = ::runToolCall,
                 inCallOrder = { toolCall, finished -> record(AgentEvent.ToolFinished(toolCall, finished.output, finished.message)) },
             )

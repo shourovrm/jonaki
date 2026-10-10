@@ -57,6 +57,12 @@ class WebFetchToolTest {
     }
 
     @Test
+    fun theContactedAddressIsTheTrimmedUrlArgument() {
+        assertEquals("https://example.com/a?q=1", tool.contactedAddressOf(arguments("""{"url":"  https://example.com/a?q=1 "}""")))
+        assertEquals(null, tool.contactedAddressOf(arguments("""{"max_length":500}""")))
+    }
+
+    @Test
     fun returnsTheArticleWithStructureAndWithoutScripts() = runBlocking {
         server.enqueue(MockResponse().setHeader("Content-Type", "text/html; charset=utf-8").setBody(articlePage))
         val url = server.url("/news/mrt").toString()

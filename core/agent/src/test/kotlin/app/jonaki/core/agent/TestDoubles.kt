@@ -62,6 +62,8 @@ class FakeTool(
     private val sendsOut: Boolean? = null,
     /** Null for a tool whose results are Jonaki's own; else the source label of its outside content. */
     private val outsideSource: String? = null,
+    /** Null for a tool that contacts no address; else the name of the argument that holds the address it contacts. */
+    private val addressArgument: String? = null,
     private val behaviour: suspend (JsonObject) -> ToolOutput = { arguments ->
         ToolOutput.success("$name got $arguments")
     },
@@ -80,6 +82,9 @@ class FakeTool(
     override fun sendsOutOf(arguments: JsonObject): Boolean = sendsOut ?: super.sendsOutOf(arguments)
 
     override fun outsideContentSourceOf(arguments: JsonObject): String? = outsideSource
+
+    override fun contactedAddressOf(arguments: JsonObject): String? =
+        addressArgument?.let { argumentName -> (arguments[argumentName] as? JsonPrimitive)?.content }
 
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput {
         receivedArguments += arguments

@@ -5,6 +5,8 @@ import app.jonaki.core.guardapi.Guard
 import app.jonaki.core.guardapi.NoGuard
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.toolapi.Tool
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
@@ -61,14 +63,25 @@ class PermissionBroker(
      * every call, so the switch applies at once.
      */
     private val asksAfterOutsideContent: () -> Boolean = { true },
+    /**
+     * Which addresses already appeared in the thread. After outside content a
+     * call to an address that appeared nowhere asks, because the model may
+     * have put data into it. Consulted only then, so research before any
+     * outside content costs nothing.
+     */
+    private val knownAddresses: KnownAddresses = KnownAddresses.NONE,
 ) {
+    // Calls of one turn that read only may run side by side; their cards still come one at a time.
+    private val cardLock = Mutex()
+
     suspend fun mayRun(tool: Tool, toolCall: ToolCall): Boolean {
         val arguments = argumentsOf(toolCall)
+        val threadHasReadOutsideContent = asksAfterOutsideContent() && threadState.readOutsideContent
         val verdict = ApprovalPolicy.decide(
-            facts = factsOf(tool, arguments),
+            facts = factsOf(tool, arguments, threadHasReadOutsideContent),
             mode = approvalMode(),
             allowAllInThread = threadState.allowAllInThread,
-            threadHasReadOutsideContent = asksAfterOutsideContent() && threadState.readOutsideContent,
+            threadHasReadOutsideContent = threadHasReadOutsideContent,
         )
         if (verdict !is ApprovalVerdict.Asks) {
             return true
@@ -79,7 +92,8 @@ class PermissionBroker(
             return true
         }
         val request = ApprovalRequest(tool.name, toolCall, verdict.offersThreadAllowance, verdict.afterOutsideContent)
-        return when (approvalRequester.requestApproval(request)) {
+        val decision = cardLock.withLock { approvalRequester.requestApproval(request) }
+        return when (decision) {
             ApprovalDecision.ALLOW_ONCE -> true
             ApprovalDecision.ALLOW_ALL_IN_THREAD -> {
                 // A card that did not offer it cannot grant it; should the answer arrive, it counts as once.
@@ -106,12 +120,38 @@ class PermissionBroker(
     private suspend fun guardLetsCallRunInsteadOfAsking(tool: Tool, arguments: JsonObject): Boolean =
         guard.judgeAction(userRequest(), tool.name, arguments) is ActionVerdict.MayRunWithoutCard
 
-    private fun factsOf(tool: Tool, arguments: JsonObject): CallFacts = CallFacts(
+    private suspend fun factsOf(tool: Tool, arguments: JsonObject, threadHasReadOutsideContent: Boolean): CallFacts = CallFacts(
         sideEffect = tool.sideEffectOf(arguments),
         isVeryRisky = tool.isVeryRiskyOf(arguments),
-        sendsOut = tool.sendsOutOf(arguments),
+        sendsOut = tool.sendsOutOf(arguments) || contactsUnknownAddress(tool, arguments, threadHasReadOutsideContent),
         matchesSettingsRule = settingsRules().any { rule -> rule.matches(tool, arguments) },
     )
+
+    /**
+     * An address the model composed can carry data in its path and query. The
+     * lookup runs only for a thread that read outside content, since before
+     * that the rule does not apply.
+     */
+    private suspend fun contactsUnknownAddress(tool: Tool, arguments: JsonObject, threadHasReadOutsideContent: Boolean): Boolean {
+        if (!threadHasReadOutsideContent) {
+            return false
+        }
+        val address = tool.contactedAddressOf(arguments) ?: return false
+        return !knownAddresses.isKnown(address)
+    }
+
+    /**
+     * True when this call may show a card after the thread read outside
+     * content although the tool only reads, so that the scheduler runs it
+     * alone and cards come one at a time. Needs no lookup: it is a safe
+     * over-estimate that ignores whether the address is known.
+     */
+    fun mayAskAboutAddress(tool: Tool, toolCall: ToolCall): Boolean {
+        if (!asksAfterOutsideContent() || !threadState.readOutsideContent) {
+            return false
+        }
+        return tool.contactedAddressOf(argumentsOf(toolCall)) != null
+    }
 
     /** The loop checked that the arguments are a JSON object before asking; an empty object is a safe fallback. */
     private fun argumentsOf(toolCall: ToolCall): JsonObject =

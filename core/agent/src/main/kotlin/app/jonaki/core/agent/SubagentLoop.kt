@@ -69,11 +69,26 @@ internal class SubagentLoop(
     timer: WaitTimer,
     /** Screens the outside results this subagent reads, as for the thread's agent. */
     private val guard: Guard = NoGuard,
+    /** Settings > Guardrails "Ask before sending out"; the address rule follows it. Read before every call. */
+    private val asksAfterOutsideContent: () -> Boolean = { true },
+    /**
+     * True once the thread that started this subagent has read outside content.
+     * Its task was then written by a model that may have been steered, so the
+     * task's addresses do not count as known.
+     */
+    private val threadReadOutsideContent: () -> Boolean = { false },
 ) {
     private val scheduler = ToolCallScheduler(timer)
 
+    // Text a contacted address may appear in: the task (when trusted) and every result this subagent read.
+    private val textsWithKnownAddresses = java.util.concurrent.CopyOnWriteArrayList<String>()
+    private val readOutsideContent = java.util.concurrent.atomic.AtomicBoolean(false)
+
     suspend fun run(taskMessage: String): SubagentOutcome {
         val conversation = mutableListOf(Message(Role.USER, taskMessage))
+        if (!threadReadOutsideContent()) {
+            textsWithKnownAddresses += taskMessage
+        }
         var stepLimitNoticeSent = false
         var retried = false
         while (true) {
@@ -262,14 +277,38 @@ internal class SubagentLoop(
         if (!SubagentPermissions.mayRun(tool, arguments)) {
             return failed(SubagentPermissions.notAvailable(tool.name))
         }
+        val unknownAddress = unknownAddressOf(tool, arguments)
+        if (unknownAddress != null) {
+            return failed(SubagentPermissions.addressNotKnown(tool.name, unknownAddress))
+        }
         val output = runToolWithTimeLimit(tool, arguments, toolContext.forCall(stepCall.id))
         // The wrapper keeps a web page's own instructions from reading as the subagent's task.
         val wrapped = withContext(GuardCallContext(stepCall.id)) { OutsideContent.wrapResult(tool, arguments, output, guard) }
+        textsWithKnownAddresses += output.text
+        if (wrapped.isOutsideContent) {
+            readOutsideContent.set(true)
+        }
         return StepResult(
             output,
             if (output.isError) SubagentStepStatus.FAILED else SubagentStepStatus.DONE,
             textForModel = wrapped.textForModel,
         )
+    }
+
+    /**
+     * The address [tool] would contact when that is not allowed: outside
+     * content was read (by the thread or by this subagent) and the address
+     * appeared nowhere known. The same rule as the thread's broker applies,
+     * with a refusal in place of a card.
+     */
+    private fun unknownAddressOf(tool: Tool, arguments: JsonObject): String? {
+        val ruleApplies = asksAfterOutsideContent() && (threadReadOutsideContent() || readOutsideContent.get())
+        if (!ruleApplies) {
+            return null
+        }
+        val address = tool.contactedAddressOf(arguments) ?: return null
+        val isKnown = textsWithKnownAddresses.any { text -> WebAddresses.appearsIn(address, text) }
+        return if (isKnown) null else address
     }
 
     /**

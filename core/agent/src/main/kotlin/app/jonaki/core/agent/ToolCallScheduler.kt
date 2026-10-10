@@ -151,10 +151,12 @@ internal class ToolCallScheduler(
         /**
          * True when [toolCall] only reads and cannot ask the user anything.
          * An unknown tool or arguments that are not a JSON object count as
-         * not read-only, to be safe.
+         * not read-only, to be safe. [mayAskAboutAddress] says that the call
+         * contacts an address and the thread read outside content, so the
+         * call may show a card and runs alone.
          */
-        fun readsOnly(tool: Tool?, toolCall: ToolCall): Boolean {
-            if (tool == null || tool.name in RUN_ALONE) {
+        fun readsOnly(tool: Tool?, toolCall: ToolCall, mayAskAboutAddress: Boolean = false): Boolean {
+            if (tool == null || tool.name in RUN_ALONE || mayAskAboutAddress) {
                 return false
             }
             if (parseToolArguments(toolCall.argumentsJson) == null) {

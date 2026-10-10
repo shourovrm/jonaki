@@ -52,6 +52,14 @@ interface Tool {
     fun sendsOutOf(arguments: JsonObject): Boolean = sideEffectOf(arguments) == SideEffect.CHANGES
 
     /**
+     * The web address this call contacts, or null for a call that contacts
+     * none. An address can carry data out in its path and query, so after the
+     * thread has read outside content such a call asks unless the address
+     * already appeared in the thread (see KnownAddresses in core/agent).
+     */
+    fun contactedAddressOf(arguments: JsonObject): String? = null
+
+    /**
      * Null when the result is Jonaki's own text. Otherwise the result is
      * outside content: text written by someone else (a web page, a document,
      * another service, a subagent), which reaches the model wrapped as data.

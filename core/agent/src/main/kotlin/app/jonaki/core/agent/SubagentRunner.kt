@@ -56,6 +56,9 @@ class SubagentRunner(
     customTypes: List<AgentType> = emptyList(),
     /** Screens the outside results the subagents read; fixed for the run. */
     private val guard: Guard = NoGuard,
+    /** The address rule's switch and the thread's state, read by each subagent before every call. */
+    private val asksAfterOutsideContent: () -> Boolean = { true },
+    private val threadReadOutsideContent: () -> Boolean = { false },
     private val timer: WaitTimer = WaitTimer.REAL,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SubagentLauncher {
@@ -254,6 +257,8 @@ class SubagentRunner(
             progress = progress,
             timer = timer,
             guard = guard,
+            asksAfterOutsideContent = asksAfterOutsideContent,
+            threadReadOutsideContent = threadReadOutsideContent,
         )
     }
 
