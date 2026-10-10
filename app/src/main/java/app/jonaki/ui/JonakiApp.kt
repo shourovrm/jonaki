@@ -143,6 +143,7 @@ import app.jonaki.run.VideoToolSetup
 import app.jonaki.settings.ChatModels
 import app.jonaki.settings.ChatService
 import app.jonaki.settings.PinnedProviders
+import app.jonaki.settings.CustomSubagents
 import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SettingsSnapshot
@@ -1478,6 +1479,12 @@ private fun SettingsRoute(
                 selectedKey = snapshot.subagentModels[type.name]?.takeIf { key -> key in snapshot.chatModels.allModelKeys },
                 defaultIsCheapest = type.name == SubagentModelChoice.SCOUT,
             )
+        } + snapshot.customSubagents.map { subagent ->
+            SubagentModelRowUi(
+                agentType = subagent.name,
+                selectedKey = subagent.modelKey?.takeIf { key -> key in snapshot.chatModels.allModelKeys },
+                defaultIsCheapest = false,
+            )
         },
         subagentModelOptions = subagentModelOptionsOf(snapshot, application),
         subagentLimits = SubagentLimitRows.of(snapshot.subagentLimits),
@@ -1616,6 +1623,10 @@ private fun SettingsRoute(
         },
         onSubagentModelChange = { agentType, modelKey ->
             settings.update { current ->
+                // A type the user made keeps its model in its own record, where its editor reads it.
+                if (current.customSubagents.any { subagent -> subagent.name == agentType }) {
+                    return@update current.copy(customSubagents = CustomSubagents.withModel(current.customSubagents, agentType, modelKey))
+                }
                 val choices = if (modelKey == null) current.subagentModels - agentType else current.subagentModels + (agentType to modelKey)
                 current.copy(subagentModels = choices)
             }

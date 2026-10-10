@@ -2589,3 +2589,73 @@ documented response shape, and `gradle testReleaseUnitTest assembleRelease
 --offline` passes. Not checked: any call to the live service (no key was
 available), so the response fields and the out-of-credits answer (taken
 as HTTP 400 "Not enough credits") are unconfirmed; not seen on the phone.
+
+## D-178 · 2026-10-10 · Update from inside the app — proposed
+User request. Settings > About has "Check for update". A tap asks
+`api.github.com/repos/shourovrm/jonaki/releases/latest`, compares the tag
+with the installed version number by number (1.4.10 is newer than 1.4.9;
+a leading "v" and a suffix such as "-beta" are ignored), and for a newer
+release offers "Download and install". The APK (the asset whose name ends
+in `.apk`) goes to `cacheDir/update/jonaki-update.apk` and is handed to
+Android's installer through the existing FileProvider. Android checks the
+signature and asks the user at every install; the first time it also asks
+to allow Jonaki to install apps. Nothing runs at app start or in the
+background, and leaving Settings cancels a download. New module
+`core/app-update`; new permission `REQUEST_INSTALL_PACKAGES`, listed under
+Settings > Permissions > Always on. GitHub allows 60 unauthenticated
+requests an hour per address, so HTTP 403 most likely means that limit.
+Built by a Sonnet subagent, reviewed. Outcome: unit tests pass (version
+comparison, release JSON, download against a fake server). Not checked: a
+real check, download or install; the first real test is the update from
+1.4.5 to the release after it.
+
+## D-179 · 2026-10-10 · A withdrawn model falls back to the thread's model — proposed
+Seen on the A059: two scouts failed with "OpenRouter answered HTTP 404:
+No endpoints found for stealth/space-bunny-alpha". The model is in the
+user's OpenRouter list, is free, and so wins the cheapest-model rule
+(D-036, D-065); OpenRouter has withdrawn it. Ruling (user): on a model
+that is not found, use the thread's model. A subagent whose first request
+fails with HTTP 404 or 400 and a "no such model" message retries once on
+the thread's model, and its report starts with a line naming both models.
+Background calls (titles, summaries, memory extraction) do the same. Other
+failures keep their behaviour; a failed subagent's text now says what the
+thread's agent can try next. Not chosen: the next cheapest model, which
+may be withdrawn as well. Amends D-065. Subagent part built by a Sonnet
+subagent, reviewed. Outcome: unit tests pass with a fake provider. Not
+checked: the real OpenRouter answer on the phone; the "not found" wording
+of Gemini, DeepSeek and Ollama is from memory; the background retry has no
+test of its own. The subagent's card still shows the configured model.
+
+## D-180 · 2026-10-10 · web_fetch asks before a composed address after outside content — proposed
+D-143's rule 1 did not cover web_fetch: it only reads, so after a hostile
+page the model could fetch an address it composed from the user's data
+and no card appeared. Now, once a thread has read outside content, a
+web_fetch asks (in every mode, Allow once or Deny) unless one of these
+holds: the exact address already stands in a user message or a tool
+result of the thread (scheme and host compared without case, fragment and
+one trailing slash ignored, path and query exact); the address is on a
+host the user named in the thread, or on a subdomain of it; the user
+allowed an address on that host earlier in the same run. Reasons: an
+attacker who has not seen the data cannot have written an address that
+holds it; a site the user named is one they chose; and one allowed
+request could already carry anything to its host, so asking again adds
+nothing. A subagent cannot ask, so it refuses such a call with an error.
+The rule follows the "Ask before sending out" switch (D-149). Cost: one
+or two database queries per web_fetch, only after outside content. Not
+covered: a known address that is itself a collection point; a redirect to
+a composed address; youtube_summarize and MCP calls; a subagent refuses
+addresses from its task when the parent thread has read outside content.
+Amends D-143. Built by a Sonnet subagent; the host rules added in review,
+because without them a thread reviewing a GitHub repository would show a
+card for nearly every page. Outcome: unit tests pass. Not checked: on the
+phone; the new queries are compiled by Room but have no database test.
+
+## D-181 · 2026-10-10 · Settings > Subagents: one section per subagent — proposed
+User request: the budgets and the models stood in separate lists, and the
+user's own subagents in a third. Now the page has the three limits on how
+many subagents start, then one section for each subagent, built-in types
+first: its model, then tool steps, cost and minutes. A section of the
+user's own subagent starts with "Edit subagent" and its description, which
+opens the editor; its model can be changed in either place. "Add
+subagent" is the last row. Amends D-138. No new strings. Outcome: unit
+tests and the release build pass; see STATUS for the phone check.

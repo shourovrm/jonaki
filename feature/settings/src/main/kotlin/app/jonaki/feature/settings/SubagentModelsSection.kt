@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 /** One subagent type and the model it runs on (D-065). */
 @Immutable
 data class SubagentModelRowUi(
-    /** "researcher", "scout", "writer" or "worker". */
+    /** "researcher", "scout", "writer", "worker", or the name of a type the user made. */
     val agentType: String,
     /** Null uses the type's default. */
     val selectedKey: String?,
@@ -43,36 +43,6 @@ data class ModelOptionUi(
     val key: String,
     val name: String,
 )
-
-/** One row per type; a tap opens the list of the user's models. */
-@Composable
-internal fun SubagentModelRows(
-    rows: List<SubagentModelRowUi>,
-    options: List<ModelOptionUi>,
-    onChange: (agentType: String, modelKey: String?) -> Unit,
-) {
-    Column {
-        rows.forEach { row -> SubagentModelRow(row, options, onChange) }
-    }
-}
-
-@Composable
-private fun SubagentModelRow(
-    row: SubagentModelRowUi,
-    options: List<ModelOptionUi>,
-    onChange: (agentType: String, modelKey: String?) -> Unit,
-) {
-    val defaultLabel = stringResource(
-        if (row.defaultIsCheapest) R.string.settings_subagent_cheapest_model else R.string.settings_subagent_thread_model,
-    )
-    ModelChoiceRow(
-        title = agentTypeLabel(row.agentType),
-        selectedKey = row.selectedKey,
-        defaultLabel = defaultLabel,
-        options = options,
-        onSelect = { modelKey -> onChange(row.agentType, modelKey) },
-    )
-}
 
 /**
  * A title over the chosen model's name; a tap lists [defaultLabel] first,

@@ -14,4 +14,6 @@
     <string name="settings_update_failed_http">GitHub HTTP %1$d উত্তর দিয়েছে।</string>
     <string name="settings_update_failed_unreadable">GitHub-এর উত্তরে কোনো APK নেই।</string>
     <string name="settings_update_failed_download">ডাউনলোড ঠিকভাবে হয়নি।</string>
+    <string name="settings_permissions_install_updates">আপডেট ইনস্টল</string>
+    <string name="settings_permissions_install_updates_purpose">প্রতিবার ইনস্টলের আগে Android জিজ্ঞেস করে</string>
 </resources>

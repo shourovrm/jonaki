@@ -49,6 +49,10 @@ object CustomSubagents {
     fun modelChoicesOf(subagents: List<CustomSubagent>): Map<String, String> =
         subagents.mapNotNull { subagent -> subagent.modelKey?.let { key -> subagent.name to key } }.toMap()
 
+    /** The subagent named [name] runs on [modelKey] from now on; null is the thread's model. */
+    fun withModel(current: List<CustomSubagent>, name: String, modelKey: String?): List<CustomSubagent> =
+        current.map { subagent -> if (subagent.name == name) subagent.copy(modelKey = modelKey) else subagent }
+
     /** [saved] replaces the one named [previousName] in place, or joins the end when that is null. */
     fun saved(current: List<CustomSubagent>, saved: CustomSubagent, previousName: String?): List<CustomSubagent> {
         if (previousName == null || current.none { subagent -> subagent.name == previousName }) {

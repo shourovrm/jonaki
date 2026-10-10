@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -106,38 +107,67 @@ data class CustomSubagentRowUi(
     val description: String,
 )
 
-/** Settings > Subagents: limits, a budget for each type, the built-in types' models, and the user's own types (D-138). */
+/**
+ * Settings > Subagents: the limits on how many start, then one section for
+ * each subagent with its model and its budget together, the built-in types
+ * first and the user's own after them (D-138, D-181).
+ */
 @Composable
 internal fun SubagentsPage(state: SettingsUiState, actions: SettingsActions) {
     SectionLabel(stringResource(R.string.settings_subagents_section_limits))
-    LimitRows(state.subagentLimits) { limit, value -> actions.onSubagentLimitChange(limit, value) }
-    for (budget in state.subagentBudgets) {
-        SectionLabel(agentTypeLabel(budget.agentType))
-        LimitRows(budget.limits) { limit, value -> actions.onSubagentBudgetChange(budget.agentType, limit, value) }
-    }
-    if (state.subagentModels.isNotEmpty()) {
-        SectionLabel(stringResource(R.string.settings_root_models))
-        Group {
-            SubagentModelRows(state.subagentModels, state.subagentModelOptions, actions.onSubagentModelChange)
-        }
-    }
-    SectionLabel(stringResource(R.string.settings_subagents_section_custom))
     Group {
-        for (subagent in state.customSubagents) {
-            CustomSubagentRow(subagent, onClick = { actions.onOpenCustomSubagent(subagent.name) })
+        LimitRows(state.subagentLimits) { limit, value -> actions.onSubagentLimitChange(limit, value) }
+    }
+    for (budget in state.subagentBudgets) {
+        SubagentSection(
+            budget = budget,
+            model = state.subagentModels.firstOrNull { row -> row.agentType == budget.agentType },
+            custom = state.customSubagents.firstOrNull { subagent -> subagent.name == budget.agentType },
+            modelOptions = state.subagentModelOptions,
+            actions = actions,
+        )
+    }
+    Spacer(Modifier.height(24.dp))
+    Group {
+        AddSubagentRow(onClick = { actions.onOpenCustomSubagent(null) })
+    }
+}
+
+/** Everything about one subagent: for the user's own, the way into its editor; then its model and its budget. */
+@Composable
+private fun SubagentSection(
+    budget: SubagentBudgetUi,
+    model: SubagentModelRowUi?,
+    custom: CustomSubagentRowUi?,
+    modelOptions: List<ModelOptionUi>,
+    actions: SettingsActions,
+) {
+    SectionLabel(agentTypeLabel(budget.agentType))
+    Group {
+        if (custom != null) {
+            CustomSubagentRow(custom, onClick = { actions.onOpenCustomSubagent(custom.name) })
             GroupDivider()
         }
-        AddSubagentRow(onClick = { actions.onOpenCustomSubagent(null) })
+        if (model != null) {
+            val defaultLabel = if (model.defaultIsCheapest) R.string.settings_subagent_cheapest_model else R.string.settings_subagent_thread_model
+            ModelChoiceRow(
+                title = stringResource(R.string.settings_subagents_model),
+                selectedKey = model.selectedKey,
+                defaultLabel = stringResource(defaultLabel),
+                options = modelOptions,
+                onSelect = { modelKey -> actions.onSubagentModelChange(budget.agentType, modelKey) },
+            )
+            GroupDivider()
+        }
+        LimitRows(budget.limits) { limit, value -> actions.onSubagentBudgetChange(budget.agentType, limit, value) }
     }
 }
 
 @Composable
 private fun LimitRows(limits: List<SubagentLimitUi>, onChange: (SubagentLimit, Int) -> Unit) {
-    Group {
-        limits.forEachIndexed { index, limit ->
-            if (index > 0) GroupDivider()
-            LimitRow(limit, onChange)
-        }
+    limits.forEachIndexed { index, limit ->
+        if (index > 0) GroupDivider()
+        LimitRow(limit, onChange)
     }
 }
 
@@ -204,7 +234,7 @@ private fun limitValue(limit: SubagentLimitUi): String {
     return limit.value.toString()
 }
 
-/** The name and the description keep one line each and end in "…" (D-029). */
+/** The section's label carries the name, so the row names the action; the description keeps one line and ends in "…" (D-029). */
 @Composable
 private fun CustomSubagentRow(subagent: CustomSubagentRowUi, onClick: () -> Unit) {
     Row(
@@ -216,13 +246,7 @@ private fun CustomSubagentRow(subagent: CustomSubagentRowUi, onClick: () -> Unit
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(
-                subagent.name,
-                style = MaterialTheme.typography.titleSmall,
-                fontFamily = MonospaceFamily,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Text(stringResource(R.string.settings_subagents_edit), style = MaterialTheme.typography.titleSmall)
             Text(
                 subagent.description,
                 style = MaterialTheme.typography.bodyMedium,

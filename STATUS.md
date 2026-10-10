@@ -1,19 +1,20 @@
-# Status — 2026-10-10 (v1.4.4 released)
+# Status — 2026-10-10 (v1.4.5 released)
 
-Phase:        v1.4.4 released on GitHub with D-157 to D-176. The session's log, with every open
-              issue, is docs/session-summary-2026-10-10.md; start the next session there.
+Phase:        v1.4.5 released on GitHub with D-177 to D-181. Older open issues: the session log.
 Active plan:  docs/plans/2026-10-02-v1-plan.md; its resume line points at the same log.
 Decisions:    Every entry up to D-176 is accepted (user, 2026-10-10: the shipped ones), except
-              D-016, superseded. Proposed: D-177.
+              D-016, superseded. Proposed: D-177 to D-181.
 Build:        `gradle testReleaseUnitTest test assembleRelease --offline` passes (2026-10-10).
-              Version 1.4.4, code 17, tag v1.4.4, pushed. Room v12.
-Phone (A059): runs 1.4.4. Phone pass done for D-166 to D-173. D-174 (media button, details
-              line, settings sheet) seen for Video; D-176 (model under the title) seen.
-Fixed today:  cache price in the Providers sheet; blank vector preview; Image quality padding;
-              Claude models through OpenRouter now use the prompt cache (D-175, seen working).
-Not seen:     D-174 picture and vector sheets, a reference picture in Picture mode, the error
-              row of a failed media send; D-158, D-161, D-163 delete, D-164 copy button.
-Strings:      D-174 reviewed; D-157 to D-173 not reviewed. Spend: $0.28 of $0.50.
-Next action:  D-177 (Serper, unreleased): a live search and a phone check; then D-174, the log.
-Key files:    AGENTS.md, DECISIONS.md, PRODUCT.md, README.md, docs/plans/2026-10-02-v1-plan.md,
-              docs/session-summary-2026-10-10.md.
+              Version 1.4.5, code 18, tag v1.4.5, pushed. Room v12.
+Phone (A059): runs 1.4.4; not connected when 1.4.5 was built, so nothing of 1.4.5 was seen.
+In 1.4.5:     Serper search (D-177); update button in Settings > About (D-178); withdrawn model
+              falls back to the thread's model (D-179); web_fetch asks before a composed address
+              after outside content (D-180); Subagents page, one section each (D-181); an empty
+              JPEG is never sent for an attached picture.
+Not checked:  Serper against the live service (no key); a real update check, download and
+              install; D-180 cards in a real research thread; the Subagents page at 360 dp and
+              font scale 1.3; strings of D-178 not reviewed. D-174 leftovers as before.
+Open:         Why GLM 5.3 Flash saw an attached picture as blank (no cause proven; test the same
+              picture with Gemini). Remove stealth/space-bunny-alpha from the OpenRouter list.
+Next action:  Install 1.4.5, add the Serper key, run one search; then the checks above.
+Key files:    AGENTS.md, DECISIONS.md, PRODUCT.md, README.md, docs/session-summary-2026-10-10.md.

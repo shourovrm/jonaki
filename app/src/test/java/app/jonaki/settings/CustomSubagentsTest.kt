@@ -88,4 +88,15 @@ class CustomSubagentsTest {
     fun theBuiltInNamesAreTaken() {
         assertEquals(AgentTypes.ALL.map { it.name }.toSet(), CustomSubagents.BUILT_IN_NAMES)
     }
+
+    @Test
+    fun aModelChoiceChangesOnlyTheNamedSubagent() {
+        val first = CustomSubagent("price-checker", "Checks prices.", "Compare prices.", listOf("web_search"), modelKey = null)
+        val second = CustomSubagent("summary-writer", "Writes summaries.", "Summarise.", listOf("read_file"), modelKey = "openrouter:a/b")
+
+        val changed = CustomSubagents.withModel(listOf(first, second), "price-checker", "openrouter:c/d")
+
+        assertEquals(listOf(first.copy(modelKey = "openrouter:c/d"), second), changed)
+        assertEquals(listOf(first, second.copy(modelKey = null)), CustomSubagents.withModel(listOf(first, second), "summary-writer", null))
+    }
 }

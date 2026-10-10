@@ -110,6 +110,16 @@ enum class AlwaysOnRow(
         R.string.settings_permissions_keep_awake_purpose,
         listOf(Manifest.permission.WAKE_LOCK),
     ),
+
+    /**
+     * Holding this only lets Jonaki open Android's installer with a
+     * downloaded update; Android still asks the user at every install.
+     */
+    INSTALL_UPDATES(
+        R.string.settings_permissions_install_updates,
+        R.string.settings_permissions_install_updates_purpose,
+        listOf(Manifest.permission.REQUEST_INSTALL_PACKAGES),
+    ),
 }
 
 /**

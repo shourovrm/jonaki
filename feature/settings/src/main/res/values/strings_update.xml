@@ -15,4 +15,6 @@
     <string name="settings_update_failed_http">GitHub answered HTTP %1$d.</string>
     <string name="settings_update_failed_unreadable">GitHub\'s answer had no APK.</string>
     <string name="settings_update_failed_download">The download was broken.</string>
+    <string name="settings_permissions_install_updates">Install updates</string>
+    <string name="settings_permissions_install_updates_purpose">Android asks at each install</string>
 </resources>
