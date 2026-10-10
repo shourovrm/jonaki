@@ -38,13 +38,8 @@ class ThreadImageChoices(private val file: File) {
      * starred default, otherwise the first added model (as the tool itself
      * falls back). Null when no image model is added.
      */
-    fun effectiveModelKey(threadKey: String, addedModelKeys: List<String>, starredDefault: String?): String? {
-        val choice = choiceFor(threadKey)
-        if (choice != null && choice in addedModelKeys) {
-            return choice
-        }
-        return starredDefault?.takeIf { key -> key in addedModelKeys } ?: addedModelKeys.firstOrNull()
-    }
+    fun effectiveModelKey(threadKey: String, addedModelKeys: List<String>, starredDefault: String?): String? =
+        resolve(choiceFor(threadKey), addedModelKeys, starredDefault)
 
     /**
      * Sets the thread's model. Choosing the starred default removes the entry
@@ -119,5 +114,15 @@ class ThreadImageChoices(private val file: File) {
             }
         }
         return result
+    }
+
+    companion object {
+        /** [effectiveModelKey] for a choice the caller already holds, such as a new thread's pick not yet stored. */
+        fun resolve(choice: String?, addedModelKeys: List<String>, starredDefault: String?): String? {
+            if (choice != null && choice in addedModelKeys) {
+                return choice
+            }
+            return starredDefault?.takeIf { key -> key in addedModelKeys } ?: addedModelKeys.firstOrNull()
+        }
     }
 }

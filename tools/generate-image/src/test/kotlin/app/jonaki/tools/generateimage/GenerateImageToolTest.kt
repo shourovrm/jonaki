@@ -95,6 +95,19 @@ class GenerateImageToolTest {
     }
 
     @Test
+    fun theDefaultIsAskedAtEveryCallSoAPickDuringARunCountsForTheNextPicture() {
+        var currentDefault: String? = models[0]
+        val outcome = success()
+        val tool = GenerateImageTool(ImageGenerator { request -> requests += request; outcome }, models) { currentDefault }
+
+        run(tool, """{"prompt":"x","file_name":"first"}""")
+        currentDefault = models[2]
+        run(tool, """{"prompt":"x","file_name":"second"}""")
+
+        assertEquals(listOf("openrouter", "gemini"), requests.map { request -> request.serviceKey })
+    }
+
+    @Test
     fun aModelIdWithColonsKeepsEverythingAfterTheServiceKey() {
         run(tool(success(), modelKeys = listOf("openrouter:x/y:free"), default = null), """{"prompt":"x"}""")
         assertEquals("openrouter", requests.single().serviceKey)

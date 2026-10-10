@@ -94,6 +94,7 @@ import app.jonaki.settings.SearchService
 import app.jonaki.settings.SecretName
 import app.jonaki.settings.SecretStore
 import app.jonaki.files.ModelImageLoader
+import app.jonaki.files.ThreadImageChoices
 import app.jonaki.skills.LibrarySkillProposalSink
 import app.jonaki.skills.ThreadSkills
 import app.jonaki.tools.phone.Phone
@@ -153,6 +154,8 @@ class AgentRunner(
     private val isSkillProposalOn: () -> Boolean = { true },
     /** Screens a fact the memory tool saves after outside content; null holds every such fact. */
     private val factScreen: FactScreen? = null,
+    /** The image model each thread picked; null (tests) means every thread follows the starred default. */
+    private val threadImageChoices: ThreadImageChoices? = null,
 ) {
     private val runningJobs = mutableMapOf<String, Job>()
 
@@ -857,8 +860,22 @@ class AgentRunner(
         enabledGroups = settings.snapshot.value.enabledToolGroups,
         imageGenerator = imageGeneratorFor(thread.id),
         imageModelKeys = settings.snapshot.value.imageModels.usableModelKeys(::hasImageKey),
-        defaultImageModelKey = settings.snapshot.value.imageModels.defaultModelKey,
+        defaultImageModelKey = { defaultImageModelFor(thread.id) },
     )
+
+    /**
+     * The model generate_image uses when a call names none: the thread's own
+     * pick while that model is still added with a saved key, else the starred
+     * default. Read at every call, so a pick made during a run counts for the
+     * next picture. Subagents never get generate_image (AgentTypes.NEVER_GIVEN),
+     * so this is the thread's agent only.
+     */
+    private fun defaultImageModelFor(threadId: String): String? {
+        val imageModels = settings.snapshot.value.imageModels
+        val usableKeys = imageModels.usableModelKeys(::hasImageKey)
+        val choices = threadImageChoices ?: return imageModels.defaultModelKey
+        return choices.effectiveModelKey(threadId, usableKeys, imageModels.defaultModelKey)
+    }
 
     private fun hasImageKey(service: ImageService): Boolean = secrets.read(service.secret) != null
 

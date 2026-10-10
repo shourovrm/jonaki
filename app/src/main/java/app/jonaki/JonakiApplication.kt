@@ -8,6 +8,7 @@ import app.jonaki.files.AndroidFileDestinations
 import app.jonaki.files.AttachmentDrafts
 import app.jonaki.files.MediaStorePhotoLibrary
 import app.jonaki.files.ThreadDrafts
+import app.jonaki.files.ThreadImageChoices
 import app.jonaki.files.MediaThumbnails
 import app.jonaki.feature.gallery.GallerySource
 import app.jonaki.files.IncomingShares
@@ -155,6 +156,10 @@ class JonakiApplication : Application() {
     lateinit var threadDrafts: ThreadDrafts
         private set
 
+    /** The image model each thread picked in its model sheet; a thread without an entry follows the starred default. */
+    lateinit var threadImageChoices: ThreadImageChoices
+        private set
+
     /** True when the launching intent was a share from another app, which picks its own screen. */
     var launchedWithShare = false
 
@@ -200,6 +205,7 @@ class JonakiApplication : Application() {
         // Read before anything is staged, so a share arriving now is not taken for a leftover.
         val leftoverAttachments = attachmentDrafts.restore()
         threadDrafts = ThreadDrafts(File(filesDir, "thread-drafts.json"))
+        threadImageChoices = ThreadImageChoices(File(filesDir, "thread-image-models.json"))
         incomingShares = IncomingShares(contentResolver, attachmentDrafts, applicationScope)
         skillProposals = SkillProposals(File(filesDir, "skill-proposals"), skillExists = { name -> skillLibrary.readText(name) != null })
         skillProposalReview = SkillProposalReview(skillLibrary, skillProposals)
@@ -247,6 +253,7 @@ class JonakiApplication : Application() {
             skillProposals = skillProposals,
             isSkillProposalOn = { settings.snapshot.value.suggestSkills },
             factScreen = factScreen,
+            threadImageChoices = threadImageChoices,
         )
         localModelTools = LocalModelTools(settings, runner::toolsForLocalPromptCosts)
         balances = AccountBalances(secrets, httpClient, UsdRates(httpClient))
@@ -273,7 +280,9 @@ class JonakiApplication : Application() {
         }
         applicationScope.launch(Dispatchers.IO) {
             // A draft whose thread was deleted while the app was not watching would wait forever.
-            threadDrafts.pruneTo(database.threadDao().observeAll().first().map { thread -> thread.id }.toSet())
+            val existingThreadIds = database.threadDao().observeAll().first().map { thread -> thread.id }.toSet()
+            threadDrafts.pruneTo(existingThreadIds)
+            threadImageChoices.pruneTo(existingThreadIds)
         }
         applicationScope.launch(Dispatchers.IO) {
             leftoverAttachments.forEach { folder -> folder.deleteRecursively() }

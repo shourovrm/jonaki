@@ -33,14 +33,19 @@ import kotlinx.serialization.json.putJsonObject
  *
  * [modelKeys] are the models the user added as "service:modelId", for example
  * "openrouter:black-forest-labs/flux.2-klein-4b"; [defaultModelKey] is the
- * starred one that is used when the call names no model. [generator] routes a
- * request to its service by [ImageRequest.serviceKey].
+ * model that is used when the call names no model. [defaultModelKey] is asked
+ * at every call, so the thread's pick made while a run is going counts for the
+ * next picture. [generator] routes a request to its service by
+ * [ImageRequest.serviceKey].
  */
 class GenerateImageTool(
     private val generator: ImageGenerator,
     private val modelKeys: List<String>,
-    private val defaultModelKey: String?,
+    private val defaultModelKey: () -> String?,
 ) : Tool {
+    constructor(generator: ImageGenerator, modelKeys: List<String>, defaultModelKey: String?) :
+        this(generator, modelKeys, { defaultModelKey })
+
     override val name: String = GeneratedImages.TOOL_NAME
 
     override val promptLine: String =
@@ -121,7 +126,7 @@ class GenerateImageTool(
     private fun chooseModel(requested: String?): String? {
         val wanted = requested?.trim().orEmpty()
         if (wanted.isEmpty()) {
-            return defaultModelKey?.takeIf { it in modelKeys } ?: modelKeys.firstOrNull()
+            return defaultModelKey()?.takeIf { it in modelKeys } ?: modelKeys.firstOrNull()
         }
         modelKeys.firstOrNull { modelKey -> modelKey.equals(wanted, ignoreCase = true) }?.let { return it }
         val sameId = modelKeys.filter { modelKey -> modelKey.substringAfter(':').equals(wanted, ignoreCase = true) }

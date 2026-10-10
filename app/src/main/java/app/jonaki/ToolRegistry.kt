@@ -81,9 +81,10 @@ data class ToolServices(
     val skillProposals: SkillProposalSink? = null,
     /** Makes pictures with the models below, routed by service; null leaves generate_image out (no image service has both a key and a model). */
     val imageGenerator: ImageGenerator? = null,
-    /** The image models of the services that have a key, as "service:modelId", and the starred one. */
+    /** The image models of the services that have a key, as "service:modelId". */
     val imageModelKeys: List<String> = emptyList(),
-    val defaultImageModelKey: String? = null,
+    /** The model used when a call names none: the thread's pick or the starred one; asked at every call. */
+    val defaultImageModelKey: () -> String? = { null },
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */

@@ -69,6 +69,7 @@ import app.jonaki.feature.chat.AttachmentUi
 import app.jonaki.files.AttachmentDrafts
 import app.jonaki.files.StagedFile
 import app.jonaki.files.ThreadDrafts
+import app.jonaki.files.ThreadImageChoices
 import androidx.compose.runtime.rememberUpdatedState
 import app.jonaki.files.CameraPhotos
 import app.jonaki.files.RefusedFile
@@ -77,6 +78,7 @@ import app.jonaki.feature.chat.ChatStatusUi
 import app.jonaki.feature.chat.ContextUi
 import app.jonaki.feature.chat.ChatUiState
 import app.jonaki.feature.chat.guardStateOf
+import app.jonaki.feature.chat.ImageModelChoiceUi
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
 import app.jonaki.feature.chat.QueuedMessageUi
@@ -563,6 +565,7 @@ private fun ThreadsRoute(
                 withContext(Dispatchers.IO) {
                     application.attachmentDrafts.discardAll(threadId)
                     application.threadDrafts.clear(threadId)
+                    application.threadImageChoices.clear(threadId)
                 }
             }
         },
@@ -711,6 +714,8 @@ private fun ChatRoute(
     var thinkingForNewThread by rememberSaveable(threadId) { mutableStateOf(ThinkingChoice.DEFAULT) }
     // The globe pill can be tapped before the first message too; null follows Settings.
     var webSearchForNewThread by rememberSaveable(threadId) { mutableStateOf<Boolean?>(null) }
+    // Likewise the image model picked before the first message; null follows the starred default.
+    var imageModelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
     // Style, persona and instructions picked before the first message, like the thinking level above.
     var styleForNewThread by rememberSaveable(threadId, stateSaver = ThreadStyleDraftSaver) { mutableStateOf(ThreadStyleDraft()) }
@@ -763,6 +768,18 @@ private fun ChatRoute(
     } else {
         null
     }
+    val starredImageModelKey = settingsSnapshot.imageModels.defaultModelKey
+    val addedImageModelKeys = settingsSnapshot.imageModels.allModelKeys
+    val imageChoicesByThread by application.threadImageChoices.byThread.collectAsState()
+    val selectedImageModelKey = ThreadImageChoices.resolve(
+        choice = if (isNew) imageModelForNewThread else imageChoicesByThread[threadId],
+        addedModelKeys = addedImageModelKeys,
+        starredDefault = starredImageModelKey,
+    )
+    val imageLabels = rememberOpenRouterImageLabels(
+        application,
+        settingsSnapshot.imageModels.modelsByService[ImageService.OPENROUTER].orEmpty(),
+    )
     val state = ChatUiState(
         title = thread?.title.orEmpty(),
         webSearchEnabled = webSearchEnabled,
@@ -778,7 +795,7 @@ private fun ChatRoute(
             compaction = compaction,
             subagentLimits = settingsSnapshot.subagentLimits,
             subagentTypeNames = AgentTypes.ALL.map { type -> type.name } + settingsSnapshot.customSubagents.map { subagent -> subagent.name },
-            stepWords = stepDetailWords(),
+            stepWords = stepDetailWords(selectedImageModelKey),
         ),
         isRunning = isRunning,
         queuedMessages = queuedByThread[threadId].orEmpty().map { queued -> QueuedMessageUi(queued.id, queued.text) },
@@ -786,6 +803,8 @@ private fun ChatRoute(
         status = status,
         modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application, rememberLocalModelKeys(application)),
         selectedModelKey = modelKey,
+        imageModelChoices = imageModelChoices(settingsSnapshot.imageModels, imageLabels),
+        selectedImageModelKey = selectedImageModelKey,
         usage = usageOf(modelUsage, catalog, threadCost, messages),
         attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name, previewPath = previewPathOf(file)) },
         editingMessageId = editingMessageId,
@@ -831,6 +850,15 @@ private fun ChatRoute(
                 val pickedModel = modelForNewThread
                 if (isNew && pickedModel != null) {
                     runner.setThreadModel(targetThreadId, pickedModel)
+                }
+                val pickedImageModel = imageModelForNewThread
+                if (isNew && pickedImageModel != null) {
+                    // Before the first message is sent, so its first picture already uses the pick.
+                    withContext(Dispatchers.IO) {
+                        application.threadImageChoices.choose(
+                            targetThreadId, pickedImageModel, starredImageModelKey, keepOnDisk = !isNewIncognito,
+                        )
+                    }
                 }
                 val pickedWebSearch = webSearchForNewThread
                 if (isNew && pickedWebSearch != null) {
@@ -887,6 +915,17 @@ private fun ChatRoute(
             }
             editingMessageId = messageId
             draft = text
+        },
+        onImageModelSelect = { imageModelKey ->
+            if (isNew) {
+                // Picking the starred default means "follow the default", as in a thread that has a row.
+                imageModelForNewThread = imageModelKey.takeIf { it != starredImageModelKey }
+            } else {
+                val keepOnDisk = thread?.incognito != true
+                scope.launch(Dispatchers.IO) {
+                    application.threadImageChoices.choose(threadId, imageModelKey, starredImageModelKey, keepOnDisk)
+                }
+            }
         },
         onThinkingChange = { choice ->
             if (isNew) {
@@ -1007,12 +1046,10 @@ private fun ChatRoute(
 /** The staged file's path when it is an image, so its chip shows a thumbnail. */
 private fun previewPathOf(file: StagedFile): String? = file.file.path.takeIf { ViewedImages.isImagePath(file.name) }
 
-/** The step track's labels in the app's language (M11). */
+/** The step track's labels in the app's language (M11); [defaultImageModel] is the thread's effective image model. */
 @Composable
-private fun stepDetailWords(): StepDetail.Words {
+private fun stepDetailWords(defaultImageModel: String?): StepDetail.Words {
     val resources = LocalContext.current.resources
-    val settings = (LocalContext.current.applicationContext as JonakiApplication).settings
-    val imageModels by settings.snapshot.collectAsState()
     return StepDetail.Words(
         readCalendar = stringResource(R.string.step_read_calendar),
         addToCalendar = stringResource(R.string.step_add_to_calendar),
@@ -1031,7 +1068,7 @@ private fun stepDetailWords(): StepDetail.Words {
         listLinkedFolder = stringResource(R.string.step_list_linked_folder),
         fromLinkedFolder = stringResource(R.string.step_from_linked_folder),
         lineCount = { lines -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_code_lines, lines, lines) },
-        defaultImageModel = imageModels.imageModels.defaultModelKey,
+        defaultImageModel = defaultImageModel,
     )
 }
 
@@ -1646,6 +1683,32 @@ private fun imageGenerationFor(
     slotFor: (SecretName) -> KeySlot,
 ): ImageGenerationUi {
     val openRouterIds = imageModels.modelsByService[ImageService.OPENROUTER].orEmpty()
+    val labels = rememberOpenRouterImageLabels(application, openRouterIds)
+    val cards = imageModels.addedServices.map { service ->
+        val rows = imageModels.modelsByService[service].orEmpty().map { modelId ->
+            val modelKey = ModelKey.of(service.key, modelId)
+            val isOpenRouter = service == ImageService.OPENROUTER
+            ImageModelRowUi(
+                key = modelKey,
+                id = modelId,
+                name = if (isOpenRouter) labels.names[modelId] ?: modelId else modelId,
+                priceText = if (isOpenRouter) labels.priceTexts[modelId] else null,
+                isDefault = modelKey == imageModels.defaultModelKey,
+            )
+        }
+        ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), rows)
+    }
+    val addable = ImageService.entries
+        .filter { service -> service !in imageModels.addedServices }
+        .map { service -> AddableServiceUi(service.key, service.displayName, imageServiceHint(service)) }
+    return ImageGenerationUi(cards, addable)
+}
+
+/** OpenRouter's display names and price lines for the added image models, filled in as they load (cached for a day). */
+private class OpenRouterImageLabels(val names: Map<String, String>, val priceTexts: Map<String, String>)
+
+@Composable
+private fun rememberOpenRouterImageLabels(application: JonakiApplication, openRouterIds: List<String>): OpenRouterImageLabels {
     val names by produceState(emptyMap<String, String>(), openRouterIds) {
         if (openRouterIds.isEmpty()) {
             return@produceState
@@ -1665,25 +1728,24 @@ private fun imageGenerationFor(
             }
         }
     }
-    val cards = imageModels.addedServices.map { service ->
-        val rows = imageModels.modelsByService[service].orEmpty().map { modelId ->
-            val modelKey = ModelKey.of(service.key, modelId)
+    return OpenRouterImageLabels(names, priceTexts)
+}
+
+/** The added image models for the chat's model sheet, named and priced like the Settings rows. */
+private fun imageModelChoices(imageModels: ImageModels, labels: OpenRouterImageLabels): List<ImageModelChoiceUi> =
+    imageModels.addedServices.flatMap { service ->
+        imageModels.modelsByService[service].orEmpty().map { modelId ->
             val isOpenRouter = service == ImageService.OPENROUTER
-            ImageModelRowUi(
+            val modelKey = ModelKey.of(service.key, modelId)
+            ImageModelChoiceUi(
                 key = modelKey,
-                id = modelId,
-                name = if (isOpenRouter) names[modelId] ?: modelId else modelId,
-                priceText = if (isOpenRouter) priceTexts[modelId] else null,
+                name = if (isOpenRouter) labels.names[modelId] ?: modelId else modelId,
+                serviceName = service.displayName,
+                priceText = if (isOpenRouter) labels.priceTexts[modelId] else null,
                 isDefault = modelKey == imageModels.defaultModelKey,
             )
         }
-        ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), rows)
     }
-    val addable = ImageService.entries
-        .filter { service -> service !in imageModels.addedServices }
-        .map { service -> AddableServiceUi(service.key, service.displayName, imageServiceHint(service)) }
-    return ImageGenerationUi(cards, addable)
-}
 
 private fun imageServiceHint(service: ImageService): String = when (service) {
     ImageService.OPENROUTER -> "openrouter.ai"
