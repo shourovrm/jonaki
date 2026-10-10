@@ -72,7 +72,8 @@ class OpenRouterVideoGenerator(
             return VideoCheckOutcome.Failed(VideoFailure.KEY_PROBLEM, "no OpenRouter key is saved")
         }
         val httpRequest = Request.Builder()
-            .url(baseUrl.trimEnd('/') + "/videos/" + jobId)
+            // The id is one path segment, whatever characters the service used in it.
+            .url(baseUrl.toHttpUrl().newBuilder().addPathSegment("videos").addPathSegment(jobId).build())
             .header("Authorization", "Bearer $apiKey")
             .build()
         return try {

@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.work.runtime)
     implementation(project(":tools:mcp"))
     implementation(project(":tools:delegate"))
+    implementation(project(":tools:generate-video"))
     implementation(project(":tools:run-code"))
     implementation(project(":core:runtime-api"))
     implementation(project(":runtimes:javascript"))
