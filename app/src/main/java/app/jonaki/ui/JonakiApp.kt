@@ -179,7 +179,7 @@ private const val ROUTE_PYTHON = "python"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
 private const val ROUTE_ADD_IMAGE_MODELS_PREFIX = "add-image-models:"
-private const val ROUTE_ADD_VECTOR_MODELS = "add-vector-models"
+private const val ROUTE_ADD_VECTOR_MODELS_PREFIX = "add-vector-models:"
 private const val ROUTE_ADD_VIDEO_MODELS = "add-video-models"
 private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
@@ -296,7 +296,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onAddImageModels = { serviceKey -> route = ROUTE_ADD_IMAGE_MODELS_PREFIX + serviceKey },
-                    onAddVectorModels = { route = ROUTE_ADD_VECTOR_MODELS },
+                    onAddVectorModels = { serviceKey -> route = ROUTE_ADD_VECTOR_MODELS_PREFIX + serviceKey },
                     onAddVideoModels = { route = ROUTE_ADD_VIDEO_MODELS },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
@@ -419,11 +419,11 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 BackHandler { route = backRoute }
                 AddImageModelsRoute(application, route.removePrefix(ROUTE_ADD_IMAGE_MODELS_PREFIX), vectorOnly = false, onFinished = { route = backRoute })
             }
-            route == ROUTE_ADD_VECTOR_MODELS -> {
+            route.startsWith(ROUTE_ADD_VECTOR_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
                 BackHandler { route = backRoute }
                 // OpenRouter is the one image service whose list has vector models (D-170).
-                AddImageModelsRoute(application, ImageService.OPENROUTER.key, vectorOnly = true, onFinished = { route = backRoute })
+                AddImageModelsRoute(application, route.removePrefix(ROUTE_ADD_VECTOR_MODELS_PREFIX), vectorOnly = true, onFinished = { route = backRoute })
             }
             route.startsWith(ROUTE_ADD_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
@@ -866,8 +866,7 @@ private fun ChatRoute(
     val videoModelKey = VideoToolSetup.modelKeyOfPlainCall(usableVideoModelKeys, settingsSnapshot.videoModels)
     val imageChoices = imageModelChoices(settingsSnapshot.imageModels, imageLabels)
     val videoStepText = rememberVideoStepText(application, settingsSnapshot.videoModels)
-    val usableVideoModelRows = videoGenerationFor(application, settingsSnapshot.videoModels, hasKey = SecretName.OPENROUTER in savedSecretNames)
-        .models
+    val usableVideoModelRows = videoModelRowsFor(application, settingsSnapshot.videoModels)
         .filter { model -> model.key in usableVideoModelKeys }
         .map { model -> MediaModelRowUi(model.key, model.name, model.priceText) }
     val state = ChatUiState(
@@ -1343,7 +1342,7 @@ private fun SettingsRoute(
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
     onAddImageModels: (String) -> Unit,
-    onAddVectorModels: () -> Unit,
+    onAddVectorModels: (String) -> Unit,
     onAddVideoModels: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
@@ -1424,7 +1423,7 @@ private fun SettingsRoute(
     )
 
     val imageGeneration = imageGenerationFor(application, snapshot.imageModels, ::slotFor, snapshot.imageQuality == ImageQuality.HIGH)
-    val videoGeneration = videoGenerationFor(application, snapshot.videoModels, hasKey = SecretName.OPENROUTER in savedKeys)
+    val videoGeneration = videoGenerationFor(application, snapshot.videoModels, slotFor(SecretName.OPENROUTER))
     val state = SettingsUiState(
         chatServices = serviceCards(
             snapshot,
@@ -1596,6 +1595,16 @@ private fun SettingsRoute(
         onAddModels = onAddModels,
         onAddImageModels = onAddImageModels,
         onAddVectorModels = onAddVectorModels,
+        onAddVectorService = { serviceKey ->
+            ImageService.byKey(serviceKey)?.let { service ->
+                settings.update { current -> current.copy(imageModels = current.imageModels.addVectorService(service)) }
+            }
+        },
+        onVectorServiceRemove = { serviceKey ->
+            ImageService.byKey(serviceKey)?.let { service ->
+                settings.update { current -> current.copy(imageModels = current.imageModels.removeVectorService(service)) }
+            }
+        },
         onVectorModelSetDefault = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.setVectorDefault(modelKey)) } },
         onAddImageService = { serviceKey ->
             ImageService.byKey(serviceKey)?.let { service ->
@@ -1612,7 +1621,10 @@ private fun SettingsRoute(
         onImageQualityChange = { isHigh ->
             settings.update { current -> current.copy(imageQuality = if (isHigh) ImageQuality.HIGH else ImageQuality.STANDARD) }
         },
-        onAddVideoModels = onAddVideoModels,
+        // Only OpenRouter serves video, so the picker needs no service name.
+        onAddVideoModels = { onAddVideoModels() },
+        onAddVideoService = { serviceKey -> settings.update { current -> current.copy(videoModels = current.videoModels.addService(serviceKey)) } },
+        onVideoServiceRemove = { serviceKey -> settings.update { current -> current.copy(videoModels = current.videoModels.removeService(serviceKey)) } },
         onVideoModelSetDefault = { modelKey -> settings.update { current -> current.copy(videoModels = current.videoModels.setDefault(modelKey)) } },
         onVideoModelRemove = { modelKey -> settings.update { current -> current.copy(videoModels = current.videoModels.removeModel(modelKey)) } },
         onModelSetDefault = { modelKey -> settings.updateChatModels { models -> models.setDefault(modelKey) } },
@@ -1935,7 +1947,7 @@ private fun imageGenerationFor(
     val openRouterIds = imageModels.modelsByService[ImageService.OPENROUTER].orEmpty()
     val labels = rememberOpenRouterImageLabels(application, openRouterIds)
     val firstVectorModelKey = imageModels.allModelKeys.firstOrNull(imageModels::isVector)
-    val rowsByService = imageModels.addedServices.associateWith { service ->
+    val rowsByService = ImageService.entries.associateWith { service ->
         imageModels.modelsByService[service].orEmpty().map { modelId ->
             val modelKey = ModelKey.of(service.key, modelId)
             val isOpenRouter = service == ImageService.OPENROUTER
@@ -1955,16 +1967,22 @@ private fun imageGenerationFor(
         val rasterRows = rowsByService[service].orEmpty().filter { row -> !row.isVector }
         ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), rasterRows)
     }
-    val vectorRows = rowsByService.values.flatten().filter { row -> row.isVector }
+    val vectorCards = imageModels.vectorServices.map { service ->
+        val vectorRows = rowsByService[service].orEmpty().filter { row -> row.isVector }
+        ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), vectorRows)
+    }
     val addable = ImageService.entries
         .filter { service -> service !in imageModels.addedServices }
+        .map { service -> AddableServiceUi(service.key, service.displayName, imageServiceHint(service)) }
+    val addableForVectors = ImageService.entries
+        .filter { service -> service.servesVectorModels && service !in imageModels.vectorServices }
         .map { service -> AddableServiceUi(service.key, service.displayName, imageServiceHint(service)) }
     return ImageGenerationUi(
         services = cards,
         addableServices = addable,
         isHighQuality = isHighQuality,
-        vectorModels = vectorRows,
-        canAddVectorModels = ImageService.OPENROUTER in imageModels.addedServices,
+        vectorServices = vectorCards,
+        addableVectorServices = addableForVectors,
     )
 }
 

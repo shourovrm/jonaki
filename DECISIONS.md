@@ -2674,3 +2674,19 @@ to the front of its service's list. The models run on the image service's
 key, so the service and its key stay under Image generation; until
 OpenRouter is added there the section says so. Amends D-170. Outcome: unit
 tests and the release build pass. Not seen on a phone (none connected).
+
+## D-183 · 2026-10-10 · Vector and video sections get service cards — proposed
+User request after seeing 1.4.6 on the phone: Image generation has a card
+per service and "Add service", while the vector and video sections were
+bare model lists. Both now have the same layout: one card per added
+service (key field, the models, "Add model", "Remove service") and then
+"Add service". Only OpenRouter serves SVG and video models, so it is the
+only service offered in those two sections. A service is added to each
+section on its own: removing OpenRouter from one section drops that
+section's models only, and the key stays (it is the same saved key in all
+three cards and in the chat service). Stored as two new preference texts,
+`image_vector_services` and `video_services`; settings saved before them
+load with every service that already has a model of that kind, so nothing
+the user added disappears. The image star can no longer land on a vector
+model. Amends D-182 (its "add OpenRouter under Image generation first"
+hint is gone). Outcome: unit tests and the release build pass.

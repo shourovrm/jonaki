@@ -265,12 +265,19 @@ class SettingsActions(
     val onAddImageModels: (serviceKey: String) -> Unit = {},
     val onImageModelSetDefault: (modelKey: String) -> Unit = {},
     val onImageModelRemove: (modelKey: String) -> Unit = {},
-    val onAddVectorModels: () -> Unit = {},
+    val onAddVectorService: (serviceKey: String) -> Unit = {},
+    /** Removes the service's vector models; its picture models and its key stay. */
+    val onVectorServiceRemove: (serviceKey: String) -> Unit = {},
+    /** Opens the vector model picker of the service. */
+    val onAddVectorModels: (serviceKey: String) -> Unit = {},
     val onVectorModelSetDefault: (modelKey: String) -> Unit = {},
     /** The default quality of generate_image: true is High, false is Standard. */
     val onImageQualityChange: (isHigh: Boolean) -> Unit = {},
-    /** Opens the video model picker. */
-    val onAddVideoModels: () -> Unit = {},
+    val onAddVideoService: (serviceKey: String) -> Unit = {},
+    /** Removes the video service and its models; the key stays, since a chat service may share it. */
+    val onVideoServiceRemove: (serviceKey: String) -> Unit = {},
+    /** Opens the video model picker of the service. */
+    val onAddVideoModels: (serviceKey: String) -> Unit = {},
     val onVideoModelSetDefault: (modelKey: String) -> Unit = {},
     val onVideoModelRemove: (modelKey: String) -> Unit = {},
     /** A thinking level picked in a model's menu (D-057). */

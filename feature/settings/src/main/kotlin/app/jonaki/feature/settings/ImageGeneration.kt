@@ -61,10 +61,10 @@ data class ImageGenerationUi(
     val addableServices: List<AddableServiceUi> = emptyList(),
     /** True when the quality default is High; false is Standard. */
     val isHighQuality: Boolean = false,
-    /** The added vector (SVG) models of every service, shown in their own section; the cards hold the others. */
-    val vectorModels: List<ImageModelRowUi> = emptyList(),
-    /** False until the service that has vector models (OpenRouter) is added above. */
-    val canAddVectorModels: Boolean = false,
+    /** The cards of Vector image generation: the services added there, each with its vector (SVG) models. */
+    val vectorServices: List<ImageServiceCardUi> = emptyList(),
+    /** Services offered by "Add service" under Vector image generation. */
+    val addableVectorServices: List<AddableServiceUi> = emptyList(),
 )
 
 /** One added image service. Its key is the same secret as a chat service of the same account. */
@@ -108,7 +108,14 @@ internal fun ImageGenerationSection(images: ImageGenerationUi, actions: Settings
     SectionLabel(stringResource(R.string.settings_section_images))
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (card in images.services) {
-            ImageServiceCard(card, actions)
+            ImageServiceCard(
+                card,
+                stateKey = "image:${card.serviceKey}",
+                actions = actions,
+                onAddModels = { actions.onAddImageModels(card.serviceKey) },
+                onRemoveService = { actions.onImageServiceRemove(card.serviceKey) },
+                onMakeDefault = actions.onImageModelSetDefault,
+            )
         }
         if (images.addableServices.isNotEmpty()) {
             AddServiceDropdown(images.addableServices, actions.onAddImageService)
@@ -140,10 +147,18 @@ private fun ImageQualityRow(isHigh: Boolean, onChange: (isHigh: Boolean) -> Unit
     }
 }
 
+/** One service of Image generation or of Vector image generation; [stateKey] differs so each card opens on its own. */
 @Composable
-private fun ImageServiceCard(card: ImageServiceCardUi, actions: SettingsActions) {
+internal fun ImageServiceCard(
+    card: ImageServiceCardUi,
+    stateKey: String,
+    actions: SettingsActions,
+    onAddModels: () -> Unit,
+    onRemoveService: () -> Unit,
+    onMakeDefault: (modelKey: String) -> Unit,
+) {
     val summary = collapsedSummary(card.apiKey, card.models.size)
-    ServiceCardFrame("image:${card.serviceKey}", startsOpen = !card.apiKey.isSet, card.displayName, summary, account = null) {
+    ServiceCardFrame(stateKey, startsOpen = !card.apiKey.isSet, card.displayName, summary, account = null) {
         KeyField(stringResource(R.string.settings_api_key), card.apiKey, actions)
         if (card.models.isNotEmpty()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(top = 12.dp))
@@ -151,18 +166,18 @@ private fun ImageServiceCard(card: ImageServiceCardUi, actions: SettingsActions)
         for (model in card.models) {
             ImageModelRow(
                 model,
-                onMakeDefault = { actions.onImageModelSetDefault(model.key) },
+                onMakeDefault = { onMakeDefault(model.key) },
                 onRemove = { actions.onImageModelRemove(model.key) },
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-            TextButton(onClick = { actions.onAddImageModels(card.serviceKey) }) {
+            TextButton(onClick = onAddModels) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.settings_add_model))
             }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = { actions.onImageServiceRemove(card.serviceKey) }) {
+            TextButton(onClick = onRemoveService) {
                 Text(stringResource(R.string.settings_remove_service), color = JonakiTheme.colors.deny)
             }
         }
@@ -171,7 +186,7 @@ private fun ImageServiceCard(card: ImageServiceCardUi, actions: SettingsActions)
 
 /** The name keeps one line and ends in "…", the id and the price get lines of their own (D-029). */
 @Composable
-internal fun ImageModelRow(model: ImageModelRowUi, onMakeDefault: () -> Unit, onRemove: () -> Unit) {
+private fun ImageModelRow(model: ImageModelRowUi, onMakeDefault: () -> Unit, onRemove: () -> Unit) {
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
         ImageModelStar(model, onMakeDefault)
         Column(Modifier.weight(1f).padding(top = 10.dp)) {

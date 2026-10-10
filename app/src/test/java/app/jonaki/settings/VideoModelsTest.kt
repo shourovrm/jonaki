@@ -53,6 +53,26 @@ class VideoModelsTest {
 
         assertEquals("openrouter:$veo\nopenrouter:$grok", stored.modelKeysText)
         assertEquals(models, VideoModels.fromStored(stored.modelKeysText, stored.defaultModelKey))
+        assertEquals(models, VideoModels.fromStored(stored.modelKeysText, stored.defaultModelKey, stored.servicesText))
+    }
+
+    @Test
+    fun aServiceCanBeAddedBeforeItHasAModelAndRemovingItDropsItsModels() {
+        val added = VideoModels().addService("openrouter")
+        val stored = VideoModels.toStored(added)
+
+        assertEquals(listOf("openrouter"), added.serviceKeys)
+        assertEquals(added, VideoModels.fromStored(stored.modelKeysText, stored.defaultModelKey, stored.servicesText))
+
+        val removed = added.addModel("openrouter", veo).removeService("openrouter")
+        assertEquals(VideoModels(), removed)
+    }
+
+    @Test
+    fun settingsSavedBeforeServicesHadCardsTakeTheServicesFromTheModels() {
+        val read = VideoModels.fromStored("openrouter:$veo", null, servicesText = null)
+
+        assertEquals(listOf("openrouter"), read.serviceKeys)
     }
 
     @Test

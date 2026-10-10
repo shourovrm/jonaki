@@ -178,6 +178,7 @@ class AppSettings(
             videoModels = VideoModels.fromStored(
                 modelKeysText = preferences.getString(VIDEO_MODEL_KEYS, null),
                 defaultModelKey = preferences.getString(VIDEO_DEFAULT_MODEL_KEY, null),
+                servicesText = preferences.getString(VIDEO_SERVICES, null),
             ),
             imageModels = ImageModels.fromStored(
                 servicesText = preferences.getString(IMAGE_SERVICES, null),
@@ -188,6 +189,7 @@ class AppSettings(
                 legacyDefaultModel = preferences.getString(IMAGE_DEFAULT_MODEL, null),
                 // Absent before vector models existed; then no model is a stored vector model.
                 vectorModelKeysText = preferences.getString(IMAGE_VECTOR_MODEL_KEYS, null),
+                vectorServicesText = preferences.getString(IMAGE_VECTOR_SERVICES, null),
             ),
             imageQuality = ImageQuality.fromStored(preferences.getString(IMAGE_QUALITY, null)),
         )
@@ -310,11 +312,13 @@ class AppSettings(
         val storedVideoModels = VideoModels.toStored(snapshot.videoModels)
         editor.putString(VIDEO_MODEL_KEYS, storedVideoModels.modelKeysText)
         editor.putString(VIDEO_DEFAULT_MODEL_KEY, storedVideoModels.defaultModelKey)
+        editor.putString(VIDEO_SERVICES, storedVideoModels.servicesText)
         val storedImageModels = ImageModels.toStored(snapshot.imageModels)
         editor.putString(IMAGE_SERVICES, storedImageModels.servicesText)
         editor.putString(IMAGE_MODEL_KEYS, storedImageModels.modelKeysText)
         editor.putString(IMAGE_DEFAULT_MODEL_KEY, storedImageModels.defaultModelKey)
         editor.putString(IMAGE_VECTOR_MODEL_KEYS, storedImageModels.vectorModelKeysText)
+        editor.putString(IMAGE_VECTOR_SERVICES, storedImageModels.vectorServicesText)
         editor.putString(IMAGE_QUALITY, snapshot.imageQuality.word)
         editor.apply()
     }
@@ -376,6 +380,7 @@ class AppSettings(
         const val APPROVAL_RULES = "approval_rules"
         const val VIDEO_MODEL_KEYS = "video_model_keys"
         const val VIDEO_DEFAULT_MODEL_KEY = "video_default_model_key"
+        const val VIDEO_SERVICES = "video_services"
         // The first version of image generation saved only IMAGE_MODELS and IMAGE_DEFAULT_MODEL (OpenRouter ids); they are left in place and read once.
         const val IMAGE_MODELS = "image_models"
         const val IMAGE_DEFAULT_MODEL = "image_default_model"
@@ -383,6 +388,7 @@ class AppSettings(
         const val IMAGE_MODEL_KEYS = "image_model_keys"
         const val IMAGE_DEFAULT_MODEL_KEY = "image_default_model_key"
         const val IMAGE_VECTOR_MODEL_KEYS = "image_vector_model_keys"
+        const val IMAGE_VECTOR_SERVICES = "image_vector_services"
         const val IMAGE_QUALITY = "image_quality"
     }
 }

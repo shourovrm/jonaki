@@ -16,14 +16,17 @@ import app.jonaki.core.ui.ThemeMode
 private const val LONG_VIDEO_MODEL_NAME = "SpaceXAI: Grok Imagine Video 1.5 Lite 4K!"
 private const val GROK_ID = "x-ai/grok-imagine-video-1.5-lite"
 
-private val sampleVideos = VideoGenerationUi(
-    hasKey = true,
-    models = listOf(
+private val sampleVideos = videoServiceOf(
+    listOf(
         VideoModelRowUi("openrouter:$GROK_ID", GROK_ID, LONG_VIDEO_MODEL_NAME, "$0.02 to $0.14 per second", "1 to 15 s", isDefault = true),
         VideoModelRowUi("openrouter:google/veo-3.1-lite", "google/veo-3.1-lite", "Google: Veo 3.1 Lite", "$0.03 to $0.05 per second", "4, 6, 8 s"),
         VideoModelRowUi("openrouter:bytedance/seedance-2.0", "bytedance/seedance-2.0", "ByteDance: Seedance 2.0", "per token", "4 to 15 s"),
         VideoModelRowUi("openrouter:runway/gen-4.5", "runway/gen-4.5", "runway/gen-4.5"),
     ),
+)
+
+private fun videoServiceOf(models: List<VideoModelRowUi>) = VideoGenerationUi(
+    services = listOf(VideoServiceCardUi("openrouter", "OpenRouter", KeySlot("OPENROUTER", isSet = true, maskedKey = "sk-o••••"), models)),
 )
 
 private val samplePicker = VideoPickerState.Loaded(
@@ -54,9 +57,12 @@ private fun VideoSectionDarkPreview() = SectionPreview(sampleVideos, ThemeMode.D
 @Composable
 private fun VideoSectionBanglaPreview() = SectionPreview(sampleVideos, ThemeMode.LIGHT)
 
-@Preview(name = "Video models, no key", widthDp = 360, heightDp = 200, fontScale = 1.3f)
+@Preview(name = "Video models, no service", widthDp = 360, heightDp = 200, fontScale = 1.3f)
 @Composable
-private fun VideoSectionNoKeyPreview() = SectionPreview(VideoGenerationUi(hasKey = false), ThemeMode.LIGHT)
+private fun VideoSectionNoKeyPreview() = SectionPreview(
+    VideoGenerationUi(addableServices = listOf(AddableServiceUi("openrouter", "OpenRouter", "openrouter.ai"))),
+    ThemeMode.LIGHT,
+)
 
 @Preview(name = "Video picker", widthDp = 360, heightDp = 640, fontScale = 1.3f)
 @Composable

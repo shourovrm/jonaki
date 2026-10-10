@@ -34,13 +34,19 @@ private val sampleImages = ImageGenerationUi(
             models = listOf(ImageModelRowUi("gemini:gemini-2.5-flash-image", "gemini-2.5-flash-image", "gemini-2.5-flash-image")),
         ),
     ),
-    vectorModels = listOf(
-        ImageModelRowUi(
-            "openrouter:recraft/recraft-v4-pro-vector", "recraft/recraft-v4-pro-vector", "Recraft: Recraft V4 Pro Vector Illustration",
-            "\$0.3 per image", isDefault = true, isVector = true,
+    vectorServices = listOf(
+        ImageServiceCardUi(
+            serviceKey = "openrouter",
+            displayName = "OpenRouter",
+            apiKey = KeySlot("OPENROUTER", isSet = true, maskedKey = "sk-o••••"),
+            models = listOf(
+                ImageModelRowUi(
+                    "openrouter:recraft/recraft-v4-pro-vector", "recraft/recraft-v4-pro-vector", "Recraft: Recraft V4 Pro Vector Illustration",
+                    "\$0.3 per image", isDefault = true, isVector = true,
+                ),
+            ),
         ),
     ),
-    canAddVectorModels = true,
 )
 
 private val sampleImagesWithoutKey = ImageGenerationUi(
@@ -48,6 +54,7 @@ private val sampleImagesWithoutKey = ImageGenerationUi(
         ImageServiceCardUi("gemini", "Gemini", KeySlot("GEMINI", isSet = false)),
     ),
     addableServices = listOf(AddableServiceUi("openrouter", "OpenRouter", "openrouter.ai")),
+    addableVectorServices = listOf(AddableServiceUi("openrouter", "OpenRouter", "openrouter.ai")),
 )
 
 private val samplePickerModels = listOf(

@@ -15,6 +15,9 @@ import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.modelcatalog.VideoModelInfo
 import app.jonaki.core.modelcatalog.VideoModelListResult
 import app.jonaki.feature.settings.AddVideoModelsScreen
+import app.jonaki.feature.settings.AddableServiceUi
+import app.jonaki.feature.settings.KeySlot
+import app.jonaki.feature.settings.VideoServiceCardUi
 import app.jonaki.feature.settings.VideoGenerationUi
 import app.jonaki.feature.settings.VideoModelRowUi
 import app.jonaki.feature.settings.VideoPickModelUi
@@ -80,11 +83,23 @@ internal fun rememberVideoStepText(application: JonakiApplication, videoModels: 
  * loaded, or when it cannot be, a row shows its id and no price.
  */
 @Composable
-internal fun videoGenerationFor(application: JonakiApplication, videoModels: VideoModels, hasKey: Boolean): VideoGenerationUi {
+internal fun videoGenerationFor(application: JonakiApplication, videoModels: VideoModels, openRouterKey: KeySlot): VideoGenerationUi {
+    val rows = videoModelRowsFor(application, videoModels)
+    // Only OpenRouter serves video, so it is the one service that can have a card or be offered.
+    val openRouter = VideoToolSetup.OPENROUTER
+    if (openRouter !in videoModels.serviceKeys) {
+        return VideoGenerationUi(addableServices = listOf(AddableServiceUi(openRouter, OPENROUTER_NAME, "openrouter.ai")))
+    }
+    return VideoGenerationUi(services = listOf(VideoServiceCardUi(openRouter, OPENROUTER_NAME, openRouterKey, rows)))
+}
+
+/** The added models as rows, for the Settings card and for the chat screen's Video choice. */
+@Composable
+internal fun videoModelRowsFor(application: JonakiApplication, videoModels: VideoModels): List<VideoModelRowUi> {
     val infos = rememberVideoModelInfos(application, needed = videoModels.modelKeys.isNotEmpty())
     val words = videoListWords()
     val infoById = infos.associateBy { info -> info.id }
-    val rows = videoModels.modelKeys.map { modelKey ->
+    return videoModels.modelKeys.map { modelKey ->
         val modelId = ModelKey.modelOf(modelKey)
         val info = infoById[modelId]
         VideoModelRowUi(
@@ -96,8 +111,9 @@ internal fun videoGenerationFor(application: JonakiApplication, videoModels: Vid
             isDefault = modelKey == videoModels.defaultModelKey,
         )
     }
-    return VideoGenerationUi(hasKey = hasKey, models = rows)
 }
+
+private const val OPENROUTER_NAME = "OpenRouter"
 
 /** The video model picker; the list needs no key and no further request for prices. */
 @Composable
@@ -126,7 +142,7 @@ internal fun AddVideoModelsRoute(application: JonakiApplication, onFinished: () 
         )
     }
     AddVideoModelsScreen(
-        serviceName = "OpenRouter",
+        serviceName = OPENROUTER_NAME,
         state = pickerState,
         onClose = onFinished,
         onRetry = { attempt += 1 },

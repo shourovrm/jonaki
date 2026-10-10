@@ -228,18 +228,78 @@ class ImageModelsTest {
         assertTrue(withoutModel.vectorModelKeys.isEmpty())
         assertFalse(withoutModel.isVector("openrouter:someone/draw-svg"))
 
-        val withoutService = models.removeService(ImageService.OPENROUTER)
+        val withoutService = models.removeVectorService(ImageService.OPENROUTER)
         assertTrue(withoutService.vectorModelKeys.isEmpty())
         // Adding the same id again as a raster model must not inherit the old flag.
         assertFalse(withoutService.addModel(ImageService.OPENROUTER, "someone/draw-svg").isVector("openrouter:someone/draw-svg"))
     }
 
     @Test
-    fun theStarCanStayOnAVectorModelWithoutChangingTheRasterList() {
-        val models = ImageModels().addModel(ImageService.OPENROUTER, vectorV4, isVector = true).addModel(ImageService.OPENROUTER, flux)
+    fun theStarIsNeverOnAVectorModel() {
+        val onlyVector = ImageModels().addModel(ImageService.OPENROUTER, vectorV4, isVector = true)
+        val models = onlyVector.addModel(ImageService.OPENROUTER, flux)
 
-        assertEquals("openrouter:$vectorV4", models.defaultModelKey)
-        assertEquals(listOf("openrouter:$flux"), models.usableRasterModelKeys { true })
+        assertNull(onlyVector.defaultModelKey)
+        assertEquals("openrouter:$flux", models.defaultModelKey)
+        assertEquals(models, models.setDefault("openrouter:$vectorV4"))
+    }
+
+    @Test
+    fun aServiceIsAddedToEachSectionOnItsOwn() {
+        val onlyVector = ImageModels().addVectorService(ImageService.OPENROUTER).addModel(ImageService.OPENROUTER, vectorV4, isVector = true)
+
+        assertTrue(onlyVector.addedServices.isEmpty())
+        assertEquals(listOf(ImageService.OPENROUTER), onlyVector.vectorServices)
+        assertEquals(listOf("openrouter:$vectorV4"), onlyVector.usableVectorModelKeys { true })
+
+        val onlyRaster = ImageModels().addModel(ImageService.OPENROUTER, flux)
+        assertTrue(onlyRaster.vectorServices.isEmpty())
+    }
+
+    @Test
+    fun removingAServiceFromOneSectionKeepsItsModelsOfTheOther() {
+        val models = ImageModels()
+            .addModel(ImageService.OPENROUTER, flux)
+            .addModel(ImageService.OPENROUTER, vectorV4, isVector = true)
+
+        val withoutPictures = models.removeService(ImageService.OPENROUTER)
+        assertEquals(listOf("openrouter:$vectorV4"), withoutPictures.allModelKeys)
+        assertNull(withoutPictures.defaultModelKey)
+
+        val withoutVectors = models.removeVectorService(ImageService.OPENROUTER)
+        assertEquals(listOf("openrouter:$flux"), withoutVectors.allModelKeys)
+        assertEquals(listOf(ImageService.OPENROUTER), withoutVectors.addedServices)
+    }
+
+    @Test
+    fun theVectorServicesSurviveTheTextFormAndOlderSettingsDeriveThemFromTheModels() {
+        val models = ImageModels()
+            .addModel(ImageService.OPENROUTER, flux)
+            .addModel(ImageService.OPENROUTER, "someone/draw-svg", isVector = true)
+            .removeService(ImageService.OPENROUTER)
+        val stored = ImageModels.toStored(models)
+
+        val restored = ImageModels.fromStored(
+            stored.servicesText, stored.modelKeysText, stored.defaultModelKey, null, null, stored.vectorModelKeysText, stored.vectorServicesText,
+        )
+        assertEquals(models, restored)
+
+        // Saved by 1.4.6: the vector model sits under the image service and no vector service is stored.
+        val older = ImageModels.fromStored("openrouter", "openrouter:$flux\nopenrouter:someone/draw-svg", null, null, null, "openrouter:someone/draw-svg", null)
+        assertEquals(listOf(ImageService.OPENROUTER), older.addedServices)
+        assertEquals(listOf(ImageService.OPENROUTER), older.vectorServices)
+        assertEquals("openrouter:$flux", older.defaultModelKey)
+    }
+
+    @Test
+    fun aVectorServiceWithoutModelsSurvivesTheTextForm() {
+        val models = ImageModels().addVectorService(ImageService.OPENROUTER)
+        val stored = ImageModels.toStored(models)
+
+        assertEquals(
+            models,
+            ImageModels.fromStored(stored.servicesText, stored.modelKeysText, stored.defaultModelKey, null, null, stored.vectorModelKeysText, stored.vectorServicesText),
+        )
     }
 
     @Test

@@ -23,6 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,11 +48,21 @@ import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
 
-/** Settings > Models > Video generation: the video models generate_video may use. */
+/** Settings > Models > Video generation: one card per added video service, then "Add service". */
 @Immutable
 data class VideoGenerationUi(
-    /** False shows that the section needs an OpenRouter key; the models stay listed. */
-    val hasKey: Boolean = false,
+    val services: List<VideoServiceCardUi> = emptyList(),
+    /** Services offered by "Add service": the ones not added yet. */
+    val addableServices: List<AddableServiceUi> = emptyList(),
+)
+
+/** One added video service. Its key is the same secret as a chat service of the same account. */
+@Immutable
+data class VideoServiceCardUi(
+    /** Stable id, for example "openrouter". */
+    val serviceKey: String,
+    val displayName: String,
+    val apiKey: KeySlot,
     val models: List<VideoModelRowUi> = emptyList(),
 )
 
@@ -93,22 +104,37 @@ sealed interface VideoPickerState {
 @Composable
 internal fun VideoGenerationSection(video: VideoGenerationUi, actions: SettingsActions) {
     SectionLabel(stringResource(R.string.settings_section_videos))
-    Group {
-        if (!video.hasKey) {
-            Text(
-                stringResource(R.string.settings_jev_guard_needs_key),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        for (card in video.services) {
+            VideoServiceCard(card, actions)
         }
-        for (model in video.models) {
+        if (video.addableServices.isNotEmpty()) {
+            AddServiceDropdown(video.addableServices, actions.onAddVideoService)
+        }
+    }
+}
+
+@Composable
+private fun VideoServiceCard(card: VideoServiceCardUi, actions: SettingsActions) {
+    val summary = collapsedSummary(card.apiKey, card.models.size)
+    ServiceCardFrame("video:${card.serviceKey}", startsOpen = !card.apiKey.isSet, card.displayName, summary, account = null) {
+        KeyField(stringResource(R.string.settings_api_key), card.apiKey, actions)
+        if (card.models.isNotEmpty()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(top = 12.dp))
+        }
+        for (model in card.models) {
             VideoModelRow(model, actions)
         }
-        TextButton(onClick = actions.onAddVideoModels, modifier = Modifier.padding(horizontal = 12.dp)) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.settings_add_model))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+            TextButton(onClick = { actions.onAddVideoModels(card.serviceKey) }) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.settings_add_model))
+            }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = { actions.onVideoServiceRemove(card.serviceKey) }) {
+                Text(stringResource(R.string.settings_remove_service), color = JonakiTheme.colors.deny)
+            }
         }
     }
 }

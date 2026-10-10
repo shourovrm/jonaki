@@ -18,8 +18,10 @@ enum class ImageService(
      * can read. OpenRouter's picker loads its own public list, so it has none.
      */
     val suggestedModels: List<SuggestedImageModel> = emptyList(),
+    /** True when the service has vector (SVG) models, so it can be added under Vector image generation. */
+    val servesVectorModels: Boolean = false,
 ) {
-    OPENROUTER("openrouter", "OpenRouter", SecretName.OPENROUTER),
+    OPENROUTER("openrouter", "OpenRouter", SecretName.OPENROUTER, servesVectorModels = true),
 
     // Google's model list (GET /models) has no field that marks image-output models,
     // so the ids below are the ones named on https://ai.google.dev/gemini-api/docs/image-generation
@@ -46,7 +48,7 @@ enum class ImageService(
 
 data class SuggestedImageModel(val id: String, val name: String)
 
-/** What [ImageModels] is saved as in preferences: four plain texts. */
+/** What [ImageModels] is saved as in preferences: five plain texts. */
 data class StoredImageModels(
     /** Service keys, one per line, in the order added. */
     val servicesText: String,
@@ -55,6 +57,8 @@ data class StoredImageModels(
     val defaultModelKey: String?,
     /** The keys of the vector models, one per line; empty when none. */
     val vectorModelKeysText: String = "",
+    /** The keys of the services added under Vector image generation, one per line. */
+    val vectorServicesText: String = "",
 )
 
 /**
@@ -62,8 +66,10 @@ data class StoredImageModels(
  * in the order added, any number of models per service, and one starred model
  * across all services that generate_image uses when the agent names none.
  * Raster models belong to generate_image and vector (SVG) models to
- * generate_vector_image; [vectorModelKeys] tells them apart. Every change
- * returns a new value.
+ * generate_vector_image; [vectorModelKeys] tells them apart. A service is
+ * added to each kind on its own ([addedServices] for raster models,
+ * [vectorServices] for vector models), so removing it from one section of
+ * Settings leaves the other. Every change returns a new value.
  */
 data class ImageModels(
     val addedServices: List<ImageService> = emptyList(),
@@ -78,10 +84,16 @@ data class ImageModels(
      * vector models existed, which load as "none".
      */
     val vectorModelKeys: Set<String> = emptySet(),
+    /** The services added under Vector image generation, in the order added. */
+    val vectorServices: List<ImageService> = emptyList(),
 ) {
+    /** The services of both sections: the raster ones in card order, then the ones added for vector models only. */
+    private val servicesOfBothKinds: List<ImageService>
+        get() = (addedServices + vectorServices).distinct()
+
     /** Every model as "service:modelId", in card order. */
     val allModelKeys: List<String>
-        get() = addedServices.flatMap { service ->
+        get() = servicesOfBothKinds.flatMap { service ->
             modelsByService[service].orEmpty().map { modelId -> ModelKey.of(service.key, modelId) }
         }
 
@@ -90,7 +102,7 @@ data class ImageModels(
 
     /** The models of services with a saved key, both kinds. */
     fun usableModelKeys(hasKey: (ImageService) -> Boolean): List<String> =
-        addedServices.filter(hasKey).flatMap { service ->
+        servicesOfBothKinds.filter(hasKey).flatMap { service ->
             modelsByService[service].orEmpty().map { modelId -> ModelKey.of(service.key, modelId) }
         }
 
@@ -109,14 +121,31 @@ data class ImageModels(
         return copy(addedServices = addedServices + service)
     }
 
-    /** Drops the service and its models; its key stays, since a chat service may use it. */
+    /** Drops the service and its raster models; its vector models and its key stay. */
     fun removeService(service: ImageService): ImageModels =
-        copy(addedServices = addedServices - service, modelsByService = modelsByService - service).withValidDefault()
+        copy(addedServices = addedServices - service).keepingModelsOf(service) { modelKey -> isVector(modelKey) }
+
+    fun addVectorService(service: ImageService): ImageModels {
+        if (service in vectorServices) {
+            return this
+        }
+        return copy(vectorServices = vectorServices + service)
+    }
+
+    /** Drops the service from Vector image generation with its vector models; its raster models and its key stay. */
+    fun removeVectorService(service: ImageService): ImageModels =
+        copy(vectorServices = vectorServices - service).keepingModelsOf(service) { modelKey -> !isVector(modelKey) }
+
+    private fun keepingModelsOf(service: ImageService, keep: (modelKey: String) -> Boolean): ImageModels {
+        val keptIds = modelsByService[service].orEmpty().filter { modelId -> keep(ModelKey.of(service.key, modelId)) }
+        return copy(modelsByService = modelsByService + (service to keptIds)).withValidDefault()
+    }
 
     /**
      * Adds a model; a blank or already-listed id changes nothing. The first
-     * model added is starred. [isVector] is what the service's list said
+     * raster model added is starred. [isVector] is what the service's list said
      * about the model; it is stored so that no later run has to ask again.
+     * The service is added to the section of the model's kind.
      */
     fun addModel(service: ImageService, modelId: String, isVector: Boolean = false): ImageModels {
         val trimmed = modelId.trim()
@@ -126,10 +155,11 @@ data class ImageModels(
         }
         val modelKey = ModelKey.of(service.key, trimmed)
         val vectorKeys = if (isVector) vectorModelKeys + modelKey else vectorModelKeys
+        val withService = if (isVector || looksLikeVectorModel(modelKey)) addVectorService(service) else addService(service)
         if (trimmed in existing) {
-            return addService(service).copy(vectorModelKeys = vectorKeys)
+            return withService.copy(vectorModelKeys = vectorKeys)
         }
-        val added = addService(service).copy(
+        val added = withService.copy(
             modelsByService = modelsByService + (service to existing + trimmed),
             vectorModelKeys = vectorKeys,
         )
@@ -142,9 +172,9 @@ data class ImageModels(
         return copy(modelsByService = modelsByService + (service to remainingIds)).withValidDefault()
     }
 
-    /** Stars [modelKey]; a key that is not listed changes nothing. */
+    /** Stars [modelKey]; a key that is not listed, or a vector model, changes nothing. */
     fun setDefault(modelKey: String): ImageModels {
-        if (modelKey !in allModelKeys) {
+        if (modelKey !in allModelKeys || isVector(modelKey)) {
             return this
         }
         return copy(defaultModelKey = modelKey)
@@ -166,13 +196,15 @@ data class ImageModels(
     }
 
     /**
-     * Keeps the star on a listed model (the current one if still listed, else
-     * the first, else none) and drops vector flags of models that are gone.
+     * Keeps the star on a listed raster model (the current one if still
+     * listed, else the first, else none), since the star is generate_image's
+     * default, and drops vector flags of models that are gone.
      */
     private fun withValidDefault(): ImageModels {
         val keys = allModelKeys
         val listedVectorKeys = vectorModelKeys.filter { modelKey -> modelKey in keys }.toSet()
-        val defaultKey = if (defaultModelKey in keys) defaultModelKey else keys.firstOrNull()
+        val rasterKeys = keys.filter { modelKey -> modelKey !in listedVectorKeys && !looksLikeVectorModel(modelKey) }
+        val defaultKey = if (defaultModelKey in rasterKeys) defaultModelKey else rasterKeys.firstOrNull()
         return copy(defaultModelKey = defaultKey, vectorModelKeys = listedVectorKeys)
     }
 
@@ -183,6 +215,7 @@ data class ImageModels(
             modelKeysText = models.allModelKeys.joinToString("\n"),
             defaultModelKey = models.defaultModelKey,
             vectorModelKeysText = models.vectorModelKeys.filter { modelKey -> modelKey in models.allModelKeys }.joinToString("\n"),
+            vectorServicesText = models.vectorServices.joinToString("\n") { service -> service.key },
         )
 
         /**
@@ -193,6 +226,8 @@ data class ImageModels(
          * (`image_default_model`). They become models of the OpenRouter
          * service with the same star. Once the new format exists it wins, even
          * when empty, so models the user removed do not come back.
+         * [vectorServicesText] is null in settings saved before vector models
+         * had a section; then every service that has a vector model is one.
          */
         fun fromStored(
             servicesText: String?,
@@ -202,6 +237,7 @@ data class ImageModels(
             legacyDefaultModel: String?,
             /** Null in settings saved before vector models existed. */
             vectorModelKeysText: String? = null,
+            vectorServicesText: String? = null,
         ): ImageModels {
             if (servicesText == null && modelKeysText == null) {
                 return fromLegacy(legacyModelsText.orEmpty(), legacyDefaultModel)
@@ -210,12 +246,15 @@ data class ImageModels(
             for (line in nonBlankLines(servicesText.orEmpty())) {
                 ImageService.byKey(line)?.let { service -> models = models.addService(service) }
             }
+            for (line in nonBlankLines(vectorServicesText.orEmpty())) {
+                ImageService.byKey(line)?.let { service -> models = models.addVectorService(service) }
+            }
+            val storedVectorKeys = nonBlankLines(vectorModelKeysText.orEmpty()).toSet()
             for (key in nonBlankLines(modelKeysText.orEmpty())) {
                 val service = ImageService.byKey(ModelKey.serviceOf(key)) ?: continue
-                models = models.addModel(service, ModelKey.modelOf(key))
+                models = models.addModel(service, ModelKey.modelOf(key), isVector = key in storedVectorKeys)
             }
-            val listedVectorKeys = nonBlankLines(vectorModelKeysText.orEmpty()).filter { modelKey -> modelKey in models.allModelKeys }
-            return models.starred(defaultModelKey).copy(vectorModelKeys = listedVectorKeys.toSet())
+            return models.starred(defaultModelKey)
         }
 
         /**
