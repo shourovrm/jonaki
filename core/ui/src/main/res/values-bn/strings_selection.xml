@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bangla for strings_selection.xml. -->
+<resources>
+    <plurals name="selection_count">
+        <item quantity="one">%1$dটি বাছাই করা</item>
+        <item quantity="other">%1$dটি বাছাই করা</item>
+    </plurals>
+    <string name="selection_close">বাছাই বন্ধ করুন</string>
+    <string name="selection_select_all">সব বাছুন</string>
+    <string name="selection_deselect_all">সব বাদ দিন</string>
+    <string name="selection_delete">মুছুন</string>
+    <string name="selection_more">আরও বিকল্প</string>
+</resources>

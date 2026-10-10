@@ -10,4 +10,6 @@ dependencies {
     api(platform(libs.compose.bom))
     api(libs.compose.material3)
     api(libs.compose.material.icons.core)
+    // BackHandler for selection mode; the app already ships this library.
+    implementation(libs.activity.compose)
 }
