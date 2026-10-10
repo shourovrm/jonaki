@@ -240,6 +240,7 @@ class SubagentRunner(
         return SubagentLoop(
             subagentId = subagentId,
             model = model,
+            fallbackModel = subagentModels.threadModel()?.takeIf { threadModel -> threadModel.key != model.key },
             systemPrompt = SubagentPrompt.systemPrompt(type, startTools, limits, model.hasKnownPrice, memorySection, skillSection),
             toolbox = SubagentToolbox(startTools, requestableTools = usableTools - threadToolsAtStart.toSet()),
             toolContext = ToolContext(

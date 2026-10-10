@@ -12,6 +12,21 @@ object SubagentEnding {
     /** A provider's error text can carry a whole response body; the row needs the first part. */
     private const val MAX_FAILURE_CHARACTERS = 1_000
 
+    /**
+     * The failure sentence with what the thread's agent can do about it. The
+     * sentence stays last, because [failureOf] reads to the end of the text.
+     */
+    internal fun failureEnding(failure: String?): String {
+        val nextStep = if (ModelUnavailable.isUnavailable(failure.orEmpty())) {
+            "The subagent's model is no longer available. Call delegate again with a \"model\" argument " +
+                "naming another model from its list, or do the task yourself."
+        } else {
+            "Call delegate again for this task (with a different \"model\" if the failure names the model), " +
+                "or do the task yourself with what is above."
+        }
+        return nextStep + "\n\n" + failureSentence(failure)
+    }
+
     internal fun failureSentence(failure: String?): String {
         val text = failure.orEmpty().trim()
         val shortened = if (text.length > MAX_FAILURE_CHARACTERS) text.take(MAX_FAILURE_CHARACTERS) + "…" else text

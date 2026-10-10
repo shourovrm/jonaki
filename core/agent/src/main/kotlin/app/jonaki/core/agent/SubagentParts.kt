@@ -40,6 +40,13 @@ interface SubagentModels {
 
     /** Null when the model has no saved key. */
     fun modelFor(agentType: AgentType, requestedKey: String?): SubagentModel?
+
+    /**
+     * The thread's own model, which a subagent retries on once when its
+     * configured model has been withdrawn. Null when it cannot be used (no
+     * saved key) or the implementation has none.
+     */
+    fun threadModel(): SubagentModel? = null
 }
 
 /** Budgets of one subagent (M7). */
@@ -86,6 +93,8 @@ data class SubagentOutcome(
     val costUsd: Double?,
     /** Why the model call failed, for [SubagentStop.FAILED]. */
     val failure: String? = null,
+    /** One line for the thread's agent when another model than the configured one answered. */
+    val modelNote: String? = null,
 )
 
 data class SubagentStart(
@@ -163,6 +172,11 @@ internal class SubagentProgress {
 
     private var notesCalls: Int = 0
 
+    /** Set when the configured model was unavailable and the thread's model took over. */
+    @get:Synchronized
+    @set:Synchronized
+    var modelNote: String? = null
+
     val costUsd: Double?
         get() = knownCostUsd
 
@@ -199,7 +213,7 @@ internal class SubagentProgress {
 
     @Synchronized
     fun finished(stop: SubagentStop, finalText: String): SubagentOutcome =
-        SubagentOutcome(stop, finalText.trim(), toolSteps, knownCostUsd)
+        SubagentOutcome(stop, finalText.trim(), toolSteps, knownCostUsd, modelNote = modelNote)
 
     /** For a stop without a final answer: its texts, then its last tool results, cut short. */
     @Synchronized
@@ -213,7 +227,7 @@ internal class SubagentProgress {
                 parts += "[$toolName]\n${text.take(RESULT_CHARACTERS_KEPT)}"
             }
         }
-        return SubagentOutcome(stop, parts.joinToString("\n\n"), toolSteps, knownCostUsd, failure)
+        return SubagentOutcome(stop, parts.joinToString("\n\n"), toolSteps, knownCostUsd, failure, modelNote)
     }
 
     private companion object {
