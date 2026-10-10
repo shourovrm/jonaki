@@ -104,4 +104,100 @@ class DirectToolRunTest {
         assertEquals(listOf("AssistantMessage", "ToolStarted", "RunFinished"), events.map { event -> event::class.simpleName })
         assertEquals(RunOutcome.Stopped(""), (events.last() as AgentEvent.RunFinished).outcome)
     }
+
+    private fun overTwoCalls(): FakeTool {
+        var calls = 0
+        return FakeTool(
+            "generate_video",
+            behaviour = {
+                calls++
+                if (calls == 1) ToolOutput.success("still being made, job-1") else ToolOutput.success("Video saved: videos/a.mp4")
+            },
+        )
+    }
+
+    private val collectJob1 = buildJsonObject { put("job_id", "job-1") }
+
+    @Test
+    fun aFollowUpCallIsRecordedAsItsOwnAssistantCallStepAndResultWithOneRunEnd() = runBlocking {
+        val tool = overTwoCalls()
+        val ids = mutableListOf("call-2")
+
+        val outcome = DirectToolRun(recorder).run(
+            tool, arguments, toolContext, callId = "call-1",
+            nextCall = { output -> if (output.text.startsWith("still")) collectJob1 else null },
+            maxCalls = 3,
+            newCallId = { ids.removeAt(0) },
+        )
+
+        assertEquals(RunOutcome.Completed(""), outcome)
+        assertEquals(
+            listOf("AssistantMessage", "ToolStarted", "ToolFinished", "AssistantMessage", "ToolStarted", "ToolFinished", "RunFinished"),
+            recorder.events.map { event -> event::class.simpleName },
+        )
+        val calls = recorder.events.filterIsInstance<AgentEvent.AssistantMessage>().map { event -> event.message.toolCalls.single() }
+        assertEquals(listOf("call-1", "call-2"), calls.map { call -> call.id })
+        assertEquals("""{"job_id":"job-1"}""", calls[1].argumentsJson)
+        val results = recorder.events.filterIsInstance<AgentEvent.ToolFinished>().map { event -> event.message }
+        assertEquals(listOf("call-1", "call-2"), results.map { message -> message.toolCallId })
+        assertEquals(listOf(arguments, collectJob1), tool.receivedArguments)
+    }
+
+    @Test
+    fun noFollowUpMeansOneCall() = runBlocking {
+        val tool = overTwoCalls()
+
+        DirectToolRun(recorder).run(tool, arguments, toolContext, callId = "call-1", nextCall = { null }, maxCalls = 3)
+
+        assertEquals(1, tool.receivedArguments.size)
+    }
+
+    @Test
+    fun theNumberOfCallsIsCappedAtMaxCalls() = runBlocking {
+        val tool = FakeTool("generate_video", behaviour = { ToolOutput.success("still being made") })
+        var ids = 1
+
+        DirectToolRun(recorder).run(
+            tool, arguments, toolContext, callId = "call-1",
+            nextCall = { collectJob1 },
+            maxCalls = 3,
+            newCallId = { "call-${++ids}" },
+        )
+
+        assertEquals(3, tool.receivedArguments.size)
+        assertEquals(3, recorder.events.count { event -> event is AgentEvent.ToolFinished })
+        assertEquals(1, recorder.events.count { event -> event is AgentEvent.RunFinished })
+    }
+
+    @Test
+    fun stopDuringAFollowUpCallKeepsTheFirstResultAndEndsStopped() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        var calls = 0
+        val tool = FakeTool(
+            "generate_video",
+            behaviour = {
+                calls++
+                if (calls == 1) {
+                    ToolOutput.success("still being made")
+                } else {
+                    started.complete(Unit)
+                    delay(60_000)
+                    ToolOutput.success("never")
+                }
+            },
+        )
+
+        val job = launch {
+            DirectToolRun(recorder).run(tool, arguments, toolContext, callId = "call-1", nextCall = { collectJob1 }, maxCalls = 3)
+        }
+        started.await()
+        job.cancel(CancellationException("Stop"))
+        job.join()
+
+        assertEquals(
+            listOf("AssistantMessage", "ToolStarted", "ToolFinished", "AssistantMessage", "ToolStarted", "RunFinished"),
+            recorder.events.map { event -> event::class.simpleName },
+        )
+        assertEquals(RunOutcome.Stopped(""), (recorder.events.last() as AgentEvent.RunFinished).outcome)
+    }
 }
