@@ -1,6 +1,7 @@
 package app.jonaki.ui
 
 import app.jonaki.core.runtimeapi.CodeLanguage
+import app.jonaki.feature.chat.StepPromptUi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -12,7 +13,14 @@ data class StepDetail(
     val query: String?,
     /** A path, link or site the step works on. */
     val target: String?,
+    /** The approval card's text when it differs from [target]: the same line with the whole prompt. */
+    val fullTarget: String? = null,
+    /** What the step's sheet shows (the whole prompt and the call's settings); null for a step without such a sheet. */
+    val prompt: StepPromptUi? = null,
 ) {
+    /** What the approval card shows. */
+    val approvalText: String? get() = fullTarget ?: target
+
     /** The labels the approval card and step track show, from string resources so they follow the app's language. */
     class Words(
         val readCalendar: String,
@@ -38,6 +46,8 @@ data class StepDetail(
         val defaultVectorImageModel: String? = null,
         /** The model, length, resolution and price estimate of a generate_video call; null shows only the prompt. */
         val video: VideoStepText? = null,
+        /** The quality and reference words of a generate_image line; null leaves them out. */
+        val image: ImageStepWords? = null,
     )
 
     companion object {
@@ -56,9 +66,9 @@ data class StepDetail(
                 "request_tool" -> StepDetail(query = null, target = arguments.text("name"))
                 "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
                 "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments, words))
-                "generate_image" -> StepDetail(query = null, target = generateImageTarget(arguments, words.defaultImageModel))
-                "generate_vector_image" -> StepDetail(query = null, target = generateImageTarget(arguments, words.defaultVectorImageModel))
-                "generate_video" -> StepDetail(query = null, target = words.video?.target(arguments) ?: arguments.text("prompt"))
+                "generate_image" -> imageDetail(arguments, words.defaultImageModel, words.image, withImageOptions = true)
+                "generate_vector_image" -> imageDetail(arguments, words.defaultVectorImageModel, words.image, withImageOptions = false)
+                "generate_video" -> videoDetail(arguments, words.video)
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
@@ -123,14 +133,26 @@ data class StepDetail(
             return StepDetail(query = null, target = target)
         }
 
-        /** The card names the model that will be paid and the prompt it gets: "black-forest-labs/flux.2-klein-4b · A blue door". */
-        private fun generateImageTarget(arguments: JsonObject, defaultModel: String?): String? {
-            val prompt = arguments.text("prompt")?.trim()?.take(MAX_PROMPT_CHARACTERS_SHOWN)
-            val model = arguments.text("model")?.trim()?.ifEmpty { null } ?: defaultModel
-            return listOfNotNull(model, prompt).joinToString(" · ").ifEmpty { null }
-        }
+        /**
+         * The line names the model that will be paid, the quality when it is High, the reference pictures and the
+         * prompt: "black-forest-labs/flux.2-klein-4b · high · 2 reference pictures · A blue door". The line cuts a long
+         * prompt; the approval card and the step's sheet show all of it.
+         */
+        private fun imageDetail(arguments: JsonObject, defaultModel: String?, words: ImageStepWords?, withImageOptions: Boolean): StepDetail =
+            StepDetail(
+                query = null,
+                target = PromptStepText.imageLine(arguments, defaultModel, words, withImageOptions, PromptStepText::cut),
+                fullTarget = PromptStepText.imageLine(arguments, defaultModel, words, withImageOptions) { prompt -> prompt.trim() },
+                prompt = PromptStepText.imageDetail(arguments, defaultModel, words, withImageOptions),
+            )
 
-        private const val MAX_PROMPT_CHARACTERS_SHOWN = 300
+        private fun videoDetail(arguments: JsonObject, video: VideoStepText?): StepDetail {
+            if (video == null) {
+                val prompt = arguments.text("prompt")
+                return StepDetail(query = null, target = prompt?.let(PromptStepText::cut), fullTarget = prompt?.trim())
+            }
+            return StepDetail(query = null, target = video.target(arguments), fullTarget = video.fullTarget(arguments), prompt = video.detail(arguments))
+        }
 
         /** "Python · 12 lines": the code itself is too long for one line, and its sheet shows it (D-090). */
         private fun runCodeTarget(arguments: JsonObject, words: Words): String? {

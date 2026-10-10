@@ -129,7 +129,7 @@ object ChatItems {
         subagentLimits: SubagentLimitSettings,
         subagentTypeNames: List<String>,
     ): ChatItem.Approval {
-        val description = StepDetail.of(pending.toolCall.toolName, pending.toolCall.argumentsJson, stepWords).target.orEmpty()
+        val description = StepDetail.of(pending.toolCall.toolName, pending.toolCall.argumentsJson, stepWords).approvalText.orEmpty()
         return ChatItem.Approval(
             pending.toolCall.id,
             pending.toolName,
@@ -401,6 +401,7 @@ object ChatItems {
             durationMillis = if (finished == null) null else finished - step.startedAtMillis,
             startedAtMillis = step.startedAtMillis,
             opensDetail = step.toolName == RUN_CODE_TOOL,
+            promptDetail = detail.prompt,
             guardNote = step.guardNote,
         )
     }

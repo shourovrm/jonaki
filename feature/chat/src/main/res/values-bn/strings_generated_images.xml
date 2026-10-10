@@ -5,4 +5,15 @@
     <string name="chat_image_model_title">ছবির মডেল</string>
     <string name="chat_image_model_default">ডিফল্ট</string>
     <string name="chat_image_svg_tag">SVG</string>
+    <string name="chat_prompt_title">প্রম্পট</string>
+    <string name="chat_prompt_model">মডেল</string>
+    <string name="chat_prompt_quality">মান</string>
+    <string name="chat_prompt_quality_high">উচ্চ</string>
+    <string name="chat_prompt_aspect_ratio">আকারের অনুপাত</string>
+    <string name="chat_prompt_references">রেফারেন্স ছবি</string>
+    <string name="chat_step_image_high">উচ্চ মান</string>
+    <plurals name="chat_step_image_references">
+        <item quantity="one">%d টি রেফারেন্স ছবি</item>
+        <item quantity="other">%d টি রেফারেন্স ছবি</item>
+    </plurals>
 </resources>

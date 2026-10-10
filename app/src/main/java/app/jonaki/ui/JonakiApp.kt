@@ -823,6 +823,7 @@ private fun ChatRoute(
                 selectedImageModelKey,
                 selectedVectorImageModelKey,
                 rememberVideoStepText(application, settingsSnapshot.videoModels),
+                imageDefaultIsHigh = settingsSnapshot.imageQuality == ImageQuality.HIGH,
             ),
         ),
         isRunning = isRunning,
@@ -1094,6 +1095,7 @@ private fun stepDetailWords(
     defaultImageModel: String?,
     defaultVectorImageModel: String?,
     video: VideoStepText? = null,
+    imageDefaultIsHigh: Boolean = false,
 ): StepDetail.Words {
     val resources = LocalContext.current.resources
     return StepDetail.Words(
@@ -1117,6 +1119,11 @@ private fun stepDetailWords(
         defaultImageModel = defaultImageModel,
         defaultVectorImageModel = defaultVectorImageModel,
         video = video,
+        image = ImageStepWords(
+            high = stringResource(app.jonaki.feature.chat.R.string.chat_step_image_high),
+            referenceCount = { count -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_step_image_references, count, count) },
+            defaultIsHigh = imageDefaultIsHigh,
+        ),
     )
 }
 

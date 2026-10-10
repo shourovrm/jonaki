@@ -179,7 +179,16 @@ internal fun StepRow(
 ) {
     // One plain rail: the lit station alone marks where the work is.
     val trackColor = JonakiTheme.colors.track
-    val openModifier = if (step.opensDetail) Modifier.clickable { onOpen(step.id) } else Modifier
+    var isPromptOpen by rememberSaveable(step.id) { mutableStateOf(false) }
+    val promptDetail = step.promptDetail
+    if (promptDetail != null && isPromptOpen) {
+        StepPromptSheet(promptDetail, onDismiss = { isPromptOpen = false })
+    }
+    val openModifier = when {
+        promptDetail != null -> Modifier.clickable { isPromptOpen = true }
+        step.opensDetail -> Modifier.clickable { onOpen(step.id) }
+        else -> Modifier
+    }
     Row(
         modifier = openModifier
             .fillMaxWidth()

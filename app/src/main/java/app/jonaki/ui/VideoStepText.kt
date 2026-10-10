@@ -9,6 +9,7 @@ import app.jonaki.core.toolapi.VideoPricing
 import app.jonaki.core.toolapi.booleanArgument
 import app.jonaki.core.toolapi.intArgument
 import app.jonaki.core.toolapi.stringArgument
+import app.jonaki.feature.chat.StepPromptUi
 import kotlinx.serialization.json.JsonObject
 
 /** The words of a generate_video line, from string resources so they follow the app's language. */
@@ -35,7 +36,27 @@ class VideoStepText(
     private val defaultModelKey: String?,
     private val words: VideoStepWords,
 ) {
-    fun target(arguments: JsonObject): String? {
+    /** The short line of the step track: the prompt is cut, and the step's sheet shows all of it. */
+    fun target(arguments: JsonObject): String? = line(arguments, PromptStepText::cut)
+
+    /** The approval card's text: the same line with the whole prompt, so the user reads it before allowing. */
+    fun fullTarget(arguments: JsonObject): String? = line(arguments) { prompt -> prompt.trim() }
+
+    /** What the step's sheet shows; null for a call that only collects an earlier job. */
+    fun detail(arguments: JsonObject): StepPromptUi? {
+        if (arguments.stringArgument("job_id")?.trim()?.isNotEmpty() == true) {
+            return null
+        }
+        val prompt = arguments.stringArgument("prompt")?.trim()?.ifEmpty { null } ?: return null
+        val model = arguments.stringArgument("model")?.trim()?.ifEmpty { null } ?: defaultModelKey
+        return StepPromptUi(
+            prompt = prompt,
+            model = model,
+            aspectRatio = arguments.stringArgument("aspect_ratio")?.trim()?.ifEmpty { null },
+        )
+    }
+
+    private fun line(arguments: JsonObject, promptOf: (String) -> String): String? {
         val jobId = arguments.stringArgument("job_id")?.trim()?.ifEmpty { null }
         if (jobId != null) {
             return words.collectsEarlierJob(jobId)
@@ -43,7 +64,7 @@ class VideoStepText(
         val model = arguments.stringArgument("model")?.trim()?.ifEmpty { null } ?: defaultModelKey
         val facts = model?.let { key -> factsByModelKey[key] }
         val choice = chosenValues(facts, arguments)
-        val prompt = arguments.stringArgument("prompt")?.trim()?.take(MAX_PROMPT_CHARACTERS_SHOWN)
+        val prompt = arguments.stringArgument("prompt")?.trim()?.ifEmpty { null }?.let(promptOf)
         val parts = listOfNotNull(
             model,
             choice.durationSeconds?.let(words.seconds),
@@ -80,8 +101,4 @@ class VideoStepText(
 
     private fun perTokenOrNull(skus: Map<String, String>, choice: VideoChoice, withAudio: Boolean): String? =
         if (VideoPricing.estimate(skus, choice.resolution, withAudio, 1) == VideoEstimate.PerToken) words.priceIsPerToken else null
-
-    private companion object {
-        const val MAX_PROMPT_CHARACTERS_SHOWN = 300
-    }
 }

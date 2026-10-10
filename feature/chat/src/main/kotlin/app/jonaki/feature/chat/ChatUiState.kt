@@ -349,6 +349,8 @@ data class StepUi(
     val startedAtMillis: Long? = null,
     /** Tapping the step opens a sheet with its details; true for run_code (D-090). */
     val opensDetail: Boolean = false,
+    /** A picture or video step: tapping the line opens the whole prompt and the call's settings in a sheet of its own. */
+    val promptDetail: StepPromptUi? = null,
     /** What the guard said about this call and its result, one or two lines; null when no guard was asked. */
     val guardNote: String? = null,
 )

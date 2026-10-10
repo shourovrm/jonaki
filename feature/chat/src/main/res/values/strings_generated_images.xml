@@ -5,4 +5,15 @@
     <string name="chat_image_model_title">Image model</string>
     <string name="chat_image_model_default">Default</string>
     <string name="chat_image_svg_tag">SVG</string>
+    <string name="chat_prompt_title">Prompt</string>
+    <string name="chat_prompt_model">Model</string>
+    <string name="chat_prompt_quality">Quality</string>
+    <string name="chat_prompt_quality_high">High</string>
+    <string name="chat_prompt_aspect_ratio">Aspect ratio</string>
+    <string name="chat_prompt_references">Reference pictures</string>
+    <string name="chat_step_image_high">high</string>
+    <plurals name="chat_step_image_references">
+        <item quantity="one">%d reference picture</item>
+        <item quantity="other">%d reference pictures</item>
+    </plurals>
 </resources>
