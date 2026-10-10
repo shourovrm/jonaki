@@ -34,6 +34,8 @@ data class StepDetail(
         val lineCount: (lines: Int) -> String,
         /** The starred image model, named on generate_image's card when the call names none; null while none is added. */
         val defaultImageModel: String? = null,
+        /** The first vector model, named on generate_vector_image's card when the call names none; null while none is added. */
+        val defaultVectorImageModel: String? = null,
     )
 
     companion object {
@@ -52,7 +54,8 @@ data class StepDetail(
                 "request_tool" -> StepDetail(query = null, target = arguments.text("name"))
                 "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
                 "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments, words))
-                "generate_image" -> StepDetail(query = null, target = generateImageTarget(arguments, words))
+                "generate_image" -> StepDetail(query = null, target = generateImageTarget(arguments, words.defaultImageModel))
+                "generate_vector_image" -> StepDetail(query = null, target = generateImageTarget(arguments, words.defaultVectorImageModel))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
@@ -118,9 +121,9 @@ data class StepDetail(
         }
 
         /** The card names the model that will be paid and the prompt it gets: "black-forest-labs/flux.2-klein-4b · A blue door". */
-        private fun generateImageTarget(arguments: JsonObject, words: Words): String? {
+        private fun generateImageTarget(arguments: JsonObject, defaultModel: String?): String? {
             val prompt = arguments.text("prompt")?.trim()?.take(MAX_PROMPT_CHARACTERS_SHOWN)
-            val model = arguments.text("model")?.trim()?.ifEmpty { null } ?: words.defaultImageModel
+            val model = arguments.text("model")?.trim()?.ifEmpty { null } ?: defaultModel
             return listOfNotNull(model, prompt).joinToString(" · ").ifEmpty { null }
         }
 

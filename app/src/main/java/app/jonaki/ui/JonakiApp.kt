@@ -716,6 +716,7 @@ private fun ChatRoute(
     var webSearchForNewThread by rememberSaveable(threadId) { mutableStateOf<Boolean?>(null) }
     // Likewise the image model picked before the first message; null follows the starred default.
     var imageModelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
+    var vectorImageModelForNewThread by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
     var renaming by rememberSaveable(threadId) { mutableStateOf(false) }
     // Style, persona and instructions picked before the first message, like the thinking level above.
     var styleForNewThread by rememberSaveable(threadId, stateSaver = ThreadStyleDraftSaver) { mutableStateOf(ThreadStyleDraft()) }
@@ -769,12 +770,20 @@ private fun ChatRoute(
         null
     }
     val starredImageModelKey = settingsSnapshot.imageModels.defaultModelKey
-    val addedImageModelKeys = settingsSnapshot.imageModels.allModelKeys
+    // The two image tools have their own models: a thread's raster pick and vector pick do not touch each other.
+    val addedImageModelKeys = settingsSnapshot.imageModels.allModelKeys.filter { modelKey -> !settingsSnapshot.imageModels.isVector(modelKey) }
+    val addedVectorModelKeys = settingsSnapshot.imageModels.allModelKeys.filter { modelKey -> settingsSnapshot.imageModels.isVector(modelKey) }
+    val firstVectorModelKey = addedVectorModelKeys.firstOrNull()
     val imageChoicesByThread by application.threadImageChoices.byThread.collectAsState()
     val selectedImageModelKey = ThreadImageChoices.resolve(
         choice = if (isNew) imageModelForNewThread else imageChoicesByThread[threadId],
         addedModelKeys = addedImageModelKeys,
         starredDefault = starredImageModelKey,
+    )
+    val selectedVectorImageModelKey = ThreadImageChoices.resolve(
+        choice = if (isNew) vectorImageModelForNewThread else imageChoicesByThread[ThreadImageChoices.vectorKeyOf(threadId)],
+        addedModelKeys = addedVectorModelKeys,
+        starredDefault = null,
     )
     val imageLabels = rememberOpenRouterImageLabels(
         application,
@@ -795,7 +804,7 @@ private fun ChatRoute(
             compaction = compaction,
             subagentLimits = settingsSnapshot.subagentLimits,
             subagentTypeNames = AgentTypes.ALL.map { type -> type.name } + settingsSnapshot.customSubagents.map { subagent -> subagent.name },
-            stepWords = stepDetailWords(selectedImageModelKey),
+            stepWords = stepDetailWords(selectedImageModelKey, selectedVectorImageModelKey),
         ),
         isRunning = isRunning,
         queuedMessages = queuedByThread[threadId].orEmpty().map { queued -> QueuedMessageUi(queued.id, queued.text) },
@@ -805,6 +814,7 @@ private fun ChatRoute(
         selectedModelKey = modelKey,
         imageModelChoices = imageModelChoices(settingsSnapshot.imageModels, imageLabels),
         selectedImageModelKey = selectedImageModelKey,
+        selectedVectorImageModelKey = selectedVectorImageModelKey,
         usage = usageOf(modelUsage, catalog, threadCost, messages),
         attachments = attachmentsByThread[threadId].orEmpty().map { file -> AttachmentUi(file.id, file.name, previewPath = previewPathOf(file)) },
         editingMessageId = editingMessageId,
@@ -857,6 +867,14 @@ private fun ChatRoute(
                     withContext(Dispatchers.IO) {
                         application.threadImageChoices.choose(
                             targetThreadId, pickedImageModel, starredImageModelKey, keepOnDisk = !isNewIncognito,
+                        )
+                    }
+                }
+                val pickedVectorImageModel = vectorImageModelForNewThread
+                if (isNew && pickedVectorImageModel != null) {
+                    withContext(Dispatchers.IO) {
+                        application.threadImageChoices.choose(
+                            targetThreadId, pickedVectorImageModel, firstVectorModelKey, keepOnDisk = !isNewIncognito, isVector = true,
                         )
                     }
                 }
@@ -917,13 +935,18 @@ private fun ChatRoute(
             draft = text
         },
         onImageModelSelect = { imageModelKey ->
-            if (isNew) {
+            // A vector model sets the pick for generate_vector_image, any other for generate_image.
+            val isVectorPick = settingsSnapshot.imageModels.isVector(imageModelKey)
+            if (isNew && isVectorPick) {
+                vectorImageModelForNewThread = imageModelKey.takeIf { it != firstVectorModelKey }
+            } else if (isNew) {
                 // Picking the starred default means "follow the default", as in a thread that has a row.
                 imageModelForNewThread = imageModelKey.takeIf { it != starredImageModelKey }
             } else {
                 val keepOnDisk = thread?.incognito != true
+                val defaultOfKind = if (isVectorPick) firstVectorModelKey else starredImageModelKey
                 scope.launch(Dispatchers.IO) {
-                    application.threadImageChoices.choose(threadId, imageModelKey, starredImageModelKey, keepOnDisk)
+                    application.threadImageChoices.choose(threadId, imageModelKey, defaultOfKind, keepOnDisk, isVector = isVectorPick)
                 }
             }
         },
@@ -1046,9 +1069,9 @@ private fun ChatRoute(
 /** The staged file's path when it is an image, so its chip shows a thumbnail. */
 private fun previewPathOf(file: StagedFile): String? = file.file.path.takeIf { ViewedImages.isImagePath(file.name) }
 
-/** The step track's labels in the app's language (M11); [defaultImageModel] is the thread's effective image model. */
+/** The step track's labels in the app's language (M11); the two models are the thread's effective raster and vector image models. */
 @Composable
-private fun stepDetailWords(defaultImageModel: String?): StepDetail.Words {
+private fun stepDetailWords(defaultImageModel: String?, defaultVectorImageModel: String?): StepDetail.Words {
     val resources = LocalContext.current.resources
     return StepDetail.Words(
         readCalendar = stringResource(R.string.step_read_calendar),
@@ -1069,6 +1092,7 @@ private fun stepDetailWords(defaultImageModel: String?): StepDetail.Words {
         fromLinkedFolder = stringResource(R.string.step_from_linked_folder),
         lineCount = { lines -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_code_lines, lines, lines) },
         defaultImageModel = defaultImageModel,
+        defaultVectorImageModel = defaultVectorImageModel,
     )
 }
 
@@ -1593,9 +1617,14 @@ private fun AddImageModelsRoute(application: JonakiApplication, serviceKey: Stri
     }
     val snapshot by application.settings.snapshot.collectAsState()
     val alreadyAdded = snapshot.imageModels.modelsByService[service].orEmpty().toSet()
-    val onDone = { modelIds: List<String> ->
+    // vectorIds are the picked ids that the service's own list marked as vector models; Gemini's list marks none.
+    val onDone = { modelIds: List<String>, vectorIds: Set<String> ->
         application.settings.update { current ->
-            current.copy(imageModels = modelIds.fold(current.imageModels) { updated, modelId -> updated.addModel(service, modelId) })
+            current.copy(
+                imageModels = modelIds.fold(current.imageModels) { updated, modelId ->
+                    updated.addModel(service, modelId, isVector = modelId in vectorIds)
+                },
+            )
         }
         onFinished()
     }
@@ -1612,7 +1641,7 @@ private fun AddImageModelsRoute(application: JonakiApplication, serviceKey: Stri
         state = ImagePickerState.Loaded(suggestions, allowsTypedId = true),
         onClose = onFinished,
         onRetry = {},
-        onDone = onDone,
+        onDone = { modelIds -> onDone(modelIds, emptySet()) },
     )
 }
 
@@ -1622,7 +1651,7 @@ private fun AddOpenRouterImageModelsScreen(
     application: JonakiApplication,
     alreadyAdded: Set<String>,
     onFinished: () -> Unit,
-    onDone: (List<String>) -> Unit,
+    onDone: (modelIds: List<String>, vectorIds: Set<String>) -> Unit,
 ) {
     // Bumped by "Try again"; each value loads the list once more.
     var attempt by remember { mutableIntStateOf(0) }
@@ -1650,6 +1679,7 @@ private fun AddOpenRouterImageModelsScreen(
                     name = model.name,
                     isAdded = model.id in alreadyAdded,
                     imagePrice = imagePriceUiOf(prices[model.id]),
+                    isVector = model.isVector,
                 )
             },
         )
@@ -1659,7 +1689,10 @@ private fun AddOpenRouterImageModelsScreen(
         state = pickerState,
         onClose = onFinished,
         onRetry = { attempt += 1 },
-        onDone = onDone,
+        onDone = { pickedIds ->
+            val vectorIds = loadedModels.orEmpty().filter { model -> model.isVector }.map { model -> model.id }.toSet()
+            onDone(pickedIds, vectorIds)
+        },
     )
 }
 
@@ -1694,6 +1727,7 @@ private fun imageGenerationFor(
                 name = if (isOpenRouter) labels.names[modelId] ?: modelId else modelId,
                 priceText = if (isOpenRouter) labels.priceTexts[modelId] else null,
                 isDefault = modelKey == imageModels.defaultModelKey,
+                isVector = imageModels.isVector(modelKey),
             )
         }
         ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), rows)
@@ -1742,7 +1776,9 @@ private fun imageModelChoices(imageModels: ImageModels, labels: OpenRouterImageL
                 name = if (isOpenRouter) labels.names[modelId] ?: modelId else modelId,
                 serviceName = service.displayName,
                 priceText = if (isOpenRouter) labels.priceTexts[modelId] else null,
-                isDefault = modelKey == imageModels.defaultModelKey,
+                // The star is generate_image's default; a vector model is never that, so it shows no "Default".
+                isDefault = modelKey == imageModels.defaultModelKey && !imageModels.isVector(modelKey),
+                isVector = imageModels.isVector(modelKey),
             )
         }
     }

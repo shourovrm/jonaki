@@ -14,6 +14,7 @@ import app.jonaki.tools.exportpdf.ExportPdfTool
 import app.jonaki.tools.exportpdf.PdfRenderer
 import app.jonaki.tools.findfiles.FindFilesTool
 import app.jonaki.tools.generateimage.GenerateImageTool
+import app.jonaki.tools.generatevectorimage.GenerateVectorImageTool
 import app.jonaki.tools.mcp.McpServer
 import app.jonaki.tools.mcp.McpTool
 import app.jonaki.tools.memory.MemoryStore
@@ -81,10 +82,14 @@ data class ToolServices(
     val skillProposals: SkillProposalSink? = null,
     /** Makes pictures with the models below, routed by service; null leaves generate_image out (no image service has both a key and a model). */
     val imageGenerator: ImageGenerator? = null,
-    /** The image models of the services that have a key, as "service:modelId". */
+    /** The raster image models of the services that have a key, as "service:modelId"; vector models are in [vectorImageModelKeys]. */
     val imageModelKeys: List<String> = emptyList(),
     /** The model used when a call names none: the thread's pick or the starred one; asked at every call. */
     val defaultImageModelKey: () -> String? = { null },
+    /** The vector (SVG) image models of the services that have a key; with [imageGenerator] they switch generate_vector_image on. */
+    val vectorImageModelKeys: List<String> = emptyList(),
+    /** The vector model used when a call names none; asked at every call. */
+    val defaultVectorImageModelKey: () -> String? = { null },
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -125,6 +130,9 @@ object ToolRegistry {
         }
         if (services.imageGenerator != null && services.imageModelKeys.isNotEmpty()) {
             tools += GenerateImageTool(services.imageGenerator, services.imageModelKeys, services.defaultImageModelKey)
+        }
+        if (services.imageGenerator != null && services.vectorImageModelKeys.isNotEmpty()) {
+            tools += GenerateVectorImageTool(services.imageGenerator, services.vectorImageModelKeys, services.defaultVectorImageModelKey)
         }
         if (services.pdfRenderer != null) {
             tools += ExportPdfTool(services.pdfRenderer)
