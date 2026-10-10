@@ -165,6 +165,132 @@ class ImageModelsTest {
         assertTrue(ImageModels().addService(ImageService.GEMINI).usableModelKeys { true }.isEmpty())
     }
 
+    private val vectorV4 = "recraft/recraft-v4-vector"
+    private val vectorPro = "recraft/recraft-v4-pro-vector"
+
+    @Test
+    fun aModelAddedAsVectorIsRememberedAndOthersAreNot() {
+        val models = ImageModels()
+            .addModel(ImageService.OPENROUTER, flux)
+            .addModel(ImageService.OPENROUTER, "someone/draw-svg", isVector = true)
+
+        assertTrue(models.isVector("openrouter:someone/draw-svg"))
+        assertFalse(models.isVector("openrouter:$flux"))
+        assertEquals(setOf("openrouter:someone/draw-svg"), models.vectorModelKeys)
+    }
+
+    @Test
+    fun withoutAStoredFlagAnOpenRouterIdEndingInVectorCounts() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, vectorV4).addModel(ImageService.OPENROUTER, vectorPro)
+            .addModel(ImageService.OPENROUTER, "vendor/vectorize-photo").addModel(ImageService.GEMINI, "vector")
+
+        assertTrue(models.isVector("openrouter:$vectorV4"))
+        assertTrue(models.isVector("openrouter:$vectorPro"))
+        // "vectorize" does not end with "vector"; Gemini ids are never matched by name.
+        assertFalse(models.isVector("openrouter:vendor/vectorize-photo"))
+        assertFalse(models.isVector("gemini:vector"))
+    }
+
+    @Test
+    fun theTwoToolsGetTheirOwnKindOfModelOnly() {
+        val models = ImageModels()
+            .addModel(ImageService.OPENROUTER, flux)
+            .addModel(ImageService.OPENROUTER, "someone/draw-svg", isVector = true)
+            .addModel(ImageService.OPENROUTER, vectorV4)
+            .addModel(ImageService.GEMINI, nanoBanana)
+        val everyServiceHasAKey = { _: ImageService -> true }
+
+        assertEquals(listOf("openrouter:$flux", "gemini:$nanoBanana"), models.usableRasterModelKeys(everyServiceHasAKey))
+        assertEquals(listOf("openrouter:someone/draw-svg", "openrouter:$vectorV4"), models.usableVectorModelKeys(everyServiceHasAKey))
+        assertEquals(listOf("openrouter:$flux", "gemini:$nanoBanana"), models.usableRasterModelKeys { it == ImageService.GEMINI || it == ImageService.OPENROUTER })
+        assertEquals(listOf("gemini:$nanoBanana"), models.usableRasterModelKeys { it == ImageService.GEMINI })
+        assertTrue(models.usableVectorModelKeys { it == ImageService.GEMINI }.isEmpty())
+    }
+
+    @Test
+    fun aToolIsOfferedOnlyWhenItsKindHasAUsableModel() {
+        val onlyRaster = ImageModels().addModel(ImageService.OPENROUTER, flux)
+        val onlyVector = ImageModels().addModel(ImageService.OPENROUTER, vectorV4, isVector = true)
+
+        assertTrue(onlyRaster.usableVectorModelKeys { true }.isEmpty())
+        assertTrue(onlyVector.usableRasterModelKeys { true }.isEmpty())
+        assertEquals(listOf("openrouter:$vectorV4"), onlyVector.usableVectorModelKeys { true })
+    }
+
+    @Test
+    fun removingAModelOrItsServiceClearsItsVectorFlag() {
+        val models = ImageModels()
+            .addModel(ImageService.OPENROUTER, "someone/draw-svg", isVector = true)
+            .addModel(ImageService.OPENROUTER, flux)
+            .addModel(ImageService.GEMINI, nanoBanana)
+
+        val withoutModel = models.removeModel("openrouter:someone/draw-svg")
+        assertTrue(withoutModel.vectorModelKeys.isEmpty())
+        assertFalse(withoutModel.isVector("openrouter:someone/draw-svg"))
+
+        val withoutService = models.removeService(ImageService.OPENROUTER)
+        assertTrue(withoutService.vectorModelKeys.isEmpty())
+        // Adding the same id again as a raster model must not inherit the old flag.
+        assertFalse(withoutService.addModel(ImageService.OPENROUTER, "someone/draw-svg").isVector("openrouter:someone/draw-svg"))
+    }
+
+    @Test
+    fun theStarCanStayOnAVectorModelWithoutChangingTheRasterList() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, vectorV4, isVector = true).addModel(ImageService.OPENROUTER, flux)
+
+        assertEquals("openrouter:$vectorV4", models.defaultModelKey)
+        assertEquals(listOf("openrouter:$flux"), models.usableRasterModelKeys { true })
+    }
+
+    @Test
+    fun theVectorFlagsSurviveTheTextForm() {
+        val models = ImageModels()
+            .addModel(ImageService.OPENROUTER, flux)
+            .addModel(ImageService.OPENROUTER, "someone/draw-svg", isVector = true)
+            .addModel(ImageService.GEMINI, nanoBanana)
+
+        val stored = ImageModels.toStored(models)
+        val restored = ImageModels.fromStored(
+            stored.servicesText, stored.modelKeysText, stored.defaultModelKey, null, null, stored.vectorModelKeysText,
+        )
+
+        assertEquals(models, restored)
+        assertEquals("openrouter:someone/draw-svg", stored.vectorModelKeysText)
+    }
+
+    @Test
+    fun settingsSavedBeforeVectorModelsExistedLoadWithNoStoredFlag() {
+        // The key image_vector_model_keys is absent, so the text is null.
+        val restored = ImageModels.fromStored(
+            servicesText = "openrouter",
+            modelKeysText = "openrouter:$flux\nopenrouter:$vectorV4",
+            defaultModelKey = "openrouter:$flux",
+            legacyModelsText = null,
+            legacyDefaultModel = null,
+            vectorModelKeysText = null,
+        )
+
+        assertTrue(restored.vectorModelKeys.isEmpty())
+        assertEquals("openrouter:$flux", restored.defaultModelKey)
+        assertEquals(listOf("openrouter:$flux", "openrouter:$vectorV4"), restored.allModelKeys)
+        // The name fallback still sorts the old model into the vector kind.
+        assertEquals(listOf("openrouter:$vectorV4"), restored.usableVectorModelKeys { true })
+    }
+
+    @Test
+    fun aStoredVectorFlagForAModelThatIsGoneIsDropped() {
+        val restored = ImageModels.fromStored("openrouter", "openrouter:$flux", null, null, null, "openrouter:gone/model-v\nopenrouter:$flux")
+
+        assertEquals(setOf("openrouter:$flux"), restored.vectorModelKeys)
+    }
+
+    @Test
+    fun addingAnAlreadyListedModelAsVectorSetsItsFlag() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, "someone/draw-svg")
+
+        assertTrue(models.addModel(ImageService.OPENROUTER, "someone/draw-svg", isVector = true).isVector("openrouter:someone/draw-svg"))
+    }
+
     @Test
     fun servicesShareSecretsWithChatServices() {
         assertEquals(ChatService.OPENROUTER.secret, ImageService.OPENROUTER.secret)

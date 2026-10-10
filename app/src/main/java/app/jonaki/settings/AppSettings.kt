@@ -176,6 +176,8 @@ class AppSettings(
                 // The first version's values; they are read only until the new ones are first saved.
                 legacyModelsText = preferences.getString(IMAGE_MODELS, null),
                 legacyDefaultModel = preferences.getString(IMAGE_DEFAULT_MODEL, null),
+                // Absent before vector models existed; then no model is a stored vector model.
+                vectorModelKeysText = preferences.getString(IMAGE_VECTOR_MODEL_KEYS, null),
             ),
         )
     }
@@ -298,6 +300,7 @@ class AppSettings(
         editor.putString(IMAGE_SERVICES, storedImageModels.servicesText)
         editor.putString(IMAGE_MODEL_KEYS, storedImageModels.modelKeysText)
         editor.putString(IMAGE_DEFAULT_MODEL_KEY, storedImageModels.defaultModelKey)
+        editor.putString(IMAGE_VECTOR_MODEL_KEYS, storedImageModels.vectorModelKeysText)
         editor.apply()
     }
 
@@ -362,5 +365,6 @@ class AppSettings(
         const val IMAGE_SERVICES = "image_services"
         const val IMAGE_MODEL_KEYS = "image_model_keys"
         const val IMAGE_DEFAULT_MODEL_KEY = "image_default_model_key"
+        const val IMAGE_VECTOR_MODEL_KEYS = "image_vector_model_keys"
     }
 }
