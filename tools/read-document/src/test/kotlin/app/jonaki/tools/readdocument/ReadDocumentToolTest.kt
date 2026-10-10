@@ -3,6 +3,7 @@ package app.jonaki.tools.readdocument
 import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -10,6 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -64,6 +66,16 @@ class ReadDocumentToolTest {
 
         assertTrue(output.isError)
         assertTrue(output.text, output.text.contains("locked.pdf is locked with a password"))
+    }
+
+    @Test
+    fun thePdfReaderForOtherCallersGivesPageTextsAndPlainReasons() {
+        val pages = PdfPageReader.read(File(testdata, "three-pages.pdf"), firstPage = 2, pageLimit = 5)
+
+        assertEquals(3, pages.totalPages)
+        assertEquals(2, pages.texts.size)
+        val locked = assertThrows(IOException::class.java) { PdfPageReader.read(File(testdata, "locked.pdf"), 1, 1) }
+        assertEquals("it is locked with a password", locked.message)
     }
 
     @Test

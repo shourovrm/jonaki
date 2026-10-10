@@ -39,6 +39,7 @@ import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.sharefile.ShareFileTool
 import app.jonaki.tools.viewimage.ViewImageTool
 import app.jonaki.tools.webfetch.PageRenderer
+import app.jonaki.tools.webfetch.PdfSupport
 import app.jonaki.tools.webfetch.WebFetchTool
 import app.jonaki.tools.websearch.WebSearchTool
 import app.jonaki.tools.writefile.WriteFileTool
@@ -72,6 +73,8 @@ data class ToolServices(
     val codeRuntimes: List<CodeRuntime> = emptyList(),
     /** The off-screen WebView that lets web_fetch run a page's JavaScript (D-131); null reads pages without it. */
     val pageRenderer: PageRenderer? = null,
+    /** The PDF reader and private cache that let web_fetch read a PDF link (D-185); null leaves PDF links unread. */
+    val pdfSupport: PdfSupport? = null,
     /** The off-screen WebView that makes the PDF for export_pdf; null leaves export_pdf out. */
     val pdfRenderer: PdfRenderer? = null,
     /** What generate_video needs; null leaves it out (no OpenRouter key, or no video model added). */
@@ -121,7 +124,7 @@ object ToolRegistry {
             tools += WebSearchTool(services.searchBackends)
         }
         if (services.webAccessEnabled) {
-            tools += WebFetchTool(services.pageRenderer)
+            tools += WebFetchTool(services.pageRenderer, services.pdfSupport)
         }
         if (services.videoSummarizer != null) {
             tools += YouTubeSummarizeTool(services.videoSummarizer)

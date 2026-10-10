@@ -106,10 +106,13 @@ import app.jonaki.skills.ThreadSkills
 import app.jonaki.tools.phone.Phone
 import app.jonaki.tools.schedule.TaskScheduler
 import app.jonaki.tools.sharefile.FileDestinations
+import app.jonaki.tools.webfetch.PdfSupport
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
+import app.jonaki.web.PdfBoxPdfReader
 import app.jonaki.web.WebViewPageRenderer
 import app.jonaki.web.WebViewPdfRenderer
+import java.io.File
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -246,6 +249,8 @@ class AgentRunner(
     /** One for the app, because it lets only one page render at a time (D-131). */
     private val pageRenderer = WebViewPageRenderer(context)
     private val pdfRenderer = WebViewPdfRenderer(context)
+    /** A PDF that web_fetch downloads stays in the app's cache, where no tool can reach it by path (D-185). */
+    private val pdfSupport = PdfSupport(PdfBoxPdfReader(), File(context.cacheDir, "web-fetch-pdf"))
 
     /**
      * Each running thread's own approval mode name, "" when it follows
@@ -1010,6 +1015,7 @@ class AgentRunner(
         mcpToolListFolder = mcpServers.toolListFolder,
         codeRuntimes = CodeRuntimes.forApp(context),
         pageRenderer = pageRenderer,
+        pdfSupport = pdfSupport,
         pdfRenderer = pdfRenderer,
         enabledGroups = settings.snapshot.value.enabledToolGroups,
         video = videoSetup?.servicesFor(thread.id),
@@ -1090,6 +1096,7 @@ class AgentRunner(
             fileDestinations = fileDestinations,
             phone = phone,
             taskScheduler = taskSchedulerFor?.invoke(NO_THREAD),
+            pdfSupport = pdfSupport,
             onlyTools = LocalModelToolList.CHOOSABLE.toSet(),
         )
         return ToolRegistry.tools(services)

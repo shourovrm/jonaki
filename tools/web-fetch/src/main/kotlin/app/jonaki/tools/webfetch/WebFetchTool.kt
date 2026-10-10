@@ -8,6 +8,8 @@ import app.jonaki.core.toolapi.ToolContext
 import app.jonaki.core.toolapi.ToolOutput
 import app.jonaki.core.toolapi.await
 import app.jonaki.core.toolapi.booleanArgument
+import app.jonaki.core.toolapi.intArgument
+import java.io.File
 import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -25,6 +27,7 @@ import kotlinx.serialization.json.putJsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import okhttp3.Response
+import okio.ByteString.Companion.encodeUtf8
 
 /**
  * Downloads one web page and returns its main text. Pages longer than
@@ -35,14 +38,30 @@ import okhttp3.Response
  * browser engine and read from the HTML its scripts built (D-131): when the
  * model asks with render=true, or when the plain download looks like an
  * empty app shell or a "please enable JavaScript" page.
+ *
+ * With [pdfSupport], an address that answers with a PDF is read too (D-185):
+ * the file goes to the app's private cache, never to the thread folder, and
+ * the model gets the text of a few pages and the call that continues them.
  */
-class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
+class WebFetchTool(
+    private val pageRenderer: PageRenderer? = null,
+    private val pdfSupport: PdfSupport? = null,
+) : Tool {
     override val name: String = "web_fetch"
 
-    override val promptLine: String = "web_fetch: read the main text of a web page"
+    override val promptLine: String = if (pdfSupport == null) {
+        "web_fetch: read the main text of a web page"
+    } else {
+        "web_fetch: read the main text of a web page or of a PDF link"
+    }
 
     override val guidelines: List<String> = listOf(
-        "web_fetch reads HTML and plain-text pages only; it cannot read PDFs, images or videos.",
+        if (pdfSupport == null) {
+            "web_fetch reads HTML and plain-text pages only; it cannot read PDFs, images or videos."
+        } else {
+            "web_fetch reads HTML pages, plain text and PDFs; it cannot read images or videos. " +
+                "A PDF comes a few pages at a time; continue with the offset the notice names."
+        },
         "For YouTube videos use youtube_summarize instead.",
     )
 
@@ -65,6 +84,16 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
                     put("description", "Run page JavaScript first; auto for empty pages")
                 }
             }
+            if (pdfSupport != null) {
+                putJsonObject("offset") {
+                    put("type", "integer")
+                    put("description", "For a PDF: first page to show, counting from 1. Default 1.")
+                }
+                putJsonObject("limit") {
+                    put("type", "integer")
+                    put("description", "For a PDF: most pages to show. Default $DEFAULT_PAGE_LIMIT.")
+                }
+            }
         }
         putJsonArray("required") { add("url") }
     }
@@ -77,7 +106,7 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
     override fun outsideContentSourceOf(arguments: JsonObject): String =
         OutsideSources.hostOf((arguments["url"] as? JsonPrimitive)?.contentOrNull)
     override val requiredCapabilities: Set<Capability> = emptySet()
-    /** A plain download (about 20 s at worst) plus a render ([RENDER_TIME_LIMIT]) must fit. */
+    /** A plain download (about 20 s at worst) plus a render ([RENDER_TIME_LIMIT]) must fit; so must a PDF download. */
     override val timeLimit: Duration = 60.seconds
 
     override suspend fun run(arguments: JsonObject, context: ToolContext): ToolOutput {
@@ -91,31 +120,40 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
         }
         val maxLength = ((arguments["max_length"] as? JsonPrimitive)?.intOrNull ?: DEFAULT_LENGTH).coerceIn(MIN_LENGTH, MAX_LENGTH)
         val renderRequested = arguments.booleanArgument("render") == true
+        val pdfWindow = PdfWindow(
+            firstPage = (arguments.intArgument("offset") ?: 1).coerceAtLeast(1),
+            pageLimit = (arguments.intArgument("limit") ?: DEFAULT_PAGE_LIMIT).coerceIn(1, MAX_PAGE_LIMIT),
+            maxLength = maxLength,
+        )
 
-        val pageText = if (renderRequested) {
+        val cachedPdf = pdfSupport?.cache?.find(url.toString())
+        val pageText = if (pdfSupport != null && cachedPdf != null) {
+            // The earlier call for this address was a PDF; later pages come from the copy.
+            readPdf(cachedPdf, url.toString(), pdfWindow, pdfSupport)
+        } else if (renderRequested) {
             renderOnRequest(url.toString())
         } else {
-            download(url.toString(), context)
+            download(url.toString(), context, pdfWindow)
         }
         if (pageText.isError) return pageText
         return ToolOutput.success(context.outputLimiter.limit(pageText.text, maxLength, name))
     }
 
-    private suspend fun download(url: String, context: ToolContext): ToolOutput {
+    private suspend fun download(url: String, context: ToolContext, pdfWindow: PdfWindow): ToolOutput {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
-            .header("Accept", "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5")
+            .header("Accept", "text/html,application/xhtml+xml,text/plain;q=0.9,application/pdf;q=0.8,*/*;q=0.5")
             .build()
         val response = try {
             context.httpClient.newCall(request).await()
         } catch (networkError: IOException) {
             return ToolOutput.error("could not load $url (${networkError.message})", "Check the address, or search for another source.")
         }
-        return response.use { readPage(it, url) }
+        return response.use { readPage(it, url, pdfWindow) }
     }
 
-    private suspend fun readPage(response: Response, url: String): ToolOutput {
+    private suspend fun readPage(response: Response, url: String, pdfWindow: PdfWindow): ToolOutput {
         if (!response.isSuccessful) {
             return ToolOutput.error(
                 "$url answered HTTP ${response.code}",
@@ -127,6 +165,9 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
         val subtype = "${mediaType?.type}/${mediaType?.subtype}"
         val isHtml = mediaType == null || subtype in HTML_TYPES
         val isText = mediaType?.type == "text" || subtype in TEXT_TYPES
+        if (pdfSupport != null && isPdf(response, subtype)) {
+            return downloadPdf(response, url, pdfWindow, pdfSupport)
+        }
         if (!isHtml && !isText) {
             return ToolOutput.error("$url is $subtype, not a web page", "web_fetch reads HTML and text pages only.")
         }
@@ -148,6 +189,54 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
             )
         }
         return ToolOutput.success(formatPage(page, finalUrl))
+    }
+
+    /** Some servers send a PDF as a plain download ("application/octet-stream"), so the first bytes are looked at too. */
+    private suspend fun isPdf(response: Response, subtype: String): Boolean {
+        if (subtype == PDF_TYPE) return true
+        return withContext(Dispatchers.IO) {
+            try {
+                response.body!!.source().rangeEquals(0, PDF_FIRST_BYTES)
+            } catch (networkError: IOException) {
+                false
+            }
+        }
+    }
+
+    private suspend fun downloadPdf(response: Response, url: String, pdfWindow: PdfWindow, support: PdfSupport): ToolOutput {
+        val tooLarge = ToolOutput.error(
+            "the PDF at $url is larger than ${MAX_PDF_BYTES / (1024 * 1024)} MB",
+            "web_fetch cannot read it; try web_search for a page that covers the same content.",
+        )
+        if (response.body!!.contentLength() > MAX_PDF_BYTES) return tooLarge
+        val copy = try {
+            withContext(Dispatchers.IO) { support.cache.save(url, response.body!!.source(), MAX_PDF_BYTES) }
+        } catch (overLimit: PdfTooLargeException) {
+            return tooLarge
+        } catch (networkError: IOException) {
+            return ToolOutput.error("could not download the PDF at $url (${networkError.message})", "Try again, or search for another source.")
+        }
+        return readPdf(copy, url, pdfWindow, support)
+    }
+
+    private suspend fun readPdf(copy: File, url: String, pdfWindow: PdfWindow, support: PdfSupport): ToolOutput {
+        val pages = try {
+            withContext(Dispatchers.IO) { support.reader.read(copy, pdfWindow.firstPage, pdfWindow.pageLimit) }
+        } catch (unreadable: PdfReadException) {
+            // A copy that cannot be read would fail the same way for an hour.
+            support.cache.remove(url)
+            return ToolOutput.error("could not read the PDF at $url (${unreadable.message})", "Try web_search for another source.")
+        }
+        if (pages.totalPages == 0) {
+            return ToolOutput.error("the PDF at $url has no pages", "Try web_search for another source.")
+        }
+        if (pdfWindow.firstPage > pages.totalPages) {
+            return ToolOutput.error(
+                "offset ${pdfWindow.firstPage} is past the end; the PDF at $url has ${pages.totalPages} pages",
+                "Use an offset between 1 and ${pages.totalPages}.",
+            )
+        }
+        return ToolOutput.success(PdfPageText.fitting(url, pages, pdfWindow.firstPage, pdfWindow.maxLength))
     }
 
     private suspend fun renderOnRequest(url: String): ToolOutput {
@@ -213,7 +302,16 @@ class WebFetchTool(private val pageRenderer: PageRenderer? = null) : Tool {
         return source.buffer.readByteArray(available)
     }
 
+    /** The part of a PDF one call asks for; [maxLength] is in characters. */
+    private class PdfWindow(val firstPage: Int, val pageLimit: Int, val maxLength: Int)
+
     private companion object {
+        const val DEFAULT_PAGE_LIMIT = 20
+        const val MAX_PAGE_LIMIT = 100
+        /** The size read_document takes too (D-046). */
+        const val MAX_PDF_BYTES = 25L * 1024 * 1024
+        const val PDF_TYPE = "application/pdf"
+        val PDF_FIRST_BYTES = "%PDF-".encodeUtf8()
         const val DEFAULT_LENGTH = 10_000
         const val MIN_LENGTH = 500
         const val MAX_LENGTH = 100_000

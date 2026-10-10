@@ -2709,3 +2709,28 @@ facts that matter (user, same day). The About line and the README now say
 "an AI agent app with a chat interface where you can use your own API
 keys", and the "no Jonaki account or server" sentence is gone (user).
 Outcome: unit tests and the release build pass.
+
+## D-185 · 2026-10-11 · web_fetch reads PDF links from a private cache — proposed
+User request: web_fetch refused every PDF link although read_document can
+read PDFs. Now an address that answers with a PDF (by its content type, or
+by the first bytes "%PDF-" when the server sends a plain download) is
+read: the file is downloaded into the app's private cache folder
+`web-fetch-pdf`, its text is extracted with the PdfBox reader of
+read_document, and the model gets whole pages up to max_length with the
+call that continues (`offset`, and `limit`, default 20 pages). The file is
+never put in the thread folder (user, same day: saving it there would let
+a web page with hidden instructions drop a file the user never chose onto
+the phone). So no tool and no other app can reach the copy by path, the
+copy is named by a hash of the address and never by a name the server
+sent, web_fetch stays read-only, and the text stays labelled with the
+website's host as outside content. A copy is reused for one hour, so later
+pages need no second download, and at most four copies are kept. PDFs over
+25 MB are refused, the size read_document takes (D-046). This is state
+outside the database and the thread folder, which AGENTS.md's "no hidden
+state" rule forbids; it is allowed here as the mcp tool-list cache is
+(D-102), because losing it only costs a download. tools/web-fetch sees
+only a `PdfReader` interface; the app passes in the reader, as it passes
+the page renderer (D-131), so one tool does not depend on another. Not
+done: scanned PDFs without a text layer come back as empty pages, and the
+model cannot look at them with view_image because there is no file path.
+Outcome: unit tests and the release build pass; not tried on the phone.
