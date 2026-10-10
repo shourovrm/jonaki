@@ -287,7 +287,7 @@ original message. A failed or cut-off summary (4,000-token limit) leaves
 the thread whole until the next run. Why: plan M4 step 6. Limit: the chat
 does not yet mark where the summary begins. Outcome: pending.
 
-## D-034 · 2026-10-02 · Memory tool runs without approval — proposed
+## D-034 · 2026-10-02 · Memory tool runs without approval — accepted
 The memory tool (remember, forget, recall) declares a new cost,
 `SideEffect.CHANGES_APP_DATA`: it changes only Jonaki's own records, which
 the user sees as a step and can edit or undo on the memory screen, so the
@@ -300,7 +300,7 @@ Rejected: `CHANGES` with approval (nags), `READ_ONLY` (false declaration),
 approval only for forget (one tool has one cost; a forgotten fact shows its
 text in the step, so it can be added back). Outcome: pending.
 
-## D-035 · 2026-10-02 · Memory in the system prompt, cache-stable — proposed
+## D-035 · 2026-10-02 · Memory in the system prompt, cache-stable — accepted
 The system prompt ends with a Memory section: global facts, then the
 thread's facts, each within 6,000 characters (about 1,500 tokens at 4
 characters per token), one line "- [id] text" per fact. Facts waiting for
@@ -315,7 +315,7 @@ during a run reach the next run. The section goes last so the base text
 and tool list stay a cached prefix. Rejected: sorting lines by last use
 (new bytes on every run). Outcome: pending.
 
-## D-036 · 2026-10-02 · Background model and memory extraction — proposed
+## D-036 · 2026-10-02 · Background model and memory extraction — accepted
 Background calls (memory extraction, compaction) use `BackgroundModel`: the
 scoped model with a saved key and the lowest input plus output price per
 million tokens in the model catalog, first in scoped order on a tie, else
@@ -333,7 +333,7 @@ row (role BACKGROUND) so thread, month and usage-sheet totals include it.
 Rejected: a separate usage table (all cost queries would need a union).
 Outcome: pending.
 
-## D-037 · 2026-10-02 · Skill library on disk, read-only for the model — proposed
+## D-037 · 2026-10-02 · Skill library on disk, read-only for the model — accepted
 Skills live in `files/skills/<name>/` with a SKILL.md whose YAML front
 matter has `name` and `description` (Anthropic's format) and any files it
 names. The name is also the folder name: lowercase letters, digits and
@@ -348,7 +348,7 @@ thread folder, so they cannot change a skill. Why: plan M5 step 1, D-014
 two fields); real absolute paths in the prompt (longer, tied to the install).
 Outcome: pending.
 
-## D-038 · 2026-10-02 · Built-in skills update only while unedited — proposed
+## D-038 · 2026-10-02 · Built-in skills update only while unedited — accepted
 On each app start every folder under `assets/skills/` is compared with the
 library. `files/skills-builtin.json` records the SHA-256 of the files the
 app installed for each built-in skill and whether the user deleted it. A
@@ -361,7 +361,7 @@ overwrite the user's edits silently. Rejected: always overwrite (loses
 edits); never update (fixes to shipped skills never arrive).
 Outcome: pending.
 
-## D-039 · 2026-10-02 · Skills listed in the system prompt — proposed
+## D-039 · 2026-10-02 · Skills listed in the system prompt — accepted
 The system prompt has a Skills section between the tool list and the
 Memory section: a header that tells the model to read a skill's SKILL.md
 with read_file before a matching task and follow it, then one line per
@@ -373,7 +373,7 @@ its problem on the skills screen. read_file's prompt line names /skills/.
 Why: plan M5 step 3, D-014. Rejected: the full SKILL.md text in the prompt
 (every skill would cost its whole text on every request). Outcome: pending.
 
-## D-040 · 2026-10-02 · Skills are on in every thread unless switched off — proposed
+## D-040 · 2026-10-02 · Skills are on in every thread unless switched off — accepted
 Each thread stores the skills the user switched off, as comma-separated
 names in a new `threads.disabledSkills` column (Room version 4, an
 AutoMigration with default ''). Every other usable skill in the library is
@@ -384,7 +384,7 @@ skill a chore. Rejected: an enabled list per thread (new skills would be
 off everywhere); a global on/off per skill in Settings (the thread switch
 covers it). Outcome: pending.
 
-## D-041 · 2026-10-02 · Skill import from a file, a link or a GitHub folder — proposed
+## D-041 · 2026-10-02 · Skill import from a file, a link or a GitHub folder — accepted
 Import takes a file from Android's document picker (no new permission): a
 zip keeps the folder that holds the shallowest SKILL.md (macOS metadata
 dropped), any other file is the SKILL.md. A link to github.com
@@ -397,7 +397,7 @@ fetched. A name that exists asks "Replace?". Why: plan M5 step 2.
 Limits: a branch name with "/" in a tree link is read as its first part
 and fails with 404; private repositories are not reachable. Outcome: pending.
 
-## D-042 · 2026-10-02 · Shared and attached files wait as chips, then go to inbox/ — proposed
+## D-042 · 2026-10-02 · Shared and attached files wait as chips, then go to inbox/ — accepted
 The share sheet (SEND and SEND_MULTIPLE, any type) and the composer's
 paper clip (system picker, several files) copy each file into the cache at
 once, because the right to read it can end with the sending activity. A
@@ -411,7 +411,7 @@ the thread is picked (a file the user removes would stay, and New thread
 would make an empty thread). Limit: chips do not survive the process; the
 cache copies are deleted on the next start. Outcome: pending.
 
-## D-043 · 2026-10-02 · One linked folder, read and written through share_file — proposed
+## D-043 · 2026-10-02 · One linked folder, read and written through share_file — accepted
 Settings > Files > "Link a folder" opens the system folder picker
 (OPEN_DOCUMENT_TREE); Jonaki keeps a persisted read and write grant and the
 folder's name; "Unlink" releases it; linking another replaces it. The model
@@ -423,7 +423,7 @@ grant taken back in system settings answers "link the folder again". Why:
 plan M6 step 1c, D-017. Rejected: a separate linked-folder tool (a 17th
 tool against D-014's count). Outcome: pending.
 
-## D-044 · 2026-10-02 · share_file: six actions, one approval cost — proposed
+## D-044 · 2026-10-02 · share_file: six actions, one approval cost — accepted
 Actions downloads, save_as, share, linked_folder, list_linked,
 import_linked; files to send must resolve inside the thread folder
 (ThreadPaths). The tool declares `SideEffect.CHANGES`, so every call shows
@@ -439,7 +439,7 @@ plan M6 step 2, user rulings of 2026-10-02 (no new permission, no new
 library). Rejected: READ_ONLY for the list actions (one tool has one cost,
 D-034); WRITE_EXTERNAL_STORAGE on Android 8 and 9. Outcome: pending.
 
-## D-045 · 2026-10-02 · Pickers and the share sheet through VisibleActivity — proposed
+## D-045 · 2026-10-02 · Pickers and the share sheet through VisibleActivity — accepted
 The tool module defines `FileDestinations` (as tools/memory defines
 MemoryStore); the app implements it. Pickers and the share sheet need an
 activity on screen, so the app's `VisibleActivity` keeps the live
@@ -454,7 +454,7 @@ in the agent service, which may not start activities. Rejected: an
 interface in core/tool-api (only one tool needs it); a notification that
 opens the picker (more moving parts for a rare case). Outcome: pending.
 
-## D-046 · 2026-10-02 · Rules for files coming in — proposed
+## D-046 · 2026-10-02 · Rules for files coming in — accepted
 `IncomingFiles` in core/tool-api serves the app and share_file: at most
 25 MB per file, checked while copying since providers often report no
 size, with "sales.zip is over 25 MB"; a name keeps one file name ("/", "\"
@@ -465,7 +465,7 @@ links are refused as unreadable, because they could name Jonaki's own
 private files. Why: plan M6 step 1c. Rejected: a larger cap (a phone and
 the model gain little from bigger files). Outcome: pending.
 
-## D-047 · 2026-10-02 · Artifact tool and offline viewer — proposed
+## D-047 · 2026-10-02 · Artifact tool and offline viewer — accepted
 The model writes an HTML file in artifacts/ with write_file or edit_file,
 then calls `artifact` with its path. The tool keeps a version when the file
 changed (artifacts/.versions/<name>/vN.html), warns the model about
@@ -491,7 +491,7 @@ lib/chart.js. Why: plan M6 step 4; the user chose Chart.js over uPlot and
 over inline SVG only (2026-10-02), because models write working Chart.js
 code more often. Outcome: pending.
 
-## D-049 · 2026-10-03 · Images reach the model as content parts — proposed
+## D-049 · 2026-10-03 · Images reach the model as content parts — accepted
 A user message whose "Attached:" line names a .jpg, .jpeg, .png, .webp,
 .gif, .heic or .heif file carries that image when the thread's model takes
 images: OpenAI-compatible `image_url` data URLs, Gemini `inlineData`. The
@@ -510,7 +510,7 @@ image.]". Why: user report of 2026-10-03. Rejected: encoding again on every
 request (a system update could change the bytes); images in the database
 (schema change, version 5 is the lead's). Outcome: pending.
 
-## D-050 · 2026-10-03 · view_image tool — proposed
+## D-050 · 2026-10-03 · view_image tool — accepted
 `view_image path=… [page=N]` lets the model look at an image or a PDF page
 in the thread folder. It answers "Image shown: work/chart.png" and, before
 the next request, `ImageMessages` adds a user message "[view_image:
@@ -524,7 +524,7 @@ to 18 with read_document. Rejected: images inside tool results (not
 portable); an action of read_document (that tool reads, this one shows).
 Outcome: pending.
 
-## D-051 · 2026-10-03 · read_document with PdfBox-Android 2.0.27.0 — proposed
+## D-051 · 2026-10-03 · read_document with PdfBox-Android 2.0.27.0 — accepted
 New tool module `tools/read-document`: PDF text page by page ("--- Page 3
 ---"), offset and limit in pages, slides or sheets (default 20, at most
 100), output over 30,000 characters saved through OutputLimiter. A page
@@ -539,7 +539,7 @@ for certificate-locked PDFs; its post-quantum tables (4.1 MB compressed)
 are excluded from the APK, which would otherwise be 10.1 MB. Why: user
 ruling of 2026-10-03. Outcome: pending.
 
-## D-052 · 2026-10-03 · Word, Excel and PowerPoint through zip and XML — proposed
+## D-052 · 2026-10-03 · Word, Excel and PowerPoint through zip and XML — accepted
 .docx: body paragraphs, "#" for headings, "- " for list items, table rows
 as tab-separated cells (headers, footers, footnotes and comments left
 out). .xlsx: each sheet as tab-separated rows, shared strings resolved,
@@ -551,7 +551,7 @@ locked Office file is recognised by its OLE container. Why: user ruling
 of 2026-10-03 (no extra library). Rejected: Apache POI (about 10 MB).
 Outcome: pending.
 
-## D-053 · 2026-10-03 · Camera through the system camera app — proposed
+## D-053 · 2026-10-03 · Camera through the system camera app — accepted
 A camera button next to the paper clip opens the system camera with
 ACTION_IMAGE_CAPTURE (`TakePicture`) and a FileProvider link to
 `cache/camera/photo-YYYYMMDD-HHMMSS.jpg`; no CAMERA permission is
@@ -560,7 +560,7 @@ like a picked file and moves to inbox/ on Send. The pending path is kept
 across a process restart; camera files are not cleaned at start for that
 reason. Why: user ruling of 2026-10-03. Outcome: pending.
 
-## D-054 · 2026-10-03 · The model's reasoning is saved and shown — proposed
+## D-054 · 2026-10-03 · The model's reasoning is saved and shown — accepted
 Reasoning that a model streams (OpenRouter `reasoning`, DeepSeek
 `reasoning_content`, Gemini thought parts) is saved in a new nullable
 column messages.reasoningText (Room version 5, AutoMigration 4 to 5) and
@@ -570,7 +570,7 @@ line once the answer starts, opened on tap. Why: user request (2026-10-03);
 the user agreed to saving after hearing the cost: about 1 to 5 KB per
 answer, about 5 MB per 1,000 answers. Outcome: pending.
 
-## D-055 · 2026-10-03 · Working line while the agent runs — proposed
+## D-055 · 2026-10-03 · Working line while the agent runs — accepted
 While a run is going and no approval card waits, the chat ends with a
 glowing firefly dot, what the agent is doing ("Thinking…", "Writing…",
 "Searching the web…", "Reading files…" and so on, named from the running
@@ -578,7 +578,7 @@ tool) and, after 3 seconds, the seconds since the prompt was sent. It
 replaces the bare caret. Why: user request (2026-10-03), modelled on Claude
 Code's status line. Outcome: pending.
 
-## D-056 · 2026-10-03 · Copy, and edit and resend — proposed
+## D-056 · 2026-10-03 · Copy, and edit and resend — accepted
 Every prompt and every finished answer has a Copy button (the raw text,
 Markdown for answers). A prompt also has Edit while no run is going: its
 text goes into the field under an "Editing message" banner; sending deletes
@@ -588,7 +588,7 @@ already extracted from deleted messages stay in memory. Why: user request
 (2026-10-03), the user chose "edit and resend" over copying into the
 field. Outcome: pending.
 
-## D-057 · 2026-10-03 · Thinking level per model and per thread — proposed
+## D-057 · 2026-10-03 · Thinking level per model and per thread — accepted
 A model that takes a thinking level offers Default, Off, Low, Medium and
 High: in Settings, in the model's ⋮ menu (shown under its prices when not
 Default), and for one thread in the chat's model sheet, below the selected
@@ -604,7 +604,7 @@ OpenRouter `reasoning: {effort}` or `{enabled: false}`; OpenAI
 settings.thinking_levels and threads.thinkingLevel (Room version 6). Why:
 user request (2026-10-03), "Settings and chat". Outcome: pending.
 
-## D-058 · 2026-10-03 · Approval modes Ask, Auto and Bypass — proposed
+## D-058 · 2026-10-03 · Approval modes Ask, Auto and Bypass — accepted
 Three modes decide which tool calls show an approval card. Ask: every
 `CHANGES` and `CHANGES_THREAD_FOLDER` call (the behaviour before). Auto:
 `CHANGES_THREAD_FOLDER` (write_file, edit_file) runs, `CHANGES` (share_file,
@@ -618,7 +618,7 @@ reads the mode before every call, so a change during a run applies from the
 next call. The status strip shows a red "Bypass" pill while a thread's mode
 is Bypass. Why: user ruling (2026-10-03). Outcome: pending.
 
-## D-059 · 2026-10-03 · Four built-in subagent types — proposed
+## D-059 · 2026-10-03 · Four built-in subagent types — accepted
 Version 1 has four types and no custom ones. researcher: web_search,
 web_fetch, youtube_summarize, read_file, find_files, search_files,
 read_document, view_image; answers with Summary, numbered Findings with
@@ -636,7 +636,7 @@ system prompt is built once from its starting tools (D-005); a tool granted
 later joins only the request's tool list. Why: user rulings (2026-10-03),
 adapted from the user's pi agents. Outcome: pending.
 
-## D-060 · 2026-10-03 · delegate tool — proposed
+## D-060 · 2026-10-03 · delegate tool — accepted
 `tools/delegate` depends only on `core/tool-api`, whose `SubagentLauncher`
 interface core/agent's `SubagentRunner` implements. Arguments: agent, task,
 extra_tools, model, or tasks[] (at most 3, set by the user on
@@ -659,7 +659,7 @@ through the broker. Guidelines tell the model to delegate reasoning-heavy
 work, not single searches, and that subagents have no context. The
 working line says "Subagents working…". Outcome: pending.
 
-## D-061 · 2026-10-03 · Subagent budgets — proposed
+## D-061 · 2026-10-03 · Subagent budgets — accepted
 A subagent has 10 tool steps (every call counts, request_tool and notes
 too), $0.10 of model cost (the calls' actual costs, reported by the
 service or priced from the catalog, plus its ask_parent answers; a call
@@ -673,7 +673,7 @@ after 2 s) or Stop, it returns its texts so far and its last three tool
 results, cut to 3,000 characters each. The result names the limit that
 stopped it. Why: brief from the lead (2026-10-03). Outcome: pending.
 
-## D-062 · 2026-10-03 · request_tool and the 3-minute rule — proposed
+## D-062 · 2026-10-03 · request_tool and the 3-minute rule — accepted
 request_tool(name, reason) and a subagent's own calls go through
 `SubagentGate` with the thread's approval mode (D-058): read-only tools,
 "Allow in thread" allowances and Bypass need no card. Otherwise a card
@@ -690,7 +690,7 @@ every skipped part. The thread's own agent waits without limit. Tested
 with a hand-made virtual clock (`WaitTimer`, first named `ApprovalTimer`), because
 kotlinx-coroutines-test would be a new dependency. Outcome: pending.
 
-## D-063 · 2026-10-03 · ask_parent — proposed
+## D-063 · 2026-10-03 · ask_parent — accepted
 ask_parent(question), at most two per subagent, is answered by one call
 on the thread's model with the thread's system prompt, tool list (sent
 with tool_choice "none", Gemini mode NONE, new `ChatRequest.toolsCallable`),
@@ -703,7 +703,7 @@ can serve them. Its usage is a BACKGROUND row, so it counts to the thread;
 its cost also counts against the asking subagent's $0.10 and shows on its
 card. Outcome: pending.
 
-## D-064 · 2026-10-03 · Subagents in the database — proposed
+## D-064 · 2026-10-03 · Subagents in the database — accepted
 Room version 7 (one AutoMigration from 6, with D-058's column) adds the
 `subagents` table (thread, delegate call id, order, type, task, model,
 status, answer, latest text, cost, times; deleted with its thread) and the
@@ -714,7 +714,7 @@ usage-sheet totals include them, and the run's cost line adds them. Edit
 and resend (D-056) deletes the subagents of removed delegate calls; a
 killed app marks running subagents stopped. Outcome: pending.
 
-## D-065 · 2026-10-03 · Model per subagent type — proposed
+## D-065 · 2026-10-03 · Model per subagent type — accepted
 Settings > Subagent models picks a model per type from the scoped models.
 Default: the thread's model; for the scout the background model (D-036),
 which is the thread's model when no priced model has a key. A model named
@@ -722,7 +722,7 @@ in the delegate call wins; a setting whose model is no longer scoped is
 ignored. A subagent uses its model's own thinking level, not the
 thread's. Stored as settings.subagent_models. Outcome: pending.
 
-## D-066 · 2026-10-03 · Subagent cards in the chat — proposed
+## D-066 · 2026-10-03 · Subagent cards in the chat — accepted
 Under the run that called delegate, one card per subagent: a dot, its
 name ("Researcher 2"), status (Working, Done, Out of steps, Over budget,
 Timed out, Failed, Stopped; a step whose card went unanswered shows "No
@@ -735,7 +735,7 @@ Opus subagent (6 of 36 changed). Artifacts a subagent
 shows get "Open" cards like the thread agent's. Outcome: pending; D-126
 proposes rows in the run in place of the cards.
 
-## D-067 · 2026-10-03 · run_code: files in by name, results out from work/ and artifacts/ — proposed
+## D-067 · 2026-10-03 · run_code: files in by name, results out from work/ and artifacts/ — accepted
 run_code takes language (javascript or python), code and files (thread
 paths or folders; a list, one path, or a list written as text). The
 program sees exactly those files at the same paths (inbox/sales.csv).
@@ -751,7 +751,7 @@ constructor from core/runtime-api (`CodeRuntime`), one module per engine
 under runtimes/. Why: plan M8 steps 1 and 2, user ruling of 2026-10-03.
 Outcome: pending.
 
-## D-068 · 2026-10-03 · JavaScript through androidx.javascriptengine 1.1.1 — proposed
+## D-068 · 2026-10-03 · JavaScript through androidx.javascriptengine 1.1.1 — accepted
 runtimes/javascript runs programs in JavaScriptSandbox (V8 in Android
 System WebView's isolated process: no network, no files, no Android API).
 A fresh sandbox and isolate per run, one run at a time per app (the API
@@ -767,7 +767,7 @@ Rejected: QuickJS (named in the plan; native code to ship). Outcome: on
 the A059 (WebView 153) a CSV total ran in 155 ms end to end, await worked,
 and an endless loop was stopped at 120.3 s.
 
-## D-069 · 2026-10-03 · Pyodide 314.0.7 pinned, downloaded from jsDelivr — proposed
+## D-069 · 2026-10-03 · Pyodide 314.0.7 pinned, downloaded from jsDelivr — accepted
 runtimes/pyodide downloads Pyodide 314.0.7 (Python 3.14.2; the latest
 stable release on 2026-10-03, npm dist-tag latest) from
 https://cdn.jsdelivr.net/pyodide/v314.0.7/full/ into files/pyodide/314.0.7/.
@@ -790,7 +790,7 @@ no database row (no Room change). Packages outside the lock file (PyPI
 through micropip) are not supported yet. Why: user ruling of 2026-10-03.
 Outcome: see D-013.
 
-## D-070 · 2026-10-03 · Python runs offline in a hidden WebView worker — proposed
+## D-070 · 2026-10-03 · Python runs offline in a hidden WebView worker — accepted
 Each Python run gets a new WebView, made on the main thread with the
 application context and destroyed afterwards. Its page (harness.html) and
 Python worker come from the module's resources on a made-up host,
@@ -810,7 +810,7 @@ Known gap: with the activity in the background the run was 4x slower
 (36.3 s against 8.7 s); runs from the foreground service were not
 measured. Why: user ruling of 2026-10-03. Outcome: pending.
 
-## D-080 · 2026-10-03 · Parallel read-only tool calls — proposed
+## D-080 · 2026-10-03 · Parallel read-only tool calls — accepted
 Amends D-026 (user approved 2026-10-03): of the tool calls in one model
 turn, consecutive READ_ONLY calls run side by side, at most 4 at once. Any
 other call (CHANGES, CHANGES_THREAD_FOLDER, CHANGES_APP_DATA, an unknown
@@ -831,7 +831,7 @@ folded line counts overlapping steps' time once. Code:
 `ToolCallScheduler` in core/agent; tests in `ParallelToolCallsTest`.
 Outcome: pending (not checked on a device).
 
-## D-081 · 2026-10-03 · Context sheet on the ring pill — proposed
+## D-081 · 2026-10-03 · Context sheet on the ring pill — accepted
 Tapping the context ring in the status strip opens a sheet like Claude
 Code's /context (user request, 2026-10-03): percent used, "N of M tokens",
 a bar, then one row per part with tokens and percent of the window: System
@@ -853,7 +853,7 @@ describe the next request, the total the last one, so they differ by the
 last answer and any compaction since. Outcome: pending (not checked on a
 device).
 
-## D-085 · 2026-10-03 · One + button and an in-app photo gallery — proposed
+## D-085 · 2026-10-03 · One + button and an in-app photo gallery — accepted
 The composer's paper clip and camera button (D-042, D-053) become one "+"
 at the bottom left, as in ChatGPT. It opens a sheet with three tiles:
 Camera (as D-053), Photos, Files (the system document picker, as D-042).
@@ -876,7 +876,7 @@ already). Limits: the selection is lost on rotation; previews at 360 dp
 and font scale 1.3 exist in GalleryPreviews.kt but were not rendered (no
 emulator). Outcome: pending.
 
-## D-086 · 2026-10-03 · Photo permission, asked once, with the system picker as fallback — proposed
+## D-086 · 2026-10-03 · Photo permission, asked once, with the system picker as fallback — accepted
 New permissions, approved by the user on 2026-10-03: READ_MEDIA_IMAGES and
 READ_MEDIA_VISUAL_USER_SELECTED (Android 13 and later), READ_EXTERNAL_STORAGE
 with maxSdkVersion 32 (checked with aapt2 on the release APK). Jonaki asks
@@ -893,7 +893,7 @@ tap and on return to the app. Why: user request of 2026-10-03; Android's
 guidance for partial access. Rejected: asking again after a refusal
 (Android blocks the dialog after two refusals anyway). Outcome: pending.
 
-## D-090 · 2026-10-03 · Code sheet for run_code steps — proposed
+## D-090 · 2026-10-03 · Code sheet for run_code steps — accepted
 Tapping a run_code step (in the run track or a subagent card) opens a
 sheet with "Python · 12 lines", a copy button and two tabs. Code: line
 numbers, colours, no wrapping (long lines scroll sideways), and the line
@@ -920,7 +920,7 @@ syntax errors name no line; previews at 360 dp and font scale 1.3 exist
 in CodeRunPreviews.kt but were not rendered (no emulator). Outcome:
 pending.
 
-## D-091 · 2026-10-03 · Tool groups and the first-run tool picker — proposed
+## D-091 · 2026-10-03 · Tool groups and the first-run tool picker — accepted
 Ten rows the user switches (plan M8 step 3, user ruling 2026-10-03): Files
 (read_file, write_file, edit_file, find_files, search_files, read_document,
 view_image; always on, as every other tool works on thread files), Web
@@ -942,7 +942,7 @@ Settings > Tools. Code: `ToolGroup`, `ToolGroups`, `ToolPicker`
 ToolGroupRowsTest. Rejected: a per-thread switch (the Web switch in the
 chat stays and both must be on). Outcome: pending.
 
-## D-092 · 2026-10-03 · Python's two switches — proposed
+## D-092 · 2026-10-03 · Python's two switches — accepted
 Python's switch says whether the model is offered Python; it starts on but
 downloads nothing, and its row shows "13.5 MB download" with a Download
 button. Switching it on from off starts the download at once with
@@ -955,7 +955,7 @@ ACCESS_NETWORK_STATE permission, which needs approval, so nothing
 downloads without the size on screen. Why: user ruling 2026-10-03 (start
 the download with progress, or offer it). Outcome: pending.
 
-## D-093 · 2026-10-03 · Settings > Python — proposed
+## D-093 · 2026-10-03 · Settings > Python — accepted
 Status (Not installed, Installed, Damaged with the file names), "Pyodide
 314.0.7", storage used, Install (13.5 MB) with progress and Cancel,
 Repair (fetches again only files with the wrong SHA-256), Remove with a
@@ -970,7 +970,7 @@ and their dependencies no other installed package needs
 (`PyodideFolder.removePackages`). Code tests: PythonSetupTest (15),
 PyodideInstallerTest (3 new). Outcome: pending.
 
-## D-094 · 2026-10-03 · Just-in-time Python install card from the saved step — proposed
+## D-094 · 2026-10-03 · Just-in-time Python install card from the saved step — accepted
 When the last turn's run_code step failed with run_code's NotInstalled or
 MissingPackages text, the chat shows a card after the turn: "Needs Python
 (13.5 MB). Install?" or "Needs pandas (7.9 MB). Install?", with Install
@@ -991,14 +991,14 @@ ChatItemsTest. Rejected: a structured field on ToolOutput (changes
 core/tool-api for one tool); a runner StateFlow (lost on restart).
 Outcome: pending.
 
-## D-095 · 2026-10-03 · Download sizes in decimal megabytes — proposed
+## D-095 · 2026-10-03 · Download sizes in decimal megabytes — accepted
 Python's sizes show as decimal megabytes with one decimal (13,532,188
 bytes is "13.5 MB", the add-on "7.9 MB"), as the user wrote them and as
 app stores show downloads; run_code's error text uses the same form.
 IncomingFiles.describeSize keeps binary megabytes for the 25 MB file cap.
 Code: UsageFormat.byteSize. Outcome: pending.
 
-## D-096 · 2026-10-03 · Cost per call for tools with mixed actions — proposed
+## D-096 · 2026-10-03 · Cost per call for tools with mixed actions — accepted
 `Tool.sideEffectOf(arguments)` returns the cost of one call and defaults to
 `sideEffect`; the permission broker asks only when that cost is CHANGES.
 phone: calendar_list and clipboard_read run at once; calendar_add,
@@ -1011,7 +1011,7 @@ approval, and D-014 keeps one tool per feature. share_file keeps its one
 cost (D-044). Rejected: separate read tools (more tools, against D-014).
 Outcome: pending.
 
-## D-097 · 2026-10-03 · Reminders: an alarm plus a file — proposed
+## D-097 · 2026-10-03 · Reminders: an alarm plus a file — accepted
 phone reminder saves id, text and time in files/reminders.json and sets
 an AlarmManager `setExactAndAllowWhileIdle` alarm. Without "Alarms &
 reminders" (SCHEDULE_EXACT_ALARM, off by default for new installs on
@@ -1030,7 +1030,7 @@ Rejected: a Room table (a schema version that would collide with the
 M7 and M8 branches, for a few rows); USE_EXACT_ALARM (not approved, meant
 for alarm-clock apps). Outcome: pending.
 
-## D-098 · 2026-10-03 · Scheduled tasks in a file, runs on WorkManager — proposed
+## D-098 · 2026-10-03 · Scheduled tasks in a file, runs on WorkManager — accepted
 files/scheduled-tasks.json holds each task's id (8 hex characters),
 thread, title, prompt, repeat (none, daily or weekly), anchor (local
 date and time) and next run. Each run is one WorkManager
@@ -1043,7 +1043,7 @@ manifest. Why: plan M9 step 2 and 3. Rejected: a Room table (as in
 D-097); PeriodicWorkRequest (it drifts and cannot keep a clock time).
 Outcome: pending.
 
-## D-099 · 2026-10-03 · A task keeps its clock time; each run plans the next — proposed
+## D-099 · 2026-10-03 · A task keeps its clock time; each run plans the next — accepted
 A daily task at 08:00 stays at 08:00 local time across daylight-saving
 changes and time zones; weekly keeps the anchor's weekday. Each worker
 first plans the next run, counted from the later of its planned time and
@@ -1054,7 +1054,7 @@ planned time and does nothing. Why: WorkManager timing is inexact; a
 chain of delays would drift. Tested in NextRunTest and ScheduleBookTest.
 Outcome: pending.
 
-## D-100 · 2026-10-03 · A scheduled run is a message in its thread — proposed
+## D-100 · 2026-10-03 · A scheduled run is a message in its thread — accepted
 The worker waits while the thread is busy, then sends `Scheduled task
 "<title>": <prompt>` through AgentRunner, so the run uses the thread's
 model, tools, approvals and history like a typed message. When the run
@@ -1069,7 +1069,7 @@ path for runs. Rejected: a separate background loop (a second code path);
 setForeground on the worker (more manifest work for the same limit).
 Outcome: pending.
 
-## D-101 · 2026-10-03 · MCP client on OkHttp, one session per tool run — proposed
+## D-101 · 2026-10-03 · MCP client on OkHttp, one session per tool run — accepted
 `tools/mcp` speaks MCP Streamable HTTP itself on OkHttp and
 kotlinx.serialization; the official Kotlin SDK would force a Kotlin upgrade.
 Each POST carries one JSON-RPC 2.0 message with `Accept: application/json,
@@ -1088,7 +1088,7 @@ https://mcp.deepwiki.com/mcp search found read_wiki_structure, describe showed
 repoName, and the call returned square/okhttp's page list in 5.7 s; DeepWiki
 answers as an event stream and gives no session id. Outcome: pending.
 
-## D-102 · 2026-10-03 · MCP tool lists cached in files for a day — proposed
+## D-102 · 2026-10-03 · MCP tool lists cached in files for a day — accepted
 Each server's tools/list answer is saved as `files/mcp-tools/<server id>.json`
 with its address and fetch time. search and describe read it while it is
 under 24 hours old and from the same address; otherwise they fetch it again.
@@ -1099,7 +1099,7 @@ still exists. Saving or removing a server in Settings deletes its file. Why:
 search should not cost a connection per server on every use. Rejected: a
 Room table (schema change for data that is only a cache). Outcome: pending.
 
-## D-103 · 2026-10-03 · mcp tool: read-only search and describe, approved call — proposed
+## D-103 · 2026-10-03 · mcp tool: read-only search and describe, approved call — accepted
 One tool `mcp` with action search (keywords over every server's tools; a word
 in the name counts 3, in the description 1; blank lists all; default 10
 results, at most 50), describe (full description and input schema) and call
@@ -1114,7 +1114,7 @@ leaving the app: Auto asks, only Bypass skips the card. The tool is offered
 only when at least one server exists; its prompt line names the servers.
 Changes D-034's "one tool has one cost" for this tool. Outcome: pending.
 
-## D-104 · 2026-10-03 · MCP servers in Settings — proposed
+## D-104 · 2026-10-03 · MCP servers in Settings — accepted
 Settings has an "MCP servers" group between Skills and Files: one row per
 server (name on one line, URL up to two lines), and "Add server". A dialog
 takes Name, URL, Header (optional) and Header value; it checks for a name,
@@ -1125,7 +1125,7 @@ Keystore key (`SecretStore` run-time secrets) and never shown again; the
 value field then says "Saved" and empty keeps it. A value with no header
 name is sent as Authorization. Outcome: pending.
 
-## D-105 · 2026-10-03 · Model lists from each service's GET /models — proposed
+## D-105 · 2026-10-03 · Model lists from each service's GET /models — accepted
 A preset with `listsModels` (OpenAI, MiniMax, Qwen, Xiaomi MiMo, Ollama Cloud,
 Ollama on the network) is asked for `<base URL>/models` with the saved key
 each time its Add models screen opens; listing is free. The OpenAI-format
@@ -1139,7 +1139,7 @@ undocumented: GET /v1/models answers 401 without a key where an unknown path
 answers 404 (curl, 2026-10-03); the same check holds for Qwen. Tested with
 MockWebServer only (no keys for these services). Outcome: pending.
 
-## D-106 · 2026-10-03 · Presets and prices for GLM, MiMo, OpenAI, MiniMax and Qwen — proposed
+## D-106 · 2026-10-03 · Presets and prices for GLM, MiMo, OpenAI, MiniMax and Qwen — accepted
 New services MiniMax (`https://api.minimax.io/v1`, default MiniMax-M3) and
 Qwen (Alibaba Model Studio, Singapore, OpenAI-compatible mode,
 `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`, default
@@ -1173,7 +1173,7 @@ priced too low (Qwen3.7 Flash costs 0.10/0.40 from 32K to 256K); Qwen
 serves the Singapore region only. Thinking levels stay off for MiniMax and
 Qwen. Outcome: pending.
 
-## D-107 · 2026-10-03 · Custom instructions, global and per thread — proposed
+## D-107 · 2026-10-03 · Custom instructions, global and per thread — accepted
 The user writes general instructions in Settings (Answers, "Custom
 instructions") and a thread's own instructions in the chat's ⋮ menu ("Style
 and persona"). Both go into one "User instructions" section of the system
@@ -1189,7 +1189,7 @@ threads.instructions (Room version 7). Rejected: thread text replacing the
 general text (the user would copy shared rules into every thread).
 Mockups: docs/mockups/style-and-personas.html. Outcome: pending.
 
-## D-108 · 2026-10-03 · Answer style in the system prompt — proposed
+## D-108 · 2026-10-03 · Answer style in the system prompt — accepted
 Concise, Normal and Detailed. Settings holds the default (Normal); the
 chat's "Style and persona" sheet adds Default, which follows Settings, as
 the thinking level does (D-057). Normal adds no line; Concise and Detailed
@@ -1201,7 +1201,7 @@ and leave stale styles in older messages. Stored as settings.answer_style
 and threads.answerStyle (null follows Settings). Rejected: more presets
 (no clear use yet; the instructions cover the rest). Outcome: pending.
 
-## D-109 · 2026-10-03 · Personas as saved, named instructions — proposed
+## D-109 · 2026-10-03 · Personas as saved, named instructions — accepted
 A persona is a name (at most 60 characters) and instructions; its voice is
 part of the instructions. Settings lists personas under Personas, with
 "Add persona"; each opens an editor with Save and Delete (asks first). A
@@ -1215,7 +1215,7 @@ AutoMigration 6 to 7). Rejected: a persona replacing the general
 instructions (language and unit rules would be lost); a default persona
 for new threads (not asked for). Outcome: pending.
 
-## D-110 · 2026-10-03 · Projects group threads — proposed
+## D-110 · 2026-10-03 · Projects group threads — accepted
 A project has a name, optional instructions and an optional model for new
 threads; nothing else is shared. Table `projects` and nullable
 `threads.projectId` (Room version 7, one AutoMigration with D-111), with
@@ -1234,7 +1234,7 @@ for now: shared project memory and shared files (both need new scopes in
 the memory tool and the file tools). Mockups:
 docs/mockups/projects-and-incognito.html. Outcome: pending.
 
-## D-111 · 2026-10-03 · Incognito chat — proposed
+## D-111 · 2026-10-03 · Incognito chat — accepted
 The lock in the thread list's bar starts an incognito chat
 (`threads.incognito`, default 0, Room version 7). It neither reads nor
 writes memory: no memory tool, no Memory section in its prompt (so no
@@ -1251,7 +1251,7 @@ Rejected: offering past messages to extraction on Keep (breaks that
 expectation); a periodic job (a check at start and list view is enough).
 Limit: a chat left open on screen past the day is deleted at the next list
 view or app start. Outcome: pending.
-## D-112 · 2026-10-03 · Attachment chips survive a process restart — proposed
+## D-112 · 2026-10-03 · Attachment chips survive a process restart — accepted
 The staged copies move from `cache/incoming/` to `files/waiting-attachments/`
 (Android may clear the cache), and the chips waiting per thread key are
 saved after every change in `waiting-attachments/waiting.json` (thread key
@@ -1263,7 +1263,7 @@ Why: STATUS known gap. Rejected: a Room table (a migration for a few
 lines of state); a file in the thread folder (a new thread has none until
 its first message). Outcome: pending.
 
-## D-113 · 2026-10-03 · Back from the skill editor asks before losing edits — proposed
+## D-113 · 2026-10-03 · Back from the skill editor asks before losing edits — accepted
 When the editor's text differs from the saved SKILL.md, Back (the arrow or
 the system gesture) asks "Discard changes?" with Discard and Keep editing;
 tapping outside keeps editing. Without changes Back leaves at once. A failed
@@ -1273,7 +1273,7 @@ Rejected: keeping a draft per skill (a stored second copy that can drift
 from the file). Not shared: the memory and rename dialogs hold a line or
 two and close only on Cancel or a tap outside. Outcome: pending.
 
-## D-114 · 2026-10-03 · Chat divider where the summary ends — proposed
+## D-114 · 2026-10-03 · Chat divider where the summary ends — accepted
 After compaction the chat shows a thin line, "Earlier messages summarised",
 before the first turn the newest summary does not cover; a tap opens the
 stored summary as Markdown under the line, a second tap folds it. Every
@@ -1283,7 +1283,7 @@ through a new Flow query on `compactions` (no schema change). Why: lifts
 D-033's limit. Rejected: hiding the summarised messages (D-005 keeps them
 in view). Outcome: pending.
 
-## D-115 · 2026-10-03 · Only the newest user turns carry their images — proposed
+## D-115 · 2026-10-03 · Only the newest user turns carry their images — accepted
 Before each request ImageMessages counts the user turns (the step-budget
 notice not counted) and sends images, attached or from view_image, only
 for turns from `firstTurnWithImages` on: 0 up to five turns, then 3 at six
@@ -1299,13 +1299,13 @@ about 1,000 to 1,600 tokens on every request. Rejected: a cut that moves
 every turn (breaks the cache at the cut on every new message); keeping
 only the current run's images (the model loses a photo the user is still
 asking about). Outcome: pending.
-## D-116 · 2026-10-03 · WorkManager's own permissions — proposed
+## D-116 · 2026-10-03 · WorkManager's own permissions — accepted
 WorkManager 2.10.5 (approved for M9) merges WAKE_LOCK and
 ACCESS_NETWORK_STATE into the manifest. Both are install-time permissions:
 Android grants them without a dialog. They come with the approved
 dependency, so no separate approval was asked. Outcome: pending.
 
-## D-117 · 2026-10-03 · Per-call cost runs through the approval modes — proposed
+## D-117 · 2026-10-03 · Per-call cost runs through the approval modes — accepted
 M9 (D-096) and MCP each added a per-call cost; only `Tool.sideEffectOf
 (arguments)` stays. `PermissionBroker.runsWithoutAsking(tool, call)` reads
 that call's cost and then applies the thread's mode (D-058), so phone
@@ -1313,7 +1313,7 @@ calendar_list and mcp search run at once, while calendar_add, schedule
 create and mcp call ask in Ask and Auto and run in Bypass. Subagents'
 request checks go through the same function. Outcome: pending.
 
-## D-118 · 2026-10-03 · Order of the user's instructions in the prompt — proposed
+## D-118 · 2026-10-03 · Order of the user's instructions in the prompt — accepted
 After the tools, one "User instructions" section joins, in this order:
 answer style, general instructions, project instructions, persona, this
 thread's instructions; the section says the later part wins, so the most
@@ -1322,7 +1322,7 @@ no memory section). With nothing set the prompt is byte-identical to 0.7.0
 (PromptBuilderTest). The context sheet counts this section with the system
 prompt. Outcome: pending.
 
-## D-119 · 2026-10-03 · One migration from 7 to 8 for personas and projects — proposed
+## D-119 · 2026-10-03 · One migration from 7 to 8 for personas and projects — accepted
 Version 7 is v0.8.0's (subagents, approval mode). Personas (D-109) and
 projects with incognito (D-110, D-111) were built as separate versions on
 branches; they now share AutoMigration(7, 8): the personas and projects
@@ -1331,13 +1331,13 @@ instructions ('' by default) and incognito (0 by default). Tested by
 PersonasMigrationTest and ProjectsAndIncognitoMigrationTest. Outcome:
 pending.
 
-## D-120 · 2026-10-03 · Phone, Schedule and MCP tool groups — proposed
+## D-120 · 2026-10-03 · Phone, Schedule and MCP tool groups — accepted
 Three groups join the tool picker and Settings > Tools: Phone (phone),
 Schedule (schedule) and MCP (mcp), each on by default and switchable.
 ToolPicker.CURRENT goes from 1 to 2, so the picker shows once more to
 installs that saw the first version. Outcome: pending.
 
-## D-121 · 2026-10-03 · run_code reads the JavaScript reply's text fields as text — proposed
+## D-121 · 2026-10-03 · run_code reads the JavaScript reply's text fields as text — accepted
 On the phone, `console.log(fib.join(', '))` printed "0" instead of
 "0, 1, 1, 2, 3, 5, 8, 13, 21, 34". The runner (run-program.js) printed the
 whole line; the cut happened in `JavaScriptProgram.outcomeFrom`, which read
@@ -1351,7 +1351,7 @@ droppedCharacters still parses). Python reads its fields with
 had this bug. Test: JavaScriptProgramTest.printedTextThatStartsWithANumberIsKeptWhole.
 Outcome: pending.
 
-## D-122 · 2026-10-03 · Markdown tables in chat answers — proposed
+## D-122 · 2026-10-03 · Markdown tables in chat answers — accepted
 The phone check of 0.8.0 showed tables as raw pipes. The chat parser now
 reads GitHub-flavoured tables: a header line, then a separator such as
 `|---|:---:|--:|` with as many cells as the header (colons set start,
@@ -1372,7 +1372,7 @@ the table copies its Markdown source ("Copy table"). Selection works as
 for the rest of the answer. Code: MarkdownTables, MarkdownText.TableView;
 test MarkdownTableParserTest (12). Outcome: pending.
 
-## D-123 · 2026-10-03 · UI revamp "Lantern" with the Leaf colours — proposed
+## D-123 · 2026-10-03 · UI revamp "Lantern" with the Leaf colours — accepted
 Amends D-024's visual details; its structure (Material 3, firefly colour
 only for live work, rail step track, theme follows the system with a
 toggle) stays. Source: docs/mockups/revamp-taste.html (direction A) and
@@ -1405,7 +1405,7 @@ Tests: WebSearchPillStateTest, ThreadGroupsTest, StepDurationTest. Not
 checked: a device or emulator view of the new screens (previews at 360 dp
 and font scale 1.3 exist but were not rendered). Outcome: pending.
 
-## D-124 · 2026-10-03 · Settings > Permissions and About — proposed
+## D-124 · 2026-10-03 · Settings > Permissions and About — accepted
 Two sections end Settings. Permissions has four live rows, each with its
 purpose and status: Notifications (POST_NOTIFICATIONS from Android 13,
 the app switch before), Calendar (read and write together), Photos (as
@@ -1433,7 +1433,7 @@ no camera permission) and dropped a description line in About. Limit: a
 permission refused on a build before this record shows "Not asked" until
 Jonaki asks again. Outcome: pending.
 
-## D-125 · 2026-10-03 · Bangla and English interface — proposed
+## D-125 · 2026-10-03 · Bangla and English interface — accepted
 Jonaki shows Bangla when the phone's language is Bangla and English
 otherwise; Android 13 and later also offer the choice per app (Settings >
 Apps > Jonaki > Language) through `android:localeConfig` and
@@ -1454,7 +1454,7 @@ network". BanglaStringsTest fails when a key, a placeholder or a plural's
 "other" is missing in values-bn. Limit: the Bangla was not reviewed by a
 second agent (the worker could not spawn one) and the bn previews were
 compiled, not rendered; the user reviews both. Outcome: pending.
-## D-126 · 2026-10-03 · Subagent rows, page and work sheet — proposed
+## D-126 · 2026-10-03 · Subagent rows, page and work sheet — accepted
 Option A of docs/mockups/subagents.html; replaces D-066's stacked cards.
 In the run block a delegate step becomes its group: "3 subagents", "1 of 3
 done" (every subagent that has ended counts), and one row per subagent:
@@ -1486,7 +1486,7 @@ subagents). Tests: SubagentRowsTest, ChatItemsTest, SubagentRunnerTest.
 Not checked: a device view; previews at 360 dp and font scale 1.3 exist but
 were not rendered. Outcome: pending.
 
-## D-127 · 2026-10-03 · Fixes from the first phone check of the revamp — proposed
+## D-127 · 2026-10-03 · Fixes from the first phone check of the revamp — accepted
 Thread list titles are NOT changed: D-029 (accepted) says a thread name
 wraps in full in the list. A one-line title was built and then held back,
 because changing an accepted decision needs the user's approval. The
@@ -1580,7 +1580,7 @@ for a later look. Why: user ruling, 2026-10-03. The prompt plus 18 tools
 (4,875 tokens against the 3,500 target) stays as it is for now, also by user
 ruling, because a request is still cheap with the cache.
 
-## D-130 · 2026-10-03 · About as a short page — proposed
+## D-130 · 2026-10-03 · About as a short page — accepted
 Settings > About is a short page of text, not rows: the lit j on its dark
 launcher tile (56 dp) beside "Jonaki" and "Version 1.0.0" in Geist Mono;
 one sentence on what the app does; "Made by Riad Mashrub Shourov"; and the
@@ -1590,7 +1590,7 @@ cannot read app resources. Why: user request ("not like rows"); nothing on
 the page is a setting. Amends D-124's About rows. Outcome: pending a phone
 check.
 
-## D-131 · 2026-10-03 · web_fetch renders pages that need JavaScript — proposed
+## D-131 · 2026-10-03 · web_fetch renders pages that need JavaScript — accepted
 web_fetch can load a page in Android's system WebView, run its scripts and
 read the HTML they built, through the same Readability and HTML-to-text
 steps as a plain download (user's option A). No new dependency and no new
@@ -1631,7 +1631,7 @@ same for 1.5 s and at least 2.5 s must pass before capture, and a list page
 whose Readability "article" is one item (under 1,500 characters and a
 quarter of the body) keeps its whole text (PageTextExtractorTest).
 
-## D-132 · 2026-10-03 · Request-log times for the first streamed token — proposed
+## D-132 · 2026-10-03 · Request-log times for the first streamed token — accepted
 The plan's budget "first streamed token shown: provider latency plus under
 100 ms" named a request log that did not exist; assistant message rows
 held token counts but no times. Each model call of the thread's agent now
@@ -1672,7 +1672,7 @@ uses the bundled driver (D-023); fixed with useWriterConnection and
 immediateTransaction. After the fix, "App delay" read 15 to 53 ms on four
 local-model turns (target under 100 ms: met).
 
-## D-133 · 2026-10-03 · Local models with llama.cpp, downloaded on demand — proposed
+## D-133 · 2026-10-03 · Local models with llama.cpp, downloaded on demand — accepted
 Jonaki runs GGUF models on the phone with llama.cpp (pinned release, built
 from source with NDK r28 and CMake 3.31, arm64 only) in a new module
 `providers:local-llama` that implements ChatProvider in-process, with its
@@ -1760,7 +1760,7 @@ tokens, reading the rest in 0.7 s. Asked to set a reminder, the 0.8B model
 asked for the text instead of calling phone; tool use needs the 2B model or
 larger, not yet tested.
 
-## D-134 · 2026-10-03 · Reddit skill reads threads from Arctic Shift — proposed
+## D-134 · 2026-10-03 · Reddit skill reads threads from Arctic Shift — accepted
 The built-in reddit skill searches through Reddit's RSS feed and reads a
 thread's comments from Arctic Shift, a third-party archive of Reddit
 (`arctic-shift.photon-reddit.com/api/comments/search?link_id=<id>&limit=100
@@ -1847,7 +1847,7 @@ wait for approval. A delegate call still starts at most 3 (default) at
 once (D-060). Tests: DelegateToolTest, PermissionBrokerTest. Outcome:
 pending a phone check.
 
-## D-138 · 2026-10-03 · Settings > Subagents: limits and custom subagents — proposed
+## D-138 · 2026-10-03 · Settings > Subagents: limits and custom subagents — accepted
 User request 2026-10-03. A new first-page row "Subagents" (after Tools and
 approvals, icon Material "people") opens its own page; the Models page loses
 its Subagents section, which moves here unchanged. Summary: "2 without asking
@@ -1902,7 +1902,7 @@ price-checker, whose row showed "Out of steps 10/10 $0.0037"; asking for
 three scouts showed "3 subagents in this message" with only Allow once and
 Deny (denied).
 
-## D-139 · 2026-10-04 · Subagent budgets per type, cap of 5, free notes — proposed
+## D-139 · 2026-10-04 · Subagent budgets per type, cap of 5, free notes — accepted
 User ruling after a research run where six subagents all ended at 10 of 10
 steps with tasks too big for them. Each type has its own steps, cost cap and
 minutes in Settings > Subagents: 10, $0.10 and 10 minutes, except the
@@ -1914,7 +1914,7 @@ finished. "Warn above" became "Most per message" (default 5): a call over it
 always asks, and approving is the user's override. A queued message restarts
 the per-message count. Old global budgets carry over to the other types.
 
-## D-140 · 2026-10-04 · Messages queue during a run; Stop is an icon — proposed
+## D-140 · 2026-10-04 · Messages queue during a run; Stop is an icon — accepted
 User ruling. While a thread runs, Send queues the message; it reaches the
 model after all tool results of the turn and before the next request, or
 continues a run that would have ended, and starts a fresh step budget. A
@@ -1923,7 +1923,7 @@ or a failure the queued text returns to the field and is not sent. The queue
 lives in memory. Stop is a round icon beside Send. Phone check (A059): both
 buttons, the row, and delivery after the tool steps.
 
-## D-141 · 2026-10-04 · Reminders repeat until Done; battery row — proposed
+## D-141 · 2026-10-04 · Reminders repeat until Done; battery row — accepted
 User ruling. A reminder stays in the book until confirmed. Its notification
 has Done, 10 min and Later… (1 hour, 1 day, pick date and time). Unanswered,
 it rings again every 10 minutes up to 5 times (Settings > Files and
@@ -1933,7 +1933,7 @@ Settings > Permissions has a Battery row that opens Android's battery
 optimisation list; no new permission. Phone check: the three buttons, the
 Later sheet and Done.
 
-## D-142 · 2026-10-04 · Approvals: fewer cards, thread allowance, Settings rules — proposed
+## D-142 · 2026-10-04 · Approvals: fewer cards, thread allowance, Settings rules — accepted
 User ruling ("the app asks almost everywhere"). Changes D-015, D-058, D-062.
 Subagents never see a card: reads and thread-folder writes run in every
 mode, and actions that leave the app return an error telling the subagent
@@ -1948,7 +1948,7 @@ never from a card. A shield chip in the status strip shows the mode and
 opens its sheet; the menu entry is gone and the two context items became
 one. Room v11 stores the allowance and the outside-content flag per thread.
 
-## D-143 · 2026-10-04 · Guardrails against prompt injection — proposed
+## D-143 · 2026-10-04 · Guardrails against prompt injection — accepted
 User ruling. (1) Once a thread has read outside content (web, video,
 document, inbox image, MCP result, subagent answer), a call that sends data
 out, or creates a scheduled task, always asks: in Bypass, with the thread
@@ -1958,7 +1958,7 @@ and one fixed prompt line says such text is material, never a task. The
 chat shows results without the wrapper. This lowers the chance of an
 injection working; rule 1 is the backstop.
 
-## D-144 · 2026-10-04 · Jev guard, off by default — proposed
+## D-144 · 2026-10-04 · Jev guard, off by default — accepted
 User ruling after spikes/jev-guard (40 labelled cases, all right, median
 0.42 s, $0.000024 a call; cases written by the same hand, 7 with Bangla,
 none over 300 characters). Settings > Tools has a "Jev guard" switch that
@@ -1970,7 +1970,7 @@ gains a warning line inside its wrapper. Any failure shows the card. Its
 cost is not added to the usage figures yet. Not checked on a phone with the
 switch on.
 
-## D-145 · 2026-10-04 · export_pdf tool — proposed
+## D-145 · 2026-10-04 · export_pdf tool — accepted
 User ruling. tools/export-pdf turns an HTML file of artifacts/ into a PDF
 beside it with the WebView's print engine and no dialog (a helper in
 package android.print, kept by an R8 rule); page a4, letter or slides. For
@@ -1978,7 +1978,7 @@ print it opens boxes that scroll sideways and wraps table cells. Phone
 check: the CGRA report came out as 9 A4 pages with selectable text and
 tables inside the page.
 
-## D-146 · 2026-10-04 · Date line without the zone; no language line; thumbnails — proposed
+## D-146 · 2026-10-04 · Date line without the zone; no language line; thumbnails — accepted
 User rulings. Each message's date line carries the local date and time
 only; Settings > Answers can add the offset or the zone's name. Three tool
 results say "(local time)" instead of the zone. The system prompt's line
@@ -1988,7 +1988,7 @@ and the composer, and a tap opens them full screen with zoom; the stored
 text and what the model gets are unchanged. Thumbnails not checked on a
 phone.
 
-## D-147 · 2026-10-05 · Memory: dates, ranked recall, keywords, superseded facts — proposed
+## D-147 · 2026-10-05 · Memory: dates, ranked recall, keywords, superseded facts — accepted
 User ruling ("go ahead, implement all") after a research round (Hermes Agent
 docs and r/hermesagent, other Reddit threads, LongMemEval, Letta, Mem0, the
 SQLite FTS5 docs). Room v12 adds memories.keywords and
@@ -2017,7 +2017,7 @@ facts), a consolidation pass (wait until facts number in the hundreds).
 Limits: the update's two writes are not one transaction; restoring a copy
 can leave two similar facts. Outcome: not checked on a phone.
 
-## D-148 · 2026-10-05 · search_chats tool and a message index outside Room — proposed
+## D-148 · 2026-10-05 · search_chats tool and a message index outside Room — accepted
 tools/search-chats finds complete user and assistant messages of regular
 threads by words, across threads or in this one, best match first, each hit
 with the message before and after it. The index is a contentless FTS5
@@ -2036,7 +2036,7 @@ are the user's own chats; an old answer that quoted a web page is the gap.
 About 145 prompt tokens (estimate). Outcome: not checked on a phone; the
 first open after the upgrade indexes old messages and was not timed.
 
-## D-149 · 2026-10-05 · Facts held after outside content; the Jev guard screens them — proposed
+## D-149 · 2026-10-05 · Facts held after outside content; the Jev guard screens them — accepted
 Published attacks plant memories through web pages, so a fact saved in a
 thread that has read outside content (D-143) waits for the user's approval
 on the Memory screen, from the memory tool and from extraction alike. With
@@ -2048,7 +2048,7 @@ thread is never asked, so it costs nothing. Settings > Guardrails >
 every later fact of a thread that searched the web once waits. Outcome: not
 checked on a phone.
 
-## D-150 · 2026-10-05 · Settings > Guardrails; the Jev guard's options — proposed
+## D-150 · 2026-10-05 · Settings > Guardrails; the Jev guard's options — accepted
 User rulings. A new Settings page holds the Jev guard and the two rules that
 follow outside content ("Ask before sending out", D-143 rule 1, and "Hold
 new facts for review", D-149); both rules can be switched off. The guard's
@@ -2068,7 +2068,7 @@ direct endpoint. Settings > Memory and skills gains switches for saving
 facts from chats, reviewing new facts, suggesting facts for all threads and
 suggesting skills. Outcome: not checked on a phone, with the guard on or off.
 
-## D-151 · 2026-10-05 · The agent proposes a skill; the user adds it — proposed
+## D-151 · 2026-10-05 · The agent proposes a skill; the user adds it — accepted
 tools/propose-skill saves a proposal (name, description, SKILL.md, optional
 "replaces") outside the skill library, at most 5 waiting and 6,000
 characters each. The Skills screen lists them under Proposed; Add writes the
@@ -2080,7 +2080,7 @@ or local models. Why: Hermes Agent's users report about five near-duplicate
 auto-created skills per workflow. Rejected: creating skills without the
 user. About 305 prompt tokens (estimate). Outcome: not checked on a phone.
 
-## D-152 · 2026-10-05 · Facts in the context sheet; Markdown export; MiniMax balance — proposed
+## D-152 · 2026-10-05 · Facts in the context sheet; Markdown export; MiniMax balance — accepted
 (1) A run records the ids of its memory section on its user message, and the
 context sheet's Memory row opens those facts. (2) Settings > Memory and
 skills > "Export as Markdown" writes every fact in use to
@@ -2095,7 +2095,7 @@ paths on its API host return 404, so its card stays without one. Amends the
 balance note of 2026-10-03. Outcome: none of the three checked on a phone,
 and the MiniMax answer was not seen with a real key.
 
-## D-153 · 2026-10-05 · Word, Excel and PowerPoint files through a documents add-on — proposed
+## D-153 · 2026-10-05 · Word, Excel and PowerPoint files through a documents add-on — accepted
 User ruling ("go with the python packages"). Jonaki could read .docx, .xlsx
 and .pptx (D-052) but not write them. The documents add-on of the Python
 runtime is lxml, pillow, typing-extensions, beautifulsoup4 and soupsieve
@@ -2129,7 +2129,7 @@ editing), translating CSS. Also fixed: a download that failed at once could
 finish before its job was recorded, so its problem never showed. Outcome:
 not run on a phone or in the WebView worker; not opened in Microsoft Office.
 
-## D-154 · 2026-10-05 · MIT licence — proposed
+## D-154 · 2026-10-05 · MIT licence — accepted
 The user asked for a licence in the README without naming one. `LICENSE` is
 the MIT text with "Copyright (c) 2026 Riad Mashrub Shourov". Why: the
 repository is public and had no licence, so nobody could legally reuse the
@@ -2139,7 +2139,7 @@ now: Apache-2.0 (adds a patent grant, longer), GPL-3.0 (forks must stay
 open). Changing it before others contribute costs one commit. Outcome:
 none yet.
 
-## D-155 · 2026-10-05 · Bangla formal letter skill no longer shipped; About text — proposed
+## D-155 · 2026-10-05 · Bangla formal letter skill no longer shipped; About text — accepted
 User ruling ("it's my personal skill, not necessary for the app"). The
 folder assets/skills/bangla-formal-letter is removed, so five skills ship.
 installBuiltIns now forgets the record of a skill the app no longer ships,
@@ -2151,7 +2151,7 @@ keys. There is no Jonaki account or server." (the user found the old one
 generic); agreed with an Opus reviewer, which also changed the Bangla
 developer line. Outcome: see the commit's checks.
 
-## D-156 · 2026-10-05 · PDF export breaks a word only in a table too wide for the paper — proposed
+## D-156 · 2026-10-05 · PDF export breaks a word only in a table too wide for the paper — accepted
 The export's fit-to-paper rule gave every table cell `overflow-wrap:
 anywhere`. That value lets the browser size a column narrower than its
 longest word, so a table that fitted the page printed "RAN K" and
@@ -2167,7 +2167,7 @@ build 1.4.1): the same report, its HTML unchanged, exports to a four-page
 PDF whose headers are whole ("RANK", "POPULATION"; pdftotext finds no
 broken word), and the table sits on page 1 with no gap above it.
 
-## D-157 · 2026-10-10 · Short generated thread names; one line in the list — proposed
+## D-157 · 2026-10-10 · Short generated thread names; one line in the list — accepted
 Amends D-029 and reverses the choice recorded in D-127; the user approved
 both in chat on 2026-10-10 ("like ChatGPT"). A new thread still gets the
 first line of its first message at once. After the first answer finishes,
@@ -2187,7 +2187,7 @@ line with "…"; the ⋮ menu has Rename, Memory, Skills, Style and persona; a
 new thread asked "Explain in one sentence why fireflies glow" was renamed
 "Firefly Bioluminescence Explained".
 
-## D-158 · 2026-10-10 · A fresh install has no service and no model — proposed
+## D-158 · 2026-10-10 · A fresh install has no service and no model — accepted
 User request. With no saved settings the 0.1.0 migration ran and left an
 OpenRouter card with z-ai/glm-5.3-flash starred. The migration now runs only
 when a 0.1.0 preference exists (ChatModels.hasLegacySettings); otherwise the
@@ -2196,7 +2196,7 @@ pill reads "No model" and opens the picker, and a sent message gets the
 existing "No model. Add one in Settings." Outcome: unit tests pass; not
 seen on a phone.
 
-## D-159 · 2026-10-10 · Chosen providers for an OpenRouter model — proposed
+## D-159 · 2026-10-10 · Chosen providers for an OpenRouter model — accepted
 Amends D-030; the user approved it in chat on 2026-10-10. A model's ⋮ menu
 in Settings has "Providers": a sheet lists who serves the model (GET
 /api/v1/models/{id}/endpoints, no key, loaded when opened), cheapest first,
@@ -2215,7 +2215,7 @@ message on that model was answered ($0.0006). Not checked: which provider
 served it, fallbacks off, and the 404 for "no chosen provider available",
 which is assumed, not recorded. The test choice was removed afterwards.
 
-## D-160 · 2026-10-10 · Image generation through OpenRouter — proposed
+## D-160 · 2026-10-10 · Image generation through OpenRouter — accepted
 User request. New tool module tools/generate-image (generate_image: prompt,
 aspect_ratio, file_name, model). It calls POST /api/v1/images through an
 ImageGenerator interface in core/tool-api, implemented in
@@ -2240,7 +2240,7 @@ appeared with Save and Share in 7.8 s; the thread's cost rose to $0.015.
 Not checked: Save, Share, the full-size view, a failed or blocked request. OpenRouter's Batch API (half price, answers within 24
 hours) was looked at and left out by user ruling.
 
-## D-161 · 2026-10-10 · A wake lock while a run is going — proposed
+## D-161 · 2026-10-10 · A wake lock while a run is going — accepted
 New permission WAKE_LOCK, approved by the user in chat on 2026-10-10; Android
 grants it without a prompt. AgentService kept the process alive but not the
 processor, so with the screen off the phone could sleep in the middle of a
@@ -2253,7 +2253,7 @@ by itself after 30 minutes, so a run that never ends cannot keep the phone
 awake for good. A scheduled task's run is covered by its worker (D-100).
 Outcome: compiles; the locked-phone test is still to do.
 
-## D-162 · 2026-10-10 · What a fresh start shows; saved drafts — proposed
+## D-162 · 2026-10-10 · What a fresh start shows; saved drafts — accepted
 User ruling: 30 minutes, no setting. A fresh start of the activity reopens
 the thread the user left less than 30 minutes ago; otherwise it opens a new
 empty thread; Back leads to the list. The start keeps its screen when a
@@ -2270,7 +2270,7 @@ text, a fresh start reopened it with the text in the box, and the list
 showed "Draft: a draft to keep". Not checked: the 30-minute boundary on a
 device, a share or reminder start, Edit with a draft.
 
-## D-163 · 2026-10-10 · Selecting several threads or facts to delete — proposed
+## D-163 · 2026-10-10 · Selecting several threads or facts to delete — accepted
 User request. A long press starts selection in the thread list and in
 Memory; a tap toggles; the top bar shows Close, the count, Delete and a ⋮
 menu with Select all or Deselect all (and Rename and Move to project for
@@ -2281,7 +2281,7 @@ declares activity-compose, which the app already ships. Outcome
 (2026-10-10, phone A059): two threads selected, rows tinted with a check
 mark, "2 selected" in the bar. Not checked: Delete, Select all, Memory.
 
-## D-164 · 2026-10-10 · Copyable errors, a subagent's reason, :batch models — proposed
+## D-164 · 2026-10-10 · Copyable errors, a subagent's reason, :batch models — accepted
 From a thread on the phone where a Researcher failed after 17 of 20 steps
 and the sheet said only "Failed". An error row's text can be selected and
 has the copy button. A subagent that did not finish shows a reason line
@@ -2297,7 +2297,7 @@ one retry per turn, a 15-minute researcher limit), so that run does not
 prove the phone slept. Not built: ending a subagent after repeated network
 failures of its tools. Outcome: unit tests pass; not seen on a phone.
 
-## D-165 · 2026-10-10 · Answer language rule in the system prompt — proposed
+## D-165 · 2026-10-10 · Answer language rule in the system prompt — accepted
 A thread whose message was a link and an English sentence was answered in
 Bangla; the model named a memory fact about the user's city. SystemPrompt
 now says, in order: keep a language the user asked for earlier in the
@@ -2309,7 +2309,7 @@ same wish along. Outcome (2026-10-10, phone A059, Haiku 5.5): asked for
 Bangla, then asked a follow-up in English, the second answer stayed Bangla.
 Not checked: an English request with a link, which was the failing case.
 
-## D-166 · 2026-10-10 · Image services as cards; prices in the image picker — proposed
+## D-166 · 2026-10-10 · Image services as cards; prices in the image picker — accepted
 User request; amends D-160. Settings > Models > Image generation holds
 image services the user adds, like chat services (D-028): a card per
 service with its key, its models and a star that is one default across all
@@ -2334,7 +2334,7 @@ the release build pass; installed on the phone. Seen on the A059 on
 and prices in the picker. No Gemini image service was added and no Gemini
 request made.
 
-## D-167 · 2026-10-10 · A thread's own image model — proposed
+## D-167 · 2026-10-10 · A thread's own image model — accepted
 User request. The "Model for this thread" sheet has a second section,
 "Image model", shown when at least one image model is added. It lists the
 added image models with service and price; the starred one carries
@@ -2352,7 +2352,7 @@ lists raster and vector models in one list with one selected radio each,
 which reads as two choices in one group; the fully opened sheet also draws
 under the status bar. Both open.
 
-## D-168 · 2026-10-10 · Privacy marks in the Providers sheet; a limit that is the service's — proposed
+## D-168 · 2026-10-10 · Privacy marks in the Providers sheet; a limit that is the service's — accepted
 User request; adds to D-159. Each provider row carries one icon after its
 name: a shield when the provider neither keeps nor trains on prompts, a
 storage mark when it keeps them, a warning triangle in the deny colour when
@@ -2371,7 +2371,7 @@ tests pass. Seen on the A059 on 2026-10-10: the shields and the legend. The
 sheet showed no cache price although the provider list was read with one;
 fixed the same day (each row now shows in, out and cache).
 
-## D-169 · 2026-10-10 · Video generation through OpenRouter — proposed
+## D-169 · 2026-10-10 · Video generation through OpenRouter — accepted
 User request. New tool module tools/generate-video (generate_video). It
 starts a job with POST /api/v1/videos, polls every 10 s for a minute and
 every 20 s after, and streams the finished file into the thread's videos/
@@ -2394,7 +2394,7 @@ the A059 on 2026-10-10 one request (Grok Imagine Video 1.5 Lite, 4 s, 720p)
 was created, polled and downloaded in 39 s for $0.12, and the card played;
 the Settings section was seen. A job that outlives one call is untried.
 
-## D-170 · 2026-10-10 · Vector images (SVG) through OpenRouter — proposed
+## D-170 · 2026-10-10 · Vector images (SVG) through OpenRouter — accepted
 User request. New tool module tools/generate-vector-image
 (generate_vector_image) beside generate_image, on the same image services.
 A model is a vector model when OpenRouter lists its output_format as
@@ -2421,7 +2421,7 @@ The picker tags the six vector models "SVG", but they are found only by
 search, and "Styles" models refuse a request without a reference (HTTP 400
 "input_references: must have between 1 and 10 items"); see D-174.
 
-## D-171 · 2026-10-10 · Picture mode: the user's words go straight to the image model — proposed
+## D-171 · 2026-10-10 · Picture mode: the user's words go straight to the image model — accepted
 User request, after a comparison with the ChatGPT app showed that the chat
 model's rewritten prompt decided the picture. A "Picture" chip above the
 message box, shown when a raster image model with a saved key is added,
@@ -2441,7 +2441,7 @@ one send, and a chat message after three media sends was answered by
 Claude Haiku 5.5 through OpenRouter. Gemini as the chat model after a
 media send is unchecked.
 
-## D-172 · 2026-10-10 · Image quality, reference pictures, instructional guidance, the full prompt — proposed
+## D-172 · 2026-10-10 · Image quality, reference pictures, instructional guidance, the full prompt — accepted
 User request, from the comparison behind D-171. generate_image gains two
 optional arguments. quality is "standard" or "high", with a default in
 Settings > Models > Image generation ("Image quality", Standard when
@@ -2471,7 +2471,7 @@ sheet show the model's key ("openrouter:recraft/…"), not its name; open.
 The "Image quality" row touched the screen's edges; its padding is fixed.
 High quality and every Gemini field are untried.
 
-## D-173 · 2026-10-10 · Media mode: pictures, vector images and videos from the message box — proposed
+## D-173 · 2026-10-10 · Media mode: pictures, vector images and videos from the message box — accepted
 User request; extends D-171, whose "picture mode" is now "media mode" in
 the code. The line above the message box has one chip per kind whose tool
 is available (Picture, Vector, Video), at most one on. The next send takes
@@ -2494,7 +2494,7 @@ a video (4 s at 720p, $0.12, 39 s, one call) and a vector image ($0.08,
 11 s) each made by one send. A failed call shows "Failed" with no reason,
 because no chat model is there to explain it; open.
 
-## D-174 · 2026-10-10 · Media button, details line and settings sheet — proposed
+## D-174 · 2026-10-10 · Media button, details line and settings sheet — accepted
 User request: the Picture and Video chips should let the user choose the
 quality, and perhaps the model, in place; then, as icons on the line of
 the model, context and cost controls. Mockups:
@@ -2529,7 +2529,7 @@ picture as a reference, a failed send's error row, and "Add model"; they
 are covered by unit tests only. The settings sheet does not yet offer a
 kind that has a key and no model (the vector report of D-170).
 
-## D-175 · 2026-10-10 · A prompt cache field for Claude models through OpenRouter — proposed
+## D-175 · 2026-10-10 · A prompt cache field for Claude models through OpenRouter — accepted
 Found while measuring D-174: Claude Haiku 5.5 through OpenRouter cached
 nothing (two messages in a row, 12,452 and 12,399 input tokens, 0 cached),
 because Anthropic's models cache only when the request asks. The user
@@ -2549,7 +2549,7 @@ the A059, three messages in a row to Claude Haiku 5.5: 0, then 12,362 of
 12,399, then 12,395 of 12,432 input tokens cached; the thread's cost went
 $0.0015, $0.0017, $0.0018, against $0.0012 a message before.
 
-## D-176 · 2026-10-10 · The model's name under the thread title — proposed
+## D-176 · 2026-10-10 · The model's name under the thread title — accepted
 User request: with the media button (D-174) the status strip holds six
 controls and the model's name was cut to one or two letters. Six
 alternatives are in docs/mockups/status-bar.html; the user chose the

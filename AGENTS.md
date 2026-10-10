@@ -98,7 +98,7 @@ module.
 - System Gradle (9.7.1), no wrapper. Plugin and library versions match the
   user's other apps (BD-calendar, hujur-tracker) so the Gradle cache in
   `~/.gradle` is reused: AGP 8.7.3, Kotlin 2.1.0, KSP 2.1.0-1.0.29, Compose
-  BOM 2024.11.00, Room 2.6.1. Changing a version is a decision.
+  BOM 2024.11.00, Room 2.7.2. Changing a version is a decision.
 - SDK `/opt/android-sdk`, compileSdk and targetSdk 35, minSdk 26,
   arm64-v8a only, Java 17 target.
 - Signing: `jonaki.keystore` in the repository root, gitignored, created with
