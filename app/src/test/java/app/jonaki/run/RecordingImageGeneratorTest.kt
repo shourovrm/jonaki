@@ -14,7 +14,7 @@ class RecordingImageGeneratorTest {
     private class Saved(val threadId: String, val modelKey: String, val usage: Usage, val costUsd: Double?)
 
     private val saved = mutableListOf<Saved>()
-    private val request = ImageRequest("black-forest-labs/flux.2-klein-4b", "a door")
+    private val request = ImageRequest("openrouter", "black-forest-labs/flux.2-klein-4b", "a door")
 
     private fun recording(outcome: ImageOutcome) = RecordingImageGenerator(
         generator = ImageGenerator { outcome },

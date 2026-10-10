@@ -4,6 +4,8 @@ plugins {
 
 dependencies {
     api(project(":core:provider-api"))
+    // Only for the ImageGenerator interface that GeminiImageGenerator implements.
+    implementation(project(":core:tool-api"))
     api(libs.okhttp)
     testImplementation(libs.okhttp.mockwebserver)
 }

@@ -37,7 +37,7 @@ class OpenRouterImageGeneratorTest {
     private fun generator(key: String? = "sk-or-test", client: OkHttpClient = OkHttpClient()) =
         OpenRouterImageGenerator({ key }, client, server.url("/api/v1").toString())
 
-    private val request = ImageRequest("black-forest-labs/flux.2-klein-4b", "A blue door", "1:1")
+    private val request = ImageRequest("openrouter", "black-forest-labs/flux.2-klein-4b", "A blue door", "1:1")
 
     private fun failed(outcome: ImageOutcome): ImageOutcome.Failed = outcome as ImageOutcome.Failed
 
@@ -48,7 +48,7 @@ class OpenRouterImageGeneratorTest {
             Json.parseToJsonElement("""{"model":"black-forest-labs/flux.2-klein-4b","prompt":"A blue door","aspect_ratio":"1:1"}"""),
             full,
         )
-        val bare = OpenRouterImageGenerator.requestBody(ImageRequest("m/x", "p"))
+        val bare = OpenRouterImageGenerator.requestBody(ImageRequest("openrouter", "m/x", "p"))
         assertEquals(setOf("model", "prompt"), bare.keys)
     }
 
