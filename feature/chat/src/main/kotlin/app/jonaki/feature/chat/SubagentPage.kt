@@ -138,6 +138,7 @@ internal fun SubagentPage(
                 Text(subagent.task, style = MaterialTheme.typography.bodyLarge)
             }
             Meters(subagent)
+            ReasonSection(subagent)
             if (subagent.isRunning) {
                 StepsSection(subagent, onOpenStep)
                 AnswerSection(subagent)
@@ -393,6 +394,23 @@ private fun AnswerSection(subagent: SubagentUi) {
             Box(Modifier.padding(top = 4.dp)) {
                 MarkdownText(answer, showCaret = false)
             }
+        }
+    }
+}
+
+/** The whole reason a subagent did not finish normally, selectable and copyable. */
+@Composable
+private fun ReasonSection(subagent: SubagentUi) {
+    val reason = SubagentRows.endReasonOf(subagent) ?: return
+    val text = subagentReasonText(reason)
+    val color = if (reason is SubagentEndReason.Failed) JonakiTheme.colors.deny else MaterialTheme.colorScheme.onSurface
+    Column {
+        SectionLabel(stringResource(R.string.subagents_reason))
+        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+            SelectionContainer(Modifier.weight(1f)) {
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = color, modifier = Modifier.padding(top = 8.dp))
+            }
+            CopyButton(text)
         }
     }
 }

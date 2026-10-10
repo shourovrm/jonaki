@@ -2,6 +2,7 @@ package app.jonaki.feature.chat
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -12,6 +13,7 @@ class SubagentRowsTest {
         latestText: String? = null,
         filesWritten: List<String> = emptyList(),
         notesPosted: Int = 0,
+        failure: String? = null,
         startedAtMillis: Long = 1_000,
         finishedAtMillis: Long? = null,
     ) = SubagentUi(
@@ -29,6 +31,9 @@ class SubagentRowsTest {
         finishedAtMillis = finishedAtMillis,
         filesWritten = filesWritten,
         notesPosted = notesPosted,
+        failure = failure,
+        stepLimit = 20,
+        timeLimitMinutes = 10,
     )
 
     private fun step(id: String, toolName: String, status: StepUiStatus, detail: String = "") =
@@ -179,5 +184,34 @@ class SubagentRowsTest {
         assertEquals(0.5f, SubagentRows.share(5.0, 10.0), 0.0001f)
         assertEquals(1f, SubagentRows.share(11.0, 10.0), 0.0001f)
         assertEquals(0f, SubagentRows.share(1.0, 0.0), 0.0001f)
+    }
+
+    @Test
+    fun aFailedSubagentGivesItsFailureAsTheReason() {
+        val reason = SubagentRows.endReasonOf(
+            subagent(SubagentUiStatus.FAILED, failure = "Could not reach OpenRouter: Unable to resolve host \"openrouter.ai\""),
+        )
+
+        assertEquals(SubagentEndReason.Failed("Could not reach OpenRouter: Unable to resolve host \"openrouter.ai\""), reason)
+    }
+
+    @Test
+    fun aFailedRowSavedWithoutAReasonHasNoReasonLine() {
+        assertNull(SubagentRows.endReasonOf(subagent(SubagentUiStatus.FAILED, failure = null)))
+        assertNull(SubagentRows.endReasonOf(subagent(SubagentUiStatus.FAILED, failure = "  ")))
+    }
+
+    @Test
+    fun theLimitsNameTheirNumbers() {
+        assertEquals(SubagentEndReason.TimeLimit(10), SubagentRows.endReasonOf(subagent(SubagentUiStatus.TIME_LIMIT)))
+        assertEquals(SubagentEndReason.StepLimit(20), SubagentRows.endReasonOf(subagent(SubagentUiStatus.STEP_LIMIT)))
+        assertEquals(SubagentEndReason.CostLimit, SubagentRows.endReasonOf(subagent(SubagentUiStatus.COST_LIMIT)))
+    }
+
+    @Test
+    fun aSubagentThatRunsOrFinishedOrWasStoppedNeedsNoReason() {
+        assertNull(SubagentRows.endReasonOf(subagent(SubagentUiStatus.RUNNING)))
+        assertNull(SubagentRows.endReasonOf(subagent(SubagentUiStatus.DONE)))
+        assertNull(SubagentRows.endReasonOf(subagent(SubagentUiStatus.STOPPED)))
     }
 }

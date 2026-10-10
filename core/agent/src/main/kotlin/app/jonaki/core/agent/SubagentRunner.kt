@@ -194,8 +194,8 @@ class SubagentRunner(
         context: ToolContext,
         limits: SubagentLimits,
     ): String {
-        val fullText = SubagentPrompt.resultText(outcome, limits)
-        val answerText = cappedAnswer(fullText, "${group.folder}/${label.replace(' ', '-')}.md", context)
+        val answerPath = "${group.folder}/${label.replace(' ', '-')}.md"
+        val answerText = SubagentPrompt.resultText(outcome, limits) { fullText -> cappedAnswer(fullText, answerPath, context) }
         try {
             recorder.subagentFinished(subagentId, outcome, answerText)
         } catch (exception: Exception) {

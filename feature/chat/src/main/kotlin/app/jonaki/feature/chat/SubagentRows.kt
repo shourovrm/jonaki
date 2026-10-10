@@ -31,6 +31,10 @@ data class SubagentUi(
     /** D-061's budgets, so the meters read "5 of 10" and "$0.012 of $0.10". */
     val stepLimit: Int = DEFAULT_STEP_LIMIT,
     val costLimitUsd: Double = DEFAULT_COST_LIMIT_USD,
+    /** Why a failed one failed, as the service or the app worded it; null when the row was saved without it. */
+    val failure: String? = null,
+    /** The time limit of its type today, for "Time limit reached (10 min)". */
+    val timeLimitMinutes: Int = DEFAULT_TIME_LIMIT_MINUTES,
 ) {
     /**
      * Steps that used up the budget: the notes board costs none (D-015), so it
@@ -50,6 +54,7 @@ data class SubagentUi(
         private const val NOTES_TOOL = "notes"
         const val DEFAULT_STEP_LIMIT = 10
         const val DEFAULT_COST_LIMIT_USD = 0.10
+        const val DEFAULT_TIME_LIMIT_MINUTES = 10
     }
 }
 
@@ -105,6 +110,17 @@ data class WorkSummary(
         get() = earlyStops.isEmpty() && skippedParts == 0
 }
 
+/** Why a subagent did not finish normally; the row and the page word it. */
+sealed interface SubagentEndReason {
+    data class TimeLimit(val minutes: Int) : SubagentEndReason
+
+    data class StepLimit(val steps: Int) : SubagentEndReason
+
+    data object CostLimit : SubagentEndReason
+
+    data class Failed(val message: String) : SubagentEndReason
+}
+
 object SubagentRows {
     private const val ASK_PARENT_TOOL = "ask_parent"
 
@@ -143,6 +159,19 @@ object SubagentRows {
             durationMillis = durationOf(subagent),
         )
         return SubagentRow(SubagentRowIcon.DONE, now, needsLook = false)
+    }
+
+    /**
+     * The reason line of a row that did not finish normally. Null for a
+     * subagent that runs, is done or was stopped by the user, and for a
+     * failure whose row was saved without a reason (older versions).
+     */
+    fun endReasonOf(subagent: SubagentUi): SubagentEndReason? = when (subagent.status) {
+        SubagentUiStatus.FAILED -> subagent.failure?.takeIf { message -> message.isNotBlank() }?.let { message -> SubagentEndReason.Failed(message) }
+        SubagentUiStatus.TIME_LIMIT -> SubagentEndReason.TimeLimit(subagent.timeLimitMinutes)
+        SubagentUiStatus.STEP_LIMIT -> SubagentEndReason.StepLimit(subagent.stepLimit)
+        SubagentUiStatus.COST_LIMIT -> SubagentEndReason.CostLimit
+        SubagentUiStatus.RUNNING, SubagentUiStatus.DONE, SubagentUiStatus.STOPPED -> null
     }
 
     /** Null while it runs. */

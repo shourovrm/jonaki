@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bangla for strings_errors.xml. -->
+<resources>
+    <string name="subagents_reason">কারণ</string>
+    <string name="subagents_reason_time_limit">সময়ের সীমায় পৌঁছেছে (%1$d মিনিট)</string>
+    <plurals name="subagents_reason_step_limit">
+        <item quantity="one">ধাপের সীমায় পৌঁছেছে (%1$dটি ধাপ)</item>
+        <item quantity="other">ধাপের সীমায় পৌঁছেছে (%1$dটি ধাপ)</item>
+    </plurals>
+    <string name="subagents_reason_cost_limit">খরচের সীমায় পৌঁছেছে</string>
+</resources>

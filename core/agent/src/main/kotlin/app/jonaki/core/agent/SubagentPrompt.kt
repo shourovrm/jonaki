@@ -35,19 +35,21 @@ ${type.instructions}"""
         return PromptBuilder(base).systemPrompt(startTools, memorySection = memorySection, skillSection = skills)
     }
 
-    /** What goes back to the thread's agent: the answer and how it ended. */
-    fun resultText(outcome: SubagentOutcome, limits: SubagentLimits): String {
+    /**
+     * What goes back to the thread's agent: the answer and how it ended.
+     * [limitAnswer] shortens the answer part only, so that a long answer
+     * cannot push the ending out (the subagent's row reads the failure from it).
+     */
+    fun resultText(outcome: SubagentOutcome, limits: SubagentLimits, limitAnswer: (String) -> String = { text -> text }): String {
         val parts = mutableListOf<String>()
         val endedEarly = outcome.stop != SubagentStop.COMPLETED && outcome.stop != SubagentStop.STEP_LIMIT
         if (endedEarly && outcome.answer.isNotBlank()) {
             parts += "It has no final answer. What it wrote and found so far:"
         }
         parts += outcome.answer.ifBlank { "(No answer.)" }
-        val ending = endingOf(outcome, limits)
-        if (ending != null) {
-            parts += ending
-        }
-        return parts.joinToString("\n\n")
+        val answerPart = limitAnswer(parts.joinToString("\n\n"))
+        val ending = endingOf(outcome, limits) ?: return answerPart
+        return "$answerPart\n\n$ending"
     }
 
     private fun endingOf(outcome: SubagentOutcome, limits: SubagentLimits): String? = when (outcome.stop) {
@@ -55,7 +57,7 @@ ${type.instructions}"""
         SubagentStop.STEP_LIMIT -> "Stopped by the step limit of ${limits.maxToolSteps} tool steps."
         SubagentStop.COST_LIMIT -> "Stopped by the cost limit of ${dollars(limits.costCapUsd)}."
         SubagentStop.TIME_LIMIT -> "Stopped by the time limit of ${limits.timeLimit.inWholeMinutes} minutes."
-        SubagentStop.FAILED -> "Stopped because the model call failed: ${outcome.failure.orEmpty()}"
+        SubagentStop.FAILED -> SubagentEnding.failureSentence(outcome.failure)
         SubagentStop.STOPPED -> "Stopped by the user."
     }
 

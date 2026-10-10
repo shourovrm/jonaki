@@ -112,7 +112,14 @@ internal object SubagentSamples {
         filesWritten = listOf("artifacts/laptop-guide-for-ma-in-bangla-with-prices.html", "work/specs.md"),
     )
 
-    private val finished = listOf(researcherOverBudget, researcherSkipped, writerDone)
+    private val researcherFailed = researcherRunning.copy(
+        status = SubagentUiStatus.FAILED,
+        steps = researcherRunning.steps.map { step -> step.copy(status = StepUiStatus.DONE, durationMillis = 2_000) },
+        failure = "Could not reach OpenRouter: Unable to resolve host \"openrouter.ai\": No address associated with hostname",
+        finishedAtMillis = START + 87_000,
+    )
+
+    private val finished = listOf(researcherOverBudget, researcherSkipped, writerDone, researcherFailed)
 
     val runningRun = ChatItem.Run(
         id = "run-subagents",

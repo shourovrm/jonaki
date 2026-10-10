@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Why a subagent did not finish normally. Bangla in values-bn/strings_errors.xml. -->
+<resources>
+    <string name="subagents_reason">Reason</string>
+    <string name="subagents_reason_time_limit">Time limit reached (%1$d min)</string>
+    <plurals name="subagents_reason_step_limit">
+        <item quantity="one">Step limit reached (%1$d step)</item>
+        <item quantity="other">Step limit reached (%1$d steps)</item>
+    </plurals>
+    <string name="subagents_reason_cost_limit">Cost limit reached</string>
+</resources>

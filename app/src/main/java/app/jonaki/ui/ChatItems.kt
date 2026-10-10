@@ -14,8 +14,10 @@ import app.jonaki.tools.runcode.InstallNeed
 import app.jonaki.tools.runcode.InstallNeeds
 import app.jonaki.core.agent.PromptBuilder
 import app.jonaki.core.agent.AgentTypes
+import app.jonaki.core.agent.SubagentEnding
 import app.jonaki.core.agent.SubagentRunner
 import app.jonaki.core.storage.SubagentEntity
+import app.jonaki.core.storage.SubagentStatus
 import app.jonaki.feature.chat.NotesBoardUi
 import app.jonaki.feature.chat.SubagentUi
 import app.jonaki.feature.chat.SubagentUiStatus
@@ -331,8 +333,14 @@ object ChatItems {
                 notesPosted = steps.count(::isNotePosted),
                 stepLimit = budget.toolSteps,
                 costLimitUsd = budget.costCapUsd,
+                failure = failureOf(subagent),
+                timeLimitMinutes = budget.minutes,
             )
         }
+
+        /** Only a failed subagent has one; older rows carry none and read as null. */
+        private fun failureOf(subagent: SubagentEntity): String? =
+            if (subagent.status == SubagentStatus.FAILED.name) SubagentEnding.failureOf(subagent.resultText) else null
 
         /** Files it wrote, edited or showed, in the order first touched; a denied or failed call wrote nothing. */
         private fun filesWrittenBy(steps: List<StepEntity>): List<String> =

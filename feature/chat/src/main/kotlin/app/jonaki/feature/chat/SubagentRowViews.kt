@@ -61,6 +61,7 @@ internal fun SubagentRowView(subagent: SubagentUi, onOpen: (subagentId: String) 
                     overflow = TextOverflow.Ellipsis,
                 )
                 SubagentNowLine(subagent, row)
+                SubagentReasonLine(subagent)
             }
             Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
@@ -104,6 +105,31 @@ private fun SubagentNowLine(subagent: SubagentUi, row: SubagentRow) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
+}
+
+/** One short reason under a row that did not finish normally: wraps to three lines, then "…". */
+@Composable
+private fun SubagentReasonLine(subagent: SubagentUi) {
+    val reason = SubagentRows.endReasonOf(subagent) ?: return
+    val isFailure = reason is SubagentEndReason.Failed
+    Text(
+        subagentReasonText(reason),
+        style = MaterialTheme.typography.bodySmall,
+        color = if (isFailure) JonakiTheme.colors.deny else MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = REASON_MAX_LINES,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+private const val REASON_MAX_LINES = 3
+
+/** The reason in words; a failure is the message itself. */
+@Composable
+internal fun subagentReasonText(reason: SubagentEndReason): String = when (reason) {
+    is SubagentEndReason.Failed -> reason.message
+    is SubagentEndReason.TimeLimit -> stringResource(R.string.subagents_reason_time_limit, reason.minutes)
+    is SubagentEndReason.StepLimit -> pluralStringResource(R.plurals.subagents_reason_step_limit, reason.steps, reason.steps)
+    SubagentEndReason.CostLimit -> stringResource(R.string.subagents_reason_cost_limit)
 }
 
 /** Only a working subagent is lit; every other mark is in ink (D-123). */
