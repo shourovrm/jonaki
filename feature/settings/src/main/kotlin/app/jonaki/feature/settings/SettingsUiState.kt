@@ -74,6 +74,8 @@ data class SettingsUiState(
     val skillCount: Int = 0,
     /** Settings > Local models' row on the first page (D-133). */
     val localModels: LocalModelsSummaryUi = LocalModelsSummaryUi(),
+    /** Settings > Models > Image generation: the models generate_image may use. */
+    val imageGeneration: ImageGenerationUi = ImageGenerationUi(),
     // The three fields below belong to the single-provider block that the cards
     // replace. They stay only until the app moves to [chatServices]; the screen
     // no longer reads them.
@@ -244,6 +246,10 @@ class SettingsActions(
     /** [routing] null means "same as the service". */
     val onModelRoutingChange: (modelKey: String, routing: RoutingUi?) -> Unit = { _, _ -> },
     val onModelRemove: (modelKey: String) -> Unit = {},
+    /** Opens the image model picker. */
+    val onAddImageModels: () -> Unit = {},
+    val onImageModelSetDefault: (modelId: String) -> Unit = {},
+    val onImageModelRemove: (modelId: String) -> Unit = {},
     /** A thinking level picked in a model's menu (D-057). */
     val onModelThinkingChange: (modelKey: String, choice: ThinkingChoice) -> Unit = { _, _ -> },
     /** Adds or edits an MCP server; the dialog has already checked the input. */

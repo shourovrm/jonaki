@@ -89,6 +89,10 @@ class JonakiApplication : Application() {
     lateinit var memoryExport: MemoryExport
         private set
 
+    /** The one client every call shares; also used for OpenRouter's public image model list. */
+    lateinit var httpClient: OkHttpClient
+        private set
+
     /** Downloads and the share sheet, for the chat's Save and Share under a generated image. */
     lateinit var fileDestinations: AndroidFileDestinations
         private set
@@ -170,7 +174,7 @@ class JonakiApplication : Application() {
         settings = AppSettings(this, ChatProviders::defaultModel)
         secrets = SecretStore(this)
         // One client for every call, so connections and threads are shared.
-        val httpClient = OkHttpClient.Builder()
+        httpClient = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             // Streaming replies can pause while a model thinks; the agent loop's own limits apply on top.
             .readTimeout(120, TimeUnit.SECONDS)
