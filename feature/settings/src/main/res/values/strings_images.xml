@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_section_images">Image generation</string>
-    <string name="settings_images_needs_key">Needs an OpenRouter key.</string>
-    <string name="settings_images_none">No image models added.</string>
-    <string name="settings_images_add">Add image model</string>
-    <string name="settings_images_picker_title">Add image models</string>
     <string name="settings_images_loading">Loading models</string>
     <string name="settings_images_failed">Could not load the list (%1$s)</string>
     <string name="settings_images_retry">Try again</string>

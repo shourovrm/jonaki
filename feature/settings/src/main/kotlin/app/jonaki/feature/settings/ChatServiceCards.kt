@@ -77,23 +77,43 @@ internal fun ChatServicesSection(state: SettingsUiState, actions: SettingsAction
 private fun ServiceCard(card: ChatServiceCardUi, actions: SettingsActions) {
     // A card with no key yet opens by itself, so the key field is in view.
     val startsOpen = card.apiKey != null && !card.apiKey.isSet
-    var open by rememberSaveable(card.serviceKey) { mutableStateOf(startsOpen) }
+    val summary = collapsedSummary(card.apiKey, card.models.size)
+    ServiceCardFrame(card.serviceKey, startsOpen, card.displayName, summary, card.account) {
+        CardBody(card, actions)
+    }
+}
+
+/**
+ * The card every service block shares, chat and image: a header with the
+ * name and a one-line summary that opens the [body]. [stateKey] keeps the
+ * card open or closed across recompositions and rotation.
+ */
+@Composable
+internal fun ServiceCardFrame(
+    stateKey: String,
+    startsOpen: Boolean,
+    displayName: String,
+    summary: String,
+    account: AccountLineUi?,
+    body: @Composable () -> Unit,
+) {
+    var open by rememberSaveable(stateKey) { mutableStateOf(startsOpen) }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         Column {
-            CardHeader(card, open, onToggle = { open = !open })
+            CardHeader(displayName, summary, account, open, onToggle = { open = !open })
             if (open) {
-                CardBody(card, actions)
+                body()
             }
         }
     }
 }
 
 @Composable
-private fun CardHeader(card: ChatServiceCardUi, open: Boolean, onToggle: () -> Unit) {
+private fun CardHeader(displayName: String, summary: String, account: AccountLineUi?, open: Boolean, onToggle: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -103,16 +123,16 @@ private fun CardHeader(card: ChatServiceCardUi, open: Boolean, onToggle: () -> U
             .padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(card.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             if (!open) {
                 Text(
-                    collapsedSummary(card),
+                    summary,
                     style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                card.account?.let { account -> AccountLine(account) }
+                account?.let { line -> AccountLine(line) }
             }
         }
         Icon(
@@ -125,9 +145,8 @@ private fun CardHeader(card: ChatServiceCardUi, open: Boolean, onToggle: () -> U
 
 /** "sk-o•••• · 3 models", or the model count alone for a service with no key. */
 @Composable
-private fun collapsedSummary(card: ChatServiceCardUi): String {
-    val models = pluralStringResource(R.plurals.settings_model_count, card.models.size, card.models.size)
-    val slot = card.apiKey
+internal fun collapsedSummary(slot: KeySlot?, modelCount: Int): String {
+    val models = pluralStringResource(R.plurals.settings_model_count, modelCount, modelCount)
     return when {
         slot == null -> models
         slot.isSet -> "${slot.maskedKey.orEmpty()} · $models"
@@ -438,7 +457,7 @@ private fun RoutingMenuItem(text: String, checked: Boolean, onClick: () -> Unit)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddServiceDropdown(services: List<AddableServiceUi>, onAdd: (String) -> Unit) {
+internal fun AddServiceDropdown(services: List<AddableServiceUi>, onAdd: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded,

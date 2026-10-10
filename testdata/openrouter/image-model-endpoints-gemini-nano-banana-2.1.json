@@ -1,0 +1,12 @@
+{
+ "id": "google/gemini-nano-banana-2.1",
+ "endpoints": [
+  {
+   "provider_name": "Google",
+   "provider_slug": "google",
+   "pricing": [
+    {"billable": "output_image", "unit": "token", "cost_usd": 0.00003}
+   ]
+  }
+ ]
+}

@@ -23,13 +23,13 @@ class GenerateImageToolTest {
     private val threadFolder: File = Files.createTempDirectory("thread").toFile()
     private val context = ToolContext(threadFolder, OkHttpClient())
     private val requests = mutableListOf<ImageRequest>()
-    private val models = listOf("black-forest-labs/flux.2-klein-4b", "openai/gpt-image-1-mini")
+    private val models = listOf("openrouter:black-forest-labs/flux.2-klein-4b", "openrouter:openai/gpt-image-1-mini", "gemini:gemini-2.5-flash-image")
 
     private fun success(cost: Double? = 0.014) =
         ImageOutcome.Success(ImageDimensionsTest.png(1024, 576), "image/png", cost)
 
-    private fun tool(outcome: ImageOutcome, modelIds: List<String> = models, default: String? = models[1]) =
-        GenerateImageTool(ImageGenerator { request -> requests += request; outcome }, modelIds, default)
+    private fun tool(outcome: ImageOutcome, modelKeys: List<String> = models, default: String? = models[1]) =
+        GenerateImageTool(ImageGenerator { request -> requests += request; outcome }, modelKeys, default)
 
     private fun run(tool: GenerateImageTool, json: String) =
         runBlocking { tool.run(Json.parseToJsonElement(json).jsonObject, context) }
@@ -41,10 +41,10 @@ class GenerateImageToolTest {
         assertFalse(output.text, output.isError)
         assertEquals("images/blue-door.png", GeneratedImages.pathIn(output.text))
         assertTrue(output.text.contains("Size: 1024x576 px"))
-        assertTrue(output.text.contains("Model: openai/gpt-image-1-mini"))
+        assertTrue(output.text.contains("Model: openrouter:openai/gpt-image-1-mini"))
         assertTrue(output.text.contains("Cost: $0.0140"))
         assertTrue(File(threadFolder, "images/blue-door.png").isFile)
-        assertEquals(ImageRequest("openai/gpt-image-1-mini", "A blue door", "16:9"), requests.single())
+        assertEquals(ImageRequest("openrouter", "openai/gpt-image-1-mini", "A blue door", "16:9"), requests.single())
     }
 
     @Test
@@ -83,19 +83,50 @@ class GenerateImageToolTest {
 
         assertTrue(output.isError)
         assertTrue(output.text.contains("stability/other is not one of the user's image models"))
-        assertTrue(output.text.contains(models[0]) && output.text.contains(models[1]))
+        assertTrue(models.all { key -> output.text.contains(key) })
         assertTrue(requests.isEmpty())
     }
 
     @Test
-    fun aNamedModelIsUsed() {
-        run(tool(success()), """{"prompt":"x","model":"black-forest-labs/flux.2-klein-4b"}""")
-        assertEquals("black-forest-labs/flux.2-klein-4b", requests.single().modelId)
+    fun aNamedModelIsUsedAndRoutedToItsService() {
+        run(tool(success()), """{"prompt":"x","model":"gemini:gemini-2.5-flash-image"}""")
+        assertEquals("gemini", requests.single().serviceKey)
+        assertEquals("gemini-2.5-flash-image", requests.single().modelId)
+    }
+
+    @Test
+    fun aModelIdWithColonsKeepsEverythingAfterTheServiceKey() {
+        run(tool(success(), modelKeys = listOf("openrouter:x/y:free"), default = null), """{"prompt":"x"}""")
+        assertEquals("openrouter", requests.single().serviceKey)
+        assertEquals("x/y:free", requests.single().modelId)
+    }
+
+    @Test
+    fun aModelWithoutItsServiceMatchesWhenOnlyOneServiceHasIt() {
+        run(tool(success()), """{"prompt":"x","model":"gemini-2.5-flash-image"}""")
+        assertEquals("gemini", requests.single().serviceKey)
+    }
+
+    @Test
+    fun aModelWithoutItsServiceIsRefusedWhenTwoServicesHaveIt() {
+        val twice = listOf("openrouter:same-id", "gemini:same-id")
+        val output = run(tool(success(), modelKeys = twice, default = null), """{"prompt":"x","model":"same-id"}""")
+
+        assertTrue(output.isError)
+        assertTrue(output.text.contains("openrouter:same-id") && output.text.contains("gemini:same-id"))
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun theSchemaListsTheServiceModelKeys() {
+        val schema = tool(success()).parameterSchema.toString()
+        assertTrue(schema.contains("\"gemini:gemini-2.5-flash-image\""))
+        assertTrue(schema.contains("service:model"))
     }
 
     @Test
     fun withoutAnAddedModelTheAnswerSaysWhereToAddOne() {
-        val output = run(tool(success(), modelIds = emptyList(), default = null), """{"prompt":"x"}""")
+        val output = run(tool(success(), modelKeys = emptyList(), default = null), """{"prompt":"x"}""")
 
         assertTrue(output.isError)
         assertTrue(output.text.contains("no image model is added"))
@@ -112,7 +143,7 @@ class GenerateImageToolTest {
     @Test
     fun everyFailureKindSaysWhatToDoNext() {
         val expectations = mapOf(
-            ImageFailure.KEY_PROBLEM to "OpenRouter key",
+            ImageFailure.KEY_PROBLEM to "key for openrouter",
             ImageFailure.OUT_OF_CREDIT to "add credit",
             ImageFailure.BLOCKED to "refused the prompt",
             ImageFailure.TIMED_OUT to "did not finish in time",

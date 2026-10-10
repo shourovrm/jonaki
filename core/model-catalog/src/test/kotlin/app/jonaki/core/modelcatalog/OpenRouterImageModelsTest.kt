@@ -93,9 +93,9 @@ class OpenRouterImageModelsTest {
         server.enqueue(MockResponse().setResponseCode(404))
         val base = server.url("/api/v1").toString()
 
-        val price = OpenRouterImageModels.fetchPrice(OkHttpClient(), "black-forest-labs/flux.2-klein-4b", base)
-        assertEquals(0.014, price!!.costUsd, 1e-9)
+        val price = OpenRouterImageModels.fetchPrice(OkHttpClient(), "black-forest-labs/flux.2-klein-4b", base) as ImagePriceResult.Priced
+        assertEquals(0.014, price.price.costUsd, 1e-9)
         assertEquals("/api/v1/images/models/black-forest-labs/flux.2-klein-4b/endpoints", server.takeRequest().path)
-        assertNull(OpenRouterImageModels.fetchPrice(OkHttpClient(), "x/y", base))
+        assertEquals(ImagePriceResult.Failed, OpenRouterImageModels.fetchPrice(OkHttpClient(), "x/y", base))
     }
 }

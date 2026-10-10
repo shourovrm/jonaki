@@ -72,6 +72,7 @@ import app.jonaki.core.storage.ThreadEntity
 import app.jonaki.core.toolapi.ImageGenerator
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.ToolContext
+import app.jonaki.providers.gemini.GeminiImageGenerator
 import app.jonaki.providers.gemini.GeminiProvider
 import app.jonaki.providers.gemini.VideoSummaryOutcome
 import app.jonaki.providers.gemini.VideoSummaryRequest
@@ -85,6 +86,7 @@ import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ApprovalRuleChoices
 import app.jonaki.settings.ApprovalModes
 import app.jonaki.settings.ChatService
+import app.jonaki.settings.ImageService
 import app.jonaki.settings.CustomSubagents
 import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.LocalModelToolList
@@ -854,17 +856,23 @@ class AgentRunner(
         pdfRenderer = pdfRenderer,
         enabledGroups = settings.snapshot.value.enabledToolGroups,
         imageGenerator = imageGeneratorFor(thread.id),
-        imageModelIds = settings.snapshot.value.imageModels.modelIds,
-        defaultImageModelId = settings.snapshot.value.imageModels.defaultModelId,
+        imageModelKeys = settings.snapshot.value.imageModels.usableModelKeys(::hasImageKey),
+        defaultImageModelKey = settings.snapshot.value.imageModels.defaultModelKey,
     )
 
-    /** Null without a saved OpenRouter key, which leaves generate_image out; each picture's cost is saved on the thread. */
-    private fun imageGeneratorFor(threadId: String): ImageGenerator? {
-        if (secrets.read(SecretName.OPENROUTER) == null) {
-            return null
-        }
-        val openRouter = OpenRouterImageGenerator({ secrets.read(SecretName.OPENROUTER) }, httpClient)
-        return RecordingImageGenerator(openRouter, threadId, backgroundModel::saveUsage)
+    private fun hasImageKey(service: ImageService): Boolean = secrets.read(service.secret) != null
+
+    /**
+     * Routes a picture to its image service; each picture's usage is saved on
+     * the thread. The tool is offered only for models of services that have a
+     * saved key (see imageModelKeys above).
+     */
+    private fun imageGeneratorFor(threadId: String): ImageGenerator {
+        val byService = mapOf(
+            ImageService.OPENROUTER.key to OpenRouterImageGenerator({ secrets.read(ImageService.OPENROUTER.secret) }, httpClient),
+            ImageService.GEMINI.key to GeminiImageGenerator({ secrets.read(ImageService.GEMINI.secret) }, httpClient),
+        )
+        return RecordingImageGenerator(ServiceImageGenerator(byService), threadId, backgroundModel::saveUsage)
     }
 
     /**

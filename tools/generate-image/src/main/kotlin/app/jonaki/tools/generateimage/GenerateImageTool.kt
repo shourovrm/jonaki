@@ -31,13 +31,15 @@ import kotlinx.serialization.json.putJsonObject
  * added in Settings, and saves it in the thread's images/ folder. Each call
  * costs money and writes a file, so every call asks the user first.
  *
- * [modelIds] are the models the user added; [defaultModelId] is the starred
- * one that is used when the call names no model.
+ * [modelKeys] are the models the user added as "service:modelId", for example
+ * "openrouter:black-forest-labs/flux.2-klein-4b"; [defaultModelKey] is the
+ * starred one that is used when the call names no model. [generator] routes a
+ * request to its service by [ImageRequest.serviceKey].
  */
 class GenerateImageTool(
     private val generator: ImageGenerator,
-    private val modelIds: List<String>,
-    private val defaultModelId: String?,
+    private val modelKeys: List<String>,
+    private val defaultModelKey: String?,
 ) : Tool {
     override val name: String = GeneratedImages.TOOL_NAME
 
@@ -71,11 +73,11 @@ class GenerateImageTool(
             }
             putJsonObject("model") {
                 put("type", "string")
-                put("description", "One of the image models the user added; the user's starred model when left out")
-                if (modelIds.isNotEmpty()) {
+                put("description", "One of the image models the user added, as service:model; the user's starred model when left out")
+                if (modelKeys.isNotEmpty()) {
                     putJsonArray("enum") {
-                        for (modelId in modelIds) {
-                            add(modelId)
+                        for (modelKey in modelKeys) {
+                            add(modelKey)
                         }
                     }
                 }
@@ -97,41 +99,51 @@ class GenerateImageTool(
         if (prompt.isEmpty()) {
             return ToolOutput.error("argument prompt is missing", "Call generate_image again with a full description of the picture.")
         }
-        val modelId = chooseModel(arguments.stringArgument("model"))
+        val modelKey = chooseModel(arguments.stringArgument("model"))
             ?: return modelError(arguments.stringArgument("model"))
         val aspectRatio = arguments.stringArgument("aspect_ratio")?.trim()?.ifEmpty { null }
 
-        val outcome = generator.generate(ImageRequest(modelId, prompt, aspectRatio))
+        // The first colon ends the service key; a model id may hold more colons, such as "x/y:free".
+        val serviceKey = modelKey.substringBefore(':')
+        val modelId = modelKey.substringAfter(':')
+        val outcome = generator.generate(ImageRequest(serviceKey, modelId, prompt, aspectRatio))
         return when (outcome) {
-            is ImageOutcome.Failed -> failureText(outcome, modelId)
-            is ImageOutcome.Success -> save(outcome, modelId, prompt, arguments.stringArgument("file_name"), context)
+            is ImageOutcome.Failed -> failureText(outcome, serviceKey, modelKey)
+            is ImageOutcome.Success -> save(outcome, modelKey, prompt, arguments.stringArgument("file_name"), context)
         }
     }
 
+    /**
+     * The added model the call names: the full "service:model" key, or just
+     * the model id when only one added model has that id. Null when nothing
+     * matches or the bare id is ambiguous.
+     */
     private fun chooseModel(requested: String?): String? {
         val wanted = requested?.trim().orEmpty()
         if (wanted.isEmpty()) {
-            return defaultModelId?.takeIf { it in modelIds } ?: modelIds.firstOrNull()
+            return defaultModelKey?.takeIf { it in modelKeys } ?: modelKeys.firstOrNull()
         }
-        return modelIds.firstOrNull { modelId -> modelId.equals(wanted, ignoreCase = true) }
+        modelKeys.firstOrNull { modelKey -> modelKey.equals(wanted, ignoreCase = true) }?.let { return it }
+        val sameId = modelKeys.filter { modelKey -> modelKey.substringAfter(':').equals(wanted, ignoreCase = true) }
+        return sameId.singleOrNull()
     }
 
     private fun modelError(requested: String?): ToolOutput {
-        if (modelIds.isEmpty()) {
+        if (modelKeys.isEmpty()) {
             return ToolOutput.error(
                 "no image model is added",
-                "Tell the user to add an image model under Settings > Models > Image generation, and to save an OpenRouter key.",
+                "Tell the user to add an image service with a key and an image model under Settings > Models > Image generation.",
             )
         }
         return ToolOutput.error(
-            "model ${requested.orEmpty().trim()} is not one of the user's image models",
-            "Use one of: ${modelIds.joinToString(", ")}. Or leave model out to use the starred one.",
+            "model ${requested.orEmpty().trim()} is not one of the user's image models, or more than one service has it",
+            "Use one of: ${modelKeys.joinToString(", ")}. Or leave model out to use the starred one.",
         )
     }
 
     private suspend fun save(
         image: ImageOutcome.Success,
-        modelId: String,
+        modelKey: String,
         prompt: String,
         requestedName: String?,
         context: ToolContext,
@@ -150,7 +162,7 @@ class GenerateImageTool(
                 "Tell the user; the picture was charged and is lost.",
             )
         }
-        return ToolOutput.success(describeResult(context.paths.relativePath(file), file, image, modelId))
+        return ToolOutput.success(describeResult(context.paths.relativePath(file), file, image, modelKey))
     }
 
     private fun write(threadFolder: File, baseName: String, extension: String, bytes: ByteArray): File {
@@ -161,29 +173,29 @@ class GenerateImageTool(
         return file
     }
 
-    private fun describeResult(path: String, file: File, image: ImageOutcome.Success, modelId: String): String {
+    private fun describeResult(path: String, file: File, image: ImageOutcome.Success, modelKey: String): String {
         val fileSize = IncomingFiles.describeSize(file.length())
         val size = ImageDimensions.of(image.bytes)?.let { dimensions -> "${dimensions.describe()}, $fileSize" } ?: fileSize
         val cost = image.costUsd?.let { dollars -> String.format(Locale.ENGLISH, "$%.4f", dollars) } ?: "not reported by the service"
         return listOf(
             GeneratedImages.firstLine(path),
             "Size: $size",
-            "Model: $modelId",
+            "Model: $modelKey",
             "Cost: $cost",
             "The user sees the picture in the chat.",
         ).joinToString("\n")
     }
 
-    private fun failureText(failure: ImageOutcome.Failed, modelId: String): ToolOutput {
+    private fun failureText(failure: ImageOutcome.Failed, serviceKey: String, modelId: String): ToolOutput {
         val said = failure.message.trim().ifEmpty { "no reason given" }
         return when (failure.kind) {
             ImageFailure.KEY_PROBLEM -> ToolOutput.error(
-                "OpenRouter did not accept the request: $said",
-                "Tell the user to save a working OpenRouter key in Settings. Do not retry.",
+                "$serviceKey did not accept the request: $said",
+                "Tell the user to save a working key for $serviceKey in Settings. Do not retry.",
             )
             ImageFailure.OUT_OF_CREDIT -> ToolOutput.error(
-                "OpenRouter has no credit for this picture: $said",
-                "Tell the user to add credit at openrouter.ai. Do not retry.",
+                "$serviceKey has no credit or quota for this picture: $said",
+                "Tell the user to add credit or check the quota with $serviceKey. Do not retry.",
             )
             ImageFailure.BLOCKED -> ToolOutput.error(
                 "$modelId refused the prompt: $said",

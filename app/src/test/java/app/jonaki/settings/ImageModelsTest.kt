@@ -1,69 +1,173 @@
 package app.jonaki.settings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ImageModelsTest {
     private val flux = "black-forest-labs/flux.2-klein-4b"
     private val gpt = "openai/gpt-image-1-mini"
+    private val nanoBanana = "gemini-2.5-flash-image"
 
     @Test
-    fun theFirstModelAddedIsStarred() {
-        val models = ImageModels().add(flux).add(gpt)
+    fun servicesKeepTheOrderTheyWereAdded() {
+        val models = ImageModels().addService(ImageService.GEMINI).addService(ImageService.OPENROUTER).addService(ImageService.GEMINI)
 
-        assertEquals(listOf(flux, gpt), models.modelIds)
-        assertEquals(flux, models.defaultModelId)
+        assertEquals(listOf(ImageService.GEMINI, ImageService.OPENROUTER), models.addedServices)
+        assertTrue(models.allModelKeys.isEmpty())
+        assertNull(models.defaultModelKey)
+    }
+
+    @Test
+    fun theFirstModelAddedIsStarredAndAddsItsService() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, flux).addModel(ImageService.OPENROUTER, gpt)
+
+        assertEquals(listOf(ImageService.OPENROUTER), models.addedServices)
+        assertEquals(listOf("openrouter:$flux", "openrouter:$gpt"), models.allModelKeys)
+        assertEquals("openrouter:$flux", models.defaultModelKey)
     }
 
     @Test
     fun blankAndRepeatedIdsChangeNothing() {
-        val models = ImageModels().add(flux)
+        val models = ImageModels().addModel(ImageService.OPENROUTER, flux)
 
-        assertEquals(models, models.add("  "))
-        assertEquals(models, models.add(" $flux "))
+        assertEquals(models, models.addModel(ImageService.OPENROUTER, "  "))
+        assertEquals(models, models.addModel(ImageService.OPENROUTER, " $flux "))
     }
 
     @Test
-    fun starringMovesTheStarAndIgnoresUnlistedIds() {
-        val models = ImageModels().add(flux).add(gpt)
+    fun theSameIdUnderTwoServicesGivesTwoModels() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, "google/x").addModel(ImageService.GEMINI, "google/x")
 
-        assertEquals(gpt, models.setDefault(gpt).defaultModelId)
-        assertEquals(flux, models.setDefault("other/model").defaultModelId)
+        assertEquals(listOf("openrouter:google/x", "gemini:google/x"), models.allModelKeys)
+    }
+
+    @Test
+    fun starringMovesTheStarAcrossServicesAndIgnoresUnlistedKeys() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, flux).addModel(ImageService.GEMINI, nanoBanana)
+
+        assertEquals("gemini:$nanoBanana", models.setDefault("gemini:$nanoBanana").defaultModelKey)
+        assertEquals("openrouter:$flux", models.setDefault("gemini:other").defaultModelKey)
     }
 
     @Test
     fun removingTheStarredModelStarsTheFirstLeft() {
-        val models = ImageModels().add(flux).add(gpt).setDefault(gpt)
+        val models = ImageModels().addModel(ImageService.OPENROUTER, flux).addModel(ImageService.GEMINI, nanoBanana)
+            .setDefault("gemini:$nanoBanana")
 
-        val afterRemoving = models.remove(gpt)
+        val afterRemoving = models.removeModel("gemini:$nanoBanana")
 
-        assertEquals(listOf(flux), afterRemoving.modelIds)
-        assertEquals(flux, afterRemoving.defaultModelId)
+        assertEquals(listOf("openrouter:$flux"), afterRemoving.allModelKeys)
+        assertEquals("openrouter:$flux", afterRemoving.defaultModelKey)
+        assertNull(afterRemoving.removeModel("openrouter:$flux").defaultModelKey)
     }
 
     @Test
-    fun removingAnotherModelKeepsTheStar() {
-        val models = ImageModels().add(flux).add(gpt).setDefault(gpt)
+    fun removingAModelKeepsItsServiceCard() {
+        val models = ImageModels().addModel(ImageService.GEMINI, nanoBanana).removeModel("gemini:$nanoBanana")
 
-        assertEquals(gpt, models.remove(flux).defaultModelId)
+        assertEquals(listOf(ImageService.GEMINI), models.addedServices)
     }
 
     @Test
-    fun removingTheLastModelLeavesNoStar() {
-        val empty = ImageModels().add(flux).remove(flux)
+    fun removingAServiceDropsItsModelsAndMovesTheStar() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, flux).addModel(ImageService.GEMINI, nanoBanana)
 
-        assertEquals(emptyList<String>(), empty.modelIds)
-        assertNull(empty.defaultModelId)
+        val afterRemoving = models.removeService(ImageService.OPENROUTER)
+
+        assertEquals(listOf(ImageService.GEMINI), afterRemoving.addedServices)
+        assertEquals(listOf("gemini:$nanoBanana"), afterRemoving.allModelKeys)
+        assertEquals("gemini:$nanoBanana", afterRemoving.defaultModelKey)
     }
 
     @Test
-    fun textRoundTripsAndRepairsAStarThatIsNotListed() {
-        val saved = ImageModels.toText(listOf(flux, gpt))
+    fun theTextFormKeepsServicesModelsOrderAndStar() {
+        val models = ImageModels().addService(ImageService.GEMINI)
+            .addModel(ImageService.OPENROUTER, flux).addModel(ImageService.OPENROUTER, "x/y:free")
+            .addModel(ImageService.GEMINI, nanoBanana).setDefault("openrouter:x/y:free")
 
-        assertEquals(ImageModels(listOf(flux, gpt), gpt), ImageModels.fromText(saved, gpt))
-        assertEquals(flux, ImageModels.fromText(saved, "gone/model").defaultModelId)
-        assertEquals(ImageModels(), ImageModels.fromText("", null))
-        assertEquals(listOf(flux), ImageModels.fromText("$flux\n\n $flux \n", null).modelIds)
+        val stored = ImageModels.toStored(models)
+        val restored = ImageModels.fromStored(stored.servicesText, stored.modelKeysText, stored.defaultModelKey, null, null)
+
+        assertEquals(models, restored)
+    }
+
+    @Test
+    fun aServiceWithoutModelsSurvivesTheTextForm() {
+        val models = ImageModels().addService(ImageService.GEMINI)
+
+        val stored = ImageModels.toStored(models)
+
+        assertEquals(models, ImageModels.fromStored(stored.servicesText, stored.modelKeysText, stored.defaultModelKey, null, null))
+    }
+
+    @Test
+    fun anUnknownServiceOrAStaleStarInTheTextIsDropped() {
+        val restored = ImageModels.fromStored(
+            servicesText = "openrouter\nnosuch",
+            modelKeysText = "openrouter:$flux\nnosuch:abc\nnocolon",
+            defaultModelKey = "gemini:gone",
+            legacyModelsText = null,
+            legacyDefaultModel = null,
+        )
+
+        assertEquals(listOf(ImageService.OPENROUTER), restored.addedServices)
+        assertEquals(listOf("openrouter:$flux"), restored.allModelKeys)
+        assertEquals("openrouter:$flux", restored.defaultModelKey)
+    }
+
+    @Test
+    fun aPhoneThatStoredOpenRouterModelsOnlyKeepsThemAsOpenRouterModelsWithTheSameStar() {
+        // image_models and image_default_model as the first version wrote them.
+        val migrated = ImageModels.fromStored(
+            servicesText = null,
+            modelKeysText = null,
+            defaultModelKey = null,
+            legacyModelsText = "$flux\n$gpt",
+            legacyDefaultModel = gpt,
+        )
+
+        assertEquals(listOf(ImageService.OPENROUTER), migrated.addedServices)
+        assertEquals(listOf("openrouter:$flux", "openrouter:$gpt"), migrated.allModelKeys)
+        assertEquals("openrouter:$gpt", migrated.defaultModelKey)
+    }
+
+    @Test
+    fun theTestPhoneSettingsMigrate() {
+        val migrated = ImageModels.fromStored(null, null, null, "black-forest-labs/flux.2-klein-4b", "black-forest-labs/flux.2-klein-4b")
+
+        assertEquals("openrouter:black-forest-labs/flux.2-klein-4b", migrated.defaultModelKey)
+        assertEquals(listOf(ImageService.OPENROUTER), migrated.addedServices)
+    }
+
+    @Test
+    fun theNewFormatWinsOverLeftoverOldValuesEvenWhenEmpty() {
+        // After the user removed every model the new keys are saved empty; the old ones must not come back.
+        val restored = ImageModels.fromStored("", "", null, "$flux", flux)
+
+        assertTrue(restored.addedServices.isEmpty())
+        assertFalse(restored.allModelKeys.contains("openrouter:$flux"))
+    }
+
+    @Test
+    fun noStoredValuesGiveAnEmptyValue() {
+        assertEquals(ImageModels(), ImageModels.fromStored(null, null, null, null, null))
+    }
+
+    @Test
+    fun onlyModelsOfServicesWithAKeyAreUsable() {
+        val models = ImageModels().addModel(ImageService.OPENROUTER, flux).addModel(ImageService.GEMINI, nanoBanana)
+
+        assertEquals(listOf("gemini:$nanoBanana"), models.usableModelKeys { service -> service == ImageService.GEMINI })
+        assertTrue(models.usableModelKeys { false }.isEmpty())
+        assertTrue(ImageModels().addService(ImageService.GEMINI).usableModelKeys { true }.isEmpty())
+    }
+
+    @Test
+    fun servicesShareSecretsWithChatServices() {
+        assertEquals(ChatService.OPENROUTER.secret, ImageService.OPENROUTER.secret)
+        assertEquals(ChatService.GEMINI.secret, ImageService.GEMINI.secret)
     }
 }

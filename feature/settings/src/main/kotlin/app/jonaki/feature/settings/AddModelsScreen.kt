@@ -224,7 +224,7 @@ private fun PriceValue(usdPerMillion: Double?) {
 }
 
 @Composable
-private fun TypedIdRow(id: String, isPicked: Boolean, onToggle: () -> Unit) {
+internal fun TypedIdRow(id: String, isPicked: Boolean, onToggle: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),

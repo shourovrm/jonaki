@@ -26,6 +26,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -91,6 +92,10 @@ import app.jonaki.feature.settings.ImagePickerState
 import app.jonaki.core.modelcatalog.ImageModelListResult
 import app.jonaki.core.modelcatalog.OpenRouterImageModels
 import app.jonaki.settings.ImageModels
+import app.jonaki.settings.ImageService
+import app.jonaki.feature.settings.ImagePriceUi
+import app.jonaki.feature.settings.ImageServiceCardUi
+import app.jonaki.core.modelcatalog.ImagePriceResult
 import app.jonaki.feature.settings.AddModelsUiState
 import app.jonaki.feature.settings.AddableModelUi
 import app.jonaki.feature.settings.AddableServiceUi
@@ -154,7 +159,7 @@ private const val ROUTE_TOOLS = "tools"
 private const val ROUTE_PYTHON = "python"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
-private const val ROUTE_ADD_IMAGE_MODELS = "add-image-models"
+private const val ROUTE_ADD_IMAGE_MODELS_PREFIX = "add-image-models:"
 private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
 private const val ROUTE_MEMORY_PROJECT_PREFIX = "memory-project:"
@@ -269,7 +274,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onBack = goBack,
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
-                    onAddImageModels = { route = ROUTE_ADD_IMAGE_MODELS },
+                    onAddImageModels = { serviceKey -> route = ROUTE_ADD_IMAGE_MODELS_PREFIX + serviceKey },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
                     onOpenTools = { route = ROUTE_TOOLS },
@@ -381,10 +386,10 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onBack = { route = backRoute },
                 )
             }
-            route == ROUTE_ADD_IMAGE_MODELS -> {
+            route.startsWith(ROUTE_ADD_IMAGE_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
                 BackHandler { route = backRoute }
-                AddImageModelsRoute(application, onFinished = { route = backRoute })
+                AddImageModelsRoute(application, route.removePrefix(ROUTE_ADD_IMAGE_MODELS_PREFIX), onFinished = { route = backRoute })
             }
             route.startsWith(ROUTE_ADD_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
@@ -1026,7 +1031,7 @@ private fun stepDetailWords(): StepDetail.Words {
         listLinkedFolder = stringResource(R.string.step_list_linked_folder),
         fromLinkedFolder = stringResource(R.string.step_from_linked_folder),
         lineCount = { lines -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_code_lines, lines, lines) },
-        defaultImageModel = imageModels.imageModels.defaultModelId,
+        defaultImageModel = imageModels.imageModels.defaultModelKey,
     )
 }
 
@@ -1102,7 +1107,7 @@ private fun SettingsRoute(
     onBack: () -> Unit,
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
-    onAddImageModels: () -> Unit,
+    onAddImageModels: (String) -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenCustomInstructions: () -> Unit,
@@ -1176,7 +1181,7 @@ private fun SettingsRoute(
         balance = BalanceText.of(balances[secret], balanceWords),
     )
 
-    val imageModelRows = imageModelRowsFor(application, snapshot.imageModels)
+    val imageGeneration = imageGenerationFor(application, snapshot.imageModels, ::slotFor)
     val state = SettingsUiState(
         chatServices = serviceCards(snapshot, application, ::slotFor, ::accountFor),
         addableServices = ChatService.entries
@@ -1249,10 +1254,7 @@ private fun SettingsRoute(
         factCount = globalFacts.size,
         skillCount = skillCount,
         localModels = localModelsSummary,
-        imageGeneration = ImageGenerationUi(
-            hasOpenRouterKey = SecretName.OPENROUTER in savedKeys,
-            models = imageModelRows,
-        ),
+        imageGeneration = imageGeneration,
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -1336,8 +1338,18 @@ private fun SettingsRoute(
         },
         onAddModels = onAddModels,
         onAddImageModels = onAddImageModels,
-        onImageModelSetDefault = { modelId -> settings.update { current -> current.copy(imageModels = current.imageModels.setDefault(modelId)) } },
-        onImageModelRemove = { modelId -> settings.update { current -> current.copy(imageModels = current.imageModels.remove(modelId)) } },
+        onAddImageService = { serviceKey ->
+            ImageService.byKey(serviceKey)?.let { service ->
+                settings.update { current -> current.copy(imageModels = current.imageModels.addService(service)) }
+            }
+        },
+        onImageServiceRemove = { serviceKey ->
+            ImageService.byKey(serviceKey)?.let { service ->
+                settings.update { current -> current.copy(imageModels = current.imageModels.removeService(service)) }
+            }
+        },
+        onImageModelSetDefault = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.setDefault(modelKey)) } },
+        onImageModelRemove = { modelKey -> settings.update { current -> current.copy(imageModels = current.imageModels.removeModel(modelKey)) } },
         onModelSetDefault = { modelKey -> settings.updateChatModels { models -> models.setDefault(modelKey) } },
         onModelRoutingChange = { modelKey, routing ->
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
@@ -1536,59 +1548,146 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
 }
 
 @Composable
-private fun AddImageModelsRoute(application: JonakiApplication, onFinished: () -> Unit) {
+private fun AddImageModelsRoute(application: JonakiApplication, serviceKey: String, onFinished: () -> Unit) {
+    val service = ImageService.byKey(serviceKey)
+    if (service == null) {
+        LaunchedEffect(Unit) { onFinished() }
+        return
+    }
     val snapshot by application.settings.snapshot.collectAsState()
-    val alreadyAdded = snapshot.imageModels.modelIds.toSet()
+    val alreadyAdded = snapshot.imageModels.modelsByService[service].orEmpty().toSet()
+    val onDone = { modelIds: List<String> ->
+        application.settings.update { current ->
+            current.copy(imageModels = modelIds.fold(current.imageModels) { updated, modelId -> updated.addModel(service, modelId) })
+        }
+        onFinished()
+    }
+    if (service == ImageService.OPENROUTER) {
+        AddOpenRouterImageModelsScreen(application, alreadyAdded, onFinished, onDone)
+        return
+    }
+    // Gemini has no list that marks image models, so the picker offers documented ids and any id typed by hand.
+    val suggestions = service.suggestedModels.map { model ->
+        AddableModelUi(id = model.id, name = model.name, isAdded = model.id in alreadyAdded)
+    }
+    AddImageModelsScreen(
+        serviceName = service.displayName,
+        state = ImagePickerState.Loaded(suggestions, allowsTypedId = true),
+        onClose = onFinished,
+        onRetry = {},
+        onDone = onDone,
+    )
+}
+
+/** OpenRouter's list loads when the screen opens; each model's price follows in the background and stops when the screen closes. */
+@Composable
+private fun AddOpenRouterImageModelsScreen(
+    application: JonakiApplication,
+    alreadyAdded: Set<String>,
+    onFinished: () -> Unit,
+    onDone: (List<String>) -> Unit,
+) {
     // Bumped by "Try again"; each value loads the list once more.
     var attempt by remember { mutableIntStateOf(0) }
     val listResult by produceState<ImageModelListResult?>(null, attempt) {
         value = null
         value = OpenRouterImageModels.fetchList(application.httpClient)
     }
+    val prices = remember { mutableStateMapOf<String, ImagePriceResult>() }
+    val loadedModels = (listResult as? ImageModelListResult.Loaded)?.models
+    // Leaving the screen cancels this effect, which cancels the requests still in flight.
+    LaunchedEffect(loadedModels) {
+        if (loadedModels != null) {
+            withContext(Dispatchers.IO) {
+                application.imagePrices.load(loadedModels.map { model -> model.id }) { modelId, result -> prices[modelId] = result }
+            }
+        }
+    }
     val pickerState = when (val result = listResult) {
         null -> ImagePickerState.Loading
         is ImageModelListResult.Failed -> ImagePickerState.Failed(result.reason)
         is ImageModelListResult.Loaded -> ImagePickerState.Loaded(
-            result.models.map { model -> AddableModelUi(id = model.id, name = model.name, isAdded = model.id in alreadyAdded) },
+            result.models.map { model ->
+                AddableModelUi(
+                    id = model.id,
+                    name = model.name,
+                    isAdded = model.id in alreadyAdded,
+                    imagePrice = imagePriceUiOf(prices[model.id]),
+                )
+            },
         )
     }
     AddImageModelsScreen(
+        serviceName = ImageService.OPENROUTER.displayName,
         state = pickerState,
         onClose = onFinished,
         onRetry = { attempt += 1 },
-        onDone = { modelIds ->
-            application.settings.update { current ->
-                current.copy(imageModels = modelIds.fold(current.imageModels) { updated, modelId -> updated.add(modelId) })
-            }
-            onFinished()
-        },
+        onDone = onDone,
     )
 }
 
+private fun imagePriceUiOf(result: ImagePriceResult?): ImagePriceUi = when (result) {
+    null -> ImagePriceUi.Loading
+    is ImagePriceResult.Priced -> ImagePriceUi.Known(result.price.describe())
+    ImagePriceResult.NoPrice, ImagePriceResult.Failed -> ImagePriceUi.Unknown
+}
+
 /**
- * The added image models as rows. The names come from one free request for
- * the model list and each price from one free request per model; until they
- * arrive, or when they fail, the row shows the id and no price.
+ * The image services as cards. OpenRouter's model names come from one free
+ * request for its list and the prices from the shared price cache (a request
+ * only for a price that is missing or older than a day); until they arrive,
+ * or when they fail, a row shows its id and no price. Gemini has no public
+ * price list, so its rows show none.
  */
 @Composable
-private fun imageModelRowsFor(application: JonakiApplication, imageModels: ImageModels): List<ImageModelRowUi> {
-    val ids = imageModels.modelIds
-    val details by produceState(emptyMap<String, Pair<String, String?>>(), ids) {
-        if (ids.isEmpty()) {
+private fun imageGenerationFor(
+    application: JonakiApplication,
+    imageModels: ImageModels,
+    slotFor: (SecretName) -> KeySlot,
+): ImageGenerationUi {
+    val openRouterIds = imageModels.modelsByService[ImageService.OPENROUTER].orEmpty()
+    val names by produceState(emptyMap<String, String>(), openRouterIds) {
+        if (openRouterIds.isEmpty()) {
             return@produceState
         }
-        val names = (OpenRouterImageModels.fetchList(application.httpClient) as? ImageModelListResult.Loaded)
+        value = (OpenRouterImageModels.fetchList(application.httpClient) as? ImageModelListResult.Loaded)
             ?.models?.associate { model -> model.id to model.name }.orEmpty()
-        value = ids.associateWith { id -> (names[id] ?: id) to null }
-        value = ids.associateWith { id ->
-            val price = OpenRouterImageModels.fetchPrice(application.httpClient, id)
-            (names[id] ?: id) to price?.describe()
+    }
+    val priceTexts = remember { mutableStateMapOf<String, String>() }
+    LaunchedEffect(openRouterIds) {
+        if (openRouterIds.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                application.imagePrices.load(openRouterIds) { modelId, result ->
+                    if (result is ImagePriceResult.Priced) {
+                        priceTexts[modelId] = result.price.describe()
+                    }
+                }
+            }
         }
     }
-    return ids.map { id ->
-        val (name, price) = details[id] ?: (id to null)
-        ImageModelRowUi(id = id, name = name, priceText = price, isDefault = id == imageModels.defaultModelId)
+    val cards = imageModels.addedServices.map { service ->
+        val rows = imageModels.modelsByService[service].orEmpty().map { modelId ->
+            val modelKey = ModelKey.of(service.key, modelId)
+            val isOpenRouter = service == ImageService.OPENROUTER
+            ImageModelRowUi(
+                key = modelKey,
+                id = modelId,
+                name = if (isOpenRouter) names[modelId] ?: modelId else modelId,
+                priceText = if (isOpenRouter) priceTexts[modelId] else null,
+                isDefault = modelKey == imageModels.defaultModelKey,
+            )
+        }
+        ImageServiceCardUi(service.key, service.displayName, slotFor(service.secret), rows)
     }
+    val addable = ImageService.entries
+        .filter { service -> service !in imageModels.addedServices }
+        .map { service -> AddableServiceUi(service.key, service.displayName, imageServiceHint(service)) }
+    return ImageGenerationUi(cards, addable)
+}
+
+private fun imageServiceHint(service: ImageService): String = when (service) {
+    ImageService.OPENROUTER -> "openrouter.ai"
+    ImageService.GEMINI -> "Google"
 }
 
 /**
