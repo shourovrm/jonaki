@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -49,6 +50,23 @@ fun RenameThreadDialog(currentTitle: String, onSave: (newTitle: String) -> Unit,
         },
     )
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+}
+
+/** Asks once before several selected threads are deleted. One thread uses [DeleteThreadDialog], which shows its name. */
+@Composable
+internal fun DeleteThreadsDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(pluralStringResource(R.plurals.threads_delete_many_title, count, count)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.threads_delete), color = JonakiTheme.colors.deny)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.threads_cancel)) }
+        },
+    )
 }
 
 /** Asks before a thread, its messages and its folder are deleted. */

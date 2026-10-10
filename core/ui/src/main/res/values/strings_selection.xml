@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Top bar of a list in selection mode (thread list, Memory). Bangla in values-bn/strings_selection.xml. -->
+<resources>
+    <plurals name="selection_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="selection_close">Close selection</string>
+    <string name="selection_select_all">Select all</string>
+    <string name="selection_deselect_all">Deselect all</string>
+    <string name="selection_delete">Delete</string>
+    <string name="selection_more">More options</string>
+</resources>

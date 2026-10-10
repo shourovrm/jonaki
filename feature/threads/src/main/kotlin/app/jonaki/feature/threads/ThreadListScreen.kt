@@ -1,13 +1,18 @@
 package app.jonaki.feature.threads
 
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.selected
+import app.jonaki.core.ui.Selection
+import app.jonaki.core.ui.SelectionAction
+import app.jonaki.core.ui.SelectionBackHandler
+import app.jonaki.core.ui.SelectionMode
+import app.jonaki.core.ui.SelectionTopBar
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +37,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Lock
@@ -51,6 +55,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,9 +104,16 @@ fun ThreadListScreen(
     onOpenProjectFiles: (projectId: String) -> Unit = {},
     /** Move to project; null takes the thread out of its project. */
     onMoveThread: (threadId: String, projectId: String?) -> Unit = { _, _ -> },
+    /** Threads selected at the start; only the previews set it. */
+    initialSelectedIds: Set<String> = emptySet(),
 ) {
     var threadToDelete by remember { mutableStateOf<ThreadRow?>(null) }
-    var threadToMove by remember { mutableStateOf<ThreadRow?>(null) }
+    // Threads waiting for a project; one when moved from the row's own action, the selection otherwise.
+    var threadsToMove by remember { mutableStateOf<List<ThreadRow>?>(null) }
+    var storedSelection by rememberSaveable(stateSaver = Selection.saver<String>()) {
+        mutableStateOf(Selection(initialSelectedIds))
+    }
+    var confirmingSelectionDelete by rememberSaveable { mutableStateOf(false) }
     var projectDialogOpen by rememberSaveable { mutableStateOf(false) }
     // Null with the dialog open means a new project.
     var projectToEdit by remember { mutableStateOf<ProjectUi?>(null) }
@@ -117,43 +129,82 @@ fun ThreadListScreen(
         if (showingIncognito) incognitoThreads(state.threads) else threadsInProject(state.threads, selectedProject?.id)
     }
     val visibleThreads = remember(filteredThreads, state.searchQuery) { filterThreads(filteredThreads, state.searchQuery) }
+    // Only what the list shows can stay selected, so a deleted thread, or one the filter
+    // hides, never counts and is never deleted unseen.
+    val visibleIds = remember(visibleThreads) { visibleThreads.map { thread -> thread.id } }
+    val selection = storedSelection.pruned(visibleIds)
+    LaunchedEffect(selection) {
+        if (selection !== storedSelection) {
+            storedSelection = selection
+        }
+    }
+    val selecting = !selection.isEmpty
+    val selectedThreads = visibleThreads.filter { thread -> thread.id in selection }
+    SelectionBackHandler(selecting) { storedSelection = selection.clear() }
     val zone = remember { ZoneId.systemDefault() }
     val entries = remember(visibleThreads, nowMillis, zone) { withGroupLabels(visibleThreads, nowMillis, zone) }
     val locale = LocalConfiguration.current.locales[0]
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.threads_title), fontWeight = FontWeight.SemiBold) },
-                actions = {
-                    IconButton(onClick = onNewIncognitoThread) {
-                        Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.threads_new_incognito))
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.threads_settings))
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            if (selecting) {
+                SelectionTopBar(
+                    selectedCount = selection.count,
+                    allSelected = selection.coversAll(visibleIds),
+                    onClose = { storedSelection = selection.clear() },
+                    onToggleSelectAll = {
+                        storedSelection = if (selection.coversAll(visibleIds)) selection.clear() else selection.selectAll(visibleIds)
+                    },
+                    onDelete = { confirmingSelectionDelete = true },
+                    extraActions = selectionActions(
+                        mode = selection.mode,
+                        selectedThreads = selectedThreads,
+                        canMove = state.projects.isNotEmpty(),
+                        onRename = { thread ->
+                            storedSelection = selection.clear()
+                            onRename(thread.id)
+                        },
+                        onMove = { threads -> threadsToMove = threads },
+                    ),
+                    scrollBehavior = scrollBehavior,
+                )
+            } else {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.threads_title), fontWeight = FontWeight.SemiBold) },
+                    actions = {
+                        IconButton(onClick = onNewIncognitoThread) {
+                            Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.threads_new_incognito))
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.threads_settings))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         floatingActionButton = {
-            val newThreadLabel = stringResource(R.string.threads_new)
-            ExtendedFloatingActionButton(
-                // Under the Incognito chip a new thread is incognito, as one under a project joins it (D-110).
-                onClick = if (showingIncognito) onNewIncognitoThread else onNewThread,
-                // The button's text slot is not exposed to accessibility in this Compose version.
-                modifier = Modifier.semantics { contentDescription = newThreadLabel },
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text(newThreadLabel, fontWeight = FontWeight.SemiBold) },
-                shape = RoundedCornerShape(18.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            )
+            // No new thread while threads are being selected.
+            if (!selecting) {
+                val newThreadLabel = stringResource(R.string.threads_new)
+                ExtendedFloatingActionButton(
+                    // Under the Incognito chip a new thread is incognito, as one under a project joins it (D-110).
+                    onClick = if (showingIncognito) onNewIncognitoThread else onNewThread,
+                    // The button's text slot is not exposed to accessibility in this Compose version.
+                    modifier = Modifier.semantics { contentDescription = newThreadLabel },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text(newThreadLabel, fontWeight = FontWeight.SemiBold) },
+                    shape = RoundedCornerShape(18.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (state.threads.isNotEmpty()) {
-                SearchField(state.searchQuery, onSearchQueryChange)
+                // Disabled while selecting: a changed search would hide threads that are selected.
+                SearchField(state.searchQuery, onSearchQueryChange, enabled = !selecting)
             }
             val monthCost = state.monthCostUsd
             if (monthCost != null && state.threads.isNotEmpty()) {
@@ -190,6 +241,7 @@ fun ThreadListScreen(
                         projectToEdit = null
                         projectDialogOpen = true
                     },
+                    enabled = !selecting,
                 )
             }
             if (selectedProject != null) {
@@ -222,7 +274,9 @@ fun ThreadListScreen(
                                     onDeleteRequest = { threadToDelete = thread },
                                     // Inside one project its name would repeat on every row.
                                     showProjectName = selectedProject == null,
-                                    onMoveRequest = if (state.projects.isEmpty()) null else ({ threadToMove = thread }),
+                                    selecting = selecting,
+                                    selected = thread.id in selection,
+                                    onToggleSelected = { storedSelection = selection.toggle(thread.id) },
                                 )
                             }
                         }
@@ -242,16 +296,37 @@ fun ThreadListScreen(
             onDismiss = { threadToDelete = null },
         )
     }
-    val moving = threadToMove
+    if (confirmingSelectionDelete && selecting) {
+        val onDismissSelectionDelete = { confirmingSelectionDelete = false }
+        val onConfirmSelectionDelete = {
+            confirmingSelectionDelete = false
+            storedSelection = selection.clear()
+            // Each thread goes through the same call as a single delete.
+            for (thread in selectedThreads) {
+                onDelete(thread.id)
+            }
+        }
+        if (selectedThreads.size == 1) {
+            DeleteThreadDialog(selectedThreads.first().title, onConfirmSelectionDelete, onDismissSelectionDelete)
+        } else {
+            DeleteThreadsDialog(selectedThreads.size, onConfirmSelectionDelete, onDismissSelectionDelete)
+        }
+    }
+    val moving = threadsToMove
     if (moving != null) {
+        val commonProjectId = moving.first().projectId
         MoveToProjectDialog(
             projects = state.projects,
-            currentProjectId = moving.projectId,
+            currentProjectId = commonProjectId,
+            markCurrent = moving.all { thread -> thread.projectId == commonProjectId },
             onMove = { projectId ->
-                threadToMove = null
-                onMoveThread(moving.id, projectId)
+                threadsToMove = null
+                storedSelection = selection.clear()
+                for (thread in moving) {
+                    onMoveThread(thread.id, projectId)
+                }
             },
-            onDismiss = { threadToMove = null },
+            onDismiss = { threadsToMove = null },
         )
     }
     if (projectDialogOpen) {
@@ -284,10 +359,11 @@ fun ThreadListScreen(
 }
 
 @Composable
-private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
+private fun SearchField(query: String, onQueryChange: (String) -> Unit, enabled: Boolean) {
     TextField(
         value = query,
         onValueChange = onQueryChange,
+        enabled = enabled,
         placeholder = { Text(stringResource(R.string.threads_search)) },
         leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
         trailingIcon = {
@@ -336,25 +412,35 @@ private fun ThreadRowView(
     onRename: (String) -> Unit,
     onDeleteRequest: () -> Unit,
     showProjectName: Boolean,
-    /** Null hides Move to project, when there is no project yet. */
-    onMoveRequest: (() -> Unit)?,
+    /** True while any thread is selected: a tap selects instead of opening. */
+    selecting: Boolean,
+    selected: Boolean,
+    onToggleSelected: () -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val renameLabel = stringResource(R.string.threads_rename)
     val deleteLabel = stringResource(R.string.threads_delete)
+    val selectLabel = stringResource(if (selected) R.string.threads_deselect else R.string.threads_select)
+    val selectedBackground = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = SELECTED_ROW_TINT) else Color.Transparent
     val titleStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
     Box {
         // No card and no tint: rows stand apart by their spacing, and only a working thread glows (D-123).
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(selectedBackground)
                 .combinedClickable(
-                    onClick = { onThreadClick(thread.id) },
-                    onLongClick = { menuOpen = true },
+                    onClick = { if (selecting) onToggleSelected() else onThreadClick(thread.id) },
+                    // A long press starts selection; it used to open a menu, now in the top bar.
+                    onLongClick = onToggleSelected,
                 )
                 .semantics {
-                    // TalkBack users reach Rename and Delete without a long-press.
+                    this.selected = selected
+                    // TalkBack users reach Select, Rename and Delete without a long-press.
                     customActions = listOf(
+                        CustomAccessibilityAction(selectLabel) {
+                            onToggleSelected()
+                            true
+                        },
                         CustomAccessibilityAction(renameLabel) {
                             onRename(thread.id)
                             true
@@ -368,7 +454,7 @@ private fun ThreadRowView(
                 .padding(horizontal = 20.dp, vertical = 11.dp),
         ) {
             Row {
-                ThreadMark(thread, titleStyle.fontSize)
+                ThreadMark(thread, selected, titleStyle.fontSize)
                 // The name keeps one line and ends in "…" (D-029); the chat's rename dialog shows it whole.
                 Text(
                     thread.title,
@@ -416,34 +502,6 @@ private fun ThreadRowView(
                 }
             }
         }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            DropdownMenuItem(
-                text = { Text(renameLabel) },
-                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                onClick = {
-                    menuOpen = false
-                    onRename(thread.id)
-                },
-            )
-            if (onMoveRequest != null) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.threads_move)) },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
-                    onClick = {
-                        menuOpen = false
-                        onMoveRequest()
-                    },
-                )
-            }
-            DropdownMenuItem(
-                text = { Text(deleteLabel, color = JonakiTheme.colors.deny) },
-                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = JonakiTheme.colors.deny) },
-                onClick = {
-                    menuOpen = false
-                    onDeleteRequest()
-                },
-            )
-        }
     }
 }
 
@@ -459,11 +517,20 @@ private fun timeText(label: ThreadTimeLabel): String = when (label) {
  * title's first line, whatever the font scale.
  */
 @Composable
-private fun RowScope.ThreadMark(thread: ThreadRow, titleFontSize: TextUnit) {
+private fun RowScope.ThreadMark(thread: ThreadRow, selected: Boolean, titleFontSize: TextUnit) {
     val density = LocalDensity.current
     // The middle of a lowercase letter is about 0.3 em above the baseline.
     val markCentreAboveBaseline = with(density) { (titleFontSize * 0.3f).roundToPx() }
     val onTitleLine = Modifier.alignBy { mark -> mark.measuredHeight / 2 + markCentreAboveBaseline }
+    if (selected) {
+        Icon(
+            Icons.Filled.Check,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = onTitleLine.size(16.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+    }
     if (thread.runState is ThreadRunState.Running) {
         // GlowDot's canvas is wider than the dot, so the dot itself starts near the text edge.
         GlowDot(JonakiTheme.colors.live, DotStyle.GLOWING, onTitleLine.offset(x = (-4).dp), dotSize = 8.dp)
@@ -512,4 +579,29 @@ private fun EmptyState(title: String, body: String?) {
             }
         }
     }
+}
+
+/** How strongly the accent tints a selected row; the accent is the theme's primary. */
+private const val SELECTED_ROW_TINT = 0.14f
+
+/**
+ * What the selection top bar's menu offers besides Select all: Rename for one
+ * thread, Move to project for one or several once a project exists.
+ */
+@Composable
+private fun selectionActions(
+    mode: SelectionMode,
+    selectedThreads: List<ThreadRow>,
+    canMove: Boolean,
+    onRename: (ThreadRow) -> Unit,
+    onMove: (List<ThreadRow>) -> Unit,
+): List<SelectionAction> {
+    val actions = mutableListOf<SelectionAction>()
+    if (mode == SelectionMode.ONE && selectedThreads.isNotEmpty()) {
+        actions += SelectionAction(stringResource(R.string.threads_rename)) { onRename(selectedThreads.first()) }
+    }
+    if (canMove && selectedThreads.isNotEmpty()) {
+        actions += SelectionAction(stringResource(R.string.threads_move)) { onMove(selectedThreads) }
+    }
+    return actions
 }

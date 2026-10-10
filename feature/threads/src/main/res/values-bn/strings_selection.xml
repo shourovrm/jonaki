@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bangla for strings_selection.xml. -->
+<resources>
+    <plurals name="threads_delete_many_title">
+        <item quantity="one">%1$dটি থ্রেড মুছবেন?</item>
+        <item quantity="other">%1$dটি থ্রেড মুছবেন?</item>
+    </plurals>
+    <string name="threads_select">বাছুন</string>
+    <string name="threads_deselect">বাদ দিন</string>
+</resources>

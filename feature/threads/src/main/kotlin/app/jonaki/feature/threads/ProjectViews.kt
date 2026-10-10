@@ -72,6 +72,8 @@ internal fun ProjectChips(
     onSelect: (projectId: String?) -> Unit,
     incognitoChip: IncognitoChip?,
     onNewProject: () -> Unit,
+    /** False while threads are being selected: the filter must not change under the selection. */
+    enabled: Boolean = true,
 ) {
     val incognitoSelected = incognitoChip?.selected == true
     Row(
@@ -85,6 +87,7 @@ internal fun ProjectChips(
         FilterChip(
             selected = selectedProjectId == null && !incognitoSelected,
             onClick = { onSelect(null) },
+            enabled = enabled,
             label = { Text(stringResource(R.string.threads_all)) },
             shape = ChipShape,
             colors = filterChipColours(),
@@ -94,6 +97,7 @@ internal fun ProjectChips(
             FilterChip(
                 selected = project.id == selectedProjectId,
                 onClick = { onSelect(project.id) },
+                enabled = enabled,
                 // A long name keeps one line and ends in "…" (D-029); the header shows it whole.
                 label = { Text(project.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 shape = ChipShape,
@@ -106,6 +110,7 @@ internal fun ProjectChips(
             FilterChip(
                 selected = incognitoChip.selected,
                 onClick = incognitoChip.onSelect,
+                enabled = enabled,
                 label = { Text(stringResource(R.string.threads_incognito)) },
                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp)) },
                 shape = ChipShape,
@@ -115,6 +120,7 @@ internal fun ProjectChips(
         }
         AssistChip(
             onClick = onNewProject,
+            enabled = enabled,
             label = { Text(stringResource(R.string.threads_project_chip)) },
             leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp)) },
             shape = ChipShape,
@@ -320,15 +326,17 @@ internal fun MoveToProjectDialog(
     currentProjectId: String?,
     onMove: (projectId: String?) -> Unit,
     onDismiss: () -> Unit,
+    /** False when several threads move and they are not all in the same project. */
+    markCurrent: Boolean = true,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.threads_move)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                ProjectChoiceRow(stringResource(R.string.threads_no_project), currentProjectId == null) { onMove(null) }
+                ProjectChoiceRow(stringResource(R.string.threads_no_project), markCurrent && currentProjectId == null) { onMove(null) }
                 for (project in projects) {
-                    ProjectChoiceRow(project.name, project.id == currentProjectId) { onMove(project.id) }
+                    ProjectChoiceRow(project.name, markCurrent && project.id == currentProjectId) { onMove(project.id) }
                 }
             }
         },
