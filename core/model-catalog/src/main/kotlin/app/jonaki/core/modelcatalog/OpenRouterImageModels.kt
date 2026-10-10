@@ -8,10 +8,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -24,6 +26,12 @@ data class ImageModelInfo(
     val aspectRatios: List<String> = emptyList(),
     /** True when the list says the model's only output format is "svg" (a vector model); false for every other model. */
     val isVector: Boolean = false,
+    /** The values of the model's `quality` parameter; null when it does not declare one. */
+    val qualityValues: List<String>? = null,
+    /** The values of the model's `resolution` parameter; null when it does not declare one. */
+    val resolutionValues: List<String>? = null,
+    /** The range of the model's `input_references` parameter (reference pictures); null when it does not declare one. */
+    val referenceRange: IntRange? = null,
 )
 
 /** What one model charges, from its endpoints answer. */
@@ -121,7 +129,29 @@ object OpenRouterImageModels {
         val aspectRatioParameter = parameters?.get("aspect_ratio") as? JsonObject
         val ratios = (aspectRatioParameter?.get("values") as? JsonArray).orEmpty()
             .mapNotNull { value -> (value as? JsonPrimitive)?.contentOrNull }
-        return ImageModelInfo(id = id, name = model.text("name") ?: id, aspectRatios = ratios, isVector = isVectorModel(parameters))
+        return ImageModelInfo(
+            id = id,
+            name = model.text("name") ?: id,
+            aspectRatios = ratios,
+            isVector = isVectorModel(parameters),
+            qualityValues = enumValues(parameters?.get("quality")),
+            resolutionValues = enumValues(parameters?.get("resolution")),
+            referenceRange = rangeOf(parameters?.get("input_references")),
+        )
+    }
+
+    /** `{"type":"enum","values":[…]}`; null when the parameter is absent. */
+    private fun enumValues(parameter: JsonElement?): List<String>? {
+        val values = (parameter as? JsonObject)?.get("values") as? JsonArray ?: return null
+        return values.mapNotNull { value -> (value as? JsonPrimitive)?.contentOrNull }
+    }
+
+    /** `{"type":"range","min":0,"max":14}`; null when the parameter is absent or has no usable numbers. */
+    private fun rangeOf(parameter: JsonElement?): IntRange? {
+        val range = parameter as? JsonObject ?: return null
+        val minimum = (range["min"] as? JsonPrimitive)?.intOrNull ?: 0
+        val maximum = (range["max"] as? JsonPrimitive)?.intOrNull ?: return null
+        return minimum..maximum
     }
 
     /**

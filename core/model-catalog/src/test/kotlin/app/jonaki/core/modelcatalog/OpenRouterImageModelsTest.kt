@@ -40,6 +40,34 @@ class OpenRouterImageModelsTest {
     }
 
     @Test
+    fun qualityResolutionAndReferenceRangeAreReadAsTheModelDeclaresThem() {
+        val json = """{"data":[
+            {"id":"openai/gpt-image-2.5-sunburst","supported_parameters":{
+              "quality":{"type":"enum","values":["auto","low","medium","high","xhigh","max"]},
+              "input_references":{"type":"range","min":0,"max":16}}},
+            {"id":"google/gemini-nano-banana-2.1","supported_parameters":{
+              "resolution":{"type":"enum","values":["1K","2K","4K"]},
+              "input_references":{"type":"range","min":0,"max":14}}},
+            {"id":"recraft/needs-one","supported_parameters":{"input_references":{"type":"range","min":1,"max":5}}},
+            {"id":"a/plain","supported_parameters":{}}]}"""
+        val models = OpenRouterImageModels.parse(json).associateBy { model -> model.id }
+
+        val gpt = models.getValue("openai/gpt-image-2.5-sunburst")
+        assertEquals(listOf("auto", "low", "medium", "high", "xhigh", "max"), gpt.qualityValues)
+        assertNull(gpt.resolutionValues)
+        assertEquals(0..16, gpt.referenceRange)
+        val banana = models.getValue("google/gemini-nano-banana-2.1")
+        assertNull(banana.qualityValues)
+        assertEquals(listOf("1K", "2K", "4K"), banana.resolutionValues)
+        assertEquals(0..14, banana.referenceRange)
+        assertEquals(1..5, models.getValue("recraft/needs-one").referenceRange)
+        val plain = models.getValue("a/plain")
+        assertNull(plain.qualityValues)
+        assertNull(plain.resolutionValues)
+        assertNull(plain.referenceRange)
+    }
+
+    @Test
     fun onlyAModelWhoseOutputFormatIsExactlySvgIsAVectorModel() {
         val models = OpenRouterImageModels.parse(recorded("image-models-vector-trimmed.json")).associateBy { model -> model.id }
 

@@ -3,6 +3,7 @@ package app.jonaki.providers.openaicompatible
 import app.jonaki.core.toolapi.ImageFailure
 import app.jonaki.core.toolapi.ImageGenerator
 import app.jonaki.core.toolapi.ImageOutcome
+import app.jonaki.core.toolapi.ImageReference
 import app.jonaki.core.toolapi.ImageRequest
 import java.io.IOException
 import java.io.InterruptedIOException
@@ -19,6 +20,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -63,11 +66,33 @@ class OpenRouterImageGenerator(
         private const val CALL_TIMEOUT_SECONDS = 110L
         private const val MAX_BODY_CHARACTERS_IN_ERROR = 300
 
-        /** Fields at the top level: model and prompt always, the aspect ratio only when the agent chose one. */
+        /**
+         * Fields at the top level: model and prompt always; the aspect ratio,
+         * quality, resolution and reference pictures only when set. A
+         * reference is `{"type":"image_url","image_url":{"url":"data:<type>;base64,<data>"}}`
+         * (the data URL prefix is the common form; OpenRouter's page does not
+         * spell it out).
+         */
         fun requestBody(request: ImageRequest): JsonObject = buildJsonObject {
             put("model", request.modelId)
             put("prompt", request.prompt)
             request.aspectRatio?.let { aspectRatio -> put("aspect_ratio", aspectRatio) }
+            request.quality?.let { quality -> put("quality", quality) }
+            request.resolution?.let { resolution -> put("resolution", resolution) }
+            if (request.references.isNotEmpty()) {
+                putJsonArray("input_references") {
+                    for (reference in request.references) {
+                        add(referenceObject(reference))
+                    }
+                }
+            }
+        }
+
+        private fun referenceObject(reference: ImageReference): JsonObject = buildJsonObject {
+            put("type", "image_url")
+            putJsonObject("image_url") {
+                put("url", "data:${reference.mediaType};base64," + Base64.getEncoder().encodeToString(reference.bytes))
+            }
         }
 
         /**

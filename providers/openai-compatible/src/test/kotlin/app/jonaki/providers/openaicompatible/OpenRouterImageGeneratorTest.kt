@@ -2,6 +2,7 @@ package app.jonaki.providers.openaicompatible
 
 import app.jonaki.core.toolapi.ImageFailure
 import app.jonaki.core.toolapi.ImageOutcome
+import app.jonaki.core.toolapi.ImageReference
 import app.jonaki.core.toolapi.ImageRequest
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -50,6 +51,30 @@ class OpenRouterImageGeneratorTest {
         )
         val bare = OpenRouterImageGenerator.requestBody(ImageRequest("openrouter", "m/x", "p"))
         assertEquals(setOf("model", "prompt"), bare.keys)
+    }
+
+    @Test
+    fun qualityResolutionAndReferencesAreSentOnlyWhenSet() {
+        val picture = byteArrayOf(1, 2, 3)
+        val body = OpenRouterImageGenerator.requestBody(
+            ImageRequest(
+                "openrouter", "m/x", "p", quality = "high", resolution = "2K",
+                references = listOf(ImageReference("images/a.png", "image/png", picture)),
+            ),
+        )
+        assertEquals(
+            Json.parseToJsonElement(
+                """{"model":"m/x","prompt":"p","quality":"high","resolution":"2K",
+                    "input_references":[{"type":"image_url","image_url":{"url":"data:image/png;base64,AQID"}}]}""",
+            ),
+            body,
+        )
+        val onlyQuality = OpenRouterImageGenerator.requestBody(ImageRequest("openrouter", "m/x", "p", quality = "high"))
+        assertEquals(setOf("model", "prompt", "quality"), onlyQuality.keys)
+        val onlyReferences = OpenRouterImageGenerator.requestBody(
+            ImageRequest("openrouter", "m/x", "p", references = listOf(ImageReference("a.jpg", "image/jpeg", picture))),
+        )
+        assertEquals(setOf("model", "prompt", "input_references"), onlyReferences.keys)
     }
 
     @Test

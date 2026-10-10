@@ -2,6 +2,7 @@ package app.jonaki.providers.gemini
 
 import app.jonaki.core.toolapi.ImageFailure
 import app.jonaki.core.toolapi.ImageOutcome
+import app.jonaki.core.toolapi.ImageReference
 import app.jonaki.core.toolapi.ImageRequest
 import java.util.Base64
 import kotlinx.coroutines.runBlocking
@@ -66,6 +67,25 @@ class GeminiImageGeneratorTest {
         val bare = GeminiImageGenerator.requestBody(ImageRequest("gemini", "m", "p"))
         assertTrue(bare["generationConfig"]!!.jsonObject["imageConfig"] == null)
         assertEquals("TEXT", bare["generationConfig"]!!.jsonObject["responseModalities"]!!.jsonArray[0].jsonPrimitive.content)
+    }
+
+    @Test
+    fun referencesGoBeforeTheTextAsInlineDataAndTheSizeJoinsTheImageConfig() {
+        val body = GeminiImageGenerator.requestBody(
+            ImageRequest(
+                "gemini", "m", "make it blue", aspectRatio = "1:1", resolution = "2K",
+                references = listOf(ImageReference("inbox/a.png", "image/png", byteArrayOf(1, 2, 3))),
+            ),
+        )
+        assertEquals(
+            Json.parseToJsonElement(
+                """{"contents":[{"parts":[{"inlineData":{"mimeType":"image/png","data":"AQID"}},{"text":"make it blue"}]}],
+                    "generationConfig":{"responseModalities":["TEXT","IMAGE"],"imageConfig":{"aspectRatio":"1:1","imageSize":"2K"}}}""",
+            ),
+            body,
+        )
+        val onlySize = GeminiImageGenerator.requestBody(ImageRequest("gemini", "m", "p", resolution = "2K"))
+        assertEquals("""{"imageSize":"2K"}""", onlySize["generationConfig"]!!.jsonObject["imageConfig"].toString())
     }
 
     @Test

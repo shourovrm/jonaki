@@ -20,7 +20,28 @@ data class ImageRequest(
     val prompt: String,
     /** For example "16:9"; null leaves the choice to the model. */
     val aspectRatio: String? = null,
+    /** The model's own `quality` value, for example "high"; null sends none. Only set for a model that declares it. */
+    val quality: String? = null,
+    /** The model's own `resolution` value, for example "2K"; null sends none. Only set for a model that declares it. */
+    val resolution: String? = null,
+    /** Pictures the model starts from, already read and checked; empty for a picture made from the prompt alone. */
+    val references: List<ImageReference> = emptyList(),
 )
+
+/**
+ * One reference picture, read from the thread folder. The generator encodes
+ * [bytes] for its service; the bytes never go into text the chat model sees,
+ * which is why [toString] leaves them out.
+ */
+class ImageReference(
+    /** Relative to the thread folder, for messages. */
+    val path: String,
+    /** "image/png", "image/jpeg" or "image/webp". */
+    val mediaType: String,
+    val bytes: ByteArray,
+) {
+    override fun toString(): String = "ImageReference($path, $mediaType, ${bytes.size} bytes)"
+}
 
 sealed interface ImageOutcome {
     /** [bytes] is the picture file; [costUsd] is what the service charged, null when it did not say. */

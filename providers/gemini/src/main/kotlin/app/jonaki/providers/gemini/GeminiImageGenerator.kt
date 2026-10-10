@@ -3,6 +3,7 @@ package app.jonaki.providers.gemini
 import app.jonaki.core.toolapi.ImageFailure
 import app.jonaki.core.toolapi.ImageGenerator
 import app.jonaki.core.toolapi.ImageOutcome
+import app.jonaki.core.toolapi.ImageReference
 import app.jonaki.core.toolapi.ImageRequest
 import java.io.IOException
 import java.io.InterruptedIOException
@@ -76,12 +77,24 @@ class GeminiImageGenerator(
         private const val CALL_TIMEOUT_SECONDS = 110L
         private const val MAX_TEXT_CHARACTERS_IN_MESSAGE = 300
 
-        /** The prompt, both output kinds (an image model refuses an image-only list on some models), and the aspect ratio only when the agent chose one. */
+        /**
+         * The reference pictures as `inlineData` parts, then the prompt; both
+         * output kinds (an image model refuses an image-only list on some
+         * models); and the aspect ratio and size only when set.
+         *
+         * Not confirmed against Google's pages (D-166): `imageConfig.aspectRatio`,
+         * and `imageConfig.imageSize` ("1K", "2K", "4K"), which is the app's
+         * reading of the documentation. The `inlineData` form of a picture in
+         * `parts` is the documented way to send an image to generateContent.
+         */
         fun requestBody(request: ImageRequest): JsonObject = buildJsonObject {
             putJsonArray("contents") {
                 add(
                     buildJsonObject {
                         putJsonArray("parts") {
+                            for (reference in request.references) {
+                                add(inlineDataPart(reference))
+                            }
                             add(buildJsonObject { put("text", request.prompt) })
                         }
                     },
@@ -89,9 +102,19 @@ class GeminiImageGenerator(
             }
             putJsonObject("generationConfig") {
                 put("responseModalities", buildJsonArray { add(JsonPrimitive("TEXT")); add(JsonPrimitive("IMAGE")) })
-                request.aspectRatio?.let { aspectRatio ->
-                    putJsonObject("imageConfig") { put("aspectRatio", aspectRatio) }
+                if (request.aspectRatio != null || request.resolution != null) {
+                    putJsonObject("imageConfig") {
+                        request.aspectRatio?.let { aspectRatio -> put("aspectRatio", aspectRatio) }
+                        request.resolution?.let { size -> put("imageSize", size) }
+                    }
                 }
+            }
+        }
+
+        private fun inlineDataPart(reference: ImageReference): JsonObject = buildJsonObject {
+            putJsonObject("inlineData") {
+                put("mimeType", reference.mediaType)
+                put("data", Base64.getEncoder().encodeToString(reference.bytes))
             }
         }
 
