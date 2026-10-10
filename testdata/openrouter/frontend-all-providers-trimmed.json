@@ -1,0 +1,182 @@
+{
+ "data": [
+  {
+   "name": "Relace",
+   "displayName": "Relace",
+   "slug": "relace",
+   "adapterName": "VLLMOpenAIAdapter",
+   "baseUrl": "https://models.relace.ai/v1",
+   "dataPolicy": {
+    "training": false,
+    "trainingOpenRouter": false,
+    "retainsPrompts": false,
+    "canPublish": false,
+    "termsOfServiceURL": "https://www.relace.ai/terms-of-use",
+    "privacyPolicyURL": "https://www.relace.ai/privacy-policy",
+    "requiresUserIDs": false
+   },
+   "datacenters": [],
+   "hasChatCompletions": true,
+   "hasCompletions": false,
+   "isAbortable": true,
+   "moderationRequired": false,
+   "statusPageUrl": "https://status.relace.ai",
+   "byokEnabled": true,
+   "sendClientIp": false,
+   "pricingStrategy": "openai_chat_completions"
+  },
+  {
+   "name": "StreamLake",
+   "displayName": "StreamLake",
+   "slug": "streamlake",
+   "adapterName": "StreamLakeAdapter",
+   "baseUrl": "https://vanchin.streamlake.ai/api/gateway/v1/endpoints",
+   "dataPolicy": {
+    "training": false,
+    "trainingOpenRouter": false,
+    "retainsPrompts": true,
+    "canPublish": false,
+    "termsOfServiceURL": "https://www.streamlake.ai/document/DOC/mgkchnd89grpt1961fw",
+    "privacyPolicyURL": "https://www.streamlake.ai/document/DOC/mgkci47q13qr66h9i54",
+    "requiresUserIDs": false
+   },
+   "headquarters": "CN",
+   "datacenters": [],
+   "hasChatCompletions": true,
+   "hasCompletions": false,
+   "isAbortable": true,
+   "moderationRequired": false,
+   "statusPageUrl": "https://status.streamlake.ai/",
+   "byokEnabled": true,
+   "sendClientIp": false,
+   "pricingStrategy": "openai_chat_completions"
+  },
+  {
+   "name": "Z.AI",
+   "displayName": "Z.ai",
+   "slug": "z-ai",
+   "adapterName": "ZAIAdapter",
+   "baseUrl": "https://api.z.ai/api/paas/v4",
+   "dataPolicy": {
+    "training": false,
+    "trainingOpenRouter": false,
+    "retainsPrompts": false,
+    "canPublish": false,
+    "termsOfServiceURL": "https://chat.z.ai/legal-agreement/terms-of-service",
+    "privacyPolicyURL": "https://chat.z.ai/legal-agreement/privacy-policy",
+    "requiresUserIDs": false
+   },
+   "headquarters": "SG",
+   "datacenters": [
+    "SG"
+   ],
+   "hasChatCompletions": true,
+   "hasCompletions": false,
+   "isAbortable": true,
+   "moderationRequired": false,
+   "statusPageUrl": null,
+   "byokEnabled": true,
+   "sendClientIp": false,
+   "pricingStrategy": "openai_chat_completions"
+  },
+  {
+   "name": "DeepInfra",
+   "displayName": "DeepInfra",
+   "slug": "deepinfra",
+   "adapterName": "DeepInfraAdapter",
+   "baseUrl": "https://api.deepinfra.com/v1/openai",
+   "dataPolicy": {
+    "training": false,
+    "trainingOpenRouter": false,
+    "retainsPrompts": false,
+    "canPublish": false,
+    "termsOfServiceURL": "https://deepinfra.com/terms",
+    "privacyPolicyURL": "https://deepinfra.com/privacy",
+    "requiresUserIDs": false
+   },
+   "headquarters": "US",
+   "hasChatCompletions": true,
+   "hasCompletions": true,
+   "isAbortable": true,
+   "moderationRequired": false,
+   "statusPageUrl": "https://status.deepinfra.com/",
+   "byokEnabled": true,
+   "sendClientIp": false,
+   "pricingStrategy": "openai_chat_completions"
+  },
+  {
+   "name": "Fireworks",
+   "displayName": "Fireworks",
+   "slug": "fireworks",
+   "adapterName": "FireworksAdapter",
+   "baseUrl": "https://api.fireworks.ai/inference/v1",
+   "dataPolicy": {
+    "training": false,
+    "trainingOpenRouter": false,
+    "retainsPrompts": false,
+    "canPublish": false,
+    "termsOfServiceURL": "https://fireworks.ai/terms-of-service",
+    "privacyPolicyURL": "https://fireworks.ai/privacy-policy",
+    "requiresUserIDs": false
+   },
+   "headquarters": "US",
+   "hasChatCompletions": true,
+   "hasCompletions": true,
+   "isAbortable": true,
+   "moderationRequired": false,
+   "statusPageUrl": "https://status.fireworks.ai/",
+   "byokEnabled": true,
+   "sendClientIp": false,
+   "pricingStrategy": "openai_chat_completions"
+  },
+  {
+   "name": "DeepSeek",
+   "displayName": "DeepSeek",
+   "slug": "deepseek",
+   "adapterName": "DeepSeekAdapter",
+   "baseUrl": "https://api.deepseek.com/beta",
+   "dataPolicy": {
+    "training": true,
+    "trainingOpenRouter": false,
+    "retainsPrompts": true,
+    "canPublish": false,
+    "termsOfServiceURL": "https://chat.deepseek.com/downloads/DeepSeek%20Terms%20of%20Use.html",
+    "privacyPolicyURL": "https://chat.deepseek.com/downloads/DeepSeek%20Privacy%20Policy.html",
+    "requiresUserIDs": false
+   },
+   "headquarters": "CN",
+   "hasChatCompletions": true,
+   "hasCompletions": true,
+   "isAbortable": true,
+   "moderationRequired": false,
+   "statusPageUrl": "https://status.deepseek.com/",
+   "byokEnabled": true,
+   "sendClientIp": false,
+   "pricingStrategy": "deepseek"
+  },
+  {
+   "name": "Thinking Machines",
+   "displayName": "Thinking Machines",
+   "slug": "thinkingmachines",
+   "adapterName": "ThinkingMachinesAdapter",
+   "baseUrl": "https://airlock.thinkingmachines.dev/openrouter/v1",
+   "dataPolicy": {
+    "training": true,
+    "trainingOpenRouter": true,
+    "retainsPrompts": true,
+    "canPublish": false,
+    "termsOfServiceURL": "https://thinkingmachines.ai/legal/tml-free-research-api-tier-terms-of-service.pdf",
+    "privacyPolicyURL": "https://thinkingmachines.ai/legal/tml-free-research-api-tier-privacy-notice.pdf",
+    "requiresUserIDs": true
+   },
+   "hasChatCompletions": true,
+   "hasCompletions": false,
+   "isAbortable": false,
+   "moderationRequired": false,
+   "statusPageUrl": null,
+   "byokEnabled": false,
+   "sendClientIp": false,
+   "pricingStrategy": "openai_extended"
+  }
+ ]
+}
