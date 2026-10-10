@@ -25,6 +25,27 @@ class OpenRouterEndpointsTest {
     }
 
     @Test
+    fun theFirstChosenProviderThatIsListedGivesThePrice() {
+        val endpoints = OpenRouterEndpoints.parse(recorded)
+
+        // Chosen providers are tried in the stored order, so the first one's price is what a request pays.
+        val first = OpenRouterEndpoints.firstChosen(endpoints, listOf("fireworks", "deepinfra/fp4"))
+        assertEquals("fireworks", first?.tag)
+        // A provider that left the list is skipped; nothing chosen or nothing listed gives no price.
+        assertEquals("deepinfra/fp4", OpenRouterEndpoints.firstChosen(endpoints, listOf("gone/fp8", "deepinfra/fp4"))?.tag)
+        assertNull(OpenRouterEndpoints.firstChosen(endpoints, emptyList()))
+        assertNull(OpenRouterEndpoints.firstChosen(endpoints, listOf("gone/fp8")))
+    }
+
+    @Test
+    fun theCacheReadPriceIsReadWhenAProviderGivesOne() {
+        val relace = OpenRouterEndpoints.parse(recorded).first { it.tag == "relace" }
+
+        // Recorded as input_cache_read "0.0000000125" dollars per token.
+        assertEquals(0.0125, relace.cachedInputUsdPerMillion!!, 1e-9)
+    }
+
+    @Test
     fun providersAreOrderedByInputPlusOutputPrice() {
         val endpoints = OpenRouterEndpoints.parse(recorded)
 

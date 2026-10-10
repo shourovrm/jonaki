@@ -25,6 +25,8 @@ data class ProviderEndpoint(
     val inputUsdPerMillion: Double?,
     val outputUsdPerMillion: Double?,
     val contextLength: Int?,
+    /** The price of input read from the provider's prompt cache; null when it gives none. */
+    val cachedInputUsdPerMillion: Double? = null,
 ) {
     /** Input plus output price per million tokens; null when either is unknown. */
     val combinedUsdPerMillion: Double?
@@ -78,6 +80,13 @@ object OpenRouterEndpoints {
         baseUrl: String = DEFAULT_BASE_URL,
     ): List<ProviderEndpoint> = parse(fetchText(httpClient, modelId, baseUrl))
 
+    /**
+     * The provider whose price a request pays when the user chose [chosenTags]: they are tried
+     * in that order, so it is the first one still listed. Null when none is chosen or listed.
+     */
+    fun firstChosen(endpoints: List<ProviderEndpoint>, chosenTags: List<String>): ProviderEndpoint? =
+        chosenTags.firstNotNullOfOrNull { tag -> endpoints.firstOrNull { endpoint -> endpoint.tag == tag } }
+
     /** The answer's text as OpenRouter sent it, which is what [OpenRouterEndpointCache] keeps. */
     internal suspend fun fetchText(httpClient: OkHttpClient, modelId: String, baseUrl: String): String =
         withContext(Dispatchers.IO) {
@@ -103,6 +112,7 @@ object OpenRouterEndpoints {
             inputUsdPerMillion = pricing?.perMillion("prompt"),
             outputUsdPerMillion = pricing?.perMillion("completion"),
             contextLength = (endpoint["context_length"] as? JsonPrimitive)?.intOrNull,
+            cachedInputUsdPerMillion = pricing?.perMillion("input_cache_read"),
         )
     }
 

@@ -55,6 +55,7 @@ import app.jonaki.core.model.Role
 import app.jonaki.core.modelcatalog.ModelCatalog
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.modelcatalog.OpenRouterEndpointCache
+import app.jonaki.core.modelcatalog.OpenRouterEndpoints
 import app.jonaki.core.modelcatalog.OpenRouterProviderPolicies
 import app.jonaki.core.modelcatalog.ProviderDataPolicy
 import app.jonaki.core.modelcatalog.ProviderEndpoint
@@ -853,7 +854,13 @@ private fun ChatRoute(
         queuedMessages = queuedByThread[threadId].orEmpty().map { queued -> QueuedMessageUi(queued.id, queued.text) },
         draft = draft,
         status = status,
-        modelChoices = modelChoices(settingsSnapshot.chatModels, catalog, application, rememberLocalModelKeys(application)),
+        modelChoices = modelChoices(
+            settingsSnapshot.chatModels,
+            catalog,
+            application,
+            rememberLocalModelKeys(application),
+            rememberChosenProviderPrices(application, settingsSnapshot.routing.pinned),
+        ),
         selectedModelKey = modelKey,
         imageModelChoices = imageModelChoices(settingsSnapshot.imageModels, imageLabels),
         selectedImageModelKey = selectedImageModelKey,
@@ -1170,18 +1177,51 @@ private fun rememberLocalModelKeys(application: JonakiApplication): List<String>
     return remember(localModelChanges) { application.localModelRuntime.modelKeys() }
 }
 
+/**
+ * For each model with chosen providers, the provider whose price a request pays (the first chosen
+ * one still listed), from the day cache of provider lists. A model whose list cannot be loaded is
+ * left out, and its row then shows OpenRouter's general price as before.
+ */
+@Composable
+private fun rememberChosenProviderPrices(
+    application: JonakiApplication,
+    pinned: Map<String, PinnedProviders>,
+): Map<String, ProviderEndpoint> {
+    val prices by produceState(emptyMap<String, ProviderEndpoint>(), pinned) {
+        val found = mutableMapOf<String, ProviderEndpoint>()
+        for ((modelKey, providers) in pinned) {
+            val endpoints = try {
+                application.providerEndpoints.load(ModelKey.modelOf(modelKey))
+            } catch (failure: IOException) {
+                continue
+            }
+            OpenRouterEndpoints.firstChosen(endpoints, providers.tags)?.let { endpoint -> found[modelKey] = endpoint }
+            // Each model's price shows as soon as it is known.
+            value = found.toMap()
+        }
+        value = found.toMap()
+    }
+    return prices
+}
+
 /** The user's added models, then the model files on the phone (D-133). */
 private fun modelChoices(
-chatModels: ChatModels, catalog: ModelCatalog, application: JonakiApplication, localModelKeys: List<String>): List<ModelChoiceUi> =
+    chatModels: ChatModels,
+    catalog: ModelCatalog,
+    application: JonakiApplication,
+    localModelKeys: List<String>,
+    chosenProviderPrices: Map<String, ProviderEndpoint> = emptyMap(),
+): List<ModelChoiceUi> =
     (chatModels.allModelKeys + localModelKeys).map { key ->
         val info = catalog.find(key)
+        val chosenProvider = chosenProviderPrices[key]
         ModelChoiceUi(
             key = key,
             name = info?.displayName ?: ModelKey.modelOf(key),
             serviceName = ChatService.byKey(ModelKey.serviceOf(key))?.let { service -> serviceNameOf(service, application) }.orEmpty(),
-            inputPricePerMillion = info?.inputUsdPerMillion,
-            outputPricePerMillion = info?.outputUsdPerMillion,
-            cachedInputPricePerMillion = info?.cachedInputUsdPerMillion,
+            inputPricePerMillion = chosenProvider?.inputUsdPerMillion ?: info?.inputUsdPerMillion,
+            outputPricePerMillion = chosenProvider?.outputUsdPerMillion ?: info?.outputUsdPerMillion,
+            cachedInputPricePerMillion = if (chosenProvider != null) chosenProvider.cachedInputUsdPerMillion else info?.cachedInputUsdPerMillion,
             supportsThinking = ThinkingSupport.isSupported(key, info),
         )
     }
@@ -1313,7 +1353,13 @@ private fun SettingsRoute(
     val imageGeneration = imageGenerationFor(application, snapshot.imageModels, ::slotFor, snapshot.imageQuality == ImageQuality.HIGH)
     val videoGeneration = videoGenerationFor(application, snapshot.videoModels, hasKey = SecretName.OPENROUTER in savedKeys)
     val state = SettingsUiState(
-        chatServices = serviceCards(snapshot, application, ::slotFor, ::accountFor),
+        chatServices = serviceCards(
+            snapshot,
+            application,
+            ::slotFor,
+            ::accountFor,
+            rememberChosenProviderPrices(application, snapshot.routing.pinned),
+        ),
         addableServices = ChatService.entries
             // Local models come from downloaded files, not from a service card (D-133).
             .filter { service -> service != ChatService.LOCAL }
@@ -1603,6 +1649,7 @@ private fun serviceCards(
     application: JonakiApplication,
     slotFor: (SecretName) -> KeySlot,
     accountFor: (ChatService) -> AccountLineUi?,
+    chosenProviderPrices: Map<String, ProviderEndpoint>,
 ): List<ChatServiceCardUi> {
     val catalog = application.catalog
     val chatModels = snapshot.chatModels
@@ -1617,13 +1664,16 @@ private fun serviceCards(
             models = chatModels.modelsByService[service].orEmpty().map { modelId ->
                 val key = ModelKey.of(service.key, modelId)
                 val info = catalog.find(key)
+                // A model with chosen providers pays the first one's price, not OpenRouter's general one.
+                val chosenProvider = chosenProviderPrices[key]
                 ServiceModelUi(
                     key = key,
                     name = info?.displayName ?: modelId,
                     contextWindowTokens = info?.contextWindowTokens,
-                    inputPricePerMillion = info?.inputUsdPerMillion,
-                    outputPricePerMillion = info?.outputUsdPerMillion,
-                    cachedInputPricePerMillion = info?.cachedInputUsdPerMillion,
+                    inputPricePerMillion = chosenProvider?.inputUsdPerMillion ?: info?.inputUsdPerMillion,
+                    outputPricePerMillion = chosenProvider?.outputUsdPerMillion ?: info?.outputUsdPerMillion,
+                    // A provider that names no cache price has none, so the general one must not stand in for it.
+                    cachedInputPricePerMillion = if (chosenProvider != null) chosenProvider.cachedInputUsdPerMillion else info?.cachedInputUsdPerMillion,
                     isDefault = key == chatModels.defaultModelKey,
                     routingOverride = if (isOpenRouter) snapshot.routing.overrides[key]?.let(::routingUiOf) else null,
                     pinnedProviders = if (isOpenRouter) snapshot.routing.pinned[key]?.tags.orEmpty() else emptyList(),
