@@ -77,6 +77,10 @@ class ThreadNamer(
             return FirstExchange(orderedRows[firstUserIndex].text, answerRow.text)
         }
 
+        /** The thread's first user message; for a first turn that made a picture and has no assistant text. */
+        fun firstUserMessage(rows: List<MessageEntity>): String? =
+            rows.sortedBy { row -> row.position }.firstOrNull { row -> row.role == Role.USER.name }?.text
+
         private const val MAX_TEXT_CHARACTERS = 1_000
 
         /** Room for a model that thinks before it answers; the name itself is about 20 tokens. */
