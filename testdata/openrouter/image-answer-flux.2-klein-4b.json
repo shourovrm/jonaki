@@ -1,0 +1,28 @@
+{
+ "created": 0,
+ "data": [
+  {
+   "b64_json": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/yQALCAABAAEBAREA/8wABgAQEAX/2gAIAQEAAD8A0s8g/9k=",
+   "media_type": "image/jpeg"
+  }
+ ],
+ "usage": {
+  "prompt_tokens": 18,
+  "completion_tokens": 4096,
+  "total_tokens": 4114,
+  "cost": 0.014,
+  "is_byok": false,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  },
+  "cost_details": {
+   "upstream_inference_cost": 0.014,
+   "upstream_inference_prompt_cost": 0,
+   "upstream_inference_completions_cost": 0.014
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 0,
+   "image_tokens": 4096
+  }
+ }
+}
