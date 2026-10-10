@@ -2181,8 +2181,11 @@ in "…"; the rename dialog still shows it whole. The first-line name is
 remembered in memory only, so a thread whose first answer never finished
 before the app was closed keeps it. Also in this change: "Web search" left
 the thread's ⋮ menu, because the status strip's globe pill does the same
-(D-123). Tests: ThreadTitlesTest, ThreadNamerTest. Outcome: unit tests
-pass; not seen on a phone.
+(D-123). Tests: ThreadTitlesTest, ThreadNamerTest. Outcome
+(2026-10-10, phone A059, build of 31d951d): the list shows each name on one
+line with "…"; the ⋮ menu has Rename, Memory, Skills, Style and persona; a
+new thread asked "Explain in one sentence why fireflies glow" was renamed
+"Firefly Bioluminescence Explained".
 
 ## D-158 · 2026-10-10 · A fresh install has no service and no model — proposed
 User request. With no saved settings the 0.1.0 migration ran and left an
@@ -2205,9 +2208,12 @@ combines with sort or data_collection. A model with chosen providers ignores
 its routing choice and gets no private-then-cheapest retry. With fallbacks
 off, an HTTP 404 becomes "None of your chosen providers (…) can serve this
 request". Stored as text under routing_pinned_providers; no Room change.
-Removing a model clears its providers and its routing override. Outcome:
-unit tests pass; no request with order was sent to OpenRouter, and the 404
-for "no chosen provider available" is assumed, not recorded.
+Removing a model clears its providers and its routing override. Outcome
+(2026-10-10, phone A059): the sheet listed GLM 5.3 Flash's providers with
+prices, DeepInfra was ticked, the model's row showed "deepinfra", and a
+message on that model was answered ($0.0006). Not checked: which provider
+served it, fallbacks off, and the 404 for "no chosen provider available",
+which is assumed, not recorded. The test choice was removed afterwards.
 
 ## D-160 · 2026-10-10 · Image generation through OpenRouter — proposed
 User request. New tool module tools/generate-image (generate_image: prompt,
@@ -2226,6 +2232,10 @@ starred, and the tool is offered only with an OpenRouter key and at least
 one image model. The chat shows a thumbnail with Save and Share under the
 run. Rejected: picking an image model as a thread's chat model; a price in
 the picker (one request per model). No new dependency, permission or Room
-change. Outcome: unit tests pass; not seen on a phone; no picture made
-through the app yet. OpenRouter's Batch API (half price, answers within 24
+change. Outcome (2026-10-10, phone A059): the picker listed OpenRouter's
+image models, flux.2-klein-4b was added and starred with "$0.014 per
+megapixel"; asked for a picture, the agent called generate_image, the card
+showed model and prompt, and after Allow once the thumbnail firefly-leaf.jpg
+appeared with Save and Share in 7.8 s; the thread's cost rose to $0.015.
+Not checked: Save, Share, the full-size view, a failed or blocked request. OpenRouter's Batch API (half price, answers within 24
 hours) was looked at and left out by user ruling.
