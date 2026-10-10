@@ -208,15 +208,21 @@ class AppSettings(
         )
     }
 
+    private fun readLegacyChatModels(presetDefaultModel: (ChatService) -> String): ChatModels {
+        val chatServiceName = preferences.getString(LEGACY_CHAT_SERVICE, null)
+        val savedModels = ChatService.entries.associate { service ->
+            service.name to preferences.getString(LEGACY_MODEL_PREFIX + service.name, "").orEmpty()
+        }
+        if (!ChatModels.hasLegacySettings(chatServiceName, savedModels)) {
+            // A fresh install: the user adds the first service and model themselves.
+            return ChatModels(addedServices = emptyList(), modelsByService = emptyMap(), defaultModelKey = null)
+        }
+        return ChatModels.fromLegacy(chatServiceName, savedModels, presetDefaultModel)
+    }
+
     private fun readChatModels(presetDefaultModel: (ChatService) -> String): ChatModels {
         val addedNames = preferences.getString(ADDED_SERVICES, null)
-            ?: return ChatModels.fromLegacy(
-                chatServiceName = preferences.getString(LEGACY_CHAT_SERVICE, null),
-                savedModels = ChatService.entries.associate { service ->
-                    service.name to preferences.getString(LEGACY_MODEL_PREFIX + service.name, "").orEmpty()
-                },
-                presetDefaultModel = presetDefaultModel,
-            )
+            ?: return readLegacyChatModels(presetDefaultModel)
         val addedServices = addedNames.split(",").mapNotNull { name -> ChatService.entries.firstOrNull { it.name == name } }
         val modelsByService = addedServices.associateWith { service ->
             // Model ids can hold commas or colons, so one id per line.

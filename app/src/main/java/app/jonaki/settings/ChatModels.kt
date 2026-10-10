@@ -98,6 +98,14 @@ data class ChatModels(
 
     companion object {
         /**
+         * True when version 0.1.0 saved a service name or a model text. A fresh
+         * install has neither, and must start with no service and no model.
+         */
+        fun hasLegacySettings(chatServiceName: String?, savedModels: Map<String, String>): Boolean {
+            return !chatServiceName.isNullOrBlank() || savedModels.values.any { it.isNotBlank() }
+        }
+
+        /**
          * Settings from version 0.1.0 had one selected service and one model text
          * per service, where a blank text meant the preset's default. They become
          * one card with one starred model, so the blank-means-default rule ends here.

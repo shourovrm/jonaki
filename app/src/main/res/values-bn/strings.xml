@@ -35,6 +35,7 @@
     <string name="files_open_no_app">এই ফাইল খোলার অ্যাপ নেই</string>
     <string name="routing_fallback_note">এই মডেলের প্রাইভেট প্রোভাইডার নেই। সবচেয়ে সস্তাটি ব্যবহার হয়েছে।</string>
     <string name="python_try_again_message">ইনস্টল হয়েছে। আবার চেষ্টা করুন।</string>
+    <string name="status_no_model">কোনো মডেল নেই</string>
     <string name="error_no_model">কোনো মডেল নেই। সেটিংসে যোগ করুন।</string>
     <string name="error_no_api_key">%1$s-এর API key নেই। সেটিংসে যোগ করুন।</string>
     <string name="service_ollama_local">এই নেটওয়ার্কের Ollama</string>

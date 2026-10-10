@@ -2,7 +2,6 @@
 <resources>
     <string name="chat_back">Back</string>
     <string name="chat_more">More options</string>
-    <string name="chat_menu_web_search">Web search</string>
     <string name="chat_menu_rename">Rename</string>
     <string name="chat_menu_memory">Memory</string>
     <string name="chat_menu_skills">Skills</string>

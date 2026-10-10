@@ -369,10 +369,12 @@ private fun ThreadRowView(
         ) {
             Row {
                 ThreadMark(thread, titleStyle.fontSize)
-                // The title wraps so the whole name shows; only the preview line is cut short.
+                // The name keeps one line and ends in "…" (D-029); the chat's rename dialog shows it whole.
                 Text(
                     thread.title,
                     style = titleStyle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).alignByBaseline(),
                 )
                 Spacer(Modifier.width(12.dp))

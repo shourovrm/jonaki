@@ -162,6 +162,24 @@ class AgentRunner(
      */
     private val latestUserText = ConcurrentHashMap<String, String>()
 
+    /** The first-line name given to each new thread, until its first answer has been used to write a short one. */
+    private val provisionalTitles = ConcurrentHashMap<String, String>()
+
+    private val threadNamer = ThreadNamer(
+        ask = { threadId, threadModelKey, systemPrompt, userText, maxOutputTokens ->
+            backgroundModel.complete(threadId, threadModelKey, systemPrompt, userText, maxOutputTokens)
+        },
+        renameIfUnchanged = { threadId, expectedTitle, newTitle ->
+            val threadDao = database.threadDao()
+            val unchanged = threadDao.find(threadId)?.title == expectedTitle
+            if (unchanged) {
+                threadDao.rename(threadId, newTitle)
+            }
+            unchanged
+        },
+        logFailure = { message -> android.util.Log.w("ThreadNamer", message) },
+    )
+
     /** Threads the user left while a run was still going; extraction waits for the run's end. */
     private val leftWhileRunning = MutableStateFlow<Set<String>>(emptySet())
 
@@ -493,6 +511,31 @@ class AgentRunner(
         }
     }
 
+    /**
+     * Its own coroutine, like extraction. One try per thread: the entry is taken
+     * out at once, so a failure is not retried after the next answer. An
+     * incognito thread keeps its first-line name. A thread on a local model is
+     * named like extraction and compaction treat it: the background model is
+     * the cheapest cloud model the user set up, else the local one itself.
+     */
+    private fun launchNaming(threadId: String) {
+        val provisionalTitle = provisionalTitles.remove(threadId) ?: return
+        scope.launch {
+            val thread = database.threadDao().find(threadId) ?: return@launch
+            if (thread.incognito) {
+                return@launch
+            }
+            val firstExchange = ThreadNamer.firstExchange(database.messageDao().listThread(threadId)) ?: return@launch
+            threadNamer.nameAfterFirstAnswer(
+                threadId = threadId,
+                threadModelKey = modelKeyFor(thread),
+                provisionalTitle = provisionalTitle,
+                firstUserMessage = firstExchange.userMessage,
+                firstAnswer = firstExchange.answer,
+            )
+        }
+    }
+
     /** [approvalId] is the waiting call's id, which the card carries. */
     fun answerApproval(threadId: String, approvalId: String, decision: ApprovalDecision) {
         val pending = approvals.value[threadId].orEmpty().firstOrNull { card -> card.toolCall.id == approvalId } ?: return
@@ -537,6 +580,9 @@ class AgentRunner(
             val outcome = runWithOneRetry(threadId)
             extractMemoryAfterRun(threadId)
             launchCompaction(threadId)
+            if (outcome is RunOutcome.Completed) {
+                launchNaming(threadId)
+            }
             val endedNormally = outcome is RunOutcome.Completed || outcome is RunOutcome.BudgetReached
             if (!endedNormally) {
                 return
@@ -570,7 +616,11 @@ class AgentRunner(
         val threadDao = database.threadDao()
         val thread = threadDao.find(threadId) ?: return text
         if (thread.title.isBlank()) {
-            threadDao.rename(threadId, titleFrom(text))
+            val firstLineTitle = titleFrom(text)
+            threadDao.rename(threadId, firstLineTitle)
+            if (firstLineTitle.isNotBlank()) {
+                provisionalTitles[threadId] = firstLineTitle
+            }
         }
         val messageDao = database.messageDao()
         // The time goes into the message, not the system prompt, so the prompt cache holds (D-005).
