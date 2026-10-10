@@ -1,6 +1,14 @@
 package app.jonaki.feature.memory
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import app.jonaki.core.ui.Selection
+import app.jonaki.core.ui.SelectionBackHandler
+import app.jonaki.core.ui.SelectionTopBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,12 +46,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,7 +65,13 @@ import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifier = Modifier) {
+fun MemoryScreen(
+    state: MemoryUiState,
+    actions: MemoryActions,
+    modifier: Modifier = Modifier,
+    /** Facts selected at the start; only the previews set it. */
+    initialSelectedIds: Set<Long> = emptySet(),
+) {
     var adding by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -63,37 +79,69 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
     val allFacts = state.waitingForReview + state.threadFacts + state.projectFacts + state.globalFacts + state.supersededFacts
     val subtitle = state.threadTitle ?: state.projectName
 
+    var storedSelection by rememberSaveable(stateSaver = Selection.saver<Long>()) {
+        mutableStateOf(Selection(initialSelectedIds))
+    }
+    var confirmingSelectionDelete by rememberSaveable { mutableStateOf(false) }
+    // Only facts on screen can stay selected: Select all covers what is listed, and a fact
+    // that disappears, or sits in the folded superseded section, never counts.
+    val shownFacts = shownFactsOf(state, supersededOpen)
+    val shownIds = shownFacts.map { fact -> fact.id }
+    val selection = storedSelection.pruned(shownIds)
+    LaunchedEffect(selection) {
+        if (selection !== storedSelection) {
+            storedSelection = selection
+        }
+    }
+    val selecting = !selection.isEmpty
+    val factSelection = FactSelection(selection) { changed -> storedSelection = changed }
+    SelectionBackHandler(selecting) { storedSelection = selection.clear() }
+
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.memory_title), fontWeight = FontWeight.SemiBold)
-                        if (subtitle != null) {
-                            Text(
-                                subtitle,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+            if (selecting) {
+                SelectionTopBar(
+                    selectedCount = selection.count,
+                    allSelected = selection.coversAll(shownIds),
+                    onClose = { storedSelection = selection.clear() },
+                    onToggleSelectAll = {
+                        storedSelection = if (selection.coversAll(shownIds)) selection.clear() else selection.selectAll(shownIds)
+                    },
+                    onDelete = { confirmingSelectionDelete = true },
+                )
+            } else {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(stringResource(R.string.memory_title), fontWeight = FontWeight.SemiBold)
+                            if (subtitle != null) {
+                                Text(
+                                    subtitle,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = actions.onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.memory_back))
-                    }
-                },
-            )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = actions.onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.memory_back))
+                        }
+                    },
+                )
+            }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { adding = true },
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.memory_add)) },
-            )
+            if (!selecting) {
+                ExtendedFloatingActionButton(
+                    onClick = { adding = true },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text(stringResource(R.string.memory_add)) },
+                )
+            }
         },
     ) { padding ->
         LazyColumn(
@@ -104,7 +152,7 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
             if (state.waitingForReview.isNotEmpty()) {
                 sectionLabel(R.string.memory_section_review)
                 items(state.waitingForReview, key = { fact -> "review-${fact.id}" }) { fact ->
-                    ReviewCard(fact, actions)
+                    ReviewCard(fact, actions, factSelection)
                 }
             }
             if (state.isThreadView) {
@@ -116,6 +164,7 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
                     onEdit = { factId -> editingId = factId },
                     onDelete = { factId -> deletingId = factId },
                     actions = actions,
+                    factSelection = factSelection,
                 )
             }
             if (state.projectName != null) {
@@ -127,6 +176,7 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
                     onEdit = { factId -> editingId = factId },
                     onDelete = { factId -> deletingId = factId },
                     actions = actions,
+                    factSelection = factSelection,
                 )
             }
             factSection(
@@ -137,6 +187,7 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
                 onEdit = { factId -> editingId = factId },
                 onDelete = { factId -> deletingId = factId },
                 actions = actions,
+                factSelection = factSelection,
             )
             item(key = "review-switch") {
                 ReviewSwitch(state.reviewMode, actions.onReviewModeChange)
@@ -148,6 +199,7 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
                     onToggle = { supersededOpen = !supersededOpen },
                     onDelete = { factId -> deletingId = factId },
                     actions = actions,
+                    factSelection = factSelection,
                 )
             }
         }
@@ -178,6 +230,23 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
             onDismiss = { editingId = null },
         )
     }
+    if (confirmingSelectionDelete && selecting) {
+        val selectedFacts = shownFacts.filter { fact -> fact.id in selection }
+        val onDismissSelectionDelete = { confirmingSelectionDelete = false }
+        val onConfirmSelectionDelete = {
+            confirmingSelectionDelete = false
+            storedSelection = selection.clear()
+            // Each fact goes through the same call as a single delete.
+            for (fact in selectedFacts) {
+                actions.onDelete(fact.id)
+            }
+        }
+        if (selectedFacts.size == 1) {
+            DeleteFactDialog(selectedFacts.first().text, onConfirmSelectionDelete, onDismissSelectionDelete)
+        } else {
+            DeleteFactsDialog(selectedFacts.size, onConfirmSelectionDelete, onDismissSelectionDelete)
+        }
+    }
     val deleting = allFacts.firstOrNull { fact -> fact.id == deletingId }
     if (deleting != null) {
         DeleteFactDialog(
@@ -189,6 +258,73 @@ fun MemoryScreen(state: MemoryUiState, actions: MemoryActions, modifier: Modifie
             onDismiss = { deletingId = null },
         )
     }
+}
+
+/** The selection and how the cards change it; selecting turns off their own buttons. */
+private class FactSelection(val selection: Selection<Long>, val onChange: (Selection<Long>) -> Unit) {
+    val selecting: Boolean
+        get() = !selection.isEmpty
+
+    fun isSelected(factId: Long): Boolean = factId in selection
+
+    fun toggle(factId: Long) = onChange(selection.toggle(factId))
+}
+
+/** The facts the screen lists now, in the order shown; the folded superseded section lists none. */
+internal fun shownFactsOf(state: MemoryUiState, supersededOpen: Boolean): List<MemoryFactUi> {
+    val shown = mutableListOf<MemoryFactUi>()
+    shown += state.waitingForReview
+    if (state.isThreadView) {
+        shown += state.threadFacts
+    }
+    if (state.projectName != null) {
+        shown += state.projectFacts
+    }
+    shown += state.globalFacts
+    if (supersededOpen) {
+        shown += state.supersededFacts
+    }
+    return shown
+}
+
+private const val SELECTED_CARD_TINT = 0.14f
+
+/** A fact row has no card of its own: transparent, or the accent tint when selected. */
+@Composable
+private fun selectedRowColour(selected: Boolean): Color {
+    return if (selected) MaterialTheme.colorScheme.primary.copy(alpha = SELECTED_CARD_TINT) else Color.Transparent
+}
+
+/** The colour of the review and superseded cards: their raised surface, with the tint over it when selected. */
+@Composable
+private fun selectedCardColour(selected: Boolean): Color {
+    val base = MaterialTheme.colorScheme.surfaceContainerHigh
+    if (!selected) {
+        return base
+    }
+    return MaterialTheme.colorScheme.primary.copy(alpha = SELECTED_CARD_TINT).compositeOver(base)
+}
+
+/** Review and superseded cards have no tap action of their own; a tap only counts while selecting. */
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.selectableCard(factId: Long, selected: Boolean, factSelection: FactSelection): Modifier {
+    return this
+        .semantics { this.selected = selected }
+        .combinedClickable(
+            onClick = { if (factSelection.selecting) factSelection.toggle(factId) },
+            onLongClick = { factSelection.toggle(factId) },
+        )
+}
+
+@Composable
+private fun SelectedMark() {
+    Icon(
+        Icons.Filled.Check,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 2.dp).size(16.dp),
+    )
+    Spacer(Modifier.width(6.dp))
 }
 
 private fun LazyListScope.sectionLabel(labelId: Int) {
@@ -211,6 +347,7 @@ private fun LazyListScope.factSection(
     onEdit: (Long) -> Unit,
     onDelete: (Long) -> Unit,
     actions: MemoryActions,
+    factSelection: FactSelection,
 ) {
     sectionLabel(labelId)
     if (facts.isEmpty()) {
@@ -225,24 +362,43 @@ private fun LazyListScope.factSection(
         return
     }
     items(facts, key = { fact -> "fact-${fact.id}" }) { fact ->
-        FactCard(fact, hasProject, onEdit = { onEdit(fact.id) }, onDelete = { onDelete(fact.id) }, actions = actions)
+        FactCard(fact, hasProject, onEdit = { onEdit(fact.id) }, onDelete = { onDelete(fact.id) }, actions = actions, factSelection = factSelection)
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FactCard(fact: MemoryFactUi, hasProject: Boolean, onEdit: () -> Unit, onDelete: () -> Unit, actions: MemoryActions) {
+private fun FactCard(
+    fact: MemoryFactUi,
+    hasProject: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    actions: MemoryActions,
+    factSelection: FactSelection,
+) {
+    val selected = factSelection.isSelected(fact.id)
     // A plain row: the list's spacing separates facts without a card (D-123).
     Surface(
-        color = Color.Transparent,
+        color = selectedRowColour(selected),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             verticalAlignment = Alignment.Top,
-            modifier = Modifier.clickable(onClick = onEdit).padding(start = 4.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier
+                .semantics { this.selected = selected }
+                .combinedClickable(
+                    onClick = { if (factSelection.selecting) factSelection.toggle(fact.id) else onEdit() },
+                    // A long press used to do nothing; it now starts selection.
+                    onLongClick = { factSelection.toggle(fact.id) },
+                )
+                .padding(start = 4.dp, top = 12.dp, bottom = 12.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Top) {
+                    if (selected) {
+                        SelectedMark()
+                    }
                     if (fact.pinned) {
                         Icon(
                             JonakiIcons.PushPin,
@@ -255,15 +411,15 @@ private fun FactCard(fact: MemoryFactUi, hasProject: Boolean, onEdit: () -> Unit
                     // A fact is content, not a name: four lines in the list, all of it in the edit dialog (D-029).
                     Text(fact.text, style = MaterialTheme.typography.bodyLarge, maxLines = 4, overflow = TextOverflow.Ellipsis)
                 }
-                SourceLine(fact, onClick = { actions.onOpenSource(fact.id) })
+                SourceLine(fact, enabled = !factSelection.selecting, onClick = { actions.onOpenSource(fact.id) })
             }
-            FactMenuButton(fact, hasProject, onEdit, onDelete, actions)
+            FactMenuButton(fact, hasProject, onEdit, onDelete, actions, enabled = !factSelection.selecting)
         }
     }
 }
 
 @Composable
-private fun SourceLine(fact: MemoryFactUi, onClick: () -> Unit) {
+private fun SourceLine(fact: MemoryFactUi, enabled: Boolean, onClick: () -> Unit) {
     val preview = fact.sourcePreview ?: return
     Text(
         stringResource(R.string.memory_from, preview),
@@ -271,15 +427,22 @@ private fun SourceLine(fact: MemoryFactUi, onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.primary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(top = 4.dp).clickable(onClick = onClick),
+        modifier = Modifier.padding(top = 4.dp).clickable(enabled = enabled, onClick = onClick),
     )
 }
 
 @Composable
-private fun FactMenuButton(fact: MemoryFactUi, hasProject: Boolean, onEdit: () -> Unit, onDelete: () -> Unit, actions: MemoryActions) {
+private fun FactMenuButton(
+    fact: MemoryFactUi,
+    hasProject: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    actions: MemoryActions,
+    enabled: Boolean,
+) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) {
+        IconButton(onClick = { open = true }, enabled = enabled) {
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.memory_more))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -327,6 +490,7 @@ private fun LazyListScope.supersededSection(
     onToggle: () -> Unit,
     onDelete: (Long) -> Unit,
     actions: MemoryActions,
+    factSelection: FactSelection,
 ) {
     item(key = "superseded-header") {
         Row(
@@ -354,20 +518,31 @@ private fun LazyListScope.supersededSection(
     }
     if (open) {
         items(facts, key = { fact -> "superseded-${fact.id}" }) { fact ->
-            SupersededCard(fact, onDelete = { onDelete(fact.id) }, actions = actions)
+            SupersededCard(fact, onDelete = { onDelete(fact.id) }, actions = actions, factSelection = factSelection)
         }
     }
 }
 
 @Composable
-private fun SupersededCard(fact: MemoryFactUi, onDelete: () -> Unit, actions: MemoryActions) {
+private fun SupersededCard(
+    fact: MemoryFactUi,
+    onDelete: () -> Unit,
+    actions: MemoryActions,
+    factSelection: FactSelection,
+) {
+    val selected = factSelection.isSelected(fact.id)
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = selectedCardColour(selected),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp)) {
-            Text(fact.text, style = MaterialTheme.typography.bodyLarge, maxLines = 4, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.selectableCard(fact.id, selected, factSelection).padding(start = 16.dp, end = 8.dp, top = 12.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                if (selected) {
+                    SelectedMark()
+                }
+                Text(fact.text, style = MaterialTheme.typography.bodyLarge, maxLines = 4, overflow = TextOverflow.Ellipsis)
+            }
             val supersededAtMillis = fact.supersededAtMillis
             if (supersededAtMillis != null) {
                 val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(supersededAtMillis))
@@ -379,10 +554,10 @@ private fun SupersededCard(fact: MemoryFactUi, onDelete: () -> Unit, actions: Me
                 )
             }
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = onDelete) {
+                TextButton(onClick = onDelete, enabled = !factSelection.selecting) {
                     Text(stringResource(R.string.memory_delete), color = JonakiTheme.colors.deny)
                 }
-                TextButton(onClick = { actions.onRestore(fact.id) }) {
+                TextButton(onClick = { actions.onRestore(fact.id) }, enabled = !factSelection.selecting) {
                     Text(stringResource(R.string.memory_restore))
                 }
             }
@@ -391,14 +566,20 @@ private fun SupersededCard(fact: MemoryFactUi, onDelete: () -> Unit, actions: Me
 }
 
 @Composable
-private fun ReviewCard(fact: MemoryFactUi, actions: MemoryActions) {
+private fun ReviewCard(fact: MemoryFactUi, actions: MemoryActions, factSelection: FactSelection) {
+    val selected = factSelection.isSelected(fact.id)
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = selectedCardColour(selected),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp)) {
-            Text(fact.text, style = MaterialTheme.typography.bodyLarge, maxLines = 4, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.selectableCard(fact.id, selected, factSelection).padding(start = 16.dp, end = 8.dp, top = 12.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                if (selected) {
+                    SelectedMark()
+                }
+                Text(fact.text, style = MaterialTheme.typography.bodyLarge, maxLines = 4, overflow = TextOverflow.Ellipsis)
+            }
             // A global fact reaches every thread, so the card says so before the user approves it.
             val whereLine = when {
                 fact.threadTitle != null -> stringResource(R.string.memory_in_thread, fact.threadTitle)
@@ -415,12 +596,12 @@ private fun ReviewCard(fact: MemoryFactUi, actions: MemoryActions) {
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
-            SourceLine(fact, onClick = { actions.onOpenSource(fact.id) })
+            SourceLine(fact, enabled = !factSelection.selecting, onClick = { actions.onOpenSource(fact.id) })
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = { actions.onDelete(fact.id) }) {
+                TextButton(onClick = { actions.onDelete(fact.id) }, enabled = !factSelection.selecting) {
                     Text(stringResource(R.string.memory_discard), color = JonakiTheme.colors.deny)
                 }
-                TextButton(onClick = { actions.onKeep(fact.id) }) {
+                TextButton(onClick = { actions.onKeep(fact.id) }, enabled = !factSelection.selecting) {
                     Text(stringResource(R.string.memory_keep))
                 }
             }

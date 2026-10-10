@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -98,6 +99,23 @@ private fun scopeLabelOf(scope: FactScopeUi): Int = when (scope) {
     FactScopeUi.THREAD -> R.string.memory_scope_thread
     FactScopeUi.PROJECT -> R.string.memory_scope_project
     FactScopeUi.GLOBAL -> R.string.memory_scope_global
+}
+
+/** Asks once before several selected facts are deleted. One fact uses [DeleteFactDialog], which shows its text. */
+@Composable
+internal fun DeleteFactsDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(pluralStringResource(R.plurals.memory_delete_many_title, count, count)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.memory_delete), color = JonakiTheme.colors.deny)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.memory_cancel)) }
+        },
+    )
 }
 
 @Composable
