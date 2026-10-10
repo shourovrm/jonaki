@@ -2252,3 +2252,59 @@ from its start to its end. Each new run renews it, and Android releases it
 by itself after 30 minutes, so a run that never ends cannot keep the phone
 awake for good. A scheduled task's run is covered by its worker (D-100).
 Outcome: compiles; the locked-phone test is still to do.
+
+## D-162 · 2026-10-10 · What a fresh start shows; saved drafts — proposed
+User ruling: 30 minutes, no setting. A fresh start of the activity reopens
+the thread the user left less than 30 minutes ago; otherwise it opens a new
+empty thread; Back leads to the list. The start keeps its screen when a
+share is arriving, the first-run tool picker is due, or no model is set up.
+An incognito thread is never reopened. The left thread and time are in their
+own preferences file (LeftThreadStore). Drafts: each thread's message box
+text is saved to files/thread-drafts.json after 500 ms without typing and at
+once on leaving; sending or deleting the thread clears it; the new-thread
+box has its own draft; incognito drafts stay in memory; an Edit keeps the
+draft aside and puts it back. The thread list shows "Draft: …" as the
+preview line. No Room change. Outcome (2026-10-10, phone A059): a fresh
+start with no record opened a new thread; after leaving a thread with typed
+text, a fresh start reopened it with the text in the box, and the list
+showed "Draft: a draft to keep". Not checked: the 30-minute boundary on a
+device, a share or reminder start, Edit with a draft.
+
+## D-163 · 2026-10-10 · Selecting several threads or facts to delete — proposed
+User request. A long press starts selection in the thread list and in
+Memory; a tap toggles; the top bar shows Close, the count, Delete and a ⋮
+menu with Select all or Deselect all (and Rename and Move to project for
+threads, which the removed long-press menu held). One dialog asks with the
+count. Each item goes through the existing single delete. Selection and its
+top bar are shared in core/ui (Selection, SelectionTopBar); core/ui now
+declares activity-compose, which the app already ships. Outcome
+(2026-10-10, phone A059): two threads selected, rows tinted with a check
+mark, "2 selected" in the bar. Not checked: Delete, Select all, Memory.
+
+## D-164 · 2026-10-10 · Copyable errors, a subagent's reason, :batch models — proposed
+From a thread on the phone where a Researcher failed after 17 of 20 steps
+and the sheet said only "Failed". An error row's text can be selected and
+has the copy button. A subagent that did not finish shows a reason line
+(the provider's text, or the time, step or cost limit) on its row and whole
+on its page; the reason is read back from the ending already saved in
+resultText, so old rows show it too and no column was added. OpenRouter ids
+ending in ":batch" are left out of the catalog, the background model and
+subagent models, because they answer HTTP 404 on the chat endpoint; an
+already added one stays, and its 404 gains "Batch models do not work in
+chat. Pick another model." Read from the code, not measured: a run can last
+about 22 minutes by design when the network half-dies (120 s read timeout,
+one retry per turn, a 15-minute researcher limit), so that run does not
+prove the phone slept. Not built: ending a subagent after repeated network
+failures of its tools. Outcome: unit tests pass; not seen on a phone.
+
+## D-165 · 2026-10-10 · Answer language rule in the system prompt — proposed
+A thread whose message was a link and an English sentence was answered in
+Bangla; the model named a memory fact about the user's city. SystemPrompt
+now says, in order: keep a language the user asked for earlier in the
+thread (or in their instructions) whatever language later messages are in;
+otherwise answer in the language the user writes in; never choose it from
+memory, location, name or the language of a page, file or tool result. The
+subagent prompt, the delegate guideline and the summary prompt carry the
+same wish along. Outcome (2026-10-10, phone A059, Haiku 5.5): asked for
+Bangla, then asked a follow-up in English, the second answer stayed Bangla.
+Not checked: an English request with a link, which was the failing case.
