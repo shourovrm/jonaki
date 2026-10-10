@@ -140,4 +140,13 @@ class ThreadNamerTest {
         assertNull(ThreadNamer.firstExchange(listOf(row(0, "USER", "question"), row(1, "ASSISTANT", " "))))
         assertNull(ThreadNamer.firstExchange(emptyList()))
     }
+
+    @Test
+    fun aPictureTurnIsNamedFromTheFirstUserMessageAlone() {
+        val rows = listOf(row(1, "ASSISTANT", ""), row(0, "USER", "a blue door at dawn"), row(2, "TOOL", "Image saved: images/a.png"))
+
+        assertEquals("a blue door at dawn", ThreadNamer.firstUserMessage(rows))
+        assertNull(ThreadNamer.firstExchange(rows))
+        assertNull(ThreadNamer.firstUserMessage(emptyList()))
+    }
 }

@@ -85,6 +85,8 @@ import app.jonaki.feature.chat.guardStateOf
 import app.jonaki.feature.chat.ImageModelChoiceUi
 import app.jonaki.feature.chat.ModelChoiceUi
 import app.jonaki.feature.chat.ModelUsageUi
+import app.jonaki.feature.chat.PictureMode
+import app.jonaki.feature.chat.PictureModeUi
 import app.jonaki.feature.chat.QueuedMessageUi
 import app.jonaki.feature.chat.UsageUi
 import app.jonaki.core.agent.ZoneInMessages
@@ -690,6 +692,8 @@ private fun ChatRoute(
     var editingMessageId by rememberSaveable(threadId) { mutableStateOf<String?>(null) }
     // What the box held when Edit replaced it, put back when the edit is sent or cancelled.
     var draftBeforeEdit by rememberSaveable(threadId) { mutableStateOf("") }
+    // Picture mode (the next send goes straight to the image model): this screen only, never written to disk.
+    var pictureModeOn by rememberSaveable(threadId) { mutableStateOf(false) }
     SaveDraftWhileTyping(
         threadDrafts = application.threadDrafts,
         draftKey = draftKey,
@@ -803,6 +807,25 @@ private fun ChatRoute(
         application,
         settingsSnapshot.imageModels.modelsByService[ImageService.OPENROUTER].orEmpty(),
     )
+    // The same condition as the generate_image tool: an added raster image model whose service has a saved key.
+    // A vector model does not count, because picture mode calls generate_image, which never gets one (D-170).
+    val savedSecretNames by application.secrets.names.collectAsState()
+    val usableImageModelKeys = settingsSnapshot.imageModels.usableRasterModelKeys { service -> service.secret in savedSecretNames }
+    val canUsePictureMode = PictureMode.canBeOn(
+        imageGenerationAvailable = usableImageModelKeys.isNotEmpty(),
+        hasAttachments = attachmentsByThread[threadId].orEmpty().isNotEmpty(),
+        isEditing = editingMessageId != null,
+        isRunning = isRunning,
+    )
+    // A file attached, an edit begun or a run started while the mode is on switches it off.
+    LaunchedEffect(canUsePictureMode) { pictureModeOn = PictureMode.settled(pictureModeOn, canUsePictureMode) }
+    val pictureModeActive = PictureMode.settled(pictureModeOn, canUsePictureMode)
+    val pictureModelKey = ThreadImageChoices.resolve(
+        choice = if (isNew) imageModelForNewThread else imageChoicesByThread[threadId],
+        addedModelKeys = usableImageModelKeys,
+        starredDefault = starredImageModelKey,
+    )
+    val pictureModelName = imageModelChoices(settingsSnapshot.imageModels, imageLabels).firstOrNull { choice -> choice.key == pictureModelKey }?.name
     val state = ChatUiState(
         title = thread?.title.orEmpty(),
         webSearchEnabled = webSearchEnabled,
@@ -848,6 +871,11 @@ private fun ChatRoute(
         guardState = guardStateOf(settingsSnapshot.jevOptions.isOn, SecretName.OPENROUTER in application.secrets.names.collectAsState().value),
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
+        pictureMode = if (usableImageModelKeys.isEmpty()) {
+            null
+        } else {
+            PictureModeUi(isOn = pictureModeActive, canChange = canUsePictureMode, modelName = pictureModelName)
+        },
     )
     val contextWindowTokens = modelInfo?.contextWindowTokens
     ChatScreen(
@@ -857,6 +885,8 @@ private fun ChatRoute(
         onSend = {
             val text = draft
             val editedMessageId = editingMessageId
+            val sendAsPicture = pictureModeActive
+            pictureModeOn = PictureMode.afterSend()
             draft = if (editedMessageId != null) draftBeforeEdit else ""
             editingMessageId = null
             if (editedMessageId == null && draftIsSaved) {
@@ -910,13 +940,19 @@ private fun ChatRoute(
                 val inboxPaths = withContext(Dispatchers.IO) {
                     application.attachmentDrafts.moveIntoInbox(threadId, runner.threadFolder(targetThreadId))
                 }
-                runner.send(targetThreadId, AttachmentDrafts.messageWith(text, inboxPaths))
+                if (sendAsPicture) {
+                    // Picture mode never holds files (PictureMode.canBeOn), so the text is sent as typed.
+                    runner.sendAsPicture(targetThreadId, text)
+                } else {
+                    runner.send(targetThreadId, AttachmentDrafts.messageWith(text, inboxPaths))
+                }
                 if (isNew) {
                     onThreadCreated(targetThreadId)
                 }
             }
         },
         onStop = { runner.stop(threadId) },
+        onPictureModeChange = { wanted -> pictureModeOn = if (wanted) PictureMode.afterToggle(pictureModeOn, canUsePictureMode) else false },
         onCancelQueued = { queuedId -> runner.cancelQueued(threadId, queuedId) },
         onEditQueued = { queuedId ->
             val queuedText = runner.takeQueuedForEdit(threadId, queuedId)

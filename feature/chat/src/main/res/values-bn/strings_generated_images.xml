@@ -5,4 +5,8 @@
     <string name="chat_image_model_title">ছবির মডেল</string>
     <string name="chat_image_model_default">ডিফল্ট</string>
     <string name="chat_image_svg_tag">SVG</string>
+    <string name="chat_picture_mode">ছবি</string>
+    <string name="chat_picture_hint">ছবির বর্ণনা লিখুন</string>
+    <string name="chat_picture_model">মডেল: %1$s</string>
+    <string name="chat_picture_send">ছবি বানান</string>
 </resources>

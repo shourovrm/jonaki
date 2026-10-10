@@ -16,6 +16,8 @@ import androidx.core.content.ContextCompat
 import app.jonaki.ToolRegistry
 import app.jonaki.ToolServices
 import app.jonaki.core.agent.AgentLoop
+import app.jonaki.core.agent.DirectToolRun
+import app.jonaki.core.toolapi.GeneratedImages
 import app.jonaki.core.agent.ContextBreakdown
 import app.jonaki.core.agent.PromptSkill
 import app.jonaki.core.model.ImagePart
@@ -301,6 +303,28 @@ class AgentRunner(
         }
     }
 
+    /**
+     * Picture mode (the message box): saves [text] as the user's message and
+     * sends it, as typed, to the image model as one generate_image call, with
+     * no chat model turn. Pressing Send is the user's approval for this one
+     * call, so no approval card is made. Only the chat screen's send calls
+     * this; the agent, subagents and scheduled tasks never do. While the
+     * thread has a run going nothing happens (the screen disables the mode).
+     */
+    fun sendAsPicture(threadId: String, text: String) {
+        if (text.isBlank()) {
+            return
+        }
+        synchronized(runStateLock) {
+            if (threadId in running.value) {
+                return
+            }
+            startRun(threadId, runBody = { runPictureMode(threadId, text.trim()) }) {
+                saveUserMessage(threadId, text.trim())
+            }
+        }
+    }
+
     /** Like [send], for a scheduled task: false when the thread is busy, so the caller can wait and try again. */
     fun sendIfIdle(threadId: String, text: String): Boolean {
         if (text.isBlank()) {
@@ -576,14 +600,18 @@ class AgentRunner(
     }
 
     /** Call with [runStateLock] held and the thread idle. */
-    private fun startRun(threadId: String, beforeRun: suspend () -> Unit) {
+    private fun startRun(
+        threadId: String,
+        runBody: suspend () -> Unit = { runUntilNothingIsQueued(threadId) },
+        beforeRun: suspend () -> Unit,
+    ) {
         running.update { current -> current + threadId }
         stepCounts.update { current -> current - threadId }
         AgentService.start(context)
         val job = scope.launch {
             try {
                 beforeRun()
-                runUntilNothingIsQueued(threadId)
+                runBody()
             } finally {
                 finishRun(threadId)
             }
@@ -615,6 +643,78 @@ class AgentRunner(
             for (text in lateMessages) {
                 saveUserMessage(threadId, text)
             }
+        }
+    }
+
+    /**
+     * The run of a send in picture mode, after the user's message is saved: one
+     * generate_image call with the user's own text as the prompt. The chat
+     * model is not asked, no approval card is made (Send was the approval) and
+     * the Jev guard is not used, because the text is the user's own and not
+     * outside content. The result is saved like an agent-made call's.
+     */
+    private suspend fun runPictureMode(threadId: String, text: String) {
+        val thread = database.threadDao().find(threadId) ?: return
+        val project = projectOf(thread)
+        // allToolServicesFor, not toolServicesFor: a thread on a local model still gets the image tool here, as no chat model is involved.
+        val tool = ToolRegistry.tools(allToolServicesFor(thread, modelAcceptsImages = false, project))
+            .firstOrNull { candidate -> candidate.name == GeneratedImages.TOOL_NAME }
+        if (tool == null) {
+            // The image key or model was removed after the screen showed the mode.
+            saveError(threadId, context.getString(R.string.error_no_model))
+            return
+        }
+        val session = RunSession(
+            threadId = threadId,
+            database = database,
+            clock = System::currentTimeMillis,
+            elapsedClock = SystemClock::elapsedRealtime,
+            onApprovalNeeded = ::addApproval,
+            onApprovalWithdrawn = ::withdrawApproval,
+            onStepStarted = {
+                stepCounts.update { current -> current + (threadId to (current[threadId] ?: 0) + 1) }
+            },
+            // Saved on the assistant row that holds the call; with no usage on it, no cost counts to this model.
+            modelKey = modelKeyFor(thread) ?: defaultImageModelFor(threadId).orEmpty(),
+            priceOf = { null },
+        )
+        val toolContext = ToolContext(
+            ThreadFolders.create(context, threadId),
+            httpClient,
+            skillLibrary.folder,
+            projectFolder = project?.folder,
+        )
+        val outcome = DirectToolRun(session).run(tool, PictureModeCall.arguments(text), toolContext, callId = UUID.randomUUID().toString())
+        // No memory extraction: a picture prompt holds no facts, and the extractor reads only the
+        // text rows. No compaction either: no chat request was made, so the context did not grow.
+        if (threadId in leftWhileRunning.value) {
+            // The user left the thread during the run; extraction was promised for the run's end.
+            extractMemoryAfterRun(threadId)
+        }
+        if (outcome is RunOutcome.Completed) {
+            launchNamingFromPromptAlone(threadId)
+        }
+    }
+
+    /**
+     * Like [launchNaming], for a thread whose first turn made a picture and so
+     * has no assistant text: the name is written from the user's message alone.
+     */
+    private fun launchNamingFromPromptAlone(threadId: String) {
+        val provisionalTitle = provisionalTitles.remove(threadId) ?: return
+        scope.launch {
+            val thread = database.threadDao().find(threadId) ?: return@launch
+            if (thread.incognito) {
+                return@launch
+            }
+            val firstUserMessage = ThreadNamer.firstUserMessage(database.messageDao().listThread(threadId)) ?: return@launch
+            threadNamer.nameAfterFirstAnswer(
+                threadId = threadId,
+                threadModelKey = modelKeyFor(thread),
+                provisionalTitle = provisionalTitle,
+                firstUserMessage = firstUserMessage,
+                firstAnswer = PICTURE_MADE_NOTE,
+            )
         }
     }
 
@@ -1216,6 +1316,9 @@ class AgentRunner(
 
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
+
+        /** Stands in for the assistant's answer when the naming model reads a thread whose first turn made a picture. */
+        const val PICTURE_MADE_NOTE = "(A picture was made from this message.)"
 
         /** The thread id of tools built only for their prompt text; it matches no thread. */
         const val NO_THREAD = ""
