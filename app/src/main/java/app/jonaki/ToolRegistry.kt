@@ -2,6 +2,7 @@ package app.jonaki
 
 import app.jonaki.core.runtimeapi.CodeRuntime
 import app.jonaki.core.searchapi.SearchBackend
+import app.jonaki.core.toolapi.ImageGenerator
 import app.jonaki.core.toolapi.Tool
 import app.jonaki.core.toolapi.SubagentLauncher
 import app.jonaki.settings.ToolGroup
@@ -12,6 +13,7 @@ import app.jonaki.tools.editfile.EditFileTool
 import app.jonaki.tools.exportpdf.ExportPdfTool
 import app.jonaki.tools.exportpdf.PdfRenderer
 import app.jonaki.tools.findfiles.FindFilesTool
+import app.jonaki.tools.generateimage.GenerateImageTool
 import app.jonaki.tools.mcp.McpServer
 import app.jonaki.tools.mcp.McpTool
 import app.jonaki.tools.memory.MemoryStore
@@ -77,6 +79,11 @@ data class ToolServices(
     val chatSearchStore: ChatSearchStore? = null,
     /** Where propose_skill saves a proposal; null leaves the tool out (off in Settings, incognito, subagents' lists). */
     val skillProposals: SkillProposalSink? = null,
+    /** Makes pictures with the models below; null leaves generate_image out (no OpenRouter key or no image model added). */
+    val imageGenerator: ImageGenerator? = null,
+    /** The image models the user added, and the starred one. */
+    val imageModelIds: List<String> = emptyList(),
+    val defaultImageModelId: String? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -114,6 +121,9 @@ object ToolRegistry {
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)
+        }
+        if (services.imageGenerator != null && services.imageModelIds.isNotEmpty()) {
+            tools += GenerateImageTool(services.imageGenerator, services.imageModelIds, services.defaultImageModelId)
         }
         if (services.pdfRenderer != null) {
             tools += ExportPdfTool(services.pdfRenderer)

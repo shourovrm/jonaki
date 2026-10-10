@@ -73,4 +73,13 @@ class StepDetailTest {
         assertEquals("2 lines", unknownLanguage.target)
         assertEquals(null, StepDetail.of("run_code", """{"language":"python"}""", englishStepWords).target)
     }
+
+    @Test
+    fun generateImageNamesTheModelAndThePrompt() {
+        val named = StepDetail.of("generate_image", """{"prompt":"A blue door","model":"openai/gpt-image-1-mini"}""", englishStepWords)
+        assertEquals("openai/gpt-image-1-mini · A blue door", named.target)
+
+        val starred = englishStepWords.let { words -> StepDetail.of("generate_image", """{"prompt":"A blue door"}""", words) }
+        assertEquals("A blue door", starred.target)
+    }
 }

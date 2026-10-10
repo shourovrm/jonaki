@@ -117,6 +117,10 @@ fun ChatScreen(
     onOpenSkills: () -> Unit = {},
     /** An artifact card was tapped: the app opens the viewer for that path. */
     onOpenArtifact: (path: String) -> Unit = {},
+    /** Save under a generated image: the app copies the file to Downloads. */
+    onSaveImage: (path: String) -> Unit = {},
+    /** Share under a generated image: the app opens the share sheet. */
+    onShareImage: (path: String) -> Unit = {},
     /** A message to show first instead of the end, when opened from a memory fact's source. */
     focusMessageId: String? = null,
     /** Files in the + sheet: the app opens the system file picker. */
@@ -249,6 +253,8 @@ fun ChatScreen(
                         onRetry = onRetry,
                         focusMessageId = focusMessageId,
                         onOpenArtifact = onOpenArtifact,
+                        onSaveImage = onSaveImage,
+                        onShareImage = onShareImage,
                         onOpenStep = onOpenStep,
                         // Editing while the agent works would change the history under the run.
                         onEditMessage = if (state.isRunning) null else onEditMessage,
@@ -420,6 +426,8 @@ private fun MessageList(
     onRetry: (String) -> Unit,
     focusMessageId: String?,
     onOpenArtifact: (path: String) -> Unit,
+    onSaveImage: (path: String) -> Unit,
+    onShareImage: (path: String) -> Unit,
     onOpenStep: (stepId: String) -> Unit,
     onEditMessage: ((messageId: String, text: String) -> Unit)?,
     onPythonCard: (ChatItem.PythonInstall, PythonCardAction) -> Unit,
@@ -485,6 +493,7 @@ private fun MessageList(
                 is ChatItem.Error -> ErrorRow(item, onRetry)
                 is ChatItem.Note -> NoteRow(item)
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
+                is ChatItem.GeneratedImage -> GeneratedImageCard(item.path, onSaveImage, onShareImage)
                 is ChatItem.PythonInstall -> PythonInstallCard(item, canTryAgain, onPythonCard)
                 is ChatItem.SummaryDivider -> SummaryDividerRow(item)
             }

@@ -1,0 +1,75 @@
+package app.jonaki.core.toolapi
+
+/**
+ * What the generate_image tool needs to make a picture. The tool module sees
+ * only this interface, like web_search sees its backends; the OpenRouter
+ * implementation lives in providers/openai-compatible and the app joins the
+ * two. It sits in this module because the tool may depend on nothing else.
+ */
+fun interface ImageGenerator {
+    suspend fun generate(request: ImageRequest): ImageOutcome
+}
+
+data class ImageRequest(
+    /** The service's id of the image model, for example "black-forest-labs/flux.2-klein-4b". */
+    val modelId: String,
+    val prompt: String,
+    /** For example "16:9"; null leaves the choice to the model. */
+    val aspectRatio: String? = null,
+)
+
+sealed interface ImageOutcome {
+    /** [bytes] is the picture file; [costUsd] is what the service charged, null when it did not say. */
+    class Success(
+        val bytes: ByteArray,
+        val mediaType: String,
+        val costUsd: Double?,
+        /** The service's token counts, kept for the hidden cost row; 0 when it gave none. */
+        val inputTokens: Int = 0,
+        val outputTokens: Int = 0,
+    ) : ImageOutcome
+
+    /** [message] is the service's own text when there is one. */
+    data class Failed(val kind: ImageFailure, val message: String) : ImageOutcome
+}
+
+/** The cases where the model or the user can do something different next. */
+enum class ImageFailure {
+    /** No OpenRouter key is saved, or the service refused the saved one. */
+    KEY_PROBLEM,
+
+    /** The account has no credit left. */
+    OUT_OF_CREDIT,
+
+    /** The service refused the prompt or the picture for its content rules. */
+    BLOCKED,
+
+    TIMED_OUT,
+
+    /** The answer held no picture. */
+    NO_IMAGE,
+
+    OTHER,
+}
+
+/**
+ * The plain-text contract between generate_image and the chat (like
+ * [ViewedImages]): the result starts with a fixed line naming the file, and
+ * the chat shows that file as a picture under the step.
+ */
+object GeneratedImages {
+    const val TOOL_NAME = "generate_image"
+
+    private const val RESULT_PREFIX = "Image saved: "
+
+    fun firstLine(path: String): String = RESULT_PREFIX + path
+
+    /** The saved file's path in a generate_image result; null for an error or any other text. */
+    fun pathIn(resultText: String): String? {
+        val firstLine = resultText.lineSequence().firstOrNull() ?: return null
+        if (!firstLine.startsWith(RESULT_PREFIX)) {
+            return null
+        }
+        return firstLine.removePrefix(RESULT_PREFIX).trim().ifEmpty { null }
+    }
+}

@@ -89,6 +89,14 @@ class JonakiApplication : Application() {
     lateinit var memoryExport: MemoryExport
         private set
 
+    /** The one client every call shares; also used for OpenRouter's public image model list. */
+    lateinit var httpClient: OkHttpClient
+        private set
+
+    /** Downloads and the share sheet, for the chat's Save and Share under a generated image. */
+    lateinit var fileDestinations: AndroidFileDestinations
+        private set
+
     /** Screens a fact saved after outside content, for the memory tool and for extraction. */
     lateinit var factScreen: FactScreen
         private set
@@ -166,7 +174,7 @@ class JonakiApplication : Application() {
         settings = AppSettings(this, ChatProviders::defaultModel)
         secrets = SecretStore(this)
         // One client for every call, so connections and threads are shared.
-        val httpClient = OkHttpClient.Builder()
+        httpClient = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             // Streaming replies can pause while a model thinks; the agent loop's own limits apply on top.
             .readTimeout(120, TimeUnit.SECONDS)
@@ -201,7 +209,7 @@ class JonakiApplication : Application() {
         reminders = Reminders(this, ReminderBook(File(filesDir, "reminders.json"))) { settings.snapshot.value.reminderPolicy }
         scheduledTasks = ScheduledTasks(this, ScheduleBook(File(filesDir, "scheduled-tasks.json")))
         runtimePermissions = RuntimePermissions(this, visibleActivity, settings::recordPermissionRefusal)
-        val fileDestinations = AndroidFileDestinations(this, visibleActivity, linkedFolder)
+        fileDestinations = AndroidFileDestinations(this, visibleActivity, linkedFolder)
         memoryExport = MemoryExport(database, fileDestinations, File(cacheDir, "memory-export"))
         val threadCompactor = ThreadCompactor(database, backgroundModel, catalog, clock = System::currentTimeMillis)
         runner = AgentRunner(

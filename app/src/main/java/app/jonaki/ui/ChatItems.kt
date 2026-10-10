@@ -3,6 +3,7 @@ package app.jonaki.ui
 import app.jonaki.core.toolapi.SubagentLimitSettings
 import app.jonaki.feature.chat.SubagentCostWarning
 import app.jonaki.core.model.Role
+import app.jonaki.core.toolapi.GeneratedImages
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.storage.CompactionEntity
 import app.jonaki.core.storage.HistoryMapper
@@ -220,6 +221,7 @@ object ChatItems {
         // A writer subagent's artifacts open from the chat like the thread agent's own.
         val stepsOfTurn = turnSteps + turnSubagents.flatMap { subagent -> subagentParts.stepsOf(subagent) }
         items += artifactsShown(stepsOfTurn, turnId)
+        items += generatedImagesShown(turnSteps, turnId)
         for (row in turn) {
             when (row.role) {
                 Role.ASSISTANT.name -> items += assistantItems(row, isActiveTurn)
@@ -271,6 +273,13 @@ object ChatItems {
             .distinct()
         return paths.map { path -> ChatItem.Artifact("artifact-$turnId-$path", path) }
     }
+
+    /** One picture per finished generate_image call; the result's first line names the file. */
+    private fun generatedImagesShown(turnSteps: List<StepEntity>, turnId: String): List<ChatItem> =
+        turnSteps
+            .filter { step -> step.toolName == GeneratedImages.TOOL_NAME && step.status == "DONE" }
+            .mapNotNull { step -> GeneratedImages.pathIn(step.resultText.orEmpty())?.let { path -> step.toolCallId to path } }
+            .map { (toolCallId, path) -> ChatItem.GeneratedImage("image-$turnId-$toolCallId", path) }
 
     private fun artifactPathOf(argumentsJson: String): String? {
         val arguments = runCatching { Json.parseToJsonElement(argumentsJson) as? JsonObject }.getOrNull() ?: return null

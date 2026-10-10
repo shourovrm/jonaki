@@ -86,6 +86,8 @@ data class SettingsSnapshot(
     val reminderPolicy: ReminderPolicy = ReminderPolicy(),
     /** "Always allow" rules of Settings > Approvals; each names one action of one tool and applies in every thread. */
     val approvalRules: List<ApprovalRule> = emptyList(),
+    /** The OpenRouter image models generate_image may use, and the starred one. */
+    val imageModels: ImageModels = ImageModels(),
 ) {
     val enabledToolGroups: Set<ToolGroup> get() = ToolGroups.enabled(disabledToolGroups)
 }
@@ -167,6 +169,10 @@ class AppSettings(
             holdFactsAfterOutsideContent = preferences.getBoolean(HOLD_FACTS_AFTER_OUTSIDE_CONTENT, true),
             zoneInMessages = enumOrDefault(preferences.getString(ZONE_IN_MESSAGES, null), ZoneInMessages.NONE),
             approvalRules = ApprovalRules.fromText(preferences.getString(APPROVAL_RULES, "").orEmpty()),
+            imageModels = ImageModels.fromText(
+                preferences.getString(IMAGE_MODELS, "").orEmpty(),
+                preferences.getString(IMAGE_DEFAULT_MODEL, null),
+            ),
         )
     }
 
@@ -284,6 +290,8 @@ class AppSettings(
         editor.putInt(REMINDER_INTERVAL_MINUTES, snapshot.reminderPolicy.intervalMinutes)
         editor.putInt(REMINDER_MAX_REPEATS, snapshot.reminderPolicy.maxRepeats)
         editor.putString(APPROVAL_RULES, ApprovalRules.toText(snapshot.approvalRules))
+        editor.putString(IMAGE_MODELS, ImageModels.toText(snapshot.imageModels.modelIds))
+        editor.putString(IMAGE_DEFAULT_MODEL, snapshot.imageModels.defaultModelId)
         editor.apply()
     }
 
@@ -342,5 +350,7 @@ class AppSettings(
         const val HOLD_FACTS_AFTER_OUTSIDE_CONTENT = "hold_facts_after_outside_content"
         const val ZONE_IN_MESSAGES = "zone_in_messages"
         const val APPROVAL_RULES = "approval_rules"
+        const val IMAGE_MODELS = "image_models"
+        const val IMAGE_DEFAULT_MODEL = "image_default_model"
     }
 }

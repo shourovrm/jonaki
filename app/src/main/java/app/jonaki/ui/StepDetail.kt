@@ -32,6 +32,8 @@ data class StepDetail(
         val listLinkedFolder: String,
         val fromLinkedFolder: String,
         val lineCount: (lines: Int) -> String,
+        /** The starred image model, named on generate_image's card when the call names none; null while none is added. */
+        val defaultImageModel: String? = null,
     )
 
     companion object {
@@ -50,6 +52,7 @@ data class StepDetail(
                 "request_tool" -> StepDetail(query = null, target = arguments.text("name"))
                 "ask_parent" -> StepDetail(query = arguments.text("question"), target = null)
                 "run_code" -> StepDetail(query = null, target = runCodeTarget(arguments, words))
+                "generate_image" -> StepDetail(query = null, target = generateImageTarget(arguments, words))
                 else -> StepDetail(query = null, target = arguments.text("path"))
             }
         }
@@ -113,6 +116,15 @@ data class StepDetail(
             val target = if (server == null) tool else "$server: ${tool.orEmpty()}"
             return StepDetail(query = null, target = target)
         }
+
+        /** The card names the model that will be paid and the prompt it gets: "black-forest-labs/flux.2-klein-4b · A blue door". */
+        private fun generateImageTarget(arguments: JsonObject, words: Words): String? {
+            val prompt = arguments.text("prompt")?.trim()?.take(MAX_PROMPT_CHARACTERS_SHOWN)
+            val model = arguments.text("model")?.trim()?.ifEmpty { null } ?: words.defaultImageModel
+            return listOfNotNull(model, prompt).joinToString(" · ").ifEmpty { null }
+        }
+
+        private const val MAX_PROMPT_CHARACTERS_SHOWN = 300
 
         /** "Python · 12 lines": the code itself is too long for one line, and its sheet shows it (D-090). */
         private fun runCodeTarget(arguments: JsonObject, words: Words): String? {

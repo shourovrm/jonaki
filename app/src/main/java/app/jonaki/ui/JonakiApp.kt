@@ -81,7 +81,14 @@ import app.jonaki.feature.chat.UsageUi
 import app.jonaki.core.agent.ZoneInMessages
 import app.jonaki.feature.settings.ZoneChoice
 import app.jonaki.feature.settings.AccountLineUi
+import app.jonaki.feature.settings.AddImageModelsScreen
 import app.jonaki.feature.settings.AddModelsScreen
+import app.jonaki.feature.settings.ImageGenerationUi
+import app.jonaki.feature.settings.ImageModelRowUi
+import app.jonaki.feature.settings.ImagePickerState
+import app.jonaki.core.modelcatalog.ImageModelListResult
+import app.jonaki.core.modelcatalog.OpenRouterImageModels
+import app.jonaki.settings.ImageModels
 import app.jonaki.feature.settings.AddModelsUiState
 import app.jonaki.feature.settings.AddableModelUi
 import app.jonaki.feature.settings.AddableServiceUi
@@ -145,6 +152,7 @@ private const val ROUTE_TOOLS = "tools"
 private const val ROUTE_PYTHON = "python"
 private const val ROUTE_CHAT_PREFIX = "chat:"
 private const val ROUTE_ADD_MODELS_PREFIX = "add-models:"
+private const val ROUTE_ADD_IMAGE_MODELS = "add-image-models"
 private const val ROUTE_MEMORY = "memory"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
 private const val ROUTE_MEMORY_PROJECT_PREFIX = "memory-project:"
@@ -241,6 +249,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onBack = goBack,
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
+                    onAddImageModels = { route = ROUTE_ADD_IMAGE_MODELS },
                     onOpenMemory = { route = ROUTE_MEMORY },
                     onOpenSkills = { route = ROUTE_SKILLS },
                     onOpenTools = { route = ROUTE_TOOLS },
@@ -351,6 +360,11 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onShowStatusStripChange = { show -> application.settings.update { it.copy(showStatusStrip = show) } },
                     onBack = { route = backRoute },
                 )
+            }
+            route == ROUTE_ADD_IMAGE_MODELS -> {
+                val backRoute = settingsPageRoute(SettingsPage.MODELS)
+                BackHandler { route = backRoute }
+                AddImageModelsRoute(application, onFinished = { route = backRoute })
             }
             route.startsWith(ROUTE_ADD_MODELS_PREFIX) -> {
                 val backRoute = settingsPageRoute(SettingsPage.MODELS)
@@ -874,6 +888,19 @@ private fun ChatRoute(
         onOpenStep = { stepId -> openCodeStepId = stepId },
         onCloseCodeRun = { openCodeStepId = null },
         onOpenFile = { path -> openSavedFile(context, runner.threadFolder(threadId), path, onOpenArtifact) },
+        onSaveImage = { path ->
+            scope.launch {
+                val result = application.fileDestinations.saveToDownloads(File(runner.threadFolder(threadId), path))
+                val message = when (result) {
+                    is DestinationResult.Done -> context.getString(R.string.memory_export_done, result.location)
+                    else -> context.getString(R.string.memory_export_failed)
+                }
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        },
+        onShareImage = { path ->
+            scope.launch { application.fileDestinations.share(File(runner.threadFolder(threadId), path)) }
+        },
         onRemoveAttachment = { attachmentId ->
             scope.launch(Dispatchers.IO) { application.attachmentDrafts.remove(threadId, attachmentId) }
         },
@@ -926,6 +953,8 @@ private fun previewPathOf(file: StagedFile): String? = file.file.path.takeIf { V
 @Composable
 private fun stepDetailWords(): StepDetail.Words {
     val resources = LocalContext.current.resources
+    val settings = (LocalContext.current.applicationContext as JonakiApplication).settings
+    val imageModels by settings.snapshot.collectAsState()
     return StepDetail.Words(
         readCalendar = stringResource(R.string.step_read_calendar),
         addToCalendar = stringResource(R.string.step_add_to_calendar),
@@ -944,6 +973,7 @@ private fun stepDetailWords(): StepDetail.Words {
         listLinkedFolder = stringResource(R.string.step_list_linked_folder),
         fromLinkedFolder = stringResource(R.string.step_from_linked_folder),
         lineCount = { lines -> resources.getQuantityString(app.jonaki.feature.chat.R.plurals.chat_code_lines, lines, lines) },
+        defaultImageModel = imageModels.imageModels.defaultModelId,
     )
 }
 
@@ -1019,6 +1049,7 @@ private fun SettingsRoute(
     onBack: () -> Unit,
     onOpenStatusIcons: () -> Unit,
     onAddModels: (String) -> Unit,
+    onAddImageModels: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenCustomInstructions: () -> Unit,
@@ -1092,6 +1123,7 @@ private fun SettingsRoute(
         balance = BalanceText.of(balances[secret], balanceWords),
     )
 
+    val imageModelRows = imageModelRowsFor(application, snapshot.imageModels)
     val state = SettingsUiState(
         chatServices = serviceCards(snapshot, application, ::slotFor, ::accountFor),
         addableServices = ChatService.entries
@@ -1164,6 +1196,10 @@ private fun SettingsRoute(
         factCount = globalFacts.size,
         skillCount = skillCount,
         localModels = localModelsSummary,
+        imageGeneration = ImageGenerationUi(
+            hasOpenRouterKey = SecretName.OPENROUTER in savedKeys,
+            models = imageModelRows,
+        ),
     )
     val actions = SettingsActions(
         onBack = onBack,
@@ -1246,6 +1282,9 @@ private fun SettingsRoute(
             settings.update { current -> current.copy(routing = current.routing.copy(openRouter = routingOf(routing))) }
         },
         onAddModels = onAddModels,
+        onAddImageModels = onAddImageModels,
+        onImageModelSetDefault = { modelId -> settings.update { current -> current.copy(imageModels = current.imageModels.setDefault(modelId)) } },
+        onImageModelRemove = { modelId -> settings.update { current -> current.copy(imageModels = current.imageModels.remove(modelId)) } },
         onModelSetDefault = { modelKey -> settings.updateChatModels { models -> models.setDefault(modelKey) } },
         onModelRoutingChange = { modelKey, routing ->
             settings.update { current -> current.copy(routing = current.routing.withOverride(modelKey, routing?.let(::routingOf))) }
@@ -1257,7 +1296,7 @@ private fun SettingsRoute(
                 current.copy(routing = current.routing.withPinned(modelKey, null).withOverride(modelKey, null))
             }
         },
-        onModelProvidersLoad = { modelKey -> loadModelProviders(modelKey) },
+        onModelProvidersLoad = { modelKey -> loadModelProviders(application.httpClient, modelKey) },
         onModelProvidersChange = { modelKey, tags, allowFallbacks ->
             settings.update { current ->
                 current.copy(routing = current.routing.withPinned(modelKey, PinnedProviders(tags, allowFallbacks)))
@@ -1443,6 +1482,62 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
     )
 }
 
+@Composable
+private fun AddImageModelsRoute(application: JonakiApplication, onFinished: () -> Unit) {
+    val snapshot by application.settings.snapshot.collectAsState()
+    val alreadyAdded = snapshot.imageModels.modelIds.toSet()
+    // Bumped by "Try again"; each value loads the list once more.
+    var attempt by remember { mutableIntStateOf(0) }
+    val listResult by produceState<ImageModelListResult?>(null, attempt) {
+        value = null
+        value = OpenRouterImageModels.fetchList(application.httpClient)
+    }
+    val pickerState = when (val result = listResult) {
+        null -> ImagePickerState.Loading
+        is ImageModelListResult.Failed -> ImagePickerState.Failed(result.reason)
+        is ImageModelListResult.Loaded -> ImagePickerState.Loaded(
+            result.models.map { model -> AddableModelUi(id = model.id, name = model.name, isAdded = model.id in alreadyAdded) },
+        )
+    }
+    AddImageModelsScreen(
+        state = pickerState,
+        onClose = onFinished,
+        onRetry = { attempt += 1 },
+        onDone = { modelIds ->
+            application.settings.update { current ->
+                current.copy(imageModels = modelIds.fold(current.imageModels) { updated, modelId -> updated.add(modelId) })
+            }
+            onFinished()
+        },
+    )
+}
+
+/**
+ * The added image models as rows. The names come from one free request for
+ * the model list and each price from one free request per model; until they
+ * arrive, or when they fail, the row shows the id and no price.
+ */
+@Composable
+private fun imageModelRowsFor(application: JonakiApplication, imageModels: ImageModels): List<ImageModelRowUi> {
+    val ids = imageModels.modelIds
+    val details by produceState(emptyMap<String, Pair<String, String?>>(), ids) {
+        if (ids.isEmpty()) {
+            return@produceState
+        }
+        val names = (OpenRouterImageModels.fetchList(application.httpClient) as? ImageModelListResult.Loaded)
+            ?.models?.associate { model -> model.id to model.name }.orEmpty()
+        value = ids.associateWith { id -> (names[id] ?: id) to null }
+        value = ids.associateWith { id ->
+            val price = OpenRouterImageModels.fetchPrice(application.httpClient, id)
+            (names[id] ?: id) to price?.describe()
+        }
+    }
+    return ids.map { id ->
+        val (name, price) = details[id] ?: (id to null)
+        ImageModelRowUi(id = id, name = name, priceText = price, isDefault = id == imageModels.defaultModelId)
+    }
+}
+
 /**
  * Asks the service's GET /models when it has one. A service that needs a
  * key is asked only once one is saved; Ollama Cloud lists its models to anyone.
@@ -1489,11 +1584,9 @@ private fun displayNameOf(service: SearchService): String = when (service) {
 }
 
 /** The providers of an OpenRouter model for the Providers sheet, cheapest first. */
-private val providerListClient = OkHttpClient()
-
-private suspend fun loadModelProviders(modelKey: String): Result<List<ProviderOptionUi>> =
+private suspend fun loadModelProviders(httpClient: OkHttpClient, modelKey: String): Result<List<ProviderOptionUi>> =
     try {
-        val endpoints = OpenRouterEndpoints.fetch(providerListClient, ModelKey.modelOf(modelKey))
+        val endpoints = OpenRouterEndpoints.fetch(httpClient, ModelKey.modelOf(modelKey))
         Result.success(
             endpoints.map { endpoint ->
                 ProviderOptionUi(

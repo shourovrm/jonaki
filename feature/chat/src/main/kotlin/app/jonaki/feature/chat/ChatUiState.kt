@@ -255,6 +255,9 @@ sealed interface ChatItem {
     /** An HTML file the model showed with the artifact tool; tapping it opens the viewer (D-047). */
     data class Artifact(override val id: String, val path: String) : ChatItem
 
+    /** A picture the generate_image tool saved; shown as a thumbnail with Save and Share. [path] is relative to the thread folder. */
+    data class GeneratedImage(override val id: String, val path: String) : ChatItem
+
     /** The model's reasoning before an answer: open while it streams, folded afterwards (D-054). */
     data class Reasoning(override val id: String, val text: String, val isStreaming: Boolean) : ChatItem
 

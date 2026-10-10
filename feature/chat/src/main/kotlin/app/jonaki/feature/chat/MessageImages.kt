@@ -119,7 +119,7 @@ internal fun DraftImageChip(attachment: AttachmentUi, onRemove: (String) -> Unit
  * picture loads, and a labelled tile when the file is gone.
  */
 @Composable
-private fun ImageTile(path: String, size: Dp, onClick: () -> Unit) {
+internal fun ImageTile(path: String, size: Dp, onClick: () -> Unit) {
     val images = LocalChatImages.current
     val sidePx = with(LocalDensity.current) { size.roundToPx() }
     val tileModifier = Modifier.size(size).clip(TileShape)

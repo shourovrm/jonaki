@@ -129,7 +129,7 @@ fun AddModelsScreen(
     }
 }
 
-private fun toggled(picked: List<String>, id: String): List<String> =
+internal fun toggled(picked: List<String>, id: String): List<String> =
     if (id in picked) picked - id else picked + id
 
 @Composable
@@ -140,7 +140,7 @@ private fun footerText(pickedCount: Int, modelCount: Int): String {
 }
 
 @Composable
-private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
+internal fun SearchField(query: String, onQueryChange: (String) -> Unit) {
     TextField(
         value = query,
         onValueChange = onQueryChange,

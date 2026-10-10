@@ -108,6 +108,7 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
 private fun ModelsPage(state: SettingsUiState, actions: SettingsActions) {
     SectionLabel(stringResource(R.string.settings_section_chat))
     ChatServicesSection(state, actions)
+    ImageGenerationSection(state.imageGeneration, actions)
 }
 
 @Composable
