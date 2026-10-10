@@ -359,5 +359,9 @@ class GenerateImageToolTest {
         assertTrue(schema.contains("\"required\":[\"prompt\"]"))
         val guidelines = tool.guidelines.joinToString("\n")
         assertTrue(guidelines.contains("reference_images"))
+        assertTrue(guidelines.contains("word for word in quotation marks"))
+        assertTrue(guidelines.contains("never invent medical, legal or safety content"))
+        assertTrue(guidelines.contains("unless the user did"))
+        assertTrue(guidelines.contains("quality high"))
     }
 }

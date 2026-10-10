@@ -76,6 +76,12 @@ class GenerateImageTool(
         "To change a picture made earlier in this thread, or to build on a picture the user attached, " +
             "pass that file in reference_images (images/firefly.jpg, inbox/photo.png) instead of describing it from memory. " +
             "The prompt then says what to change and what to keep.",
+        "For an instructional picture, infographic, diagram or poster, plan the layout in the prompt: portrait or landscape, " +
+            "the panels and what each shows, for a movement or process a start figure and an end figure with labels and arrows, " +
+            "a title, and every text that must appear, word for word in quotation marks. " +
+            "Use the user's wording for instructions and facts; add cues, tips or warnings only when asked or when the content is left to you, " +
+            "and never invent medical, legal or safety content. " +
+            "Do not ask for a minimal or simple style unless the user did. With much small text, use quality high.",
         "The picture is saved in images/ and the user sees it in the chat; do not paste its path as a link. " +
             "If a picture was blocked or failed, tell the user before trying again.",
     )
