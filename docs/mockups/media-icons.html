@@ -42,8 +42,22 @@ figcaption b { font-weight: 620; color: #171b14; }
   --sel: #2a3122; --on-sel: #dde4cf; --live: #d4f06a; --sheet: #1a1e16; --scrim: rgba(0,0,0,.55);
 }
 .phone.scale13 { --fs: 1.3; }
-.phone.h300 { height: 300px; } .phone.h560 { height: 560px; }
-.chat { flex: 1; min-height: 0; }
+.phone.h300 { height: 780px; } .phone.h560 { height: 780px; }
+.top { display: flex; align-items: center; gap: 14px; padding: 18px 16px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.top b { flex: 1; min-width: 0; font-weight: 600; font-size: calc(16px * var(--fs)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.chat { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 0 16px 12px; }
+.user { align-self: flex-end; max-width: 78%; background: var(--bubble); border-radius: 20px 20px 6px 20px; padding: 10px 14px; font-size: calc(15px * var(--fs)); line-height: 1.4; }
+.steps { border: 1px solid var(--line); background: var(--card); border-radius: 18px; padding: 10px 14px; font-size: calc(13px * var(--fs)); color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.steps span { font-family: "Geist Mono", monospace; }
+.steps svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.made { display: block; border-radius: 16px; object-fit: cover; background: var(--field); }
+.made.square { width: 190px; height: 190px; }
+.made.wide { width: 250px; height: 141px; }
+.clip { position: relative; width: 250px; }
+.clip::after { content: ""; position: absolute; left: 50%; top: 50%; margin: -9px 0 0 -6px; border-left: 16px solid #fff; border-top: 10px solid transparent; border-bottom: 10px solid transparent; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
+.file { font-size: calc(12px * var(--fs)); color: var(--muted); margin-top: -4px; }
+.acts { display: flex; gap: 22px; color: var(--accent); font-weight: 500; font-size: calc(14px * var(--fs)); padding: 2px 8px 4px; }
 
 /* the status line */
 .bar { display: flex; gap: 6px; padding: 0 12px; align-items: center; }
@@ -78,7 +92,7 @@ figcaption b { font-weight: 620; color: #171b14; }
 .box { flex: 1; min-width: 0; height: 48px; border-radius: 24px; background: var(--field); display: flex; align-items: center; padding: 0 18px; font-size: calc(15px * var(--fs)); color: var(--muted); white-space: nowrap; overflow: hidden; }
 
 /* menu and sheet */
-.menu { position: absolute; right: 12px; bottom: 118px; width: 264px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 6px 0; box-shadow: 0 10px 28px -10px rgba(23,27,20,.45); z-index: 3; }
+.menu { position: absolute; right: 12px; bottom: 122px; width: 264px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 6px 0; box-shadow: 0 10px 28px -10px rgba(23,27,20,.45); z-index: 3; }
 .opt { width: 100%; border: 0; background: none; color: var(--ink); display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 14px; font: 400 calc(14px * var(--fs))/1.2 "Geist", sans-serif; text-align: left; cursor: pointer; }
 .opt svg { color: var(--ink-soft); }
 .opt b { font-weight: 500; flex: 1; min-width: 0; }
@@ -133,6 +147,21 @@ const ICON = {
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
 };
+const TURN = {
+  picture: ['a firefly on a green leaf at dusk, paper cut style', '6.0 s', '<img class="made square" src="assets/firefly-leaf.jpg" alt="Paper cut firefly on a green leaf">', 'a-firefly-on-a-green-leaf.webp', ''],
+  edit: ['Make the leaf in the first picture red. Use that picture as a reference.', '37 s', '<img class="made square" src="assets/firefly-red-leaf.jpg" alt="The same firefly on a red leaf">', 'firefly-red-leaf.jpg', ''],
+  vector: ['a simple firefly icon, two colours', '11 s', '<img class="made square" src="assets/firefly-icon.svg" alt="Black and yellow firefly icon">', 'a-simple-firefly-icon-two-colours.svg', ''],
+  video: ['a firefly blinking on a leaf at night, slow camera push', '39 s', '<div class="clip"><img class="made wide" src="assets/firefly-video.jpg" alt="Dark forest floor, first frame of the video"></div>', 'a-firefly-blinking-on-a-leaf.mp4 · 4 s · 2.6 MB', 'Play'],
+};
+/** The chat above the message box: each named turn is a prompt, its step card and what was made. */
+function chatHtml(turns) {
+  return turns.map(name => {
+    const [prompt, time, made, file, play] = TURN[name];
+    const actions = (play ? `<span>${play}</span>` : '') + '<span>Save</span><span>Share</span>';
+    return `<div class="user">${prompt}</div><div class="steps"><div>1 step <span>${time}</span></div><svg viewBox="0 0 24 24"><path d="M8 10l4 4 4-4"/></svg></div>${made}<div class="file">${file}</div><div class="acts">${actions}</div>`;
+  }).join('');
+}
+const TOP = '<div class="top"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><b>Dusk Firefly Paper Cut</b><svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="18" r="1"/></svg></div>';
 const DETAILS = {
   picture: ['Recraft V4.1 Flash · Standard · 1:1', '$0.007'],
   video: ['Grok Imagine Video 1.5 Lite · 4 s · 720p', 'about $0.12'],
@@ -156,8 +185,8 @@ function detailsLine(kind) {
 function compose(kind) {
   return `<div class="compose"><div class="round plus">${ICON.plus}</div><div class="box">${kind ? HINT[kind] : 'Message'}</div><div class="round send">${ICON.up}</div></div>`;
 }
-function frame(cls, mediaControl, kind, extra, label, caption) {
-  const body = `<div class="chat"></div><div class="bar">${statusStart()}${mediaControl}${statusEnd()}</div>${detailsLine(kind)}${compose(kind)}${extra || ''}`;
+function frame(cls, mediaControl, kind, extra, label, caption, turns) {
+  const body = `${TOP}<div class="chat">${chatHtml(turns || ['picture', 'video'])}</div><div class="bar">${statusStart()}${mediaControl}${statusEnd()}</div>${detailsLine(kind)}${compose(kind)}${extra || ''}`;
   return `<figure><span class="size">${label}</span><div class="phone ${cls}">${body}</div><figcaption>${caption}</figcaption></figure>`;
 }
 const menu = `<div class="menu">
@@ -174,15 +203,15 @@ const sheet = `<div class="scrim"></div><div class="sheet"><div class="grab"></d
   <div class="total"><span>Next video</span><code>about $0.12</code></div></div>`;
 
 document.getElementById('v1').innerHTML = [
-  frame('h300 tight', trio(null), null, '', '411 dp', '<b>Nothing switched on.</b> The media row is gone, but so is the model's name: the row has room for its dot only, and the context chip had to drop "/1M".'),
+  frame('h300 tight', trio(null), null, '', '411 dp', '<b>Nothing switched on.</b> The media row is gone, but so is the model\'s name: the row has room for its dot only, and the context chip had to drop "/1M".'),
   frame('h300 tight', trio('video'), 'video', '', '411 dp', '<b>Video on.</b> The details line appears only while a kind is on. A tap on it opens the sheet.'),
   frame('h300 w360 tight', trio('video'), 'video', '', '360 dp', '<b>Narrow phone.</b> The approvals button is cut off at the right edge.'),
   frame('h300 w360 scale13 tight', trio('video'), 'video', '', '360 dp, font scale 1.3', '<b>Narrow phone, large font.</b> Web search is half off the screen and approvals is gone.'),
 ].join('');
 
 document.getElementById('v2').innerHTML = [
-  frame('h300', single(null), null, '', '411 dp', '<b>Nothing switched on.</b> One button stands for all three kinds.'),
-  frame('h300', single(null), null, menu, '411 dp', '<b>The menu.</b> Each kind names the model that will run and what a send costs. A kind with no model shows "Add model" in place of the price.'),
+  frame('h300', single(null), null, '', '411 dp', '<b>Nothing switched on.</b> One button stands for all three kinds.', ['picture', 'edit']),
+  frame('h300', single(null), null, menu, '411 dp', '<b>The menu.</b> Each kind names the model that will run and what a send costs. A kind with no model shows "Add model" in place of the price.', ['edit', 'vector']),
   frame('h300', single('video'), 'video', '', '411 dp', '<b>Video on.</b> The button takes the kind\'s icon and the accent colour. A tap on it switches the mode off.'),
   frame('h300 w360', single('video'), 'video', '', '360 dp', '<b>Narrow phone.</b> All six controls fit; the model shows as its dot.'),
   frame('h300 w360 scale13 tight', single('video'), 'video', '', '360 dp, font scale 1.3', '<b>Narrow phone, large font.</b> The context chip drops "/1M" and the details line wraps to two lines.'),
