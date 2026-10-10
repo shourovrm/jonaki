@@ -2363,3 +2363,46 @@ credit are fine and nothing was charged; seen with Nano Banana 2.1, whose
 only provider, Google AI Studio, was over its quota (recorded in
 testdata/openrouter/image-error-429-upstream-quota.json). Outcome: unit
 tests pass; no APK built since (user ruling); not seen on a phone.
+
+## D-169 · 2026-10-10 · Video generation through OpenRouter — proposed
+User request. New tool module tools/generate-video (generate_video). It
+starts a job with POST /api/v1/videos, polls every 10 s for a minute and
+every 20 s after, and streams the finished file into the thread's videos/
+folder. A job goes on, and is charged, at the service when the tool stops,
+so: the tool returns the job id after 7.5 of its 8 minutes with the call
+that collects it (job_id, no new charge); each started job is written to
+videos/pending-jobs.json at once, because a stopped tool cannot return
+text; a call without job_id is refused while a job younger than 60 minutes
+is pending unless new_video is true; a job_id is accepted only from that
+file. Defaults keep the price low: the shortest length of at least 4 s and
+720p, or the model's lowest resolution. Every call asks for approval, and
+the card shows model, length, resolution and a cost estimated from the
+model's per-second price. The real cost from the poll answer is saved once
+as a hidden usage row. Subagents never get it. Settings > Models has "Video
+generation" (add from /api/v1/videos/models, star one; price per second and
+lengths on each row; the list is cached for a day). The chat shows a card
+with a preview frame and Play (the phone's own player), Save and Share.
+No new dependency, permission or Room change. Outcome: unit tests pass; no
+video request was made, so the poll and download answers are from the
+documentation only; no screen seen.
+
+## D-170 · 2026-10-10 · Vector images (SVG) through OpenRouter — proposed
+User request. New tool module tools/generate-vector-image
+(generate_vector_image) beside generate_image, on the same image services.
+A model is a vector model when OpenRouter lists its output_format as
+exactly ["svg"] (six Recraft models today); the fact is stored with the
+settings when the model is added, with the id ending in "vector" as the
+fallback. generate_image gets only raster models and the vector tool only
+vector ones; the vector default is the first added vector model, and a
+thread keeps one pick of each kind. Vector models carry an "SVG" tag in
+Settings and the model sheet. Safety: the answer must be an SVG document of
+at most 2 MB; a DOCTYPE or entity is refused; it is parsed with the JDK's
+XML parser and written back without scripts, foreignObject, event
+attributes, outside links, outside CSS and elements of other namespaces;
+what cannot be made safe is not saved. The chat draws it in a WebView with
+JavaScript off, no file, content or network access, the SVG inside an img
+tag under a strict content security policy. Model choice, failure texts
+and file names moved to core/tool-api for both tools. Not confirmed: how a
+vector model returns its SVG (base64, plain text and a data URI are
+accepted), and the XML parser's behaviour on Android. Outcome: unit tests
+pass; no vector request made; no screen seen.
