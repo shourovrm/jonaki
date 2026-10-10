@@ -148,22 +148,28 @@ internal fun ReasoningBlock(reasoning: ChatItem.Reasoning) {
 
 private const val STREAMING_LINES = 6
 
+/** The small copy icon under answers and next to errors; copies [text] whole. */
+@Composable
+internal fun CopyButton(text: String) {
+    val clipboard = LocalClipboardManager.current
+    IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, modifier = Modifier.size(36.dp)) {
+        Icon(
+            JonakiIcons.ContentCopy,
+            contentDescription = stringResource(R.string.chat_copy),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
 /** Copy, and for a prompt also Edit, under a message. */
 @Composable
 internal fun MessageActions(text: String, alignEnd: Boolean, onEdit: (() -> Unit)?) {
-    val clipboard = LocalClipboardManager.current
     Row(
         horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, modifier = Modifier.size(36.dp)) {
-            Icon(
-                JonakiIcons.ContentCopy,
-                contentDescription = stringResource(R.string.chat_copy),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
-        }
+        CopyButton(text)
         if (onEdit != null) {
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(
