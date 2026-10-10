@@ -5,12 +5,16 @@ package app.jonaki.core.toolapi
  * only this interface, like web_search sees its backends; the OpenRouter
  * implementation lives in providers/openai-compatible and the app joins the
  * two. It sits in this module because the tool may depend on nothing else.
+ * There is one generator per image service; the app gives the tool a
+ * dispatcher that picks the generator by [ImageRequest.serviceKey].
  */
 fun interface ImageGenerator {
     suspend fun generate(request: ImageRequest): ImageOutcome
 }
 
 data class ImageRequest(
+    /** The image service that makes the picture, for example "openrouter" or "gemini"; the app routes by it. */
+    val serviceKey: String,
     /** The service's id of the image model, for example "black-forest-labs/flux.2-klein-4b". */
     val modelId: String,
     val prompt: String,
@@ -35,7 +39,7 @@ sealed interface ImageOutcome {
 
 /** The cases where the model or the user can do something different next. */
 enum class ImageFailure {
-    /** No OpenRouter key is saved, or the service refused the saved one. */
+    /** No key is saved for the service, or the service refused the saved one. */
     KEY_PROBLEM,
 
     /** The account has no credit left. */
