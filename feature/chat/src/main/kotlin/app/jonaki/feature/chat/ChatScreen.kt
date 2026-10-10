@@ -171,8 +171,8 @@ fun ChatScreen(
      * more than once; the app keeps the first call's time for the request log (D-132).
      */
     onAnswerDrawn: (messageId: String) -> Unit = {},
-    /** The picture chip above the field was tapped; the app decides whether the mode may change. */
-    onMediaModeChange: (isOn: Boolean) -> Unit = {},
+    /** A kind chip above the field was tapped; [selected] is the kind that is on afterwards, null for off. */
+    onMediaModeChange: (selected: MediaKind?) -> Unit = {},
     /** The app keeps the list's position while a file viewer opened from the chat is in front. */
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -243,7 +243,7 @@ fun ChatScreen(
                     Composer(
                         draft = state.draft,
                         canSend = state.draft.isNotBlank() || state.attachments.isNotEmpty(),
-                        mediaModeOn = mediaMode?.isOn == true,
+                        mediaKind = mediaMode?.selected,
                         isRunning = state.isRunning,
                         onDraftChange = onDraftChange,
                         onSend = onSend,
@@ -730,8 +730,8 @@ private fun Composer(
     onTakePhoto: () -> Unit,
     onPickPhotos: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Picture mode is on: the field asks for a description and Send shows the picture icon. */
-    mediaModeOn: Boolean = false,
+    /** The kind of media mode that is on: the field asks for its description and Send shows its icon; null when off. */
+    mediaKind: MediaKind? = null,
 ) {
     // Local to the composer, like the sheet it opens: nothing outside needs to know it is open.
     var addSheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -764,7 +764,7 @@ private fun Composer(
                     onDraftChange(changed.text)
                 },
                 placeholder = {
-                    val hint = if (mediaModeOn) R.string.chat_picture_hint else R.string.chat_message_hint
+                    val hint = mediaKind?.hintRes ?: R.string.chat_message_hint
                     Text(stringResource(hint))
                 },
                 maxLines = 6,
@@ -791,8 +791,8 @@ private fun Composer(
                 ),
                 modifier = Modifier.size(52.dp),
             ) {
-                if (mediaModeOn) {
-                    Icon(JonakiIcons.Image, contentDescription = stringResource(R.string.chat_picture_send))
+                if (mediaKind != null) {
+                    Icon(mediaKind.icon, contentDescription = stringResource(mediaKind.sendDescriptionRes))
                 } else {
                     Icon(JonakiIcons.ArrowUpward, contentDescription = stringResource(R.string.chat_send))
                 }

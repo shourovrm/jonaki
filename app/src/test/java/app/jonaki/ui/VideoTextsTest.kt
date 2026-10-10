@@ -130,4 +130,39 @@ class VideoTextsTest {
             target(text, """{"prompt":"A boat","duration_seconds":99}"""),
         )
     }
+
+    @Test
+    fun theDefaultsOfAPlainCallAreTheShortestLengthTheLowestResolutionAndAnEstimate() {
+        val text = stepText("x-ai/grok-imagine-video-1.5-lite")
+
+        val defaults = text.defaultsFor("openrouter:x-ai/grok-imagine-video-1.5-lite")
+
+        assertEquals("4 s", defaults.lengthText)
+        assertEquals("720p", defaults.resolution)
+        assertEquals("about $0.12", defaults.estimateText)
+    }
+
+    @Test
+    fun withoutFactsThereAreNoDefaultsAndNoEstimate() {
+        val defaults = VideoStepText(emptyMap(), "openrouter:a/b", stepWords).defaultsFor("openrouter:a/b")
+
+        assertNull(defaults.lengthText)
+        assertNull(defaults.resolution)
+        assertNull(defaults.estimateText)
+    }
+
+    @Test
+    fun aModelWithPerTokenPricesHasTheNotEstimatedText() {
+        val text = stepText("bytedance/seedance-2.0")
+
+        assertEquals("price per token, not estimated", text.defaultsFor("openrouter:bytedance/seedance-2.0").estimateText)
+    }
+
+    @Test
+    fun theModelIsNamedFromTheServicesListElseByItsId() {
+        val named = VideoStepText(emptyMap(), null, stepWords, mapOf("openrouter:a/b" to "Model B"))
+
+        assertEquals("Model B", named.displayNameOf("openrouter:a/b"))
+        assertEquals("c/d", named.displayNameOf("openrouter:c/d"))
+    }
 }

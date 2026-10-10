@@ -1,5 +1,6 @@
 package app.jonaki.ui
 
+import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.core.toolapi.VideoChoice
 import app.jonaki.core.toolapi.VideoChoiceResult
 import app.jonaki.core.toolapi.VideoChoices
@@ -23,6 +24,13 @@ class VideoStepWords(
     val seconds: (Int) -> String,
 )
 
+/** The length, resolution and cost estimate of a video call that sets nothing but the prompt; null where unknown. */
+class VideoCallDefaults(
+    val lengthText: String?,
+    val resolution: String?,
+    val estimateText: String?,
+)
+
 /**
  * The line the approval card and the step track show for a generate_video
  * call: the model, the length, the resolution, a price estimate and the
@@ -34,7 +42,12 @@ class VideoStepText(
     private val factsByModelKey: Map<String, VideoModelFacts>,
     private val defaultModelKey: String?,
     private val words: VideoStepWords,
+    /** The service's name of each model by key, such as "Grok Imagine Video 1.5 Lite"; empty until the list has loaded. */
+    private val displayNamesByModelKey: Map<String, String> = emptyMap(),
 ) {
+    /** The name to show for a model: the service's name when the list has loaded, else the model id. */
+    fun displayNameOf(modelKey: String): String = displayNamesByModelKey[modelKey] ?: ModelKey.modelOf(modelKey)
+
     fun target(arguments: JsonObject): String? {
         val jobId = arguments.stringArgument("job_id")?.trim()?.ifEmpty { null }
         if (jobId != null) {
@@ -52,6 +65,21 @@ class VideoStepText(
             prompt,
         )
         return parts.joinToString(" · ").ifEmpty { null }
+    }
+
+    /**
+     * What a call with only a prompt asks for from [modelKey], and its estimate,
+     * for the line above the message box in video mode (no approval card is shown
+     * there). The values are the ones [target] shows for such a call.
+     */
+    fun defaultsFor(modelKey: String?): VideoCallDefaults {
+        val facts = modelKey?.let { key -> factsByModelKey[key] }
+        val choice = chosenValues(facts, JsonObject(emptyMap()))
+        return VideoCallDefaults(
+            lengthText = choice.durationSeconds?.let(words.seconds),
+            resolution = choice.resolution,
+            estimateText = estimateText(facts, choice),
+        )
     }
 
     /** What the call asks for. A value the model refuses is shown as asked; the tool refuses it before any request. */

@@ -44,11 +44,7 @@ class VideoToolSetup(
 ) {
     /** Null leaves generate_video out: no OpenRouter key saved, or no video model added. */
     fun servicesFor(threadId: String): VideoToolServices? {
-        if (readOpenRouterKey() == null) {
-            return null
-        }
-        val videoModels = readVideoModels()
-        val modelKeys = videoModels.modelKeys.filter { key -> ModelKey.serviceOf(key) == OPENROUTER }
+        val modelKeys = usableModelKeys(hasOpenRouterKey = readOpenRouterKey() != null, videoModels = readVideoModels())
         if (modelKeys.isEmpty()) {
             return null
         }
@@ -68,6 +64,23 @@ class VideoToolSetup(
 
     companion object {
         const val OPENROUTER = "openrouter"
+
+        /**
+         * The added video models that can be used now: only OpenRouter serves
+         * video, and only with a saved key. generate_video is offered exactly
+         * when this is not empty; the chat screen asks the same question to
+         * show the Video chip.
+         */
+        fun usableModelKeys(hasOpenRouterKey: Boolean, videoModels: VideoModels): List<String> {
+            if (!hasOpenRouterKey) {
+                return emptyList()
+            }
+            return videoModels.modelKeys.filter { key -> ModelKey.serviceOf(key) == OPENROUTER }
+        }
+
+        /** The model a generate_video call without a model uses: the starred one if usable, else the first usable one. */
+        fun modelKeyOfPlainCall(usableModelKeys: List<String>, videoModels: VideoModels): String? =
+            videoModels.defaultModelKey?.takeIf { key -> key in usableModelKeys } ?: usableModelKeys.firstOrNull()
 
         fun factsByKey(models: List<VideoModelInfo>): Map<String, VideoModelFacts> =
             models.associate { model -> ModelKey.of(OPENROUTER, model.id) to factsOf(model) }

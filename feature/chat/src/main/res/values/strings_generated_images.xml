@@ -5,8 +5,14 @@
     <string name="chat_image_model_title">Image model</string>
     <string name="chat_image_model_default">Default</string>
     <string name="chat_image_svg_tag">SVG</string>
-    <string name="chat_picture_mode">Picture</string>
+    <string name="chat_media_picture">Picture</string>
+    <string name="chat_media_vector">Vector</string>
+    <string name="chat_media_video">Video</string>
+    <string name="chat_media_price_unknown">price unknown</string>
     <string name="chat_picture_hint">Describe a picture</string>
-    <string name="chat_picture_model">Model: %1$s</string>
     <string name="chat_picture_send">Make picture</string>
+    <string name="chat_vector_hint">Describe a vector image</string>
+    <string name="chat_vector_send">Make vector image</string>
+    <string name="chat_video_hint">Describe a video</string>
+    <string name="chat_video_send">Make video</string>
 </resources>

@@ -47,7 +47,7 @@ data class ChatUiState(
     val codeRun: CodeRunUi? = null,
     /** Whether the Jev guard is working, for the approval chip's sheet. */
     val guardState: GuardState = GuardState.OFF,
-    /** Picture mode in the message box (the user's text goes to the image model as it is); null hides the toggle. */
+    /** Media mode in the message box (the user's text goes to a picture, vector or video tool as it is); null hides the chips. */
     val mediaMode: MediaModeUi? = null,
 )
 

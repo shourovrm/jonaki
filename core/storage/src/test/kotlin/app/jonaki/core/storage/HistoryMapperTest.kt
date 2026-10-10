@@ -143,4 +143,24 @@ class HistoryMapperTest {
         assertEquals(listOf(Role.USER, Role.ASSISTANT, Role.TOOL, Role.USER), history.map { it.role })
         assertEquals(HistoryMapper.STOPPED_TOOL_RESULT, history[2].text)
     }
+
+    @Test
+    fun aVideoRunOfTwoCallsMapsToCallResultCallResultThenTheNextMessage() {
+        val rows = listOf(
+            row("USER", "a boat at dawn"),
+            row("ASSISTANT", "", toolCalls = listOf(ToolCall("call-1", "generate_video", """{"prompt":"a boat at dawn"}"""))),
+            row("TOOL", "The video is still being made by openrouter:a/b. Job id: j1.", toolCallId = "call-1"),
+            row("ASSISTANT", "", toolCalls = listOf(ToolCall("call-2", "generate_video", """{"job_id":"j1"}"""))),
+            row("TOOL", "Video saved: videos/boat.mp4", toolCallId = "call-2"),
+            row("USER", "make it longer"),
+        )
+
+        val history = HistoryMapper.toHistory(rows)
+
+        assertEquals(
+            listOf(Role.USER, Role.ASSISTANT, Role.TOOL, Role.ASSISTANT, Role.TOOL, Role.USER),
+            history.map { it.role },
+        )
+        assertEquals(listOf("call-1", "call-2"), history.filter { it.role == Role.TOOL }.map { it.toolCallId })
+    }
 }
