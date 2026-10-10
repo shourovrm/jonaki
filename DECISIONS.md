@@ -2406,3 +2406,21 @@ and file names moved to core/tool-api for both tools. Not confirmed: how a
 vector model returns its SVG (base64, plain text and a data URI are
 accepted), and the XML parser's behaviour on Android. Outcome: unit tests
 pass; no vector request made; no screen seen.
+
+## D-171 · 2026-10-10 · Picture mode: the user's words go straight to the image model — proposed
+User request, after a comparison with the ChatGPT app showed that the chat
+model's rewritten prompt decided the picture. A "Picture" chip above the
+message box, shown when a raster image model with a saved key is added,
+switches the next send: the typed text is the image prompt, unchanged, and
+the chat model is not called. The send is the approval, so no card is
+shown and the permission broker and the Jev guard are not asked; only the
+chat screen's send can reach this path. The thread is saved as if the
+agent had made the call (user row, assistant row with one generate_image
+call, step, tool result) through the same recording code and the same
+tool, so the card, the cost row and later turns work unchanged; no
+assistant text is added. The mode switches off after each send, and when a
+file is attached, an edit begins or a run starts; it is never saved. A new
+thread is named from the message alone. Memory extraction and compaction
+are skipped for such a turn. Not yet: attached pictures as references.
+Outcome: unit tests pass; not seen on a phone; no request made, and
+Gemini's acceptance of a history that ends in a tool result is unchecked.
