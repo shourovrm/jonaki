@@ -96,7 +96,7 @@ class FreeTierUsage(
 
     companion object {
         /** Calls a phone may make in one day; the Worker in server/jonaki-free holds the same number. */
-        const val DAILY_CALL_LIMIT = 60
+        const val DAILY_CALL_LIMIT = 20
 
         /** A store in the app's shared preferences. */
         fun inPreferences(context: Context): Store {

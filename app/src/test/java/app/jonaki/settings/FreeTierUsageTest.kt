@@ -38,8 +38,8 @@ class FreeTierUsageTest {
     }
 
     @Test
-    fun `the daily limit is sixty calls`() {
-        assertEquals(60, FreeTierUsage.DAILY_CALL_LIMIT)
+    fun `the daily limit is twenty calls`() {
+        assertEquals(20, FreeTierUsage.DAILY_CALL_LIMIT)
     }
 
     @Test
@@ -48,7 +48,7 @@ class FreeTierUsageTest {
             server.enqueue(MockResponse().setBody("{\"limit\":30,\"used\":7,\"resets_at\":\"2026-10-26T00:00:00.000Z\"}"))
             val usage = FreeTierUsage(store, clock = { 1_761_350_400_000L }, zoneId = "UTC")
             assertNull(usage.serverLimit())
-            assertEquals(60, usage.effectiveLimit())
+            assertEquals(FreeTierUsage.DAILY_CALL_LIMIT, usage.effectiveLimit())
 
             runBlocking {
                 usage.refreshLimit(OkHttpClient(), server.url("/v1").toString(), "device-1")

@@ -2761,6 +2761,17 @@ Outcome: built; unit tests and the release build pass (2026-10-25). The
 Worker is written but not deployed: the deploy call was blocked as a
 production deploy, so the user deploys it (STATUS.md has the commands).
 Card 1 seen on the phone with the three rows.
+Amended the same day (user: "I don't want any user to pay for this, and
+don't want to incur for this one too"): the account stays on the Workers
+Free plan, where Workers AI refuses calls past 10,000 neurons a day and
+bills nothing; the Worker caps the day at 250 calls over all phones
+(DAILY_TOTAL_CALL_LIMIT) and 20 per phone (DAILY_CALL_LIMIT), the model is
+@cf/qwen/qwen3-30b-a3b-fp8 (4,625 neurons per million input tokens, a
+quarter of gpt-oss-20b's), and the app sends Jonaki Free the short tool
+list it sends the on-phone model, so one call costs about 20 to 35
+neurons and 250 calls fit the free share. Past a cap the Worker answers
+"Jonaki Free is used up for today". Deployed with its own name, KV
+namespace and secrets, separate from the user's other Workers.
 
 ## D-187 · 2026-10-25 · Settings grouped by the user's question, fewer summaries — proposed
 User ruling on the mockup docs/mockups/settings-v2.html: the home page gets

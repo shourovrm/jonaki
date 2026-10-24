@@ -3,6 +3,8 @@
 interface Env {
   LIMITS: KVNamespace;
   DAILY_CALL_LIMIT: string;
+  /** Calls a day over every phone together; keeps the account inside the Free plan's daily neurons. */
+  DAILY_TOTAL_CALL_LIMIT: string;
   MODEL: string;
   ACCOUNT_ID: string;
   CF_AI_TOKEN: string;
@@ -17,6 +19,17 @@ function jsonError(status: number, message: string, type: string): Response {
 }
 
 /** Adds one call to the phone's count for today (UTC) and returns the new count. */
+/** Adds one call to today's count over every phone and returns the new count. */
+async function countTotalCall(env: Env): Promise<number> {
+  const day = new Date().toISOString().slice(0, 10);
+  const totalKey = `total:${day}`;
+  const calls = Number((await env.LIMITS.get(totalKey)) ?? "0") + 1;
+  await env.LIMITS.put(totalKey, String(calls), { expirationTtl: COUNTER_TTL_SECONDS });
+  return calls;
+}
+
+const USED_UP_MESSAGE = "Jonaki Free is used up for today. It resets at midnight UTC. Add your own key in Settings to keep going.";
+
 async function countCall(env: Env, device: string): Promise<number> {
   const day = new Date().toISOString().slice(0, 10);
   const counterKey = `${device}:${day}`;
@@ -52,7 +65,10 @@ async function limitStatus(request: Request, env: Env): Promise<Response> {
 /** Turns a failed upstream answer into the OpenAI error shape the app can read. */
 async function upstreamError(upstream: Response): Promise<Response> {
   if (upstream.status === 401 || upstream.status === 403) {
-    return jsonError(upstream.status, "Jonaki Free is not set up yet (server token missing).", "upstream_error");
+    return jsonError(upstream.status, `Jonaki Free is not set up yet (server token missing or refused, upstream ${upstream.status}).`, "upstream_error");
+  }
+  if (upstream.status === 429) {
+    return jsonError(429, USED_UP_MESSAGE, "rate_limit");
   }
   const text = await upstream.text();
   let message = text.slice(0, 300);
@@ -81,6 +97,9 @@ async function chatCompletions(request: Request, env: Env): Promise<Response> {
     return jsonError(400, "The body is not valid JSON.", "invalid_request_error");
   }
 
+  if ((await countTotalCall(env)) > Number(env.DAILY_TOTAL_CALL_LIMIT)) {
+    return jsonError(429, USED_UP_MESSAGE, "rate_limit");
+  }
   const limit = Number(env.DAILY_CALL_LIMIT);
   if ((await countCall(env, device)) > limit) {
     return jsonError(

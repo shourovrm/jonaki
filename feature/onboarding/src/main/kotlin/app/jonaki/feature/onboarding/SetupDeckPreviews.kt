@@ -47,7 +47,7 @@ private val samplePhoneModels = listOf(
 @Preview(name = "Setup, three ways", widthDp = 360, heightDp = 640, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun SetupStartPreview() = DeckPreview(
-    SetupDeckUi(model = SetupModelCardUi(freeDailyLimit = 60, phoneModels = samplePhoneModels)),
+    SetupDeckUi(model = SetupModelCardUi(freeDailyLimit = 20, phoneModels = samplePhoneModels)),
     ThemeMode.DARK,
 )
 

@@ -991,7 +991,10 @@ class AgentRunner(
         threadFolder: java.io.File,
     ): ToolServices {
         val services = allToolServicesFor(thread, modelAcceptsImages, project)
-        if (!LocalModelRuntime.isLocal(modelKeyFor(thread))) {
+        // Jonaki Free gets the short tool list too: a small prompt keeps the free share of Workers AI going (D-186).
+        val modelKey = modelKeyFor(thread)
+        val isFree = modelKey != null && ModelKey.serviceOf(modelKey) == ChatService.JONAKI_FREE.key
+        if (!LocalModelRuntime.isLocal(modelKey) && !isFree) {
             return services
         }
         val hasFiles = ProjectFolders.holdsFiles(threadFolder) || (project != null && ProjectFolders.holdsFiles(project.folder))

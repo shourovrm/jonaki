@@ -43,3 +43,16 @@ curl -sS https://jonaki-free.shourovrm.workers.dev/v1/chat/completions \
 ```
 
 Without the `X-Jonaki-Device` header the answer is HTTP 400.
+
+## Keeping it free
+
+The account stays on the Workers Free plan. Workers AI then gives 10,000
+neurons a day and refuses calls past that until 00:00 UTC; nothing is ever
+billed. Two Worker variables keep the day inside that share:
+`DAILY_TOTAL_CALL_LIMIT` (all phones together, 250) and `DAILY_CALL_LIMIT`
+(one phone, 20). With `@cf/qwen/qwen3-30b-a3b-fp8` (4,625 neurons per
+million input tokens, 30,475 per million output) and the short tool list
+the app sends to this service, one call costs about 20 to 35 neurons, so
+250 calls fit. Past either cap the Worker answers 429 with "Jonaki Free is
+used up for today", and the app shows that line. Change a cap by editing
+`wrangler.toml` and running `npx wrangler deploy`.
