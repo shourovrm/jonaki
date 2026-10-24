@@ -19,9 +19,10 @@ object BuiltInModels {
         estimate("deepseek", "deepseek-flash", "DeepSeek Flash", 1_048_576, 0.30, 1.20, 0.006),
         estimate("deepseek", "deepseek-pro", "DeepSeek Pro", 1_048_576, 0.66, 1.98, 0.022),
         // gemini-3.8-flash checked in spike S-3; prices from google/gemini-3.x on OpenRouter.
-        estimate("gemini", "gemini-3.8-flash", "Gemini 3.8 Flash", 1_048_576, 0.75, 3.75, 0.075, acceptsImages = true),
-        estimate("gemini", "gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite", 1_048_576, 0.30, 2.50, 0.03, acceptsImages = true),
-        estimate("gemini", "gemini-3.1-pro-preview", "Gemini 3.1 Pro Preview", 1_048_576, 2.00, 12.00, 0.20, acceptsImages = true),
+        // freePlan from the user's own 429s (2026-10-25): the free tier allows Flash models and gives Pro a limit of 0.
+        estimate("gemini", "gemini-3.8-flash", "Gemini 3.8 Flash", 1_048_576, 0.75, 3.75, 0.075, acceptsImages = true).copy(freePlan = true),
+        estimate("gemini", "gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite", 1_048_576, 0.30, 2.50, 0.03, acceptsImages = true).copy(freePlan = true),
+        estimate("gemini", "gemini-3.1-pro-preview", "Gemini 3.1 Pro Preview", 1_048_576, 2.00, 12.00, 0.20, acceptsImages = true).copy(freePlan = false),
         // Z.ai price page; context and modalities from Z.ai's model pages. Z.ai documents no model list.
         official("glm", "glm-5.3-flash", "GLM 5.3 Flash", 1_048_576, 0.15, 0.50, 0.03, acceptsImages = true),
         official("glm", "glm-5.3-flashx", "GLM 5.3 FlashX", 1_048_576, 0.37, 1.25, 0.075, acceptsImages = true),
@@ -52,6 +53,8 @@ object BuiltInModels {
         official("qwen", "qwen3.7-flash", "Qwen3.7 Flash", 1_000_000, 0.03, 0.13, 0.006, acceptsImages = true),
         // Ollama Cloud is a subscription, so no per-token price.
         ModelInfo("ollama-cloud", "gpt-oss:120b", "gpt-oss 120B", 131_072, null, null, isEstimate = true),
+        // Jonaki Free has no per-token price, so the background rule never picks it (D-186).
+        ModelInfo("jonaki-free", "free", "Jonaki Free", 128_000, null, null, isEstimate = true, freePlan = true),
     )
 
     private fun official(

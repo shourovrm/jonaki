@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
         PersonaEntity::class,
         ProjectEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     // Version 2 only adds nullable columns (D-027 usage and the thread's model),
     // so Room generates the migration from the exported schemas in schemas/.
@@ -55,6 +55,9 @@ import kotlinx.coroutines.Dispatchers
         // memories.supersededAtMillis, messages.promptFactIds and steps.guardNote;
         // the spec rebuilds the memory search index so that it covers the keywords.
         AutoMigration(from = 11, to = 12, spec = JonakiDatabase.AddKeywordsToMemorySearchIndex::class),
+        // Version 13 adds threads.safetyCheckOff (0 by default) and the nullable
+        // messages.backgroundResult, messages.errorDetails and messages.suggestedModelKey.
+        AutoMigration(from = 12, to = 13),
     ],
 )
 abstract class JonakiDatabase : RoomDatabase() {

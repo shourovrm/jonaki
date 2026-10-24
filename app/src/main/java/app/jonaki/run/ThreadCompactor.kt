@@ -37,6 +37,7 @@ class ThreadCompactor(
             systemPrompt = ConversationSummary.SYSTEM_PROMPT,
             userText = ConversationSummary.requestText(previous?.summaryText, transcript),
             maxOutputTokens = ConversationSummary.MAX_SUMMARY_TOKENS,
+            purpose = BackgroundModel.PURPOSE_COMPACTION,
         )
         // A failed summary leaves the thread whole; the next run's end tries again.
         if (answer !is BackgroundAnswer.Success || answer.text.isBlank()) {

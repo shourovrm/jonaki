@@ -67,7 +67,12 @@ sealed interface StreamEvent {
      * The request failed. [retryable] is true for overload and rate-limit errors
      * (for example Gemini 503), false for bad keys or invalid requests.
      */
-    data class Failed(val message: String, val retryable: Boolean) : StreamEvent
+    data class Failed(
+        val message: String,
+        val retryable: Boolean,
+        /** What went wrong when the app can name it; null for everything else. */
+        val kind: FailureKind? = null,
+    ) : StreamEvent
 }
 
 enum class FinishReason {
@@ -85,3 +90,16 @@ data class Usage(
     /** Cost in US dollars when the service reports it (OpenRouter does); otherwise priced from tokens (D-027). */
     val costUsd: Double? = null,
 )
+
+/**
+ * A failure the chat can act on: it names the cause in plain words and, for
+ * [FREE_PLAN_MODEL], offers another model of the same service.
+ */
+enum class FailureKind {
+    /** The key's free plan does not include the requested model (Gemini answers 429 with a free-tier limit of 0). */
+    FREE_PLAN_MODEL,
+    /** Too many requests for now; the same call may work after a wait. */
+    RATE_LIMIT,
+    /** The service wants money before it answers again. */
+    NO_CREDIT,
+}

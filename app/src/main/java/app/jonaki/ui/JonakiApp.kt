@@ -2112,17 +2112,19 @@ private fun serviceNameOf(service: ChatService, application: JonakiApplication):
     return service.displayName
 }
 
+/** The site that gives out the service's key; a name with a dot becomes a "Get a key at" line (D-189). */
 internal fun hintFor(service: ChatService): String = when (service) {
     ChatService.OPENROUTER -> "openrouter.ai"
     ChatService.DEEPSEEK -> "deepseek.com"
-    ChatService.GEMINI -> "Google"
+    ChatService.GEMINI -> "aistudio.google.com"
     ChatService.GLM -> "z.ai"
-    ChatService.MIMO -> "Xiaomi"
+    ChatService.MIMO -> "platform.xiaomimimo.com"
     ChatService.OLLAMA_CLOUD -> "ollama.com"
     ChatService.OLLAMA_LOCAL -> "localhost:11434"
     ChatService.OPENAI -> "openai.com"
     ChatService.MINIMAX -> "minimax.io"
-    ChatService.QWEN -> "Alibaba Cloud"
+    ChatService.QWEN -> "modelstudio.console.alibabacloud.com"
+    ChatService.JONAKI_FREE -> "Jonaki"
     ChatService.LOCAL -> "llama.cpp"
 }
 

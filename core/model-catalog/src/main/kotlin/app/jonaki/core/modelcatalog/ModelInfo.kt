@@ -20,6 +20,11 @@ data class ModelInfo(
     val supportsThinkingLevel: Boolean = false,
     /** True only when the list says the model takes images; unknown counts as no (D-049). */
     val acceptsImages: Boolean = false,
+    /**
+     * True when the service's free plan serves this model, false when only a
+     * paid plan does, null when the app does not know (most services).
+     */
+    val freePlan: Boolean? = null,
 ) {
     /** "service:modelId", the form stored in settings and on each thread. */
     val key: String

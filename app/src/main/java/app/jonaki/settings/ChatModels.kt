@@ -23,6 +23,9 @@ enum class ChatService(
     MINIMAX("minimax", "MiniMax", SecretName.MINIMAX),
     QWEN("qwen", "Qwen", SecretName.QWEN),
 
+    // Jonaki's own free service: a Cloudflare Worker with a daily limit per phone, no key (D-186).
+    JONAKI_FREE("jonaki-free", "Jonaki Free", null),
+
     // GGUF files on the phone (D-133); its models are the files, not a list the user adds to.
     LOCAL("local", "Local", null),
     ;

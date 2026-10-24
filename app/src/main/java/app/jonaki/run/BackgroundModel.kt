@@ -27,9 +27,12 @@ import okhttp3.OkHttpClient
 sealed interface BackgroundAnswer {
     val costUsd: Double?
 
-    data class Success(val text: String, val modelKey: String, override val costUsd: Double? = null) : BackgroundAnswer
+    /** The id of the BACKGROUND row that records this call, for a caller that adds its result to it (D-188); null when none was written. */
+    val rowId: String?
 
-    data class Failed(val message: String, override val costUsd: Double? = null) : BackgroundAnswer
+    data class Success(val text: String, val modelKey: String, override val costUsd: Double? = null, override val rowId: String? = null) : BackgroundAnswer
+
+    data class Failed(val message: String, override val costUsd: Double? = null, override val rowId: String? = null) : BackgroundAnswer
 }
 
 /**
@@ -64,12 +67,14 @@ class BackgroundModel(
         systemPrompt: String,
         userText: String,
         maxOutputTokens: Int,
+        purpose: String = PURPOSE_OTHER,
     ): BackgroundAnswer {
-        val modelKey = modelFor(threadModelKey) ?: return BackgroundAnswer.Failed("no chat model is set up")
+        val modelKey = modelFor(threadModelKey)
+            ?: return failedWithRow(threadId, null, "no chat model is set up", purpose)
         val messages = listOf(Message(Role.USER, userText))
-        val answer = completeOn(threadId, modelKey, systemPrompt, messages, maxOutputTokens)
+        val answer = completeOn(threadId, modelKey, systemPrompt, messages, maxOutputTokens, purpose = purpose)
         val fallbackModelKey = fallbackFor(answer, modelKey, threadModelKey) ?: return answer
-        return completeOn(threadId, fallbackModelKey, systemPrompt, messages, maxOutputTokens)
+        return completeOn(threadId, fallbackModelKey, systemPrompt, messages, maxOutputTokens, purpose = purpose)
     }
 
     /**
@@ -99,11 +104,16 @@ class BackgroundModel(
         maxOutputTokens: Int,
         tools: List<ToolDefinition> = emptyList(),
         thinkingLevel: ThinkingLevel? = null,
+        purpose: String = PURPOSE_OTHER,
     ): BackgroundAnswer {
         val service = ChatService.byKey(ModelKey.serviceOf(modelKey))
-            ?: return BackgroundAnswer.Failed("unknown service in $modelKey")
+            ?: return failedWithRow(threadId, modelKey, "unknown service in $modelKey", purpose)
         val secret = service.secret
-        val apiKey = if (secret == null) null else secrets.read(secret) ?: return BackgroundAnswer.Failed("no key for ${service.displayName}")
+        val apiKey = if (secret == null) {
+            null
+        } else {
+            secrets.read(secret) ?: return failedWithRow(threadId, modelKey, "no key for ${service.displayName}", purpose)
+        }
         val routing = settings.snapshot.value.routing.effectiveFor(modelKey)
         val provider = ChatProviders.create(service, apiKey, httpClient, routing, onRoutingFallback = {}, localRuntime)
         val request = ChatRequest(
@@ -133,14 +143,25 @@ class BackgroundModel(
             }
         }
         val cost = usage?.let { reported -> CostCalculator.costUsd(reported, catalog.find(modelKey)) }
-        usage?.let { reported -> saveUsage(threadId, modelKey, reported, cost) }
-        return when {
-            finished == null -> BackgroundAnswer.Failed("$modelKey gave no answer within ${TIME_LIMIT_MILLIS / 1000} s", cost)
-            failure != null -> BackgroundAnswer.Failed(failure.orEmpty(), cost)
+        val failureText = when {
+            finished == null -> "$modelKey gave no answer within ${TIME_LIMIT_MILLIS / 1000} s"
+            failure != null -> failure.orEmpty()
             // Half a summary or half a JSON answer would silently lose the newest part.
-            finishReason == FinishReason.LENGTH -> BackgroundAnswer.Failed("$modelKey stopped at $maxOutputTokens output tokens", cost)
-            else -> BackgroundAnswer.Success(answer.toString(), modelKey, cost)
+            finishReason == FinishReason.LENGTH -> "$modelKey stopped at $maxOutputTokens output tokens"
+            else -> null
         }
+        // Every call leaves a row, so the memory log can show a failure that returned no usage (D-188).
+        val rowId = saveUsage(threadId, modelKey, usage, cost, purpose, failureText)
+        return if (failureText != null) {
+            BackgroundAnswer.Failed(failureText, cost, rowId)
+        } else {
+            BackgroundAnswer.Success(answer.toString(), modelKey, cost, rowId)
+        }
+    }
+
+    private suspend fun failedWithRow(threadId: String, modelKey: String?, message: String, purpose: String): BackgroundAnswer.Failed {
+        val rowId = saveUsage(threadId, modelKey, usage = null, costUsd = null, purpose = purpose, result = message)
+        return BackgroundAnswer.Failed(message, rowId = rowId)
     }
 
     private fun hasKey(modelKey: String): Boolean {
@@ -161,30 +182,52 @@ class BackgroundModel(
      * the call's cost (D-027). Subagents' model calls are saved the same way
      * (D-064), with the cost their loop already computed.
      */
-    suspend fun saveUsage(threadId: String, modelKey: String, usage: Usage, costUsd: Double?) {
+    /**
+     * Writes the BACKGROUND row of one call and returns its id. The row's text
+     * is the call's [purpose] ("memory", "title", "compaction"), so the memory
+     * log can pick its own rows; [result] is the failure, or null for success
+     * until the caller writes what the answer came to (D-188).
+     */
+    suspend fun saveUsage(
+        threadId: String,
+        modelKey: String?,
+        usage: Usage?,
+        costUsd: Double?,
+        purpose: String = PURPOSE_OTHER,
+        result: String? = null,
+    ): String {
         val messageDao = database.messageDao()
+        val id = UUID.randomUUID().toString()
         messageDao.upsert(
             MessageEntity(
-                id = UUID.randomUUID().toString(),
+                id = id,
                 threadId = threadId,
                 position = messageDao.nextPosition(threadId),
                 role = HistoryMapper.BACKGROUND_ROLE,
-                text = "",
+                text = purpose,
                 toolCallsJson = "[]",
                 toolCallId = null,
                 isComplete = true,
                 createdAtMillis = System.currentTimeMillis(),
                 model = modelKey,
-                inputTokens = usage.inputTokens,
-                cachedInputTokens = usage.cachedInputTokens,
-                outputTokens = usage.outputTokens,
+                inputTokens = usage?.inputTokens,
+                cachedInputTokens = usage?.cachedInputTokens,
+                outputTokens = usage?.outputTokens,
                 costUsd = costUsd,
+                backgroundResult = result,
             ),
         )
+        return id
     }
 
     companion object {
         private const val TIME_LIMIT_MILLIS = 60_000L
+
+        /** Values of a BACKGROUND row's text: what the call was for (D-188). */
+        const val PURPOSE_MEMORY = "memory"
+        const val PURPOSE_TITLE = "title"
+        const val PURPOSE_COMPACTION = "compaction"
+        const val PURPOSE_OTHER = "background"
 
         /**
          * The scoped model with a saved key and the lowest input plus output

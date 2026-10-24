@@ -74,6 +74,7 @@ class MemoryExtractor(
             systemPrompt = MemoryExtraction.systemPrompt(inProject = projectId != null, allowGlobalFacts = allowGlobalFacts),
             userText = MemoryExtraction.userPrompt(messages, threadFacts, globalFacts, projectFacts),
             maxOutputTokens = MAX_OUTPUT_TOKENS,
+            purpose = BackgroundModel.PURPOSE_MEMORY,
         )
         if (answer is BackgroundAnswer.Failed) {
             // The mark stays, so the next trigger tries these messages again.
@@ -120,8 +121,8 @@ class MemoryExtractor(
     }
 
     companion object {
-        /** Extraction runs after a run once this many messages are unread (D-009: every 20 messages). */
-        const val MESSAGES_PER_EXTRACTION = 20
+        /** Extraction runs after a run once this many messages are unread (D-009 said 20; D-188 lowered it to 8). */
+        const val MESSAGES_PER_EXTRACTION = 8
 
         /** Leaving a thread after at least one exchange extracts what it holds. */
         const val MESSAGES_FOR_EXTRACTION_ON_LEAVE = 2

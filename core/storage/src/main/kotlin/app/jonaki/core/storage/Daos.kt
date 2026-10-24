@@ -136,6 +136,10 @@ interface MessageDao {
     @Upsert
     suspend fun upsert(message: MessageEntity)
 
+    /** Writes what a background call came to onto its BACKGROUND row (D-188). */
+    @Query("UPDATE messages SET backgroundResult = :result WHERE id = :id")
+    suspend fun setBackgroundResult(id: String, result: String)
+
     @Query("UPDATE messages SET text = :text WHERE id = :messageId")
     suspend fun updateText(messageId: String, text: String)
 

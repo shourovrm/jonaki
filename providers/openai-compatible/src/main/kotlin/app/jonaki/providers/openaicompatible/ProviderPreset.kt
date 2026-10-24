@@ -106,6 +106,19 @@ object ProviderPresets {
         listsModels = true,
     )
 
+    /**
+     * Jonaki's own free service (D-186): a Cloudflare Worker in server/jonaki-free
+     * that answers through Workers AI with a daily call limit per phone. The
+     * model id is fixed on the server; the app sends "free".
+     */
+    val jonakiFree = ProviderPreset(
+        key = "jonaki-free",
+        displayName = "Jonaki Free",
+        baseUrl = "https://jonaki-free.shourovrm.workers.dev/v1",
+        defaultModel = "free",
+        needsApiKey = false,
+    )
+
     val all: List<ProviderPreset> = listOf(
         openRouter,
         deepSeek,
@@ -116,5 +129,6 @@ object ProviderPresets {
         openAi,
         miniMax,
         qwen,
+        jonakiFree,
     )
 }

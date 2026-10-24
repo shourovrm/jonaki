@@ -57,6 +57,12 @@ data class ThreadEntity(
     @ColumnInfo(defaultValue = "0")
     val allowAllInThread: Boolean = false,
     /**
+     * The user switched the safety check (Jev) off for this thread from the
+     * approvals sheet; Settings keeps the default for new threads (D-188).
+     */
+    @ColumnInfo(defaultValue = "0")
+    val safetyCheckOff: Boolean = false,
+    /**
      * Outside content (a web page, a document, an MCP result, a subagent's
      * answer) reached this thread. From then on every call that sends data out
      * of the app asks. It stays set, because the outside text stays in the history.
@@ -138,6 +144,15 @@ data class MessageEntity(
     val firstTextElapsedMillis: Long? = null,
     /** When the chat first drew that text; written by the chat screen. */
     val firstShownElapsedMillis: Long? = null,
+    /**
+     * On a BACKGROUND row: what the call came to, for the memory log, for
+     * example "2 facts added" or "no key for Gemini"; null on other rows (D-188).
+     */
+    val backgroundResult: String? = null,
+    /** On an ERROR row: the service's full answer, folded under the short text; null when none (D-189). */
+    val errorDetails: String? = null,
+    /** On an ERROR row: a model of the same service that would work, as "service:modelId"; null when none (D-189). */
+    val suggestedModelKey: String? = null,
     /**
      * Ids of the facts in the prompt's memory section for the run this user
      * message started, comma-separated; null on other rows, on rows saved

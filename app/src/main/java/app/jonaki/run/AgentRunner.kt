@@ -198,7 +198,7 @@ class AgentRunner(
 
     private val threadNamer = ThreadNamer(
         ask = { threadId, threadModelKey, systemPrompt, userText, maxOutputTokens ->
-            backgroundModel.complete(threadId, threadModelKey, systemPrompt, userText, maxOutputTokens)
+            backgroundModel.complete(threadId, threadModelKey, systemPrompt, userText, maxOutputTokens, purpose = BackgroundModel.PURPOSE_TITLE)
         },
         renameIfUnchanged = { threadId, expectedTitle, newTitle ->
             val threadDao = database.threadDao()
