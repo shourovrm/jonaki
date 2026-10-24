@@ -112,6 +112,7 @@ import app.jonaki.core.providerapi.FailureKind
 import kotlinx.coroutines.flow.Flow
 import app.jonaki.core.providerapi.StreamEvent
 import app.jonaki.core.providerapi.ChatRequest
+import app.jonaki.settings.DeviceId
 import app.jonaki.settings.FreeTierUsage
 import app.jonaki.tools.youtubesummarize.RetryingVideoSummarizer
 import app.jonaki.tools.youtubesummarize.VideoAnswer
@@ -1379,7 +1380,7 @@ class AgentRunner(
     private fun chatProvider(service: ChatService, route: OpenRouterRoute, onRoutingFallback: () -> Unit): ChatProvider? {
         val secret = service.secret
         val key = if (secret == null) null else secrets.read(secret) ?: return null
-        val provider = ChatProviders.create(service, key, httpClient, route, onRoutingFallback, localRuntime)
+        val provider = ChatProviders.create(service, key, httpClient, route, onRoutingFallback, localRuntime, deviceId = DeviceId.get(context))
         if (service != ChatService.JONAKI_FREE) {
             return provider
         }

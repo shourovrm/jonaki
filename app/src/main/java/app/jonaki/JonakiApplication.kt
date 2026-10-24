@@ -49,6 +49,7 @@ import app.jonaki.skills.SkillImporter
 import app.jonaki.skills.SkillProposalReview
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
+import app.jonaki.settings.DeviceId
 import app.jonaki.settings.LocalModelTools
 import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.SecretStore
@@ -231,7 +232,7 @@ class JonakiApplication : Application() {
         catalog = ModelCatalog(File(cacheDir, "openrouter-models.json"), httpClient)
         localModels = LocalModels(this, httpClient, applicationScope)
         localModelRuntime = LocalModelRuntime(localModels.store)
-        backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog, localModelRuntime)
+        backgroundModel = BackgroundModel(database, settings, secrets, httpClient, catalog, localModelRuntime, deviceId = { DeviceId.get(this) })
         factScreen = FactScreen(
             guard = { GuardFactory(settings, secrets, httpClient).create() },
             recorderFor = { threadId -> GuardRecorder(threadId, database.stepDao()::appendGuardNote, backgroundModel::saveUsage) },

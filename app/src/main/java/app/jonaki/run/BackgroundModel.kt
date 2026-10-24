@@ -48,6 +48,8 @@ class BackgroundModel(
     private val httpClient: OkHttpClient,
     private val catalog: ModelCatalog,
     private val localRuntime: LocalModelRuntime,
+    /** This phone's id for Jonaki Free's daily count (D-186); null leaves the header out. */
+    private val deviceId: () -> String? = { null },
 ) {
     /** The model [complete] would use for a thread whose own model is [threadModelKey]. */
     fun modelFor(threadModelKey: String?): String? = choose(
@@ -115,7 +117,7 @@ class BackgroundModel(
             secrets.read(secret) ?: return failedWithRow(threadId, modelKey, "no key for ${service.displayName}", purpose)
         }
         val routing = settings.snapshot.value.routing.effectiveFor(modelKey)
-        val provider = ChatProviders.create(service, apiKey, httpClient, routing, onRoutingFallback = {}, localRuntime)
+        val provider = ChatProviders.create(service, apiKey, httpClient, routing, onRoutingFallback = {}, localRuntime, deviceId = deviceId())
         val request = ChatRequest(
             model = ModelKey.modelOf(modelKey),
             systemPrompt = systemPrompt,
