@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki Settings v2: grouped by question</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  ::selection { background: #c9e86b; color: #1f2a00; }
+  body { background: #0b0c0b; color: #d9dcd5; font-family: "Geist", system-ui, sans-serif; padding: 44px 32px 90px; }
+  .page-head, .band, .notes { max-width: 1560px; margin-left: auto; margin-right: auto; }
+  .page-head { margin-bottom: 34px; }
+  .page-head h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+  .page-head p { margin-top: 10px; max-width: 72ch; color: #a4aa9d; line-height: 1.6; font-size: 15px; }
+  .band { margin-bottom: 14px; margin-top: 46px; }
+  .band h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+  .band p { margin-top: 6px; max-width: 72ch; color: #a4aa9d; line-height: 1.6; font-size: 14px; }
+  .row-of-phones { max-width: 1560px; margin: 18px auto 0; display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start; }
+  .cell { display: flex; flex-direction: column; gap: 12px; width: 360px; }
+  .cell-label { font-size: 13.5px; color: #c6cbbf; padding-left: 6px; font-weight: 500; }
+  .cell-note { font-size: 13px; color: #9aa094; padding: 0 6px; line-height: 1.55; }
+  .notes { margin-top: 52px; color: #b4b9ad; font-size: 14.5px; line-height: 1.65; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 8px 48px; }
+  .notes h3 { font-size: 15px; color: #e4e7df; font-weight: 600; margin: 18px 0 6px; }
+  .notes p { margin-bottom: 10px; max-width: 68ch; }
+  .notes b { color: #e4e7df; font-weight: 600; }
+  .notes .wide { grid-column: 1 / -1; }
+  .notes table { border-collapse: collapse; font-size: 13.5px; width: 100%; max-width: 980px; }
+  .notes th, .notes td { text-align: left; padding: 5px 16px 5px 0; border-bottom: 1px solid #262b21; vertical-align: top; }
+  .notes th { color: #e4e7df; font-weight: 600; }
+  .notes td:first-child { color: #8b927f; }
+  .notes ul { margin: 0 0 10px 18px; max-width: 68ch; }
+
+  .phone {
+    width: 360px; height: 760px; border-radius: 34px; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
+    font-family: "Geist", system-ui, sans-serif; box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080;
+  }
+  .dark  { --bg:#10130e; --ink:#e6e9e0; --ink-2:#c3c9b9; --muted:#8b927f; --line:#262b21; --line-2:#333a2b; --field:#1a1e16; --card:#181c14; --accent:#c9e86b; --on-accent:#1f2a00; --warn:#ffb4ab; --well:#0c0f0a; --tint:#1a1e16; }
+  .light { --bg:#f3f6ef; --ink:#171b14; --ink-2:#3a4233; --muted:#5f6857; --line:#dde3d5; --line-2:#cdd5c2; --field:#e7ece1; --card:#ffffff; --accent:#3f5600; --on-accent:#f3f6ef; --warn:#ba1a1a; --well:#eef2e8; --tint:#e7ece1; }
+  .statusbar { height: 30px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; }
+  .statusbar i { font-size: 13px; margin-left: 4px; }
+  .top { height: 56px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+  .top .title { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; padding-left: 4px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; font-size: 21px; color: var(--ink); flex: none; }
+  .scroll { flex: 1; overflow: hidden; padding-bottom: 20px; }
+  .mono { font-family: "Geist Mono", monospace; font-feature-settings: "tnum"; }
+
+  /* Home rows: icon, title, chevron. A second line appears only when it is a problem. */
+  .group { padding: 16px 20px 4px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .nav-row { display: grid; grid-template-columns: 32px 1fr 18px; align-items: center; gap: 0 12px; padding: 7px 20px; min-height: 44px; }
+  .nav-row .ico { width: 32px; height: 32px; border-radius: 10px; background: var(--tint); display: grid; place-items: center; font-size: 18px; color: var(--ink-2); }
+  .nav-row .t { font-size: 16px; font-weight: 500; }
+  .nav-row .s { font-size: 13px; color: var(--muted); margin-top: 1px; }
+  .nav-row .s.attention { color: var(--warn); }
+  .nav-row .chev { color: var(--muted); font-size: 16px; }
+  .search { margin: 4px 20px 2px; height: 44px; flex: none; border-radius: 22px; background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--muted); font-size: 14.5px; }
+
+  /* Sub-page rows. */
+  .label { padding: 16px 20px 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .item { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 0 20px; min-height: 44px; align-items: center; border-bottom: 1px solid var(--line); }
+  .item.last { border-bottom: none; }
+  .item .t { font-size: 15.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .s { grid-column: 1; font-size: 13px; color: var(--muted); }
+  .item .s.attention { color: var(--warn); }
+  .item .end { grid-row: 1 / span 2; grid-column: 2; font-size: 14px; color: var(--accent); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .item .end.muted { color: var(--muted); font-weight: 400; }
+  .item:has(.s) { padding-top: 7px; padding-bottom: 7px; }
+  .status { font-size: 12.5px; font-weight: 600; }
+  .ok { color: var(--accent); }
+  .switch { width: 44px; height: 26px; border-radius: 13px; background: var(--accent); position: relative; }
+  .switch::after { content: ""; position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--on-accent); }
+  .switch.off { background: var(--line-2); }
+  .switch.off::after { left: 3px; right: auto; background: var(--muted); }
+  .segmented { margin: 4px 20px 6px; display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); border: 1px solid var(--line-2); border-radius: 12px; overflow: hidden; }
+  .segmented span { text-align: center; padding: 9px 0; font-size: 14px; border-right: 1px solid var(--line-2); }
+  .segmented span:last-child { border-right: none; }
+  .segmented .on { background: var(--tint); font-weight: 600; color: var(--accent); }
+  .segmented.small span { font-size: 13px; padding: 8px 0; }
+  .add { padding: 0 20px; min-height: 44px; color: var(--accent); font-weight: 600; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+  .add.warn { color: var(--warn); }
+  .crumb { font-size: 13px; color: var(--muted); padding: 0 20px 4px; line-height: 1.45; }
+
+  /* Models. */
+  .service { margin: 0 12px; border: 1px solid var(--line-2); border-radius: 18px; background: var(--card); overflow: hidden; }
+  .service .head { display: flex; justify-content: space-between; align-items: center; padding: 0 14px 0 16px; min-height: 48px; font-size: 16px; font-weight: 600; }
+  .service .head i { color: var(--muted); font-size: 16px; }
+  .service .item { padding-left: 16px; padding-right: 14px; border-bottom: 1px solid var(--line); border-top: none; }
+  .service .item:first-of-type { border-top: 1px solid var(--line); }
+  .price-head, .price-row { display: grid; grid-template-columns: 20px 1fr 46px 46px 46px; gap: 0 8px; align-items: center; padding: 0 14px 0 16px; }
+  .price-head { padding-top: 10px; padding-bottom: 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .price-head .unit { grid-column: 1 / span 2; }
+  .price-head span:not(.unit) { text-align: right; }
+  .price-row { min-height: 42px; font-size: 12.5px; }
+  .price-row .name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .price-row .n { text-align: right; color: var(--ink-2); }
+  .price-row .star { color: var(--accent); font-size: 16px; }
+  .price-row .star.off { color: var(--muted); }
+  .btn-row { display: flex; justify-content: space-between; padding: 4px 8px; }
+  .text-btn { height: 40px; padding: 0 10px; display: flex; align-items: center; font-size: 14.5px; font-weight: 600; color: var(--accent); }
+  .text-btn.danger { color: var(--warn); }
+
+  /* Safety and Subagents. */
+  .num { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; min-width: 128px; height: 34px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--well); align-items: center; font-size: 14.5px; }
+  .num .unit { font-size: 13px; color: var(--muted); }
+  .slider { margin: 6px 20px 2px; height: 26px; position: relative; }
+  .slider::before { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: var(--line-2); }
+  .slider::after { content: ""; position: absolute; left: 50%; top: 3px; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: var(--accent); }
+  .slider-ends { display: flex; justify-content: space-between; padding: 0 20px; font-size: 12.5px; color: var(--muted); }
+  .slider-ends .on { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>Settings v2: grouped by the question you came with</h1>
+  <p>Today the first page has 12 rows in three unlabeled groups and every row has a live second line. Here the first page has 18 rows under six group headers, and a second line shows only when something needs fixing: a key is missing or a permission is blocked. Five screens are shown, each in dark and light: the home page, Models, Safety, Subagents and Tools. The right column of the Notes table lists every label that changes.</p>
+</header>
+
+<!-- Home: two halves of one scrolling page. -->
+<template id="home-top">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Settings</div></div>
+    <div class="search"><i class="ph ph-magnifying-glass"></i>Search settings</div>
+    <div class="scroll">
+      <div class="group">Models and keys</div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-cpu"></i></div><div class="t">Models</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-device-mobile"></i></div><div class="t">Local models</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-gift"></i></div><div class="t">Jonaki Free</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="group">What Jonaki can do</div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-globe-simple"></i></div><div><div class="t">Web search and YouTube</div><div class="s attention">YouTube needs a Gemini key</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-wrench"></i></div><div class="t">Tools</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-users-three"></i></div><div class="t">Subagents</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-alarm"></i></div><div class="t">Reminders and schedule</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-folder-simple"></i></div><div class="t">Files</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="group">Memory</div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-brain"></i></div><div class="t">Saved facts</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-books"></i></div><div class="t">Skills</div><i class="ph ph-caret-right chev"></i></div>
+    </div>
+  </div>
+</template>
+
+<template id="home-bottom">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="scroll">
+      <div class="group" style="padding-top: 10px">Safety</div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-hand-pointing"></i></div><div class="t">Approvals</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-shield-check"></i></div><div class="t">Safety check</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-file-text"></i></div><div class="t">After web content</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-lock-key"></i></div><div><div class="t">Permissions</div><div class="s attention">Calendar blocked</div></div><i class="ph ph-caret-right chev"></i></div>
+      <div class="group">Look and feel</div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-moon"></i></div><div class="t">Theme</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-dots-three-outline"></i></div><div class="t">Status strip</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-chat-text"></i></div><div class="t">Answer style and personas</div><i class="ph ph-caret-right chev"></i></div>
+      <div class="group">About</div>
+      <div class="nav-row"><div class="ico"><i class="ph ph-info"></i></div><div class="t">About Jonaki</div><i class="ph ph-caret-right chev"></i></div>
+    </div>
+  </div>
+</template>
+
+<template id="models">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Models</div></div>
+    <div class="scroll">
+      <div class="label" style="padding-top: 6px">Chat services</div>
+      <div class="service">
+        <div class="head">OpenRouter<i class="ph ph-caret-up"></i></div>
+        <div class="item"><div class="t">API key</div><div class="end"><span class="status ok">Added</span><span class="muted" style="color: var(--muted); font-weight: 400">Change</span></div></div>
+        <div class="item"><div class="t">Which provider</div><div class="end muted">Prefer private<i class="ph ph-caret-down"></i></div></div>
+        <div class="item"><div class="t">Reasoning</div><div class="end muted">Medium<i class="ph ph-caret-down"></i></div></div>
+        <div class="price-head"><span class="unit">USD per million tokens</span><span>In</span><span>Out</span><span>Cached</span></div>
+        <div class="price-row"><i class="ph-fill ph-star star"></i><span class="name">GLM 5.3 Flash</span><span class="n mono">0.07</span><span class="n mono">0.40</span><span class="n mono">0.01</span></div>
+        <div class="price-row"><i class="ph ph-star star off"></i><span class="name">DeepSeek V4</span><span class="n mono">0.28</span><span class="n mono">1.10</span><span class="n mono">0.03</span></div>
+        <div class="price-row"><i class="ph ph-star star off"></i><span class="name">Gemini 3 Flash</span><span class="n mono">0.30</span><span class="n mono">2.50</span><span class="n mono">0.08</span></div>
+        <div class="btn-row"><div class="text-btn">Add model</div><div class="text-btn danger">Remove service</div></div>
+      </div>
+      <div class="item" style="margin-top: 6px"><div class="t">DeepSeek</div><div class="end"><span class="status" style="color: var(--warn)">No key</span><i class="ph ph-caret-down" style="color: var(--muted)"></i></div></div>
+      <div class="item last"><div class="t">Qwen</div><div class="end"><span class="status" style="color: var(--warn)">No key</span><i class="ph ph-caret-down" style="color: var(--muted)"></i></div></div>
+      <div class="add"><i class="ph ph-plus"></i>Add service</div>
+      <div class="label">Image generation</div>
+      <div class="item last"><div class="t">Image quality</div><div class="end muted">Standard<i class="ph ph-caret-down"></i></div></div>
+    </div>
+  </div>
+</template>
+
+<template id="safety">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Safety</div></div>
+    <div class="scroll">
+      <div class="label" style="padding-top: 6px">Approvals in new threads</div>
+      <div class="segmented"><span class="on">Ask</span><span>Auto</span><span>Never ask</span></div>
+      <div class="crumb">Every change asks first.</div>
+      <div class="item last"><div class="t">Always-allow rules</div><div class="end muted"><span class="mono">2</span><i class="ph ph-caret-right"></i></div></div>
+      <div class="label">Safety check</div>
+      <div class="crumb">A second, low-cost model checks each risky action and any web text. Both are sent to OpenRouter.</div>
+      <div class="item"><div class="t">Don't ask for safe actions</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item last"><div class="t">Check web content</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item last" style="margin-top: 4px"><div class="t">Strictness</div></div>
+      <div class="slider"></div>
+      <div class="slider-ends"><span>Careful</span><span class="on">Balanced</span><span>Relaxed</span></div>
+      <div class="item last" style="margin-top: 4px"><div class="t">Spent this month</div><div class="end muted mono">$0.04</div></div>
+      <div class="label">After reading web content</div>
+      <div class="item"><div class="t">Ask before sending data out</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item last"><div class="t">Review new facts before saving</div><div class="end"><div class="switch"></div></div></div>
+    </div>
+  </div>
+</template>
+
+<template id="subagents">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Subagents</div></div>
+    <div class="scroll">
+      <div class="label" style="padding-top: 6px">Limits</div>
+      <div class="item"><div class="t">Start without asking</div><div class="end"><div class="num"><span class="mono">3</span><span class="unit">per message</span></div></div></div>
+      <div class="item"><div class="t">Run at the same time</div><div class="end"><div class="num"><span class="mono">2</span><span class="unit">agents</span></div></div></div>
+      <div class="item"><div class="t">Most in one message</div><div class="end"><div class="num"><span class="mono">8</span><span class="unit">agents</span></div></div></div>
+      <div class="item"><div class="t">Steps per agent</div><div class="end"><div class="num"><span class="mono">20</span><span class="unit">tool calls</span></div></div></div>
+      <div class="item"><div class="t">Spend per agent</div><div class="end"><div class="num"><span class="mono">0.50</span><span class="unit">USD</span></div></div></div>
+      <div class="item last"><div class="t">Time per agent</div><div class="end"><div class="num"><span class="mono">10</span><span class="unit">minutes</span></div></div></div>
+      <div class="label">Types</div>
+      <div class="item"><div class="t">Researcher</div><div class="end muted">Same as thread<i class="ph ph-caret-right"></i></div></div>
+      <div class="item"><div class="t">Scout</div><div class="end muted">Cheapest<i class="ph ph-caret-right"></i></div></div>
+      <div class="item"><div class="t">Writer</div><div class="end muted">Same as thread<i class="ph ph-caret-right"></i></div></div>
+      <div class="item last"><div class="t">Worker</div><div class="end muted">Same as thread<i class="ph ph-caret-right"></i></div></div>
+      <div class="add"><i class="ph ph-plus"></i>Add subagent</div>
+    </div>
+  </div>
+</template>
+
+<template id="tools">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>
+    <div class="top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Tools</div></div>
+    <div class="scroll">
+      <div class="item" style="margin-top: 4px"><div class="t">Python</div><div class="end muted"><i class="ph ph-caret-right"></i></div></div>
+      <div class="item last"><div class="t">MCP servers</div><div class="end muted"><i class="ph ph-caret-right"></i></div></div>
+      <div class="label">Turn tools on or off</div>
+      <div class="item" style="min-height: 40px"><div class="t">Files</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Web</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">YouTube</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Memory</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Subagents</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Reports</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Share</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Phone</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Schedule</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">MCP</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">JavaScript</div><div class="end"><div class="switch off"></div></div></div>
+      <div class="item" style="min-height: 40px"><div class="t">Python</div><div class="end"><div class="switch"></div></div></div>
+      <div class="item last" style="min-height: 40px"><div class="t">Data tools</div><div class="end"><div class="switch off"></div></div></div>
+    </div>
+  </div>
+</template>
+
+<section class="band">
+  <h2>Settings home</h2>
+  <p>The page is one list in six groups. The first frame is the top of the list and the second is the same list scrolled to the end. Rows have no second line except the two that need action.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell"><div class="slot" data-t="home-top" data-mode="dark"></div><div class="cell-label">Home, top, dark</div><div class="cell-note">"Web search and YouTube" shows a red line because the Gemini key for YouTube summaries is missing.</div></div>
+  <div class="cell"><div class="slot" data-t="home-bottom" data-mode="dark"></div><div class="cell-label">Home, scrolled, dark</div><div class="cell-note">"Permissions" shows a red line because Calendar is blocked. Approvals, Safety check and After web content moved out of "Tools and approvals" and "Guardrails" into one Safety group.</div></div>
+  <div class="cell"><div class="slot" data-t="home-top" data-mode="light"></div><div class="cell-label">Home, top, light</div></div>
+  <div class="cell"><div class="slot" data-t="home-bottom" data-mode="light"></div><div class="cell-label">Home, scrolled, light</div></div>
+</div>
+
+<section class="band">
+  <h2>Models</h2>
+  <p>One service is open. Its prices sit under one header that names the unit once, so each row is only a name and three numbers.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell"><div class="slot" data-t="models" data-mode="dark"></div><div class="cell-label">Models, dark</div><div class="cell-note">"Routing" is "Which provider", "Thinking" is "Reasoning". The star marks the default model.</div></div>
+  <div class="cell"><div class="slot" data-t="models" data-mode="light"></div><div class="cell-label">Models, light</div></div>
+</div>
+
+<section class="band">
+  <h2>Safety</h2>
+  <p>Approvals, the safety check and the rules for web content are on one page, in the order a risky action meets them.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell"><div class="slot" data-t="safety" data-mode="dark"></div><div class="cell-label">Safety, dark</div><div class="cell-note">The line under the segmented control describes only the chosen mode. "Always-allow rules" opens the Server and Tool list.</div></div>
+  <div class="cell"><div class="slot" data-t="safety" data-mode="light"></div><div class="cell-label">Safety, light</div></div>
+</div>
+
+<section class="band">
+  <h2>Subagents</h2>
+  <p>Each limit is a label and a field that shows its own unit, so "3 per message" and "20 tool calls" read without a help text.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell"><div class="slot" data-t="subagents" data-mode="dark"></div><div class="cell-label">Subagents, dark</div><div class="cell-note">A type opens a page with Model plus the same three rows: steps, spend and time.</div></div>
+  <div class="cell"><div class="slot" data-t="subagents" data-mode="light"></div><div class="cell-label">Subagents, light</div></div>
+</div>
+
+<section class="band">
+  <h2>Tools</h2>
+  <p>Python and MCP servers need their own pages, so they are two rows at the top. The 13 switches follow with no second line.</p>
+</section>
+<div class="row-of-phones">
+  <div class="cell"><div class="slot" data-t="tools" data-mode="dark"></div><div class="cell-label">Tools, dark</div><div class="cell-note">The default approval mode and the always-allow rules left this page for Safety.</div></div>
+  <div class="cell"><div class="slot" data-t="tools" data-mode="light"></div><div class="cell-label">Tools, light</div></div>
+</div>
+
+<div class="notes">
+  <div class="wide">
+    <h3>Grouping</h3>
+    <p>The home page follows the question a user arrives with. "Models and keys" answers "can Jonaki answer". "What Jonaki can do" lists the abilities. "Memory" is separate because facts and skills are things the user edits, not switches. "Safety" holds everything that decides whether an action runs. "Look and feel" holds Theme, the status strip and the answer style. Two changes to the proposal: the Memory group is titled "Memory" and holds two rows, "Saved facts" and "Skills", because a group "Memory and skills" over one row of the same name repeats itself; and "Files" and "Reminders and schedule" are separate rows because today's "Files and schedule" joins a folder link to a reminder list that have nothing in common.</p>
+  </div>
+  <div class="wide">
+    <h3>Renamed labels</h3>
+    <table>
+      <tr><th>Old label</th><th>New label</th></tr>
+      <tr><td>Guardrails / Jev guard</td><td>Safety / Safety check</td></tr>
+      <tr><td>Tools and approvals</td><td>Tools (approvals moved to Safety)</td></tr>
+      <tr><td>Web and YouTube</td><td>Web search and YouTube</td></tr>
+      <tr><td>Answers</td><td>Answer style and personas</td></tr>
+      <tr><td>Files and schedule</td><td>Files; Reminders and schedule</td></tr>
+      <tr><td>Memory and skills</td><td>Memory group: Saved facts; Skills</td></tr>
+      <tr><td>Theme > Status icons / Show status strip</td><td>Status strip</td></tr>
+      <tr><td>Status icons rows: Context window / Bypass</td><td>Context size / Never-ask mode</td></tr>
+      <tr><td>About</td><td>About Jonaki</td></tr>
+      <tr><td>Routing (service, model menu)</td><td>Which provider</td></tr>
+      <tr><td>Private, then cheapest</td><td>Prefer private (full text on the open choice: "Private providers first, then cheapest")</td></tr>
+      <tr><td>Automatic (routing)</td><td>OpenRouter decides</td></tr>
+      <tr><td>Providers (model menu)</td><td>Provider list</td></tr>
+      <tr><td>Set as default (model menu)</td><td>Make default</td></tr>
+      <tr><td>Thinking</td><td>Reasoning</td></tr>
+      <tr><td>in $ / out $ / cache $ per model</td><td>One header "USD per million tokens" with In / Out / Cached</td></tr>
+      <tr><td>Bypass (approval mode)</td><td>Never ask (description "Nothing asks")</td></tr>
+      <tr><td>Approvals in new threads</td><td>Unchanged</td></tr>
+      <tr><td>Skip cards for safe actions</td><td>Don't ask for safe actions</td></tr>
+      <tr><td>Screen outside content</td><td>Check web content</td></tr>
+      <tr><td>Cost this month</td><td>Spent this month</td></tr>
+      <tr><td>After outside content</td><td>After reading web content</td></tr>
+      <tr><td>Ask before sending out</td><td>Ask before sending data out</td></tr>
+      <tr><td>Hold new facts for review</td><td>Review new facts before saving</td></tr>
+      <tr><td>Start without asking (Per message)</td><td>Start without asking, "3 per message"</td></tr>
+      <tr><td>Start at once (In one call)</td><td>Run at the same time, "2 agents"</td></tr>
+      <tr><td>Most per message</td><td>Most in one message, "8 agents"</td></tr>
+      <tr><td>Tool steps</td><td>Steps per agent, "20 tool calls"</td></tr>
+      <tr><td>Cost (subagent)</td><td>Spend per agent, "0.50 USD"</td></tr>
+      <tr><td>Minutes</td><td>Time per agent, "10 minutes"</td></tr>
+      <tr><td>All tools</td><td>Turn tools on or off</td></tr>
+      <tr><td>Data add-on</td><td>Data tools</td></tr>
+      <tr><td>Time zone in messages: None / Offset / Zone name</td><td>Off / UTC offset / City (for example Asia/Dhaka)</td></tr>
+      <tr><td>Network state</td><td>Check connection</td></tr>
+      <tr><td>Keep awake</td><td>Stay awake for tasks</td></tr>
+      <tr><td>Alarms &amp; reminders, Run in background, Start at boot, Install updates</td><td>Unchanged</td></tr>
+      <tr><td>MCP, Python, JavaScript, Markdown, SVG, Tavily, Serper, Ollama, Exa, Hugging Face</td><td>Unchanged (technical names)</td></tr>
+    </table>
+    <p style="margin-top: 10px">Items to check against the code before the build: what "Providers" in the model menu does, what the subagent "Cost" limit counts (assumed: spend per agent run), and whether "Private" in the routing choice means providers that keep no prompt logs.</p>
+  </div>
+  <div>
+    <h3>Summaries removed</h3>
+    <ul>
+      <li>Models: "OpenRouter, 3 models, $12.82 left" and the per-service "3 models, $12.82 left, $0.13 this month".</li>
+      <li>Web and YouTube: "Tavily, then Serper" and "No Gemini key" as a general line.</li>
+      <li>Tools: "N of M tools on, Ask", "Installed, 13.5 MB, numpy, pandas", the MCP server names, "12 groups" and the one-line explanation under each tool switch.</li>
+      <li>Answers: "Normal, no personas". Memory: "N facts, N skills". Files and schedule: folder name and reminder count.</li>
+      <li>Theme: "Follows the phone". About: the version line (the version stays on the About page).</li>
+      <li>Subagents: the per-type model summaries on the home page; the model now shows at the end of the type row, where it is the value being set.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Summaries kept</h3>
+    <ul>
+      <li>Permissions: "Calendar blocked" in red, shown only when a permission is blocked.</li>
+      <li>Web search and YouTube: "YouTube needs a Gemini key" in red, shown only when the key is missing.</li>
+      <li>Models: a chat service with no key shows "No key" in red on its row. When no service has a key the Models home row also shows "Add a key".</li>
+      <li>Safety check: shows "Needs an OpenRouter key" in red when the check cannot run (not drawn, same style).</li>
+    </ul>
+    <p>Rule: a second line appears when the user must act, and disappears when the thing is fine.</p>
+  </div>
+</div>
+
+<script>
+  // Each screen is written once as a template and cloned into a dark and a light frame.
+  for (const slot of document.querySelectorAll(".slot")) {
+    const phone = document.getElementById(slot.dataset.t).content.firstElementChild.cloneNode(true);
+    phone.classList.add(slot.dataset.mode);
+    slot.replaceWith(phone);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki memory and skills v2: what was remembered, what is waiting</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  ::selection { background: #c9e86b; color: #1f2a00; }
+  body { background: #0b0c0b; color: #d9dcd5; font-family: "Geist", system-ui, sans-serif; padding: 44px 32px 90px; }
+  .page-head, .band, .notes { max-width: 1560px; margin-left: auto; margin-right: auto; }
+  .page-head { margin-bottom: 34px; }
+  .page-head h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+  .page-head p { margin-top: 10px; max-width: 72ch; color: #a4aa9d; line-height: 1.6; font-size: 15px; }
+  .band { margin-bottom: 14px; margin-top: 46px; }
+  .band h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+  .band p { margin-top: 6px; max-width: 72ch; color: #a4aa9d; line-height: 1.6; font-size: 14px; }
+  .row-of-phones { max-width: 1560px; margin: 18px auto 0; display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start; }
+  .cell { display: flex; flex-direction: column; gap: 12px; width: 360px; }
+  .cell-label { font-size: 13.5px; color: #c6cbbf; padding-left: 6px; font-weight: 500; }
+  .cell-note { font-size: 13px; color: #9aa094; padding: 0 6px; line-height: 1.55; }
+  .notes { margin-top: 52px; color: #b4b9ad; font-size: 14.5px; line-height: 1.65; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 8px 48px; }
+  .notes h3 { font-size: 15px; color: #e4e7df; font-weight: 600; margin: 18px 0 6px; }
+  .notes p { margin-bottom: 10px; max-width: 68ch; }
+  .notes b { color: #e4e7df; font-weight: 600; }
+
+  .phone {
+    width: 360px; height: 760px; border-radius: 34px; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
+    font-family: "Geist", system-ui, sans-serif; box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080;
+  }
+  .dark  { --bg:#10130e; --ink:#e6e9e0; --ink-2:#c3c9b9; --muted:#8b927f; --line:#262b21; --line-2:#333a2b; --field:#1a1e16; --card:#181c14; --under:#141811; --accent:#c9e86b; --on-accent:#1f2a00; --glow:#d4f06a; --glow-halo:#c9e86b55; --warn:#ffb4ab; --well:#0c0f0a; }
+  .light { --bg:#f3f6ef; --ink:#171b14; --ink-2:#3a4233; --muted:#5f6857; --line:#dde3d5; --line-2:#cdd5c2; --field:#e7ece1; --card:#ffffff; --under:#e9eee3; --accent:#3f5600; --on-accent:#f3f6ef; --glow:#9cc520; --glow-halo:#9cc52066; --warn:#ba1a1a; --well:#eef2e8; }
+  .statusbar { height: 30px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; }
+  .statusbar i { font-size: 13px; margin-left: 4px; }
+  .mono { font-family: "Geist Mono", monospace; font-feature-settings: "tnum"; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; font-size: 21px; color: var(--ink); flex: none; }
+
+  /* Today's first screen, for comparison. */
+  .list-top { height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 20px; }
+  .brand { font-size: 23px; font-weight: 600; letter-spacing: -0.02em; }
+  .brand .j { color: var(--accent); position: relative; }
+  .brand .j::before { content: ""; position: absolute; left: 50%; top: 4px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 9px 2px var(--glow-halo); }
+  .search { margin: 4px 20px 10px; height: 44px; flex: none; border-radius: 22px; background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--muted); font-size: 14.5px; }
+  .empty { flex: 1; display: grid; place-items: center; color: var(--muted); font-size: 15px; }
+  .fab { position: absolute; right: 18px; bottom: 26px; height: 54px; padding: 0 20px 0 16px; border-radius: 18px; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+  .fab i { font-size: 20px; }
+
+  /* The setup deck. One card is on top; the edges under it are the cards still to come. */
+  .deck-top { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 22px; }
+  .deck-top .count { font-size: 14px; color: var(--muted); }
+  .deck-top .count b { color: var(--ink); font-weight: 600; }
+  .text-btn { height: 40px; padding: 0 12px; display: flex; align-items: center; font-size: 14.5px; font-weight: 600; color: var(--accent); border-radius: 20px; }
+  .text-btn.quiet { color: var(--ink-2); font-weight: 500; }
+  .deck { flex: 1; position: relative; margin: 2px 14px 0; min-height: 0; }
+  .under { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; border-radius: 26px; background: var(--under); border: 1px solid var(--line); }
+  .under.u1 { left: 10px; right: 10px; bottom: 30px; }
+  .under.u2 { left: 20px; right: 20px; bottom: 20px; }
+  .under.u3 { left: 30px; right: 30px; bottom: 10px; }
+  .card { position: absolute; left: 0; right: 0; top: 0; border-radius: 26px; background: var(--card); border: 1px solid var(--line-2); display: flex; flex-direction: column; overflow: hidden; }
+  .card.left3 { bottom: 42px; } .card.left2 { bottom: 32px; } .card.left1 { bottom: 22px; } .card.left0 { bottom: 12px; }
+  .card h3 { font-size: 23px; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; padding: 24px 22px 0; text-wrap: balance; }
+  .card .lede { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); padding: 8px 22px 0; }
+  .card .body { flex: 1; min-height: 0; padding-top: 14px; }
+  .if-skip { font-size: 13px; line-height: 1.45; color: var(--muted); padding: 10px 22px 0; border-top: 1px solid var(--line); margin-top: auto; }
+  .foot { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 14px 10px; }
+  .btn { height: 46px; padding: 0 22px; border-radius: 23px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .btn.off { background: var(--field); color: var(--muted); }
+
+  .choice { display: grid; grid-template-columns: 24px 1fr; gap: 0 14px; align-items: center; padding: 11px 22px; min-height: 52px; }
+  .choice .t { font-size: 15.5px; font-weight: 500; }
+  .choice .s { grid-column: 2; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .choice.tall { align-items: start; padding-top: 13px; padding-bottom: 13px; }
+  .choice.tall .radio { margin-top: 1px; }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--muted); grid-row: 1 / span 2; }
+  .choice.on .radio { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px); }
+  .choice.on { background: var(--well); }
+  .more-row { padding: 11px 22px 11px 60px; font-size: 14.5px; color: var(--accent); font-weight: 600; }
+
+  .key-label { font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 22px 6px; }
+  .key-field { margin: 0 22px; height: 50px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--well); display: flex; align-items: center; justify-content: space-between; padding: 0 6px 0 14px; font-size: 14.5px; }
+  .key-field.empty { color: var(--muted); }
+  .key-field .paste { height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; font-size: 13.5px; font-weight: 600; color: var(--accent); }
+  .key-state { padding: 8px 22px 0; font-size: 13.5px; color: var(--accent); display: flex; align-items: center; gap: 7px; font-weight: 500; }
+  .key-state .rest { color: var(--muted); font-weight: 400; }
+  .key-help { padding: 8px 22px 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .key-help u { color: var(--ink-2); text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  .sub-label { font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 18px 22px 2px; }
+  .model { display: grid; grid-template-columns: 24px 1fr; gap: 0 14px; padding: 9px 22px; align-items: start; }
+  .model .radio { margin-top: 2px; }
+  .model.on { background: var(--well); }
+  .model.on .radio { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px); }
+  .model .t { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .model .s { grid-column: 2; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .perm { margin: 6px 22px 0; border-radius: 16px; background: var(--well); padding: 14px 16px; }
+  .notif { display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 10px; align-items: center; }
+  .notif .app { font-size: 12px; color: var(--muted); grid-column: 2; }
+  .notif .when { font-size: 12px; color: var(--muted); }
+  .notif .t { grid-column: 2 / span 2; font-size: 14px; font-weight: 600; }
+  .notif .s { grid-column: 2 / span 2; font-size: 13px; color: var(--ink-2); }
+  .notif .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 8px 2px var(--glow-halo); justify-self: center; grid-row: 1 / span 3; align-self: start; margin-top: 4px; }
+  .notif + .notif { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .notif .tick { font-size: 15px; color: var(--muted); justify-self: center; grid-row: 1 / span 3; align-self: start; margin-top: 1px; }
+
+  /* After the deck. */
+  .chat-top { height: 56px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+  .chat-top .title { flex: 1; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; padding-left: 4px; }
+  .transcript { flex: 1; padding: 0 20px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .strip { display: flex; gap: 8px; padding: 6px 12px; flex: none; }
+  .pill { height: 34px; border-radius: 17px; background: var(--field); display: flex; align-items: center; gap: 7px; padding: 0 12px; font-size: 13px; color: var(--ink-2); white-space: nowrap; min-width: 0; }
+  .pill span { overflow: hidden; text-overflow: ellipsis; }
+  .pill.off { color: var(--muted); }
+  .pill.need { background: transparent; border: 1px solid var(--line-2); color: var(--ink); font-weight: 600; }
+  .composer { display: flex; align-items: flex-end; gap: 8px; padding: 6px 12px 18px; flex: none; }
+  .plus { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--line); display: grid; place-items: center; font-size: 21px; color: var(--ink-2); flex: none; }
+  .field { flex: 1; min-height: 44px; border-radius: 22px; background: var(--field); display: flex; align-items: center; padding: 0 16px; font-size: 14.5px; color: var(--muted); }
+  .field .caret { width: 1.5px; height: 19px; background: var(--accent); margin-right: 2px; }
+  .send { width: 44px; height: 44px; border-radius: 22px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 19px; flex: none; }
+  .send.off { background: var(--field); color: var(--muted); }
+  .blocked { margin: 0 12px 18px; flex: none; border-radius: 22px; border: 1px solid var(--line-2); padding: 14px 8px 8px 18px; }
+  .blocked .t { font-size: 15px; font-weight: 600; }
+  .blocked .s { font-size: 13.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.45; padding-right: 10px; }
+  .blocked .acts { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+  .todo { margin: 2px 20px 0; flex: none; }
+  .todo-head { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .todo-head .t { font-size: 14px; font-weight: 600; }
+  .todo-row { display: grid; grid-template-columns: 1fr auto; gap: 1px 12px; padding: 11px 0; border-top: 1px solid var(--line); align-items: center; }
+  .todo-row .t { font-size: 15px; font-weight: 500; }
+  .todo-row .s { font-size: 13px; color: var(--muted); grid-column: 1; }
+  .todo-row .s.need { color: var(--warn); }
+  .todo-row .go { grid-row: 1 / span 2; grid-column: 2; font-size: 14px; font-weight: 600; color: var(--accent); }
+  .todo-end { border-top: 1px solid var(--line); }
+
+  /* v2 additions */
+  .row-of-phones { align-items: start; }
+  .screen-top { height: 56px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+  .screen-top .title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; padding-left: 4px; flex: 1; }
+  .scroll { flex: 1; min-height: 0; overflow: hidden; }
+  .sec { font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 16px 20px 4px; display: flex; justify-content: space-between; }
+  .sec b { color: var(--accent); font-weight: 600; }
+  .help { font-size: 13px; color: var(--muted); line-height: 1.45; padding: 4px 20px 6px; }
+  .fact { padding: 11px 20px; border-top: 1px solid var(--line); }
+  .fact .t { font-size: 14.5px; line-height: 1.4; }
+  .fact .src { font-size: 12.5px; color: var(--muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fact .src i { color: var(--accent); font-style: normal; }
+  .fact .acts { display: flex; gap: 6px; margin-top: 8px; }
+  .fact .acts span { height: 32px; padding: 0 12px; border-radius: 16px; display: flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--well); }
+  .fact .acts span.quiet { color: var(--ink-2); background: transparent; border: 1px solid var(--line-2); }
+  .srow { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 20px; border-top: 1px solid var(--line); align-items: center; }
+  .srow .t { font-size: 15px; font-weight: 500; }
+  .srow .s { font-size: 13px; color: var(--muted); grid-column: 1; line-height: 1.4; }
+  .srow .s.warn { color: var(--warn); }
+  .srow .v { font-size: 13.5px; color: var(--muted); grid-row: 1 / span 2; grid-column: 2; }
+  .sw { width: 44px; height: 26px; border-radius: 13px; background: var(--line-2); position: relative; grid-row: 1 / span 2; grid-column: 2; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--card); }
+  .sw.on { background: var(--accent); }
+  .sw.on::after { left: 21px; background: var(--on-accent); }
+  .sys { margin: 10px 0 14px; display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+  .sys i { color: var(--accent); font-size: 15px; }
+  .sys u { color: var(--ink-2); text-decoration-color: var(--line-2); text-underline-offset: 3px; margin-left: auto; font-weight: 600; }
+  .bubble { align-self: flex-end; background: var(--field); border-radius: 18px 18px 4px 18px; padding: 10px 14px; font-size: 14.5px; max-width: 78%; margin-top: 10px; }
+  .answer { font-size: 14.5px; line-height: 1.5; margin-top: 14px; }
+  .log { padding: 10px 20px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; }
+  .log .t { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log .s { font-size: 12.5px; color: var(--muted); grid-column: 1; }
+  .log .r { font-size: 12.5px; color: var(--accent); grid-row: 1 / span 2; grid-column: 2; align-self: center; text-align: right; }
+  .log .r.bad { color: var(--warn); }
+  .wait { margin: 4px 20px 0; border-radius: 16px; background: var(--well); border: 1px solid var(--line); padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 13.5px; flex: none; }
+  .wait i { color: var(--accent); }
+  .wait u { margin-left: auto; color: var(--accent); font-weight: 600; text-decoration: none; }
+  .thread { padding: 12px 20px; border-top: 1px solid var(--line); }
+  .thread .t { font-size: 15px; font-weight: 500; }
+  .thread .s { font-size: 13px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet { margin-top: auto; border-radius: 26px 26px 0 0; background: var(--card); border: 1px solid var(--line-2); border-bottom: 0; padding: 8px 0 22px; flex: none; }
+  .handle { width: 36px; height: 4px; border-radius: 2px; background: var(--line-2); margin: 4px auto 14px; }
+  .sheet h4 { font-size: 18px; font-weight: 600; padding: 0 20px 6px; }
+  .sheet .choice { padding-left: 20px; }
+  .skill { padding: 12px 20px; border-top: 1px solid var(--line); }
+  .skill .t { font-size: 15px; font-weight: 600; font-family: "Geist Mono", monospace; }
+  .skill .s { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; }
+  .skill .m { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .tag { font-size: 11.5px; font-weight: 600; color: var(--on-accent); background: var(--accent); border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+  .phone.light .sw::after { background: #ffffff; }
+</style>
+</head>
+<body>
+<header class="page-head">
+  <h1>Memory and skills v2: what was remembered, what is waiting</h1>
+  <p>On the test phone, after two weeks of use, Memory holds 5 facts for all threads and 1 thread fact, and Skills has no proposal. The background model (MiMo V2.6 Flash, picked as the cheapest priced model) did run: the usage sheet of a thread shows 2 turns on it that the user never chose. So extraction works and finds almost nothing, and the app never says so. Every path that ends in "nothing saved" is silent: a fact held for review, an answer with no operations, a model that failed, a proposal refused because five are waiting. These screens make each of those visible, in the thread, on the thread list, and on the Memory and Skills screens. Dark first, light beside it.</p>
+</header>
+
+<section class="band">
+  <h2>In the thread: one quiet line after extraction</h2>
+  <p>After a run that extracted memory, the transcript gets one muted system line. It says what happened in five words and opens the Memory screen. The same line reports a failure, so a missing key or a broken answer is seen the first time, not after two weeks.</p>
+</section>
+<template data-screen data-label="Facts remembered" data-note="The line appears once per extraction, under the last answer. &quot;See&quot; opens Memory filtered to this thread.">
+  <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Mustard Oil vs Soybean Oil<div style="font-size:12.5px;font-weight:500;color:var(--muted)">Claude Haiku 5.5 · OpenRouter</div></div><div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div></div>
+  <div class="transcript">
+    <div class="bubble">I cook with mustard oil daily, my doctor said to cut down. Is soybean better?</div>
+    <div class="answer">Short answer: for daily cooking, soybean oil has less erucic acid and more polyunsaturated fat, so it is the safer swap. Mustard oil is fine for finishing dishes a few times a week…</div>
+    <div class="sys"><i class="ph ph-brain"></i>Remembered 2 facts<u>See</u></div>
+  </div>
+  <div class="strip"><div class="pill mono"><span>4% /1M</span></div><div class="pill mono"><span>$0.0028</span></div></div>
+  <div class="composer"><div class="plus"><i class="ph ph-plus"></i></div><div class="field">Message</div><div class="send"><i class="ph ph-arrow-up"></i></div></div>
+</template>
+<template data-screen data-label="Nothing to remember, and a failure" data-note="Two states of the same line. The second one is the case that was invisible until now.">
+  <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Cluster Fig Tree Identification<div style="font-size:12.5px;font-weight:500;color:var(--muted)">Claude Haiku 5.5 · OpenRouter</div></div><div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div></div>
+  <div class="transcript">
+    <div class="bubble">what is this tree called in bangla?</div>
+    <div class="answer">If it is the cluster fig (Ficus racemosa), its Bangla name is জগডুমুর.</div>
+    <div class="sys"><i class="ph ph-brain"></i>Nothing new to remember<u>Why</u></div>
+    <div class="bubble">and the one with small round leaves?</div>
+    <div class="answer">That looks like a jujube (Ziziphus mauritiana), Bangla কুল or বরই.</div>
+    <div class="sys"><i class="ph ph-warning" style="color:var(--warn)"></i>Memory not updated: no key for Gemini<u>Fix</u></div>
+  </div>
+  <div class="strip"><div class="pill mono"><span>1% /1M</span></div><div class="pill mono"><span>$0.0021</span></div></div>
+  <div class="composer"><div class="plus"><i class="ph ph-plus"></i></div><div class="field">Message</div><div class="send"><i class="ph ph-arrow-up"></i></div></div>
+</template>
+
+<section class="band">
+  <h2>Thread list: what is waiting</h2>
+  <p>Facts held for review and skill proposals are the two things the user must act on, and both live three taps away today. One row above the threads counts them. It is gone when nothing waits.</p>
+</section>
+<template data-screen data-label="Waiting row" data-note="Replaces nothing: it sits where &quot;Left to set up&quot; sits on a fresh install, and the two never show together.">
+  <div class="list-top"><div class="brand"><span class="j">ȷ</span>onaki</div><div style="display:flex"><div class="icon-btn"><i class="ph ph-lock"></i></div><div class="icon-btn"><i class="ph ph-gear"></i></div></div></div>
+  <div class="search"><i class="ph ph-magnifying-glass"></i>Search threads</div>
+  <div class="wait"><i class="ph ph-tray"></i>3 facts and 1 skill to review<u>Open</u></div>
+  <div class="sec"><span>Yesterday</span></div>
+  <div class="thread"><div class="t">Kai free model analysis</div><div class="s">Here's a comparison. I know Jonaki's tools from my own setup…</div></div>
+  <div class="thread"><div class="t">Mustard Oil vs Soybean Oil</div><div class="s">Here's how olive and sunflower oil compare, in the same terms…</div></div>
+  <div class="thread"><div class="t">Soybean Oil and Thyroid Risk</div><div class="s">Short answer: No. Neither oil is a meaningful thyroid risk.</div></div>
+  <div class="sec"><span>Last 7 days</span></div>
+  <div class="thread"><div class="t">Hierarchy-dLLM Paper Search</div><div class="s">I couldn't open the paper itself. OpenReview blocked both…</div></div>
+  <div class="fab"><i class="ph ph-plus"></i>New thread</div>
+</template>
+
+<section class="band">
+  <h2>Memory screen: review first, then a log</h2>
+  <p>Facts waiting for review go to the top with Keep and Discard, as the code already does when the section is not empty; what is new is the help line that says what memory is for, and the log at the bottom. The log lists every background call: when, which model, and what came of it. It is the only place a user can see "the model answered with nothing" without adb.</p>
+</section>
+<template data-screen data-label="Memory with facts to review" data-note="The help line answers the question this review started from: memory keeps facts about the user, not what answers explained. Chat search covers the rest.">
+  <div class="screen-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Memory</div></div>
+  <div class="scroll">
+    <div class="help">Jonaki keeps facts about you: goals, preferences, decisions, names, dates. What an answer explained is found with chat search.</div>
+    <div class="sec"><span>To review</span><b>3</b></div>
+    <div class="fact"><div class="t">User cooks with mustard oil daily and was told by a doctor to cut down.</div><div class="src"><i>Mustard Oil vs Soybean Oil</i> · for all threads</div><div class="acts"><span>Keep</span><span class="quiet">Discard</span></div></div>
+    <div class="fact"><div class="t">The user's thesis topic is CGRA accelerator design; the draft is due 15 December 2026.</div><div class="src"><i>Hierarchy-dLLM Paper Search</i> · held: this thread read web pages</div><div class="acts"><span>Keep</span><span class="quiet">Discard</span></div></div>
+    <div class="fact"><div class="t">User prefers answers in English with Bangla terms in brackets.</div><div class="src"><i>Cluster Fig Tree Identification</i> · for all threads</div><div class="acts"><span>Keep</span><span class="quiet">Discard</span></div></div>
+    <div class="sec"><span>All threads</span><b>5</b></div>
+    <div class="fact"><div class="t">User's research area interest: CGRA (coarse-grained reconfigurable arrays) accelerator architecture.</div><div class="src">From: do a deep search about latest research papers on CGRA</div></div>
+    <div class="fact"><div class="t">User is a self-taught amateur developer who builds Android apps with AI assistance.</div><div class="src">From: ok.</div></div>
+  </div>
+  <div class="fab"><i class="ph ph-plus"></i>Add fact</div>
+</template>
+<template data-screen data-label="Memory log" data-note="Reached from the bottom of Memory. One row per background call, newest first. The red rows are the ones the user asked about.">
+  <div class="screen-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Memory log</div></div>
+  <div class="scroll">
+    <div class="help">Every time Jonaki read a thread for facts. Calls use the cheapest model with a key.</div>
+    <div class="log"><div class="t">Kai free model analysis</div><div class="s">Today 02:05 · MiMo V2.6 Flash · 24 messages</div><div class="r">Nothing new</div></div>
+    <div class="log"><div class="t">Mustard Oil vs Soybean Oil</div><div class="s">Sat 13:59 · MiMo V2.6 Flash · 6 messages</div><div class="r">2 to review</div></div>
+    <div class="log"><div class="t">Soybean Oil and Thyroid Risk</div><div class="s">Sat 13:41 · MiMo V2.6 Flash · 4 messages</div><div class="r">Nothing new</div></div>
+    <div class="log"><div class="t">Hierarchy-dLLM Paper Search</div><div class="s">Fri 22:10 · MiMo V2.6 Flash · 31 messages</div><div class="r">1 held, 1 added</div></div>
+    <div class="log"><div class="t">Suggesting a Useful New Skill</div><div class="s">Fri 21:02 · MiMo V2.6 Flash · 12 messages</div><div class="r bad">Answer unreadable</div></div>
+    <div class="log"><div class="t">Identifying vine on pergola</div><div class="s">Fri 18:30 · Gemini 3.8 Flash · 3 messages</div><div class="r bad">No key for Gemini</div></div>
+    <div class="log"><div class="t">what are the letters of idgam ba gunnah</div><div class="s">Thu 23:12 · MiMo V2.6 Flash · 2 messages</div><div class="r">Nothing new</div></div>
+    <div class="help" style="padding-top:14px">A thread is read after 8 new messages, or when you leave it with 2 or more. Facts from a thread that read web pages wait for review.</div>
+  </div>
+</template>
+
+<section class="band">
+  <h2>Skills: proposals you can see</h2>
+  <p>A proposal is written by the model and waits for the user. Today it is listed only at the top of Skills, five block any new one, and a refused proposal is reported to the model alone. Here the proposal is announced in the thread, counted on the thread list, and dated on the Skills screen; one older than 14 days is dropped so the cap cannot stay full.</p>
+</section>
+<template data-screen data-label="Skills with a proposal" data-note="&quot;Proposed&quot; keeps its place at the top. The date and the thread name are new, and the 14-day note.">
+  <div class="screen-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Skills</div><div class="icon-btn"><i class="ph ph-plus"></i></div></div>
+  <div class="scroll">
+    <div class="sec"><span>Proposed</span><b>1</b></div>
+    <div class="skill"><div class="t">openreview-paper</div><div class="s">Read an OpenReview paper when the forum page is blocked: fetch the PDF link, then the PDF.</div><div class="m">From Hierarchy-dLLM Paper Search · Fri · kept 14 days</div><div class="fact" style="padding:0;border:0"><div class="acts"><span>Add</span><span class="quiet">Read</span><span class="quiet">Discard</span></div></div></div>
+    <div class="sec"><span>Library</span><b>8</b></div>
+    <div class="skill"><div class="t">bangla-formal-letter</div><div class="s">Write a formal letter or application in Bangla (আবেদনপত্র, দাপ্তরিক চিঠি).</div></div>
+    <div class="skill"><div class="t">internal-comms</div><div class="s">A set of resources to help me write all kinds of internal communications.</div></div>
+    <div class="skill"><div class="t">office-documents<span class="tag">Built-in</span></div><div class="s">Write or change Word, Excel and PowerPoint files.</div></div>
+    <div class="skill"><div class="t">pdf</div><div class="s">Read and extract text or tables from PDFs, merge, split, rotate, fill forms.</div></div>
+  </div>
+</template>
+<template data-screen data-label="A proposal in the thread" data-note="The model already has to say in one sentence that it proposed a skill; this makes that sentence a line with a button, so the user does not need to find Skills.">
+  <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Hierarchy-dLLM Paper Search<div style="font-size:12.5px;font-weight:500;color:var(--muted)">Claude Haiku 5.5 · OpenRouter</div></div><div class="icon-btn"><i class="ph ph-dots-three-vertical"></i></div></div>
+  <div class="transcript">
+    <div class="bubble">try the pdf link instead</div>
+    <div class="answer">That worked. The paper proposes a two-level diffusion language model where a coarse planner… Summary saved to artifacts/hierarchy-dllm.md.</div>
+    <div class="sys"><i class="ph ph-sparkle"></i>Proposed a skill: openreview-paper<u>Review</u></div>
+    <div class="sys"><i class="ph ph-brain"></i>1 fact to review<u>See</u></div>
+  </div>
+  <div class="strip"><div class="pill mono"><span>12% /1M</span></div><div class="pill mono"><span>$0.0039</span></div></div>
+  <div class="composer"><div class="plus"><i class="ph ph-plus"></i></div><div class="field">Message</div><div class="send"><i class="ph ph-arrow-up"></i></div></div>
+</template>
+
+<section class="band">
+  <h2>Approvals sheet: the Jev row becomes a switch</h2>
+  <p>The sheet under the shield chip lists Ask, Auto and Bypass for this thread and then a row "Jev guard · On" that cannot be touched. The row becomes a switch for this thread, with the one line that says what it does. Without an OpenRouter key the switch is off and locked, and the line says why.</p>
+</section>
+<template data-screen data-label="Approvals sheet, switch on" data-note="The global default stays in Settings > Safety. This switch is the thread's own, like Ask, Auto and Bypass are.">
+  <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Kai free model analysis</div></div>
+  <div class="transcript"></div>
+  <div class="sheet">
+    <div class="handle"></div>
+    <h4>Approvals</h4>
+    <div class="choice on"><span class="radio"></span><span class="t">Ask</span><span class="s">Every change asks</span></div>
+    <div class="choice"><span class="radio"></span><span class="t">Auto</span><span class="s">Only changes that leave the app ask</span></div>
+    <div class="choice"><span class="radio"></span><span class="t">Never ask</span><span class="s">Nothing asks</span></div>
+    <div class="srow" style="margin-top:8px"><div class="t">Safety check</div><div class="s">A second model checks risky actions and web text. Jev, through OpenRouter.</div><div class="sw on"></div></div>
+  </div>
+</template>
+<template data-screen data-label="Approvals sheet, no key" data-note="Locked state. The line names the fix instead of &quot;On, no OpenRouter key&quot;.">
+  <div class="chat-top"><div class="icon-btn"><i class="ph ph-arrow-left"></i></div><div class="title">Kai free model analysis</div></div>
+  <div class="transcript"></div>
+  <div class="sheet">
+    <div class="handle"></div>
+    <h4>Approvals</h4>
+    <div class="choice on"><span class="radio"></span><span class="t">Ask</span><span class="s">Every change asks</span></div>
+    <div class="choice"><span class="radio"></span><span class="t">Auto</span><span class="s">Only changes that leave the app ask</span></div>
+    <div class="choice"><span class="radio"></span><span class="t">Never ask</span><span class="s">Nothing asks</span></div>
+    <div class="srow" style="margin-top:8px"><div class="t" style="color:var(--muted)">Safety check</div><div class="s warn">Needs an OpenRouter key. Add one in Settings.</div><div class="sw"></div></div>
+  </div>
+</template>
+
+<div class="notes">
+  <div>
+    <h3>Strings introduced</h3>
+    <p>Remembered %d facts · Nothing new to remember · Memory not updated: %s · See · Why · Fix<br>%d facts and %d skills to review · Open<br>To review · Memory log · Nothing new · %d to review · %d held, %d added · Answer unreadable · No key for %s<br>Jonaki keeps facts about you: goals, preferences, decisions, names, dates. What an answer explained is found with chat search.<br>A thread is read after 8 new messages, or when you leave it with 2 or more. Facts from a thread that read web pages wait for review.<br>Proposed a skill: %s · Review · kept 14 days · Library<br>Safety check · A second model checks risky actions and web text. Jev, through OpenRouter. · Needs an OpenRouter key. Add one in Settings.</p>
+    <h3>Code behind each screen</h3>
+    <p><b>System line:</b> MemoryExtractor already knows the outcome (plan applied, Failed, unreadable); it writes a hidden BACKGROUND usage row today, which becomes a visible row with a result text.<br><b>Waiting row:</b> observePendingReview and SkillProposals.list() already exist; the thread list only needs their counts.<br><b>Memory log:</b> the BACKGROUND rows plus a result column; the request log filter that hides them (requestSentAtMillis) is lifted for this page.<br><b>Trigger:</b> MESSAGES_PER_EXTRACTION from 20 to 8.<br><b>Jev switch:</b> a per-thread field next to the thread's approval mode; the global one stays in Settings.</p>
+  </div>
+  <div>
+    <h3>What the phone showed (2026-10-25)</h3>
+    <p>Settings > Memory and skills: Save facts from chats on, Review new facts off, Suggest facts for all threads on, Suggest skills on. Memory: 5 facts for all threads, no "To review" section. Skills: 8 skills, no "Proposed" section. Usage sheet of "Kai free model analysis": Claude Haiku 14 turns, Jev 16 turns, MiMo V2.6 Flash 2 turns at $0.0004, a model the user never picked, so the background calls ran. Opening and leaving that thread wrote no MemoryExtractor line to logcat: either nothing was unread or the gate returned before logging; the code logs only on failure.</p>
+    <h3>Open points</h3>
+    <p>Whether the "Nothing new" case should also be shown in the thread or only in the log (the mock shows both; the thread line could be limited to the first time).<br>Whether the thread-level Safety check switch overrides the global one or only turns it off for this thread (the mock assumes off-only).</p>
+  </div>
+</div>
+
+<script>
+// Each screen is written once inside a <template>; this clones it into a dark and a light frame.
+document.querySelectorAll('template[data-screen]').forEach(function (template) {
+  var label = template.dataset.label, note = template.dataset.note;
+  var row = document.createElement('div'); row.className = 'row-of-phones';
+  ['dark', 'light'].forEach(function (theme) {
+    var cell = document.createElement('div'); cell.className = 'cell';
+    var phone = document.createElement('div'); phone.className = 'phone ' + theme;
+    phone.innerHTML = '<div class="statusbar"><span>9:41</span><span><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></span></div>' + template.innerHTML;
+    cell.appendChild(phone);
+    cell.insertAdjacentHTML('beforeend', '<div class="cell-label">' + label + (theme === 'light' ? ', light' : '') + '</div><div class="cell-note">' + note + '</div>');
+    row.appendChild(cell);
+  });
+  template.parentNode.insertBefore(row, template.nextSibling);
+});
+</script>
+</body>
+</html>
