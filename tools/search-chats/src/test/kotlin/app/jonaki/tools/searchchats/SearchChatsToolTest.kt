@@ -114,7 +114,7 @@ class SearchChatsToolTest {
         assertFalse(output.isError)
         assertEquals(
             "No earlier message contains any of \"unicorn\". Search matches letters, not meaning: try other words, " +
-                "a shorter part of a word, or the same word in the other script (Bangla or English).",
+                "a shorter part of a word, or the same word in another language or script.",
             output.text,
         )
     }

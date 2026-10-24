@@ -25,6 +25,46 @@ async function countCall(env: Env, device: string): Promise<number> {
   return calls;
 }
 
+/** The phone's count for today (UTC) without adding a call. */
+async function todaysCount(env: Env, device: string): Promise<number> {
+  const day = new Date().toISOString().slice(0, 10);
+  return Number((await env.LIMITS.get(`${device}:${day}`)) ?? "0");
+}
+
+/** The next 00:00 UTC, when the daily counters start again. */
+function nextUtcMidnight(): string {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)).toISOString();
+}
+
+async function limitStatus(request: Request, env: Env): Promise<Response> {
+  const device = request.headers.get("X-Jonaki-Device")?.trim();
+  if (!device || device.length > 100) {
+    return jsonError(400, "Missing header X-Jonaki-Device.", "invalid_request_error");
+  }
+  return Response.json({
+    limit: Number(env.DAILY_CALL_LIMIT),
+    used: await todaysCount(env, device),
+    resets_at: nextUtcMidnight(),
+  });
+}
+
+/** Turns a failed upstream answer into the OpenAI error shape the app can read. */
+async function upstreamError(upstream: Response): Promise<Response> {
+  if (upstream.status === 401 || upstream.status === 403) {
+    return jsonError(upstream.status, "Jonaki Free is not set up yet (server token missing).", "upstream_error");
+  }
+  const text = await upstream.text();
+  let message = text.slice(0, 300);
+  try {
+    const parsed = JSON.parse(text) as { errors?: { message?: string }[] };
+    message = parsed.errors?.[0]?.message ?? message;
+  } catch {
+    // Not JSON: the first 300 characters of the body stay as the message.
+  }
+  return jsonError(upstream.status, message, "upstream_error");
+}
+
 async function chatCompletions(request: Request, env: Env): Promise<Response> {
   const device = request.headers.get("X-Jonaki-Device")?.trim();
   if (!device || device.length > 100) {
@@ -62,6 +102,9 @@ async function chatCompletions(request: Request, env: Env): Promise<Response> {
       body: JSON.stringify(body),
     },
   );
+  if (!upstream.ok) {
+    return upstreamError(upstream);
+  }
   // The body is passed on as a stream, so server-sent events reach the phone as they arrive.
   return new Response(upstream.body, {
     status: upstream.status,
@@ -77,6 +120,9 @@ export default {
     }
     if (request.method === "GET" && pathname === "/v1/models") {
       return Response.json({ object: "list", data: [{ id: "free", object: "model", owned_by: "jonaki" }] });
+    }
+    if (request.method === "GET" && pathname === "/v1/limit") {
+      return limitStatus(request, env);
     }
     return jsonError(404, "Not found.", "invalid_request_error");
   },

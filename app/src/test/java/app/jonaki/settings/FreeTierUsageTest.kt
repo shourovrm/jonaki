@@ -1,5 +1,10 @@
 package app.jonaki.settings
 
+import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.Assert.assertEquals
 
@@ -37,6 +42,44 @@ class FreeTierUsageTest {
         assertEquals(60, FreeTierUsage.DAILY_CALL_LIMIT)
     }
 
+    @Test
+    fun `fetches the server limit once per day and sends the device header`() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("{\"limit\":30,\"used\":7,\"resets_at\":\"2026-10-26T00:00:00.000Z\"}"))
+            val usage = FreeTierUsage(store, clock = { 1_761_350_400_000L }, zoneId = "UTC")
+            assertNull(usage.serverLimit())
+            assertEquals(60, usage.effectiveLimit())
+
+            runBlocking {
+                usage.refreshLimit(OkHttpClient(), server.url("/v1").toString(), "device-1")
+                usage.refreshLimit(OkHttpClient(), server.url("/v1").toString(), "device-1")
+            }
+
+            assertEquals(1, server.requestCount)
+            val request = server.takeRequest()
+            assertEquals("/v1/limit", request.path)
+            assertEquals("device-1", request.getHeader("X-Jonaki-Device"))
+            assertEquals(30, usage.effectiveLimit())
+            assertEquals(7, usage.todayCount())
+        }
+    }
+
+    @Test
+    fun `a failed fetch keeps the stored limit and does not throw`() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setResponseCode(500).setBody("oops"))
+            server.enqueue(MockResponse().setBody("not json"))
+            store.writeLimit("2026-10-24", 45)
+            val usage = FreeTierUsage(store, clock = { 1_761_350_400_000L }, zoneId = "UTC")
+
+            runBlocking { usage.refreshLimit(OkHttpClient(), server.url("/v1").toString(), "device-1") }
+            runBlocking { usage.refreshLimit(OkHttpClient(), server.url("/v1").toString(), "device-1") }
+
+            assertEquals(2, server.requestCount)
+            assertEquals(45, usage.effectiveLimit())
+        }
+    }
+
     private class InMemoryStore : FreeTierUsage.Store {
         private var day: String? = null
         private var count: Int = 0
@@ -44,6 +87,14 @@ class FreeTierUsageTest {
         override fun write(day: String, count: Int) {
             this.day = day
             this.count = count
+        }
+
+        private var limitDay: String? = null
+        private var limit: Int? = null
+        override fun readLimit(): Pair<String?, Int?> = limitDay to limit
+        override fun writeLimit(day: String, limit: Int) {
+            limitDay = day
+            this.limit = limit
         }
     }
 }

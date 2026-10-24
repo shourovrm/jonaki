@@ -115,7 +115,7 @@ class SkillProposals(
         if (!SkillFrontMatter.isValidName(skillName)) {
             return ProposalResult.Refused(
                 "the name must be a-z, 0-9 and single hyphens, up to ${SkillFrontMatter.MAX_NAME_LENGTH} characters",
-                "Call propose_skill again with a name such as \"bangla-formal-letter\".",
+                "Call propose_skill again with a name such as \"openreview-paper\".",
             )
         }
         if (isChange && !skillExists(skillName)) {

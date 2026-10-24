@@ -20,8 +20,8 @@ object ThreadTitles {
     private const val SURROUNDING_QUOTES = "\"'`“”‘’„«»"
     private const val TRAILING_MARKS = ".。।…,;:!"
 
-    /** "Title:", "**Title:**" and the Bangla "শিরোনাম:" at the start of the answer. */
-    private val LABEL = Regex("""^\**\s*(thread title|title|name|শিরোনাম)\s*\**\s*[:：]\s*\**\s*""", RegexOption.IGNORE_CASE)
+    /** "Title:" and "**Title:**" at the start of the answer. */
+    private val LABEL = Regex("""^\**\s*(thread title|title|name)\s*\**\s*[:：]\s*\**\s*""", RegexOption.IGNORE_CASE)
 
     fun fromMessage(text: String): String {
         val withoutTimeLine = PromptBuilder.userTextOf(text)

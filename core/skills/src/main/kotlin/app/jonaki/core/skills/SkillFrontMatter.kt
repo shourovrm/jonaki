@@ -25,7 +25,7 @@ data class SkillFrontMatter(
         /** Reads the front matter; a skill that does not follow the format is refused with the reason. */
         fun parse(skillMarkdown: String): FrontMatterResult = FrontMatterReader(skillMarkdown).read()
 
-        /** True for names such as "report" and "bangla-formal-letter"; the name is also the folder name. */
+        /** True for names such as "report" and "openreview-paper"; the name is also the folder name. */
         fun isValidName(name: String): Boolean =
             name.length <= MAX_NAME_LENGTH && NAME_PATTERN.matches(name)
 

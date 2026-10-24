@@ -183,4 +183,24 @@ class SkillLibraryTest {
 
         assertEquals(emptyList<SkillEntry>(), library().list())
     }
+
+    @Test
+    fun anUneditedWithdrawnBuiltInIsRemovedAndAnEditedOneStays() {
+        val withdrawn = builtIn("bangla-formal-letter")
+        val library = library()
+        library.installBuiltIns(listOf(withdrawn))
+        library.installBuiltIns(emptyList())
+
+        library.removeWithdrawnBuiltIns()
+
+        assertFalse(File(libraryFolder, "bangla-formal-letter").exists())
+
+        library.installBuiltIns(listOf(withdrawn))
+        skillFileOf("bangla-formal-letter").appendText("My own line.\n")
+        library.installBuiltIns(emptyList())
+
+        library.removeWithdrawnBuiltIns()
+
+        assertTrue(skillFileOf("bangla-formal-letter").readText().contains("My own line."))
+    }
 }

@@ -87,7 +87,7 @@ class SearchChatsTool(
         if (result.hits.isEmpty()) {
             return ToolOutput.success(
                 "No earlier message contains any of \"$query\". Search matches letters, not meaning: try other words, " +
-                    "a shorter part of a word, or the same word in the other script (Bangla or English).",
+                    "a shorter part of a word, or the same word in another language or script.",
             )
         }
         return ToolOutput.success(describe(query, result, limit))
