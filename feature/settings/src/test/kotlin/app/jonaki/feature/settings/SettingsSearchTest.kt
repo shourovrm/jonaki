@@ -13,8 +13,8 @@ class SettingsSearchTest {
     fun everyPageTitleIsAnEntry() {
         val titles = entries.map { entry -> entry.title to entry.page }
         assertTrue(("Models" to SettingsPage.MODELS) in titles)
-        assertTrue(("Web and YouTube" to SettingsPage.WEB) in titles)
-        assertTrue(("About" to SettingsPage.ABOUT) in titles)
+        assertTrue(("Web search and YouTube" to SettingsPage.WEB) in titles)
+        assertTrue(("About Jonaki" to SettingsPage.ABOUT) in titles)
         assertEquals(SettingsPage.entries.toSet(), entries.map { entry -> entry.page }.toSet())
     }
 
@@ -26,7 +26,7 @@ class SettingsSearchTest {
     @Test
     fun aWordFindsEveryTitleThatHoldsIt() {
         val found = search("persona")
-        assertEquals(listOf("Personas", "Add persona"), found.map { entry -> entry.title })
+        assertEquals(listOf("Answer style and personas", "Personas", "Add persona"), found.map { entry -> entry.title })
         assertTrue(found.all { entry -> entry.page == SettingsPage.ANSWERS })
     }
 
@@ -68,8 +68,8 @@ class SettingsSearchTest {
 
     @Test
     fun matchingIgnoresCaseAndSurroundingSpace() {
-        assertEquals(search("Status icons"), search("  STATUS ICONS "))
-        assertEquals(SettingsPage.THEME, search("status icons").single().page)
+        assertEquals(search("Status strip"), search("  STATUS STRIP "))
+        assertTrue(search("status strip").all { entry -> entry.page == SettingsPage.THEME })
     }
 
     @Test

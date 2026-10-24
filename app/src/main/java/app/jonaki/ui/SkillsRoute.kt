@@ -114,7 +114,9 @@ internal fun SkillsRoute(
         },
         canRestoreBuiltIns = deletedBuiltIns.isNotEmpty(),
         import = importUi,
-        proposals = proposals.map { proposal -> ProposalRowUi(proposal.name, proposal.description, proposal.replaces) },
+        proposals = proposals.map { proposal ->
+            ProposalRowUi(proposal.name, proposal.description, proposal.replaces, sourceTitle = proposal.sourceTitle, createdAtMillis = proposal.createdAtMillis)
+        },
         openProposal = proposals.firstOrNull { proposal -> proposal.name == openProposalName }?.let { proposal ->
             ProposalDetailUi(
                 name = proposal.name,

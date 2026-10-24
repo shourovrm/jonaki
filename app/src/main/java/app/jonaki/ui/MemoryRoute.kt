@@ -16,6 +16,12 @@ import app.jonaki.feature.memory.MemoryScreen
 import app.jonaki.memory.MemoryEdits
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import app.jonaki.core.modelcatalog.ModelKey
+import app.jonaki.feature.memory.MemoryLogRowUi
+import app.jonaki.feature.memory.MemoryLogScreen
+import app.jonaki.memory.MemoryLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * The memory screen for one thread, for one project when [projectId] is
@@ -30,6 +36,8 @@ internal fun MemoryRoute(
     onBack: () -> Unit,
     /** Opens a thread's chat at a message: the source of a fact. */
     onOpenMessage: (threadId: String, messageId: String) -> Unit,
+    /** Opens the memory log, the list of every background memory call (D-188). */
+    onOpenLog: () -> Unit = {},
 ) {
     val database = application.database
     val memoryDao = database.memoryDao()
@@ -119,6 +127,19 @@ internal fun MemoryRoute(
         onReviewModeChange = { enabled ->
             application.settings.update { current -> current.copy(reviewExtractedMemories = enabled) }
         },
+        onOpenLog = onOpenLog,
     )
     MemoryScreen(state = state, actions = actions)
+}
+
+/** Every background memory call, newest first, with its model and what it came to (D-188). */
+@Composable
+internal fun MemoryLogRoute(application: JonakiApplication, onBack: () -> Unit) {
+    var rows by remember { mutableStateOf<List<MemoryLogRowUi>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        rows = withContext(Dispatchers.IO) {
+            MemoryLog.load(application.database) { modelKey -> application.catalog.find(modelKey)?.displayName ?: ModelKey.modelOf(modelKey) }
+        }
+    }
+    MemoryLogScreen(rows = rows, onBack = onBack)
 }

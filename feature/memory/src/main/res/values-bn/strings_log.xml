@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_help">Jonaki আপনার সম্পর্কে তথ্য রাখে: লক্ষ্য, পছন্দ, সিদ্ধান্ত, নাম, তারিখ। আগের উত্তর খুঁজতে চ্যাট সার্চ করুন।</string>
+    <string name="memory_log_row">মেমরি লগ</string>
+    <string name="memory_log_title">মেমরি লগ</string>
+    <string name="memory_log_intro">Jonaki যতবার কোনো থ্রেড থেকে তথ্য খুঁজেছে। কল যায় কী থাকা সবচেয়ে সস্তা মডেলে।</string>
+    <string name="memory_log_help">৮টি নতুন বার্তার পর, বা ২টি বা বেশি নতুন বার্তা রেখে থ্রেড ছাড়লে থ্রেড পড়া হয়। ওয়েব পেজ পড়া থ্রেডের তথ্য পর্যালোচনার অপেক্ষায় থাকে।</string>
+</resources>

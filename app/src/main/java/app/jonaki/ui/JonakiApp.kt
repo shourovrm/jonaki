@@ -169,6 +169,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import app.jonaki.settings.FreeTierUsage
 
 /** Routes are plain strings so they survive process death through rememberSaveable. */
 private const val ROUTE_THREADS = "threads"
@@ -186,6 +187,7 @@ private const val ROUTE_ADD_IMAGE_MODELS_PREFIX = "add-image-models:"
 private const val ROUTE_ADD_VECTOR_MODELS_PREFIX = "add-vector-models:"
 private const val ROUTE_ADD_VIDEO_MODELS = "add-video-models"
 private const val ROUTE_MEMORY = "memory"
+private const val ROUTE_MEMORY_LOG = "memory-log"
 private const val ROUTE_MEMORY_THREAD_PREFIX = "memory:"
 private const val ROUTE_MEMORY_PROJECT_PREFIX = "memory-project:"
 private const val ROUTE_PROJECT_FILES_PREFIX = "project-files:"
@@ -364,7 +366,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             }
             route == ROUTE_SKILLS || route.startsWith(ROUTE_SKILLS_THREAD_PREFIX) -> {
                 val skillsThreadId = if (route == ROUTE_SKILLS) null else route.removePrefix(ROUTE_SKILLS_THREAD_PREFIX)
-                val backRoute = if (skillsThreadId == null) settingsPageRoute(SettingsPage.MEMORY_SKILLS) else ROUTE_CHAT_PREFIX + skillsThreadId
+                val backRoute = if (skillsThreadId == null) settingsPageRoute(SettingsPage.SKILLS) else ROUTE_CHAT_PREFIX + skillsThreadId
                 BackHandler { route = backRoute }
                 SkillsRoute(
                     application = application,
@@ -383,14 +385,19 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
             }
             route == ROUTE_MEMORY || route.startsWith(ROUTE_MEMORY_THREAD_PREFIX) -> {
                 val memoryThreadId = if (route == ROUTE_MEMORY) null else route.removePrefix(ROUTE_MEMORY_THREAD_PREFIX)
-                val backRoute = if (memoryThreadId == null) settingsPageRoute(SettingsPage.MEMORY_SKILLS) else ROUTE_CHAT_PREFIX + memoryThreadId
+                val backRoute = if (memoryThreadId == null) settingsPageRoute(SettingsPage.MEMORY) else ROUTE_CHAT_PREFIX + memoryThreadId
                 BackHandler { route = backRoute }
                 MemoryRoute(
                     application = application,
                     threadId = memoryThreadId,
                     onBack = { route = backRoute },
                     onOpenMessage = { threadId, messageId -> route = ROUTE_CHAT_PREFIX + threadId + FOCUS_SEPARATOR + messageId },
+                    onOpenLog = { route = ROUTE_MEMORY_LOG },
                 )
+            }
+            route == ROUTE_MEMORY_LOG -> {
+                BackHandler { route = ROUTE_MEMORY }
+                MemoryLogRoute(application, onBack = { route = ROUTE_MEMORY })
             }
             route.startsWith(ROUTE_MEMORY_PROJECT_PREFIX) -> {
                 BackHandler { route = ROUTE_THREADS }
@@ -491,6 +498,11 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                         onOpenMemory = { route = ROUTE_MEMORY_THREAD_PREFIX + chatThreadId },
                         onOpenSkills = { route = ROUTE_SKILLS_THREAD_PREFIX + chatThreadId },
                         onOpenArtifact = { path -> route = ROUTE_ARTIFACT_PREFIX + chatThreadId + FOCUS_SEPARATOR + path },
+                        onSetUp = {
+                            setupPlace.openAt(Setup.cardOf(SetupLeft.MODEL))
+                            setupOpen = true
+                            route = ROUTE_SETUP
+                        },
                         newThreadProjectId = selectedProjectId,
                     )
                 }
@@ -505,6 +517,7 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                 onProjectSelect = { projectId -> selectedProjectId = projectId },
                 onOpenProjectMemory = { projectId -> route = ROUTE_MEMORY_PROJECT_PREFIX + projectId },
                 onOpenProjectFiles = { projectId -> route = ROUTE_PROJECT_FILES_PREFIX + projectId },
+                onOpenReview = { facts -> route = if (facts) ROUTE_MEMORY else ROUTE_SKILLS },
                 onSetUp = { item ->
                     setupPlace.openAt(Setup.cardOf(item))
                     setupOpen = true
@@ -565,8 +578,16 @@ private fun ThreadsRoute(
     onOpenProjectMemory: (projectId: String) -> Unit,
     onOpenProjectFiles: (projectId: String) -> Unit,
     onSetUp: (SetupLeft) -> Unit,
+    /** Opens Memory when facts wait for review, else Skills (D-188). */
+    onOpenReview: (facts: Boolean) -> Unit = {},
 ) {
     val database = application.database
+    val factsToReview by remember { database.memoryDao().observePendingReview() }.collectAsState(initial = emptyList())
+    var skillsToReview by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        // Proposals are files with no change feed; the count is read when the list opens.
+        skillsToReview = withContext(Dispatchers.IO) { application.skillProposals.list().size }
+    }
     val summaries by remember { database.threadDao().observeSummaries() }.collectAsState(initial = emptyList())
     val projects by remember { database.projectDao().observeAll() }.collectAsState(initial = emptyList())
     val settingsSnapshot by application.settings.snapshot.collectAsState()
@@ -630,8 +651,11 @@ private fun ThreadsRoute(
             projectModelOptions = modelChoices(settingsSnapshot.chatModels, application.catalog, application, rememberLocalModelKeys(application))
                 .map { choice -> ProjectModelOption(choice.key, choice.name) },
             setupLeft = setupLeft,
+            factsToReview = factsToReview.size,
+            skillsToReview = skillsToReview,
         ),
         nowMillis = nowMillis,
+        onOpenReview = { onOpenReview(factsToReview.isNotEmpty()) },
         onSearchQueryChange = { query -> searchQuery = query },
         onThreadClick = onOpenThread,
         onNewThread = onNewThread,
@@ -699,6 +723,8 @@ private fun ChatRoute(
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
     onOpenArtifact: (path: String) -> Unit,
+    /** Opens the setup cards at the model card, from the "No model yet" block (D-189). */
+    onSetUp: () -> Unit = {},
     /** The project a new regular thread joins: the one selected in the thread list (D-110). */
     newThreadProjectId: String?,
     openSubagentId: String?,
@@ -968,6 +994,9 @@ private fun ChatRoute(
         defaultApprovalMode = approvalChoiceOf(settingsSnapshot.defaultApprovalMode),
         allowAllInThread = !isNew && thread?.allowAllInThread == true,
         guardState = guardStateOf(settingsSnapshot.jevOptions.isOn, SecretName.OPENROUTER in application.secrets.names.collectAsState().value),
+        hasModel = modelKey != null,
+        safetyCheckOn = settingsSnapshot.jevOptions.isOn && thread?.safetyCheckOff != true,
+        safetyCheckAvailable = SecretName.OPENROUTER in application.secrets.names.collectAsState().value,
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
         mediaMode = MediaModeUiBuilder.build(
@@ -1170,6 +1199,20 @@ private fun ChatRoute(
         onOpenMemory = onOpenMemory,
         onOpenSkills = onOpenSkills,
         onOpenArtifact = onOpenArtifact,
+        onMemoryLine = onOpenMemory,
+        onUseModel = { key ->
+            if (isNew) {
+                modelForNewThread = key
+            } else {
+                scope.launch { runner.setThreadModel(threadId, key) }
+            }
+        },
+        onSetUp = onSetUp,
+        onSafetyCheckChange = { on ->
+            if (!isNew) {
+                scope.launch { application.database.threadDao().setSafetyCheckOff(threadId, !on) }
+            }
+        },
         focusMessageId = focusMessageId,
         onAttach = { filePicker.launch(arrayOf("*/*")) },
         onPickPhotos = pickPhotos,
@@ -1529,6 +1572,9 @@ private fun SettingsRoute(
         // The two enums have the same three names; the screen's module does not see the agent's.
         zoneInMessages = ZoneChoice.valueOf(snapshot.zoneInMessages.name),
         jevGuardAvailable = SecretName.OPENROUTER in savedKeys,
+        toolGroupRows = toolGroupRows(application),
+        freeCallsToday = if (ChatService.JONAKI_FREE in snapshot.chatModels.addedServices) FreeTierUsage(FreeTierUsage.inPreferences(application)).todayCount() else null,
+        freeCallLimit = FreeTierUsage.DAILY_CALL_LIMIT,
         approvalRules = snapshot.approvalRules.map { rule -> ApprovalRuleUi(rule.toolName, rule.action, rule.detail) },
         approvalRuleChoices = approvalRuleChoices,
         subagentModels = AgentTypes.ALL.map { type ->
@@ -1563,6 +1609,7 @@ private fun SettingsRoute(
         videoGeneration = videoGeneration,
     )
     val actions = SettingsActions(
+        onToolGroupSwitch = { choice, on -> switchToolGroup(application.settings, application.python, choice, on) },
         onBack = onBack,
         onKeySave = { slotId, value -> secrets.save(SecretName.valueOf(slotId), value) },
         onKeyClear = { slotId -> secrets.remove(SecretName.valueOf(slotId)) },
@@ -1826,6 +1873,7 @@ private fun serviceCards(
                     // A provider that names no cache price has none, so the general one must not stand in for it.
                     cachedInputPricePerMillion = if (chosenProvider != null) chosenProvider.cachedInputUsdPerMillion else info?.cachedInputUsdPerMillion,
                     isDefault = key == chatModels.defaultModelKey,
+                    freePlan = info?.freePlan,
                     routingOverride = if (isOpenRouter) snapshot.routing.overrides[key]?.let(::routingUiOf) else null,
                     pinnedProviders = if (isOpenRouter) snapshot.routing.pinned[key]?.tags.orEmpty() else emptyList(),
                     allowFallbacks = snapshot.routing.pinned[key]?.allowFallbacks ?: true,
@@ -1872,6 +1920,7 @@ private fun AddModelsRoute(application: JonakiApplication, serviceKey: String, o
                     outputPricePerMillion = info.outputUsdPerMillion,
                     cachedInputPricePerMillion = info.cachedInputUsdPerMillion,
                     isAdded = info.modelId in alreadyAdded,
+                    freePlan = info.freePlan,
                 )
             },
         ),

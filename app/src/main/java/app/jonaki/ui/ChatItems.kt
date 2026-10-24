@@ -27,6 +27,11 @@ import app.jonaki.feature.chat.ChatItem
 import app.jonaki.feature.chat.StepUi
 import app.jonaki.feature.chat.StepUiStatus
 import app.jonaki.feature.chat.WorkingActivity
+import app.jonaki.core.modelcatalog.ModelKey
+import app.jonaki.feature.chat.MemoryLineAction
+import app.jonaki.feature.chat.MemoryLineText
+import app.jonaki.memory.MemoryExtractor
+import app.jonaki.run.BackgroundModel
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -74,6 +79,8 @@ object ChatItems {
     ): List<ChatItem> {
         // Background usage rows only carry a cost; they would add it to a run's cost line.
         val visibleRows = rows.filter { row -> row.role != HistoryMapper.BACKGROUND_ROLE }
+        // A memory call's row becomes a quiet line under the turn it followed (D-188).
+        val memoryRows = rows.filter { row -> row.role == HistoryMapper.BACKGROUND_ROLE && row.text == BackgroundModel.PURPOSE_MEMORY && row.backgroundResult != null }
         val turns = splitIntoTurns(visibleRows)
         val stepsById = steps.filter { step -> step.subagentId == null }.associateBy { step -> step.toolCallId }
         val subagentSteps = steps.filter { step -> step.subagentId != null }.groupBy { step -> step.subagentId }
@@ -86,7 +93,9 @@ object ChatItems {
             if (compaction != null && index == firstKeptTurn) {
                 items += ChatItem.SummaryDivider("summary-${compaction.id}", compaction.summaryText)
             }
-            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentParts, stepWords)
+            items += itemsForTurn(turn, stepsById, isRunning && isLastTurn, fallbackNote, subagentParts, stepWords, modelNameOf)
+            val nextTurnPosition = turns.getOrNull(index + 1)?.first()?.position ?: Long.MAX_VALUE
+            items += memoryLines(memoryRows, after = turn.last().position, before = nextTurnPosition)
             if (isLastTurn) {
                 items += pythonCardFor(turn, stepsById, pythonCard)
                 items += pendingApprovals.map { pending -> approvalCard(pending, stepWords, subagentLimits, subagentTypeNames) }
@@ -196,6 +205,7 @@ object ChatItems {
         fallbackNote: String,
         subagentParts: SubagentParts,
         stepWords: StepDetail.Words,
+        modelNameOf: (String) -> String?,
     ): List<ChatItem> {
         val items = mutableListOf<ChatItem>()
         val turnId = turn.first().id
@@ -226,10 +236,11 @@ object ChatItems {
         items += artifactsShown(stepsOfTurn, turnId)
         items += generatedImagesShown(turnSteps, turnId)
         items += generatedVideosShown(turnSteps, turnId)
+        items += skillProposalLines(turnSteps)
         for (row in turn) {
             when (row.role) {
                 Role.ASSISTANT.name -> items += assistantItems(row, isActiveTurn)
-                HistoryMapper.ERROR_ROLE -> items += ChatItem.Error(row.id, row.text, canRetry = false)
+                HistoryMapper.ERROR_ROLE -> items += errorItem(row, modelNameOf)
             }
             if (row.routingFallback == true && fallbackNote.isNotEmpty()) {
                 items += ChatItem.Note("note-${row.id}", fallbackNote)
@@ -317,6 +328,7 @@ object ChatItems {
 
     /** Its steps open the code sheet (D-090) and its install errors show the Python card (D-094). */
     private const val RUN_CODE_TOOL = "run_code"
+    private const val PROPOSE_SKILL_TOOL = "propose_skill"
 
     /** The turn's own model calls plus its subagents', whose usage rows are hidden. */
     private fun costOf(turn: List<MessageEntity>, subagents: List<SubagentEntity>): Double? {
@@ -405,6 +417,46 @@ object ChatItems {
             guardNote = step.guardNote,
         )
     }
+
+    /** A failure the provider could name gets a card with the raw answer folded away (D-189); any other error stays a plain line. */
+    private fun errorItem(row: MessageEntity, modelNameOf: (String) -> String?): ChatItem {
+        if (row.errorDetails == null && row.suggestedModelKey == null) {
+            return ChatItem.Error(row.id, row.text, canRetry = false)
+        }
+        val suggestedKey = row.suggestedModelKey
+        return ChatItem.ErrorCard(
+            id = row.id,
+            text = row.text,
+            details = row.errorDetails,
+            suggestedModelKey = suggestedKey,
+            suggestedModelName = suggestedKey?.let { key -> modelNameOf(key) ?: ModelKey.modelOf(key) },
+        )
+    }
+
+    /** The memory calls that ran between this turn's end and the next turn's start, as quiet lines (D-188). */
+    private fun memoryLines(memoryRows: List<MessageEntity>, after: Long, before: Long): List<ChatItem> =
+        memoryRows
+            .filter { row -> row.position > after && row.position < before }
+            .map { row ->
+                val result = row.backgroundResult.orEmpty()
+                val text = MemoryLineText.from(result)
+                val action = when {
+                    result == MemoryExtractor.RESULT_NOTHING_NEW -> MemoryLineAction.WHY
+                    text.startsWith(MemoryLineText.NOT_UPDATED_PREFIX) -> MemoryLineAction.FIX
+                    else -> MemoryLineAction.SEE
+                }
+                ChatItem.MemoryLine("memory-${row.id}", text, action)
+            }
+
+    /** One line per skill the model proposed in this turn, so the user need not find the Skills screen (D-188). */
+    private fun skillProposalLines(turnSteps: List<StepEntity>): List<ChatItem> =
+        turnSteps
+            .filter { step -> step.toolName == PROPOSE_SKILL_TOOL && step.status == StepStatus.DONE.name }
+            .mapNotNull { step ->
+                val name = runCatching { (Json.parseToJsonElement(step.argumentsJson) as? JsonObject)?.get("name") as? JsonPrimitive }
+                    .getOrNull()?.content?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                ChatItem.SkillProposalLine("skill-${step.toolCallId}", name)
+            }
 
     /** Retry re-runs the saved history, so it only makes sense on a final error while idle. */
     private fun markRetryableError(items: List<ChatItem>, rows: List<MessageEntity>, isRunning: Boolean): List<ChatItem> {

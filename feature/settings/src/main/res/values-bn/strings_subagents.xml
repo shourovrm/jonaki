@@ -5,12 +5,12 @@
     <string name="settings_subagents_section_limits">সীমা</string>
     <string name="settings_subagents_without_asking">না জিজ্ঞেস করে শুরু</string>
     <string name="settings_subagents_per_message">প্রতি মেসেজে</string>
-    <string name="settings_subagents_per_call">একসাথে শুরু</string>
+    <string name="settings_subagents_per_call">একসাথে চলবে</string>
     <string name="settings_subagents_in_one_call">এক কলে</string>
-    <string name="settings_subagents_max_per_message">প্রতি মেসেজে সর্বোচ্চ</string>
-    <string name="settings_subagents_tool_steps">টুল ধাপ</string>
-    <string name="settings_subagents_cost">খরচ</string>
-    <string name="settings_subagents_minutes">মিনিট</string>
+    <string name="settings_subagents_max_per_message">এক বার্তায় সর্বোচ্চ</string>
+    <string name="settings_subagents_tool_steps">প্রতি এজেন্টে ধাপ</string>
+    <string name="settings_subagents_cost">প্রতি এজেন্টে খরচ</string>
+    <string name="settings_subagents_minutes">প্রতি এজেন্টে সময়</string>
     <string name="settings_subagents_lower">%1$s কমান</string>
     <string name="settings_subagents_raise">%1$s বাড়ান</string>
     <string name="settings_subagents_section_custom">কাস্টম</string>
@@ -30,5 +30,20 @@
     <plurals name="settings_summary_subagents_custom">
         <item quantity="one">%1$dটি কাস্টম</item>
         <item quantity="other">%1$dটি কাস্টম</item>
+    </plurals>
+    <string name="settings_subagents_section_types">ধরন</string>
+    <string name="settings_subagents_unit_per_message">প্রতি বার্তায় %1$d</string>
+    <string name="settings_subagents_unit_usd">%1$s USD</string>
+    <plurals name="settings_subagents_unit_agents">
+        <item quantity="one">%1$d এজেন্ট</item>
+        <item quantity="other">%1$d এজেন্ট</item>
+    </plurals>
+    <plurals name="settings_subagents_unit_tool_calls">
+        <item quantity="one">%1$d টুল কল</item>
+        <item quantity="other">%1$d টুল কল</item>
+    </plurals>
+    <plurals name="settings_subagents_unit_minutes">
+        <item quantity="one">%1$d মিনিট</item>
+        <item quantity="other">%1$d মিনিট</item>
     </plurals>
 </resources>

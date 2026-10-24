@@ -135,7 +135,7 @@ class MemoryExtractor(
             outcome.added > 0 && outcome.toReview > 0 -> "${outcome.added} added, ${outcome.toReview} to review"
             outcome.added > 0 -> "${outcome.added} added"
             outcome.toReview > 0 -> "${outcome.toReview} to review"
-            else -> "Nothing new"
+            else -> RESULT_NOTHING_NEW
         }
     }
 
@@ -145,6 +145,9 @@ class MemoryExtractor(
     }
 
     companion object {
+        /** The result of a memory call that found nothing to add; the chat line and the log read it (D-188). */
+        const val RESULT_NOTHING_NEW = "Nothing new"
+
         /** Extraction runs after a run once this many messages are unread (D-009 said 20; D-188 lowered it to 8). */
         const val MESSAGES_PER_EXTRACTION = 8
 

@@ -26,6 +26,6 @@ class ReminderSettingsUiTest {
         val found = SettingsSearch.filter(entries, "repeat")
 
         assertEquals(listOf("Repeat every", "Repeats"), found.map { it.title })
-        assertEquals(setOf(SettingsPage.FILES_SCHEDULE), found.map { it.page }.toSet())
+        assertEquals(setOf(SettingsPage.REMINDERS), found.map { it.page }.toSet())
     }
 }

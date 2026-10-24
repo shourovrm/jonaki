@@ -14,6 +14,6 @@
     <string name="setup_fit_tight">Barely fits</string>
     <string name="setup_fit_too_big">Too big</string>
     <string name="setup_phone_wifi">Wi-Fi is recommended.</string>
-    <string name="setup_phone_started">The model appears in the picker when it is done.</string>
+    <string name="setup_phone_started">Download started.</string>
     <string name="setup_phone_no_space">Not enough free storage.</string>
 </resources>

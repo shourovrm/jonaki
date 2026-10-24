@@ -34,6 +34,9 @@ import app.jonaki.core.ui.MonospaceFamily
  * "Nothing new" or "Answer unreadable: why"; a failed call writes its failure text.
  */
 object MemoryLineText {
+    /** Starts every line about a call that saved nothing because it failed; the chat offers Fix on such a line. */
+    const val NOT_UPDATED_PREFIX = "Memory not updated: "
+
     private val addedPattern = Regex("""(\d+) added""")
     private val reviewPattern = Regex("""(\d+) to review""")
     private val addedAndReviewPattern = Regex("""(\d+) added, (\d+) to review""")
@@ -57,7 +60,7 @@ object MemoryLineText {
         if (toReview != null) {
             return "${factCount(toReview)} to review"
         }
-        return "Memory not updated: $text"
+        return NOT_UPDATED_PREFIX + text
     }
 
     private fun factCount(count: Int): String = if (count == 1) "1 fact" else "$count facts"

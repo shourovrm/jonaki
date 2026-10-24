@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_model_providers">প্রোভাইডার</string>
+    <string name="settings_model_providers">প্রোভাইডারের তালিকা</string>
     <string name="settings_providers_order_note">বেছে নেওয়া প্রোভাইডারে সবচেয়ে সস্তাটি আগে চেষ্টা হয়।</string>
     <string name="settings_providers_fallbacks">এগুলো ব্যর্থ হলে অন্য প্রোভাইডার ব্যবহার করুন</string>
     <string name="settings_providers_loading">প্রোভাইডার লোড হচ্ছে…</string>

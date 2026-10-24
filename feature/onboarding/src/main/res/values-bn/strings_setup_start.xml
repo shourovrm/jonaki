@@ -14,6 +14,6 @@
     <string name="setup_fit_tight">কোনোমতে ধরবে</string>
     <string name="setup_fit_too_big">খুব বড়</string>
     <string name="setup_phone_wifi">ওয়াই-ফাই ভালো।</string>
-    <string name="setup_phone_started">শেষ হলে মডেলটি তালিকায় আসবে।</string>
+    <string name="setup_phone_started">ডাউনলোড শুরু হয়েছে।</string>
     <string name="setup_phone_no_space">ফোনে যথেষ্ট জায়গা নেই।</string>
 </resources>

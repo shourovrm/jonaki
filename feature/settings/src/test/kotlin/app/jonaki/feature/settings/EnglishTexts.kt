@@ -41,7 +41,7 @@ class EnglishTexts : SettingsTexts {
     override fun approvalMode(choice: ApprovalModeChoice): String = when (choice) {
         ApprovalModeChoice.ASK -> "Ask"
         ApprovalModeChoice.AUTO -> "Auto"
-        ApprovalModeChoice.BYPASS -> "Bypass"
+        ApprovalModeChoice.BYPASS -> "Never ask"
     }
 
     override fun answerStyle(choice: AnswerStyleChoice): String = when (choice) {

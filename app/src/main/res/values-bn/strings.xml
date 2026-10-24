@@ -55,4 +55,6 @@
     <string name="step_to_linked_folder">লিংক করা ফোল্ডারে</string>
     <string name="step_list_linked_folder">লিংক করা ফোল্ডারের তালিকা</string>
     <string name="step_from_linked_folder">লিংক করা ফোল্ডার থেকে</string>
+    <string name="error_free_plan_model">%1$s-এর ফ্রি প্ল্যানে %2$s নেই।</string>
+    <string name="youtube_fallback_note">%1$s ব্যবহার করা হয়েছে; %2$s ব্যস্ত ছিল।</string>
 </resources>

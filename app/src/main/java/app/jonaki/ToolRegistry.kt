@@ -103,6 +103,8 @@ data class ToolServices(
     val vectorImageModelKeys: List<String> = emptyList(),
     /** The vector model used when a call names none; asked at every call. */
     val defaultVectorImageModelKey: () -> String? = { null },
+    /** The thread's title, so a skill proposal can say where it came from (D-188). */
+    val threadTitle: String? = null,
 )
 
 /** Every tool the app offers. Adding a tool is one module plus one line here (D-007). */
@@ -136,7 +138,7 @@ object ToolRegistry {
             tools += SearchChatsTool(services.chatSearchStore)
         }
         if (services.skillProposals != null) {
-            tools += ProposeSkillTool(services.skillProposals)
+            tools += ProposeSkillTool(services.skillProposals, sourceTitle = { services.threadTitle })
         }
         if (services.fileDestinations != null) {
             tools += ShareFileTool(services.fileDestinations)

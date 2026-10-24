@@ -2,14 +2,12 @@
 <resources>
     <!-- The first Settings page and its sub-pages (D-128). -->
     <string name="settings_root_models">মডেল</string>
-    <string name="settings_root_web">ওয়েব ও YouTube</string>
-    <string name="settings_root_tools">টুল ও অনুমতি</string>
-    <string name="settings_root_answers">উত্তর</string>
-    <string name="settings_root_memory_skills">মেমরি ও স্কিল</string>
-    <string name="settings_root_files_schedule">ফাইল ও সময়সূচি</string>
+    <string name="settings_root_web">ওয়েব সার্চ ও YouTube</string>
+    <string name="settings_root_tools">টুল</string>
+    <string name="settings_root_answers">উত্তরের ধরন ও পারসোনা</string>
     <string name="settings_root_theme">থিম</string>
     <string name="settings_root_permissions">ফোনের অনুমতি</string>
-    <string name="settings_root_about">অ্যাপ সম্পর্কে</string>
+    <string name="settings_root_about">Jonaki সম্পর্কে</string>
     <string name="settings_search">সেটিংসে খুঁজুন</string>
     <string name="settings_search_none">কিছু পাওয়া যায়নি</string>
 
@@ -60,9 +58,21 @@
     <string name="settings_summary_all_allowed">সব অনুমতি আছে</string>
 
     <!-- Tools and approvals page. -->
-    <string name="settings_tools_all">সব টুল</string>
+    <string name="settings_tools_all">টুল চালু বা বন্ধ করুন</string>
     <plurals name="settings_tools_all_summary">
         <item quantity="one">%1$d টুল</item>
         <item quantity="other">%1$d টুল</item>
     </plurals>
+    <string name="settings_root_memory">সংরক্ষিত তথ্য</string>
+    <string name="settings_root_skills">স্কিল</string>
+    <string name="settings_root_files">ফাইল</string>
+    <string name="settings_root_reminders">রিমাইন্ডার ও সময়সূচি</string>
+    <string name="settings_root_safety">নিরাপত্তা</string>
+    <string name="settings_group_models">মডেল ও কী</string>
+    <string name="settings_group_capabilities">Jonaki যা করতে পারে</string>
+    <string name="settings_group_memory">মেমরি</string>
+    <string name="settings_group_safety">নিরাপত্তা</string>
+    <string name="settings_group_look">চেহারা</string>
+    <string name="settings_group_about">অ্যাপ সম্পর্কে</string>
+    <string name="settings_summary_youtube_needs_key">YouTube-এর জন্য Gemini কী লাগবে</string>
 </resources>

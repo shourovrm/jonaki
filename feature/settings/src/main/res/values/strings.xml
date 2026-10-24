@@ -88,7 +88,7 @@
     <string name="settings_add_models_title">Add %1$s models</string>
     <string name="settings_search_models">Search models</string>
     <string name="settings_clear_search">Clear search</string>
-    <string name="settings_per_million">USD per million tokens</string>
+    <string name="settings_per_million">USD / 1M</string>
     <string name="settings_price_head_in">In</string>
     <string name="settings_price_head_out">Out</string>
     <string name="settings_price_head_cache">Cached</string>
@@ -104,7 +104,7 @@
     <string name="settings_subagent_worker">Worker</string>
     <string name="settings_subagent_thread_model">Same as the thread</string>
     <string name="settings_subagent_cheapest_model">Cheapest model</string>
-    <string name="settings_section_tools">Turn tools on or off</string>
+    <string name="settings_section_tools">Tools</string>
     <string name="settings_tools">Tools</string>
     <string name="settings_tools_help">Switched-off tools are hidden from the model.</string>
     <string name="settings_python">Python</string>

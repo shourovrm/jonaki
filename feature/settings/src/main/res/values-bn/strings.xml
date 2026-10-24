@@ -22,7 +22,7 @@
     <string name="settings_key_save">সেভ</string>
     <string name="settings_key_show">key দেখুন</string>
     <string name="settings_key_hide">key লুকান</string>
-    <string name="settings_status_icons">স্ট্যাটাস আইকন</string>
+    <string name="settings_status_icons">স্ট্যাটাস স্ট্রিপ</string>
     <string name="settings_section_memory">মেমরি</string>
     <string name="settings_memory_open">সেভ করা তথ্য</string>
     <string name="settings_section_skills">স্কিল</string>
@@ -48,13 +48,13 @@
     <string name="settings_scheduled_none">কিছু নির্ধারিত নেই</string>
     <string name="settings_icon_model">মডেল</string>
     <string name="settings_icon_model_help">এই থ্রেডের মডেল। বদলাতে ট্যাপ করুন।</string>
-    <string name="settings_icon_window">কনটেক্সট উইন্ডো</string>
+    <string name="settings_icon_window">কনটেক্সটের আকার</string>
     <string name="settings_icon_window_help">মডেল কতটা লেখা ধরে রাখতে পারে, টোকেনে।</string>
     <string name="settings_icon_used">কনটেক্সট ব্যবহার</string>
     <string name="settings_icon_used_help">উইন্ডো কতটা ভরেছে।</string>
     <string name="settings_icon_cost">খরচ</string>
     <string name="settings_icon_cost_help">এই থ্রেডে খরচ, মার্কিন ডলারে। বিস্তারিত দেখতে ট্যাপ করুন।</string>
-    <string name="settings_icon_bypass">বাইপাস</string>
+    <string name="settings_icon_bypass">না-জিজ্ঞেস মোড</string>
     <string name="settings_icon_bypass_help">এই থ্রেডের টুল জিজ্ঞেস না করেই চলে।</string>
     <string name="settings_section_approvals">নতুন থ্রেডে অনুমতি</string>
     <string name="settings_show_status_strip">স্ট্যাটাস বার দেখান</string>
@@ -67,12 +67,12 @@
         <item quantity="one">%1$dটি মডেল</item>
         <item quantity="other">%1$dটি মডেল</item>
     </plurals>
-    <string name="settings_routing">রাউটিং</string>
+    <string name="settings_routing">কোন প্রোভাইডার</string>
     <string name="settings_routing_private_short">প্রাইভেট</string>
     <string name="settings_routing_auto_short">অটো</string>
-    <string name="settings_routing_private">প্রাইভেট, না হলে সবচেয়ে সস্তা</string>
+    <string name="settings_routing_private">প্রাইভেট আগে</string>
     <string name="settings_routing_cheapest">সবচেয়ে সস্তা</string>
-    <string name="settings_routing_automatic">অটোমেটিক</string>
+    <string name="settings_routing_automatic">OpenRouter ঠিক করবে</string>
     <string name="settings_routing_same_as">%1$s-এর মতো</string>
     <string name="settings_price_in">ইনপুট %1$s</string>
     <string name="settings_price_out">আউটপুট %1$s</string>
@@ -88,10 +88,10 @@
     <string name="settings_add_models_title">%1$s মডেল যোগ করুন</string>
     <string name="settings_search_models">মডেল খুঁজুন</string>
     <string name="settings_clear_search">খোঁজা মুছুন</string>
-    <string name="settings_per_million">প্রতি 1M</string>
+    <string name="settings_per_million">USD / 1M</string>
     <string name="settings_price_head_in">ইন</string>
     <string name="settings_price_head_out">আউট</string>
-    <string name="settings_price_head_cache">ক্যাশ</string>
+    <string name="settings_price_head_cache">ক্যাশড</string>
     <string name="settings_price_free">ফ্রি</string>
     <string name="settings_add_by_id">ID দিয়ে যোগ করুন</string>
     <plurals name="settings_selected_count">
@@ -126,9 +126,14 @@
     <string name="settings_python_downloading_python">Python ডাউনলোড হচ্ছে</string>
     <string name="settings_python_downloading">%1$s ডাউনলোড হচ্ছে</string>
     <string name="settings_python_packages">প্যাকেজ</string>
-    <string name="settings_python_data_add_on">ডেটা অ্যাড-অন: numpy, pandas</string>
+    <string name="settings_python_data_add_on">ডেটা টুল: numpy, pandas</string>
     <string name="settings_python_add_on_size">%1$s ডাউনলোড</string>
     <string name="settings_python_no_packages">কোনো প্যাকেজ ইনস্টল নেই</string>
     <string name="settings_python_package_name">প্যাকেজের নাম</string>
     <string name="settings_python_package_help">শুধু Pyodide %1$s-এর জন্য তৈরি প্যাকেজ</string>
+    <string name="settings_tools_data">ডেটা টুল</string>
+    <string name="settings_plan_free">ফ্রি প্ল্যান</string>
+    <string name="settings_plan_paid">শুধু পেইড প্ল্যান</string>
+    <string name="settings_add_model_needs_key">আগে একটি কী যোগ করুন</string>
+    <string name="settings_free_calls_today">আজ: %2$d-এর মধ্যে %1$d কল</string>
 </resources>

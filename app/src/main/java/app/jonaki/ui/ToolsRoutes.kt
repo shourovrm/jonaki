@@ -73,7 +73,7 @@ fun PythonRoute(application: JonakiApplication, onBack: () -> Unit) {
 }
 
 @Composable
-private fun toolGroupRows(application: JonakiApplication): List<ToolGroupRowUi> {
+internal fun toolGroupRows(application: JonakiApplication): List<ToolGroupRowUi> {
     val snapshot by application.settings.snapshot.collectAsState()
     val pythonState by application.python.state.collectAsState()
     LaunchedEffect(Unit) {
@@ -87,7 +87,7 @@ private fun toolGroupRows(application: JonakiApplication): List<ToolGroupRowUi> 
  * names the size beside the switch, so the download is never silent.
  * The data add-on's switch installs or removes numpy and pandas.
  */
-private fun switchToolGroup(settings: AppSettings, python: PythonSetup, choice: ToolGroupChoice, on: Boolean) {
+internal fun switchToolGroup(settings: AppSettings, python: PythonSetup, choice: ToolGroupChoice, on: Boolean) {
     if (choice == ToolGroupChoice.DATA_ADD_ON) {
         switchDataAddOn(python, on)
         return

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="memory_help">Jonaki keeps facts about you: goals, preferences, decisions, names, dates. What an answer explained is found with chat search.</string>
+    <string name="memory_help">Jonaki keeps facts about you: goals, preferences, decisions, names, dates. Search chats to find past answers.</string>
     <string name="memory_log_row">Memory log</string>
     <string name="memory_log_title">Memory log</string>
     <string name="memory_log_intro">Every time Jonaki read a thread for facts. Calls use the cheapest model with a key.</string>

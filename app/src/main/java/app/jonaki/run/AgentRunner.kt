@@ -1003,6 +1003,7 @@ class AgentRunner(
         searchBackends = searchBackends(settings.snapshot.value.searchOrder),
         videoSummarizer = videoSummarizer(),
         webAccessEnabled = thread.webSearchEnabled,
+        threadTitle = thread.title,
         memoryStore = ThreadMemory.storeFor(thread) {
             RoomMemoryStore(
                 database = database,
@@ -1412,9 +1413,11 @@ class AgentRunner(
         return RetryingVideoSummarizer(
             primary = geminiVideoSummarizer(gemini, GeminiProvider.DEFAULT_MODEL),
             fallback = geminiVideoSummarizer(gemini, VIDEO_FALLBACK_MODEL),
-            fallbackNote = context.getString(R.string.youtube_fallback_note),
+            fallbackNote = context.getString(R.string.youtube_fallback_note, geminiModelName(VIDEO_FALLBACK_MODEL), geminiModelName(GeminiProvider.DEFAULT_MODEL)),
         )
     }
+
+    private fun geminiModelName(model: String): String = catalog.find(ModelKey.of(ChatService.GEMINI.key, model))?.displayName ?: model
 
     private fun geminiVideoSummarizer(gemini: GeminiProvider, model: String) = VideoSummarizer { request ->
         val outcome = gemini.summarizeVideo(

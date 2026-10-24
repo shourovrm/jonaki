@@ -2,16 +2,16 @@
 <resources>
     <string name="ui_copy_code">কোড কপি</string>
     <string name="ui_copy_table">টেবিল কপি</string>
-    <string name="ui_thinking">চিন্তা</string>
+    <string name="ui_thinking">রিজনিং</string>
     <string name="ui_thinking_default">ডিফল্ট</string>
     <string name="ui_thinking_off">বন্ধ</string>
     <string name="ui_thinking_low">কম</string>
     <string name="ui_thinking_medium">মাঝারি</string>
     <string name="ui_thinking_high">বেশি</string>
-    <string name="ui_thinking_is">চিন্তা: %1$s</string>
+    <string name="ui_thinking_is">রিজনিং: %1$s</string>
     <string name="ui_approval_ask">জিজ্ঞেস</string>
     <string name="ui_approval_auto">অটো</string>
-    <string name="ui_approval_bypass">বাইপাস</string>
+    <string name="ui_approval_bypass">জিজ্ঞেস নয়</string>
     <string name="ui_approval_ask_help">প্রতিটি পরিবর্তনে জিজ্ঞেস করবে</string>
     <string name="ui_approval_auto_help">শুধু অ্যাপের বাইরে যাওয়া পরিবর্তনে জিজ্ঞেস করবে</string>
     <string name="ui_approval_bypass_help">কিছুতেই জিজ্ঞেস করবে না</string>
@@ -40,7 +40,7 @@
     <string name="ui_tools_javascript_help">JavaScript চালানো, অফলাইনে</string>
     <string name="ui_tools_python">Python</string>
     <string name="ui_tools_python_help">Python প্রোগ্রাম চালানো, অফলাইনে</string>
-    <string name="ui_tools_data_add_on">ডেটা অ্যাড-অন</string>
+    <string name="ui_tools_data_add_on">ডেটা টুল</string>
     <string name="ui_tools_data_add_on_help">Python-এর জন্য numpy ও pandas</string>
     <string name="ui_download">ডাউনলোড</string>
     <string name="ui_download_again">আবার ডাউনলোড</string>
