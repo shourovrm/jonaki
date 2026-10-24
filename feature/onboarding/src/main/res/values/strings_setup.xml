@@ -6,7 +6,7 @@
     <string name="setup_back">Back</string>
     <string name="setup_next">Next</string>
     <string name="setup_allow">Allow</string>
-    <string name="setup_model_title">Which AI service do you have a key for?</string>
+    <string name="setup_model_title">Which service?</string>
     <string name="setup_more_services">More services</string>
     <string name="setup_model_needed">Jonaki cannot answer without a model.</string>
     <string name="setup_model_key_title">%1$s key</string>

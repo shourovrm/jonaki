@@ -6,7 +6,7 @@
     <string name="setup_back">ফিরে যান</string>
     <string name="setup_next">পরের</string>
     <string name="setup_allow">অনুমতি দিন</string>
-    <string name="setup_model_title">কোন AI সার্ভিসের key আপনার আছে?</string>
+    <string name="setup_model_title">কোন সার্ভিস?</string>
     <string name="setup_more_services">আরও সার্ভিস</string>
     <string name="setup_model_needed">মডেল ছাড়া জোনাকি উত্তর দিতে পারে না।</string>
     <string name="setup_model_key_title">%1$s key</string>

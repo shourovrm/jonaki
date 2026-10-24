@@ -31,6 +31,8 @@ class OpenAiCompatibleProvider(
     private val openRouterRoute: OpenRouterRoute = OpenRouterRoute.Automatic,
     /** Called when a private-only request found no endpoint and was sent again as cheapest. */
     private val onRoutingFallback: () -> Unit = {},
+    /** Sent on every request, for example the device header of Jonaki Free. */
+    private val extraHeaders: Map<String, String> = emptyMap(),
 ) : ChatProvider {
     override val id: String = "openai-compatible:${preset.key}"
 
@@ -114,6 +116,7 @@ class OpenAiCompatibleProvider(
             builder.header("HTTP-Referer", "https://github.com/shourovrm/jonaki")
             builder.header("X-Title", "Jonaki")
         }
+        extraHeaders.forEach { (name, value) -> builder.header(name, value) }
         return builder.build()
     }
 

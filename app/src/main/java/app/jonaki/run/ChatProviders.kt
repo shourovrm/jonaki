@@ -24,6 +24,7 @@ object ChatProviders {
         route: OpenRouterRoute,
         onRoutingFallback: () -> Unit,
         localRuntime: LocalModelRuntime,
+        deviceId: String? = null,
     ): ChatProvider {
         if (service == ChatService.LOCAL) {
             return localRuntime.provider
@@ -32,12 +33,19 @@ object ChatProviders {
             return GeminiProvider(apiKey.orEmpty(), httpClient)
         }
         val preset = presetFor(service)
+        // Jonaki Free counts its daily calls per phone, so it needs the device id.
+        val extraHeaders = if (service == ChatService.JONAKI_FREE && deviceId != null) {
+            mapOf("X-Jonaki-Device" to deviceId)
+        } else {
+            emptyMap()
+        }
         return OpenAiCompatibleProvider(
             preset = preset,
             apiKey = apiKey,
             httpClient = httpClient,
             openRouterRoute = route,
             onRoutingFallback = onRoutingFallback,
+            extraHeaders = extraHeaders,
         )
     }
 
