@@ -1,9 +1,9 @@
 package app.jonaki.providers.gemini
 
 import app.jonaki.core.providerapi.FailureKind
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 
 /** The 429 bodies are the user's own, from a free-plan key asking for gemini-3.1-pro (2026-10-25). */
 class GeminiFailuresTest {

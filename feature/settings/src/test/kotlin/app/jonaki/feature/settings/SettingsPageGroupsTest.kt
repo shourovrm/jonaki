@@ -1,8 +1,8 @@
 package app.jonaki.feature.settings
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 /** D-187: the Settings home has six titled groups, and every page sits in exactly one. */
 class SettingsPageGroupsTest {
@@ -32,7 +32,7 @@ class SettingsPageGroupsTest {
     fun `a page's group matches the list it sits in`() {
         for ((group, pages) in SettingsPage.GROUPS) {
             for (page in pages) {
-                assertEquals(group, page.group, "page ${page.key}")
+                assertEquals("page ${page.key}", group, page.group)
             }
         }
     }

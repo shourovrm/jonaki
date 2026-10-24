@@ -1,7 +1,7 @@
 package app.jonaki.settings
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.Test
+import org.junit.Assert.assertEquals
 
 /**
  * The Jonaki Free counter the Settings card shows: calls made today on this

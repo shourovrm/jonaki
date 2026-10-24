@@ -1,7 +1,7 @@
 package app.jonaki.memory
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.Test
+import org.junit.Assert.assertEquals
 
 /** D-188: a thread is read for facts after 8 new messages, not 20; leaving still needs 2. */
 class ExtractionTriggerTest {

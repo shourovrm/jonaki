@@ -2,9 +2,9 @@ package app.jonaki.core.skills
 
 import java.io.File
 import java.nio.file.Files
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 /** D-188: a proposal older than 14 days is dropped, so five stale ones cannot block new ones. */
 class SkillProposalExpiryTest {
