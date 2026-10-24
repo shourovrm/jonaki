@@ -110,6 +110,15 @@ async function chatCompletions(request: Request, env: Env): Promise<Response> {
   }
 
   body.model = env.MODEL;
+  // Qwen3 thinks before it answers unless told not to; thinking burns the expensive output tokens
+  // and `chat_template_kwargs` misfiles the answer, so a "/no_think" system line goes first.
+  if (Array.isArray(body.messages)) {
+    const messages = body.messages as Array<{ role?: string; content?: unknown }>;
+    const alreadyOff = messages.some((m) => m.role === "system" && typeof m.content === "string" && m.content.includes("/no_think"));
+    if (!alreadyOff) {
+      body.messages = [{ role: "system", content: "/no_think" }, ...messages];
+    }
+  }
   const requestedTokens = typeof body.max_tokens === "number" ? body.max_tokens : MAX_TOKENS;
   body.max_tokens = Math.min(requestedTokens, MAX_TOKENS);
 
