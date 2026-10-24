@@ -22,7 +22,7 @@ internal object SubagentSamples {
         id = "s1",
         label = "researcher 1",
         delegateStepId = "d1",
-        task = "Same search on ryans.com: laptops under ৳80,000 with 16 GB RAM and 512 GB SSD. " +
+        task = "Same search on ryans.com: laptops under Tk 80,000 with 16 GB RAM and 512 GB SSD. " +
             "Note EMI offers from bKash and City Bank cards.",
         modelName = "Gemini 3.8 Flash",
         status = SubagentUiStatus.RUNNING,
@@ -95,8 +95,8 @@ internal object SubagentSamples {
         ),
         costUsd = 0.014,
         answer = "Two models from official stores fit the budget.\n\n" +
-            "1. ASUS Vivobook 15 X1504VA, i5-1335U, 16 GB, 512 GB: ৳74,990 at the ASUS Official Store.\n" +
-            "2. HP 15-fc0xxx, Ryzen 5 7520U, 16 GB, 512 GB: ৳66,500 at HP Official. RAM is soldered.\n\n" +
+            "1. ASUS Vivobook 15 X1504VA, i5-1335U, 16 GB, 512 GB: Tk 74,990 at the ASUS Official Store.\n" +
+            "2. HP 15-fc0xxx, Ryzen 5 7520U, 16 GB, 512 GB: Tk 66,500 at HP Official. RAM is soldered.\n\n" +
             "**Gaps**\n\nLenovo's store had no 16 GB model in stock.",
         finishedAtMillis = START + 112_000,
         notesPosted = 2,

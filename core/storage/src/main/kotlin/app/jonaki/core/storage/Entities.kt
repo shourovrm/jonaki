@@ -304,7 +304,7 @@ data class MemoryEntity(
     val lastUsedAtMillis: Long? = null,
     /**
      * Search words the fact's own text lacks, such as the same word in the
-     * other script ("thesis" for "থিসিস"). Indexed for recall, never shown
+     * other script or language ("thesis" for its translation). Indexed for recall, never shown
      * to the model or the user.
      */
     @ColumnInfo(defaultValue = "")

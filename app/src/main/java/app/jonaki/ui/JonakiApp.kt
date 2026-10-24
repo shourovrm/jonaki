@@ -997,6 +997,7 @@ private fun ChatRoute(
         hasModel = modelKey != null,
         safetyCheckOn = settingsSnapshot.jevOptions.isOn && thread?.safetyCheckOff != true,
         safetyCheckAvailable = SecretName.OPENROUTER in application.secrets.names.collectAsState().value,
+        safetyCheckOffInSettings = !settingsSnapshot.jevOptions.isOn,
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
         mediaMode = MediaModeUiBuilder.build(
@@ -1517,6 +1518,7 @@ private fun SettingsRoute(
 
     val imageGeneration = imageGenerationFor(application, snapshot.imageModels, ::slotFor, snapshot.imageQuality == ImageQuality.HIGH)
     val videoGeneration = videoGenerationFor(application, snapshot.videoModels, slotFor(SecretName.OPENROUTER))
+    val freeTierUsage = remember { FreeTierUsage(FreeTierUsage.inPreferences(application)) }
     val state = SettingsUiState(
         chatServices = serviceCards(
             snapshot,
@@ -1573,8 +1575,8 @@ private fun SettingsRoute(
         zoneInMessages = ZoneChoice.valueOf(snapshot.zoneInMessages.name),
         jevGuardAvailable = SecretName.OPENROUTER in savedKeys,
         toolGroupRows = toolGroupRows(application),
-        freeCallsToday = if (ChatService.JONAKI_FREE in snapshot.chatModels.addedServices) FreeTierUsage(FreeTierUsage.inPreferences(application)).todayCount() else null,
-        freeCallLimit = FreeTierUsage.DAILY_CALL_LIMIT,
+        freeCallsToday = if (ChatService.JONAKI_FREE in snapshot.chatModels.addedServices) freeTierUsage.todayCount() else null,
+        freeCallLimit = freeTierUsage.effectiveLimit(),
         approvalRules = snapshot.approvalRules.map { rule -> ApprovalRuleUi(rule.toolName, rule.action, rule.detail) },
         approvalRuleChoices = approvalRuleChoices,
         subagentModels = AgentTypes.ALL.map { type ->

@@ -1,25 +1,25 @@
-# Status — 2026-10-25 (v1.5.0 built, not released)
+# Status — 2026-10-25 (v1.5.0 built, English only, Worker live)
 
-Phase:        D-186 to D-190 implemented from the three v2 mockups (docs/mockups/*-v2.html):
-              first-run deck with free options, Settings regrouped, memory and skill
-              proposals visible, Jonaki Free service, YouTube retry with Flash Lite.
+Phase:        D-186 to D-191 implemented. The app ships in English only (D-191): no
+              values-bn, no Bangla in prompts, previews or samples; About keeps "Jonaki is
+              Bangla for firefly." Jonaki Free's Worker is deployed at
+              jonaki-free.shourovrm.workers.dev with its own KV namespace and secrets.
 Active plan:  docs/plans/2026-10-02-v1-plan.md; its resume line points at this file.
-Decisions:    D-177 to D-185 still proposed; D-186 to D-190 proposed (2026-10-25).
-Build:        `gradle testReleaseUnitTest test assembleRelease --offline` (see the Outcome
-              lines of D-186 to D-190 for the run on 2026-10-25). Version 1.5.0, code 22. Room v13.
-Phone (A059): on this PC over USB; 1.4.7 installed before this session.
-Worker:       server/jonaki-free is written and the KV namespace jonaki-free-limits exists
-              (id in wrangler.toml), but the Worker is NOT deployed: the tool deploy was
-              blocked as a production deploy. Deploy: `cd server/jonaki-free && npx wrangler
-              login && npx wrangler secret put ACCOUNT_ID && npx wrangler secret put
-              CF_AI_TOKEN && npx wrangler deploy` (CF_AI_TOKEN: an API token with Workers AI
-              Read, made at dash.cloudflare.com/profile/api-tokens). Until then "Jonaki Free"
-              answers with a connection error.
-Not checked:  Every new screen on the phone (first-run deck v2, Settings v2, memory lines,
-              Memory log, review row, error card, Safety check switch) at 360 dp and 1.3.
-Open:         The memory line's text ("Remembered 2 facts") is built in Kotlin, not in
-              strings, so Bangla phones see it in English. The thread Safety check switch
-              only turns the check off; with the Settings default off it cannot turn it on.
-              D-187 strings changed after the Opus review: "Review web facts", "USD / 1M".
-Next action:  Install 1.5.0, walk through the setup cards (Settings > About > Show setup
-              cards) and the Settings pages on the phone; then deploy the Worker.
+Decisions:    D-177 to D-191 proposed (D-186 to D-191 from 2026-10-25).
+Build:        `gradle testReleaseUnitTest test assembleRelease --offline` passes (2026-10-25,
+              see D-191 Outcome). Version 1.5.0, code 22. Room v13.
+Phone (A059): 1.5.0 installed over USB; the APK is also in Downloads/jonaki-1.5.0.apk.
+Worker:       GET /v1/models and GET /v1/limit answer; POST /v1/chat/completions answers
+              "Jonaki Free is not set up yet (server token missing)" until the user runs
+              `cd server/jonaki-free && npx wrangler login && npx wrangler secret put
+              CF_AI_TOKEN` with a token that has only Workers AI Read. DAILY_CALL_LIMIT (60)
+              is a Worker variable; the app reads it from /v1/limit once a day.
+Checked:      Settings home with six groups, setup card 1, Memory screen with To review and
+              the help line, thread list review row. Not yet on a device: the error card, the
+              No-model composer, the Safety check switch, the Memory log with rows, the new
+              run notification with Stop, the withdrawn-skill removal.
+Open:         The thread Safety check switch only turns the check off ("Off in Settings"
+              when the default is off). The memory line text is built in Kotlin. Test data in
+              other scripts stays in tests (D-191).
+Next action:  Set CF_AI_TOKEN, then try Jonaki Free from the setup card on the phone; look at
+              the run notification during a long task; tag v1.5.0 when the user says so.

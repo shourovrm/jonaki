@@ -190,7 +190,7 @@ internal fun SetupRoute(
             showsServiceList = place.showsServiceList,
             showsKeyStep = place.showsKeyStep && modelService != null,
             start = place.start,
-            freeDailyLimit = FreeTierUsage.DAILY_CALL_LIMIT,
+            freeDailyLimit = FreeTierUsage(FreeTierUsage.inPreferences(application)).effectiveLimit(),
             phoneModels = phoneModels.map { model ->
                 SetupPhoneModelUi(model.fileName, model.name, Setup.gigabytesText(model.sizeBytes), Setup.fitOf(model, phoneBudgetBytes))
             },

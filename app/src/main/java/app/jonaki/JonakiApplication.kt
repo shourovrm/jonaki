@@ -50,6 +50,9 @@ import app.jonaki.skills.SkillProposalReview
 import app.jonaki.settings.AccountBalances
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.DeviceId
+import app.jonaki.providers.openaicompatible.ProviderPresets
+import app.jonaki.settings.FreeTierUsage
+import app.jonaki.settings.ChatService
 import app.jonaki.settings.LocalModelTools
 import app.jonaki.settings.McpServerStore
 import app.jonaki.settings.SecretStore
@@ -311,8 +314,17 @@ class JonakiApplication : Application() {
             File(cacheDir, "incoming").deleteRecursively()
         }
         applicationScope.launch(Dispatchers.IO) {
+            // A withdrawn built-in the user never edited goes before the install drops its record (D-191).
+            skillLibrary.removeWithdrawnBuiltIns()
             // Installs new built-in skills and updates unedited ones after an app update (D-038).
             skillLibrary.installBuiltIns(builtInSkills())
+        }
+        applicationScope.launch(Dispatchers.IO) {
+            // The server's daily limit for Jonaki Free, once a day, so the Settings card follows a change (D-186).
+            if (ChatService.JONAKI_FREE in settings.snapshot.value.chatModels.addedServices) {
+                FreeTierUsage(FreeTierUsage.inPreferences(this@JonakiApplication))
+                    .refreshLimit(httpClient, ProviderPresets.jonakiFree.baseUrl, DeviceId.get(this@JonakiApplication))
+            }
         }
     }
 

@@ -2867,5 +2867,9 @@ only stopped shipping it). Test data in other scripts stays where it
 checks that search, file names and Markdown handle any script, because
 it never reaches the app. The About line "Jonaki is Bangla for firefly."
 and README's "Bangla for firefly" stay. Supersedes the Bangla interface
-part of M11.
-Outcome: pending.
+part of M11. Also from this round: the run notification names the running
+thread, offers Stop and sits on a minimum-importance channel; the Worker
+answers GET /v1/limit and turns upstream errors into the OpenAI error
+shape; the app reads the server's limit once a day (D-186).
+Outcome: unit tests and the release build pass (2026-10-25); the English
+text was checked on the phone's Settings and Memory screens.
