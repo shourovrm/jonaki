@@ -17,7 +17,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.pluralStringResource
+import java.util.Locale
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +36,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.MonospaceFamily
-import app.jonaki.core.ui.UsageFormat
 
 /** The limits on Settings > Subagents (D-138). */
 enum class SubagentLimit {
@@ -118,14 +125,18 @@ internal fun SubagentsPage(state: SettingsUiState, actions: SettingsActions) {
     Group {
         LimitRows(state.subagentLimits) { limit, value -> actions.onSubagentLimitChange(limit, value) }
     }
-    for (budget in state.subagentBudgets) {
-        SubagentSection(
-            budget = budget,
-            model = state.subagentModels.firstOrNull { row -> row.agentType == budget.agentType },
-            custom = state.customSubagents.firstOrNull { subagent -> subagent.name == budget.agentType },
-            modelOptions = state.subagentModelOptions,
-            actions = actions,
-        )
+    SectionLabel(stringResource(R.string.settings_subagents_section_types))
+    Group {
+        state.subagentBudgets.forEachIndexed { index, budget ->
+            if (index > 0) GroupDivider()
+            SubagentTypeRow(
+                budget = budget,
+                model = state.subagentModels.firstOrNull { row -> row.agentType == budget.agentType },
+                custom = state.customSubagents.firstOrNull { subagent -> subagent.name == budget.agentType },
+                modelOptions = state.subagentModelOptions,
+                actions = actions,
+            )
+        }
     }
     Spacer(Modifier.height(24.dp))
     Group {
@@ -133,34 +144,76 @@ internal fun SubagentsPage(state: SettingsUiState, actions: SettingsActions) {
     }
 }
 
-/** Everything about one subagent: for the user's own, the way into its editor; then its model and its budget. */
+/**
+ * One subagent type as a row that opens in place: closed it shows the name and
+ * the model it runs on; open it shows, for the user's own types, the way into
+ * the editor, then the model and the budget.
+ */
 @Composable
-private fun SubagentSection(
+private fun SubagentTypeRow(
     budget: SubagentBudgetUi,
     model: SubagentModelRowUi?,
     custom: CustomSubagentRowUi?,
     modelOptions: List<ModelOptionUi>,
     actions: SettingsActions,
 ) {
-    SectionLabel(agentTypeLabel(budget.agentType))
-    Group {
-        if (custom != null) {
-            CustomSubagentRow(custom, onClick = { actions.onOpenCustomSubagent(custom.name) })
-            GroupDivider()
-        }
-        if (model != null) {
-            val defaultLabel = if (model.defaultIsCheapest) R.string.settings_subagent_cheapest_model else R.string.settings_subagent_thread_model
-            ModelChoiceRow(
-                title = stringResource(R.string.settings_subagents_model),
-                selectedKey = model.selectedKey,
-                defaultLabel = stringResource(defaultLabel),
-                options = modelOptions,
-                onSelect = { modelKey -> actions.onSubagentModelChange(budget.agentType, modelKey) },
-            )
-            GroupDivider()
-        }
-        LimitRows(budget.limits) { limit, value -> actions.onSubagentBudgetChange(budget.agentType, limit, value) }
+    var open by rememberSaveable(budget.agentType) { mutableStateOf(false) }
+    val defaultLabel = defaultModelLabel(model)
+    val modelName = modelOptions.firstOrNull { option -> option.key == model?.selectedKey }?.name ?: defaultLabel
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { open = !open }
+            .heightIn(min = 56.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            agentTypeLabel(budget.agentType),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            modelName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 160.dp),
+        )
+        Icon(
+            if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
+    if (!open) {
+        return
+    }
+    if (custom != null) {
+        CustomSubagentRow(custom, onClick = { actions.onOpenCustomSubagent(custom.name) })
+        GroupDivider()
+    }
+    if (model != null) {
+        ModelChoiceRow(
+            title = stringResource(R.string.settings_subagents_model),
+            selectedKey = model.selectedKey,
+            defaultLabel = defaultLabel,
+            options = modelOptions,
+            onSelect = { modelKey -> actions.onSubagentModelChange(budget.agentType, modelKey) },
+        )
+        GroupDivider()
+    }
+    LimitRows(budget.limits) { limit, value -> actions.onSubagentBudgetChange(budget.agentType, limit, value) }
+}
+
+@Composable
+private fun defaultModelLabel(model: SubagentModelRowUi?): String {
+    val id = if (model?.defaultIsCheapest == true) R.string.settings_subagent_cheapest_model else R.string.settings_subagent_thread_model
+    return stringResource(id)
 }
 
 @Composable
@@ -175,7 +228,6 @@ private fun LimitRows(limits: List<SubagentLimitUi>, onChange: (SubagentLimit, I
 @Composable
 private fun LimitRow(limit: SubagentLimitUi, onChange: (SubagentLimit, Int) -> Unit) {
     val title = limitTitle(limit.limit)
-    val scope = limitScope(limit.limit)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -183,22 +235,17 @@ private fun LimitRow(limit: SubagentLimitUi, onChange: (SubagentLimit, Int) -> U
             .heightIn(min = 56.dp)
             .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            if (scope != null) {
-                Text(scope, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+        Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         IconButton(onClick = { onChange(limit.limit, limit.value - limit.step) }, enabled = limit.canLower) {
             Icon(JonakiIcons.Remove, contentDescription = stringResource(R.string.settings_subagents_lower, title))
         }
         Text(
             limitValue(limit),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyLarge,
             fontFamily = MonospaceFamily,
             textAlign = TextAlign.Center,
             maxLines = 1,
-            modifier = Modifier.widthIn(min = 44.dp),
+            modifier = Modifier.widthIn(min = 96.dp),
         )
         IconButton(onClick = { onChange(limit.limit, limit.value + limit.step) }, enabled = limit.canRaise) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.settings_subagents_raise, title))
@@ -216,22 +263,16 @@ private fun limitTitle(limit: SubagentLimit): String = when (limit) {
     SubagentLimit.MINUTES -> stringResource(R.string.settings_subagents_minutes)
 }
 
-/** The first two limits say what they count; the cap's title does, and a type's budgets sit under its name. */
+/** The value with its unit, so "3 per message" and "20 tool calls" need no help text. */
 @Composable
-private fun limitScope(limit: SubagentLimit): String? = when (limit) {
-    SubagentLimit.WITHOUT_ASKING -> stringResource(R.string.settings_subagents_per_message)
-    SubagentLimit.PER_CALL -> stringResource(R.string.settings_subagents_in_one_call)
-    SubagentLimit.MAX_PER_MESSAGE -> null
-    SubagentLimit.TOOL_STEPS -> null
-    SubagentLimit.COST_CENTS -> null
-    SubagentLimit.MINUTES -> null
-}
-
-private fun limitValue(limit: SubagentLimitUi): String {
-    if (limit.limit == SubagentLimit.COST_CENTS) {
-        return UsageFormat.limit(limit.value / 100.0)
-    }
-    return limit.value.toString()
+private fun limitValue(limit: SubagentLimitUi): String = when (limit.limit) {
+    SubagentLimit.WITHOUT_ASKING -> stringResource(R.string.settings_subagents_unit_per_message, limit.value)
+    SubagentLimit.PER_CALL, SubagentLimit.MAX_PER_MESSAGE ->
+        pluralStringResource(R.plurals.settings_subagents_unit_agents, limit.value, limit.value)
+    SubagentLimit.TOOL_STEPS -> pluralStringResource(R.plurals.settings_subagents_unit_tool_calls, limit.value, limit.value)
+    SubagentLimit.COST_CENTS ->
+        stringResource(R.string.settings_subagents_unit_usd, String.format(Locale.ENGLISH, "%.2f", limit.value / 100.0))
+    SubagentLimit.MINUTES -> pluralStringResource(R.plurals.settings_subagents_unit_minutes, limit.value, limit.value)
 }
 
 /** The section's label carries the name, so the row names the action; the description keeps one line and ends in "…" (D-029). */

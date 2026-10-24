@@ -36,16 +36,15 @@ object SettingsSearch {
             R.string.settings_gemini_key,
         ),
         SettingsPage.TOOLS to listOf(
-            R.string.settings_section_approvals,
-            R.string.settings_approvals_always,
-            R.string.settings_approvals_add,
-            R.string.settings_section_tools,
             R.string.settings_tools_all,
             R.string.settings_python,
             R.string.settings_section_mcp,
             R.string.settings_mcp_add,
         ),
-        SettingsPage.GUARDRAILS to listOf(
+        SettingsPage.SAFETY to listOf(
+            R.string.settings_section_approvals,
+            R.string.settings_approvals_always,
+            R.string.settings_approvals_add,
             R.string.settings_jev_guard,
             R.string.settings_jev_skip_cards,
             R.string.settings_jev_screen_outside_content,
@@ -76,21 +75,21 @@ object SettingsSearch {
             R.string.settings_section_personas,
             R.string.settings_add_persona,
         ),
-        SettingsPage.MEMORY_SKILLS to listOf(
-            R.string.settings_section_memory,
-            R.string.settings_memory_open,
+        SettingsPage.MEMORY to listOf(
             R.string.settings_memory_save_facts,
             R.string.settings_memory_review_facts,
             R.string.settings_memory_suggest_global,
             R.string.settings_memory_export,
-            R.string.settings_section_skills,
+        ),
+        SettingsPage.SKILLS to listOf(
             R.string.settings_skills_open,
             R.string.settings_skills_suggest,
         ),
-        SettingsPage.FILES_SCHEDULE to listOf(
-            R.string.settings_section_files,
+        SettingsPage.FILES to listOf(
             R.string.settings_link_folder,
             R.string.settings_linked_folder,
+        ),
+        SettingsPage.REMINDERS to listOf(
             R.string.settings_section_reminders,
             R.string.settings_reminders_interval,
             R.string.settings_reminders_repeats,

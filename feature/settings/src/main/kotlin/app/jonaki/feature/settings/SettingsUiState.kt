@@ -6,6 +6,8 @@ import app.jonaki.core.ui.ThinkingChoice
 
 import androidx.compose.runtime.Immutable
 import app.jonaki.core.ui.ThemeMode
+import app.jonaki.core.ui.ToolGroupChoice
+import app.jonaki.core.ui.ToolGroupRowUi
 
 /**
  * Everything the settings screen shows. Saved keys are never part of the
@@ -70,6 +72,12 @@ data class SettingsUiState(
     /** Tool groups switched on, and all of them, for the first page's "12 of 12 tools on" (D-128). */
     val toolGroupsOn: Int = 0,
     val toolGroupCount: Int = 0,
+    /** The switches of Settings > Tools, in the order they show. */
+    val toolGroupRows: List<ToolGroupRowUi> = emptyList(),
+    /** Calls Jonaki Free has served today; null while the count is not known. */
+    val freeCallsToday: Int? = null,
+    /** Calls Jonaki Free serves per day. */
+    val freeCallLimit: Int? = null,
     /** Global saved facts, for the first page's summary. */
     val factCount: Int = 0,
     /** Skills in the library, for the first page's summary. */
@@ -156,6 +164,8 @@ data class ServiceModelUi(
     val inputPricePerMillion: Double? = null,
     val outputPricePerMillion: Double? = null,
     val cachedInputPricePerMillion: Double? = null,
+    /** True when the free plan serves the model, false when only a paid plan does, null when unknown. */
+    val freePlan: Boolean? = null,
     /** The one starred model, default for new threads across all services. */
     val isDefault: Boolean = false,
     /** Null means the same as the card's routing. */
@@ -237,6 +247,8 @@ class SettingsActions(
     val onOpenSkills: () -> Unit = {},
     /** Opens Settings > Tools, the tool group switches (plan M8 step 3). */
     val onOpenTools: () -> Unit = {},
+    /** A tool group switched on or off on Settings > Tools. */
+    val onToolGroupSwitch: (ToolGroupChoice, Boolean) -> Unit = { _, _ -> },
     /** Opens Settings > Python (plan M8 step 4). */
     val onOpenPython: () -> Unit = {},
     /** Opens Android's folder picker; the app keeps the picked folder. */

@@ -18,6 +18,8 @@ data class AddableModelUi(
     val inputPricePerMillion: Double? = null,
     val outputPricePerMillion: Double? = null,
     val cachedInputPricePerMillion: Double? = null,
+    /** True when the free plan serves the model, false when only a paid plan does, null when unknown. */
+    val freePlan: Boolean? = null,
     /** Already in the user's list: shown ticked and not changeable here. */
     val isAdded: Boolean = false,
     /** Image model picker only: the price line under the id; null for a service that shows no prices. */

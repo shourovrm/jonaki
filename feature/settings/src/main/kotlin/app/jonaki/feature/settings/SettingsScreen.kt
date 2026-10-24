@@ -47,6 +47,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.ApprovalModeOptions
 import app.jonaki.core.ui.ThemeMode
+import app.jonaki.core.ui.ToolGroupChoice
+import app.jonaki.core.ui.toolGroupName
 import androidx.compose.ui.text.style.TextOverflow
 import app.jonaki.core.ui.MonospaceFamily
 
@@ -91,11 +93,13 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
                 SettingsPage.LOCAL_MODELS -> Unit
                 SettingsPage.WEB -> WebPage(state, actions)
                 SettingsPage.TOOLS -> ToolsPage(state, actions)
-                SettingsPage.GUARDRAILS -> GuardrailsPage(state, actions)
+                SettingsPage.SAFETY -> SafetyPage(state, actions)
                 SettingsPage.SUBAGENTS -> SubagentsPage(state, actions)
                 SettingsPage.ANSWERS -> AnswersAndPersonasSections(state, actions)
-                SettingsPage.MEMORY_SKILLS -> MemoryAndSkillsPage(state, actions)
-                SettingsPage.FILES_SCHEDULE -> FilesAndSchedulePage(state, actions)
+                SettingsPage.MEMORY -> MemoryPage(state, actions)
+                SettingsPage.SKILLS -> SkillsPage(state, actions)
+                SettingsPage.FILES -> FilesPage(state, actions)
+                SettingsPage.REMINDERS -> RemindersPage(state, actions)
                 SettingsPage.THEME -> ThemePage(state, actions)
                 SettingsPage.PERMISSIONS -> PermissionsSection(state.permissions, actions.onPermissionTap)
                 SettingsPage.ABOUT -> AboutSection(
@@ -129,8 +133,70 @@ private fun WebPage(state: SettingsUiState, actions: SettingsActions) {
     }
 }
 
+/** Python and the MCP servers have pages of their own, so they are two rows; the switches follow with no second line. */
 @Composable
 private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
+    Group {
+        NavigationRow(stringResource(R.string.settings_python), onClick = actions.onOpenPython)
+        GroupDivider()
+        McpServersRow(state, actions)
+    }
+    SectionLabel(stringResource(R.string.settings_tools_all))
+    Group {
+        state.toolGroupRows.forEachIndexed { index, row ->
+            if (index > 0) GroupDivider()
+            OptionSwitchRow(
+                text = toolSwitchName(row.group),
+                isOn = row.isOn,
+                onChange = { on -> actions.onToolGroupSwitch(row.group, on) },
+                enabled = row.canSwitch,
+            )
+        }
+    }
+}
+
+@Composable
+private fun toolSwitchName(group: ToolGroupChoice): String {
+    if (group == ToolGroupChoice.DATA_ADD_ON) {
+        return stringResource(R.string.settings_tools_data)
+    }
+    return toolGroupName(group)
+}
+
+/** The MCP servers open in place under their row, with the same add and edit controls as before. */
+@Composable
+private fun McpServersRow(state: SettingsUiState, actions: SettingsActions) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { open = !open }
+            .heightIn(min = 56.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            stringResource(R.string.settings_section_mcp),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    if (open) {
+        McpServerRows(state.mcpServers, actions)
+    }
+}
+
+/** In the order a risky action meets them: the approval mode, the rules, the safety check, then web content. */
+@Composable
+private fun SafetyPage(state: SettingsUiState, actions: SettingsActions) {
+    val options = state.guardrails
     SectionLabel(stringResource(R.string.settings_section_approvals))
     Group {
         ApprovalModeOptions(
@@ -143,25 +209,6 @@ private fun ToolsPage(state: SettingsUiState, actions: SettingsActions) {
     Group {
         ApprovalRuleRows(state.approvalRules, state.approvalRuleChoices, actions)
     }
-    SectionLabel(stringResource(R.string.settings_section_tools))
-    Group {
-        NavigationRow(
-            text = stringResource(R.string.settings_tools_all),
-            summary = pluralStringResource(R.plurals.settings_tools_all_summary, state.toolGroupCount, state.toolGroupCount),
-            onClick = actions.onOpenTools,
-        )
-        GroupDivider()
-        NavigationRow(stringResource(R.string.settings_python), onClick = actions.onOpenPython)
-    }
-    SectionLabel(stringResource(R.string.settings_section_mcp))
-    Group {
-        McpServerRows(state.mcpServers, actions)
-    }
-}
-
-@Composable
-private fun GuardrailsPage(state: SettingsUiState, actions: SettingsActions) {
-    val options = state.guardrails
     SectionLabel(stringResource(R.string.settings_jev_guard))
     JevGuardSection(state.jev, state.jevGuardAvailable, actions.onJevOptionsChange)
     SectionLabel(stringResource(R.string.settings_section_after_outside_content))
@@ -181,15 +228,10 @@ private fun GuardrailsPage(state: SettingsUiState, actions: SettingsActions) {
 }
 
 @Composable
-private fun MemoryAndSkillsPage(state: SettingsUiState, actions: SettingsActions) {
+private fun MemoryPage(state: SettingsUiState, actions: SettingsActions) {
     val options = state.memoryOptions
-    SectionLabel(stringResource(R.string.settings_section_memory))
     Group {
-        NavigationRow(
-            text = stringResource(R.string.settings_memory_open),
-            summary = pluralStringResource(R.plurals.settings_summary_facts, state.factCount, state.factCount),
-            onClick = actions.onOpenMemory,
-        )
+        NavigationRow(text = stringResource(R.string.settings_memory_open), onClick = actions.onOpenMemory)
         GroupDivider()
         OptionSwitchRow(
             text = stringResource(R.string.settings_memory_save_facts),
@@ -211,13 +253,13 @@ private fun MemoryAndSkillsPage(state: SettingsUiState, actions: SettingsActions
         GroupDivider()
         NavigationRow(stringResource(R.string.settings_memory_export), onClick = actions.onExportMemory)
     }
-    SectionLabel(stringResource(R.string.settings_section_skills))
+}
+
+@Composable
+private fun SkillsPage(state: SettingsUiState, actions: SettingsActions) {
+    val options = state.memoryOptions
     Group {
-        NavigationRow(
-            text = stringResource(R.string.settings_skills_open),
-            summary = pluralStringResource(R.plurals.settings_summary_skills, state.skillCount, state.skillCount),
-            onClick = actions.onOpenSkills,
-        )
+        NavigationRow(text = stringResource(R.string.settings_skills_open), onClick = actions.onOpenSkills)
         GroupDivider()
         OptionSwitchRow(
             text = stringResource(R.string.settings_skills_suggest),
@@ -228,11 +270,14 @@ private fun MemoryAndSkillsPage(state: SettingsUiState, actions: SettingsActions
 }
 
 @Composable
-private fun FilesAndSchedulePage(state: SettingsUiState, actions: SettingsActions) {
-    SectionLabel(stringResource(R.string.settings_section_files))
+private fun FilesPage(state: SettingsUiState, actions: SettingsActions) {
     Group {
         LinkedFolderRow(state.linkedFolderName, actions)
     }
+}
+
+@Composable
+private fun RemindersPage(state: SettingsUiState, actions: SettingsActions) {
     ReminderSettingsSection(state.reminders, actions)
     ScheduledSection(state.scheduledItems, actions.onCancelScheduled)
 }

@@ -205,8 +205,8 @@ private fun ModelPickRow(model: AddableModelUi, isPicked: Boolean, onToggle: () 
                 }
             }
             Text(model.id, style = monoSmall(), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row {
-                Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f)) { PlanTag(model.freePlan) }
                 PriceValue(model.inputPricePerMillion)
                 PriceValue(model.outputPricePerMillion)
                 PriceValue(model.cachedInputPricePerMillion)
