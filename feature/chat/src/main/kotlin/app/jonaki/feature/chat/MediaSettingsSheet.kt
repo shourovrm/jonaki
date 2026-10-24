@@ -173,11 +173,3 @@ private fun VideoSettingsDarkPreview() {
         Surface { MediaSettingsContent(MediaKind.VIDEO, videoSettingsSample, "about \$0.12", onChange = {}, onAddModel = {}) }
     }
 }
-
-@Preview(name = "Video settings, Bangla", locale = "bn", widthDp = 360, heightDp = 760, fontScale = 1.3f)
-@Composable
-private fun VideoSettingsBanglaPreview() {
-    JonakiTheme(ThemeMode.LIGHT) {
-        Surface { MediaSettingsContent(MediaKind.VIDEO, videoSettingsSample, "about \$0.12", onChange = {}, onAddModel = {}) }
-    }
-}

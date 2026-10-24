@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Selecting threads to delete or move together. Bangla in values-bn/strings_selection.xml. -->
+<!-- Selecting threads to delete or move together. -->
 <resources>
     <plurals name="threads_delete_many_title">
         <item quantity="one">Delete %1$d thread?</item>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Subagent rows, page and work sheet (D-126). Bangla in values-bn/strings_subagents.xml. -->
+<!-- Subagent rows, page and work sheet (D-126). -->
 <resources>
     <plurals name="subagents_count">
         <item quantity="one">%1$d subagent</item>

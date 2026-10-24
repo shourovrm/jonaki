@@ -5,8 +5,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
 
-// The D-029 check: a 360 dp wide phone at font scale 1.3, in dark, light and
-// Bangla, with 40-character repository and file names.
+// The D-029 check: a 360 dp wide phone at font scale 1.3, in dark and light,
+// with 40-character repository and file names.
 
 /** 40 characters each. */
 private const val LONG_REPO = "mradermacher/Qwen3.5-9B-Heretic2-i1-GGUF"
@@ -78,20 +78,8 @@ private fun LocalModelsLightPreview() {
     PageSample(ThemeMode.LIGHT)
 }
 
-@Preview(name = "Local models, Bangla", locale = "bn", widthDp = 360, heightDp = 1800, fontScale = 1.3f)
-@Composable
-private fun LocalModelsBanglaPreview() {
-    PageSample(ThemeMode.LIGHT)
-}
-
 @Preview(name = "Repository files, dark", widthDp = 360, heightDp = 800, fontScale = 1.3f)
 @Composable
 private fun RepoFilesDarkPreview() {
     FilesSample(ThemeMode.DARK)
-}
-
-@Preview(name = "Repository files, Bangla", locale = "bn", widthDp = 360, heightDp = 800, fontScale = 1.3f)
-@Composable
-private fun RepoFilesBanglaPreview() {
-    FilesSample(ThemeMode.LIGHT)
 }

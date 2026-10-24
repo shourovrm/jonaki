@@ -54,12 +54,6 @@ private fun ProvidersLightPreview() {
     SheetSample(ThemeMode.LIGHT, ProvidersLoadState.Loaded(sampleOptions))
 }
 
-@Preview(name = "Providers, Bangla", locale = "bn", widthDp = 360, heightDp = 900, fontScale = 1.3f)
-@Composable
-private fun ProvidersBanglaPreview() {
-    SheetSample(ThemeMode.LIGHT, ProvidersLoadState.Loaded(sampleOptions))
-}
-
 @Preview(name = "Providers, loading", widthDp = 360, heightDp = 300, fontScale = 1.3f)
 @Composable
 private fun ProvidersLoadingPreview() {

@@ -6,7 +6,7 @@ import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
 
 // The D-029 check for Settings > Subagents and its editor (D-138): a 360 dp
-// wide phone at font scale 1.3, in dark, light and Bangla, with a 30-character
+// wide phone at font scale 1.3, in dark and light, with a 30-character
 // name and a long description.
 
 private val noActions = SettingsActions(
@@ -19,8 +19,8 @@ private val noActions = SettingsActions(
 )
 
 private val sampleSubagent = CustomSubagentEditorUi(
-    name = "bangla-legal-summary-writer-02",
-    description = "Summarises court papers and land deeds in plain Bangla for a reader without legal training.",
+    name = "legal-summary-writer-02",
+    description = "Summarises court papers and land deeds in plain words for a reader without legal training.",
     instructions = "Read the papers in inbox/. Write a summary of at most one page.\nEnd with the dates and amounts named.",
     tools = listOf("read_file", "read_document", "write_file"),
     modelKey = "openrouter:qwen/qwen-4-coder-480b-a35b-instruct-turbo",
@@ -66,20 +66,8 @@ private fun SubagentsLightPreview() {
     PageSample(ThemeMode.LIGHT)
 }
 
-@Preview(name = "Subagents, Bangla", locale = "bn", widthDp = 360, heightDp = 1500, fontScale = 1.3f)
-@Composable
-private fun SubagentsBanglaPreview() {
-    PageSample(ThemeMode.LIGHT)
-}
-
 @Preview(name = "Subagent editor, dark", widthDp = 360, heightDp = 1800, fontScale = 1.3f)
 @Composable
 private fun EditorDarkPreview() {
     EditorSample(ThemeMode.DARK)
-}
-
-@Preview(name = "Subagent editor, Bangla", locale = "bn", widthDp = 360, heightDp = 1800, fontScale = 1.3f)
-@Composable
-private fun EditorBanglaPreview() {
-    EditorSample(ThemeMode.LIGHT)
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Selecting facts to delete together. Bangla in values-bn/strings_selection.xml. -->
+<!-- Selecting facts to delete together. -->
 <resources>
     <plurals name="memory_delete_many_title">
         <item quantity="one">Delete %1$d fact?</item>

@@ -160,7 +160,7 @@ private fun MissingVideoTile() {
     }
 }
 
-// D-029 check: 360 dp wide, font scale 1.3, a long file name; English, Bangla and the deleted-file tile.
+// D-029 check: 360 dp wide, font scale 1.3, a long file name; English and the deleted-file tile.
 private const val LONG_VIDEO_NAME = "videos/a-very-long-name-for-a-generated-video-clip.mp4"
 
 private class PreviewVideos(private val result: ChatVideoResult) : ChatVideos {
@@ -182,11 +182,6 @@ private fun CardPreview(result: ChatVideoResult, mode: ThemeMode) {
 @Composable
 private fun GeneratedVideoCardPreview() =
     CardPreview(ChatVideoResult.Loaded(frame = null, durationSeconds = 4, sizeBytes = 1_300_000L), ThemeMode.DARK)
-
-@Preview(name = "Generated video, Bangla", locale = "bn", widthDp = 360, fontScale = 1.3f)
-@Composable
-private fun GeneratedVideoCardBanglaPreview() =
-    CardPreview(ChatVideoResult.Loaded(frame = null, durationSeconds = 4, sizeBytes = 1_300_000L), ThemeMode.LIGHT)
 
 @Preview(name = "Generated video, file deleted", widthDp = 360, fontScale = 1.3f)
 @Composable

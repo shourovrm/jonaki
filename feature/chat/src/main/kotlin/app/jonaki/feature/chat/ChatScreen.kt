@@ -341,6 +341,7 @@ fun ChatScreen(
                 allowAllInThread = state.allowAllInThread,
                 safetyCheckOn = state.safetyCheckOn,
                 safetyCheckAvailable = state.safetyCheckAvailable,
+                safetyCheckOffInSettings = state.safetyCheckOffInSettings,
                 onSafetyCheckChange = onSafetyCheckChange,
                 onSelect = { choice ->
                     openSheet = ChatSheet.NONE

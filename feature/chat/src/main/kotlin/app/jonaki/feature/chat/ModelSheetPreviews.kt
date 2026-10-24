@@ -46,9 +46,3 @@ private fun ModelSheetWithoutImageModelsPreview() {
     val state = ChatSample.withUsage.copy(imageModelChoices = emptyList(), selectedImageModelKey = null)
     JonakiTheme(ThemeMode.LIGHT) { ModelSheetPreviewContent(state) }
 }
-
-@Preview(name = "Model sheet with image models, Bangla", locale = "bn", widthDp = 360, heightDp = 900, fontScale = 1.3f)
-@Composable
-private fun ModelSheetBanglaPreview() {
-    JonakiTheme(ThemeMode.LIGHT) { ModelSheetPreviewContent(ChatSample.withUsage) }
-}

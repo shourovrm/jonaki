@@ -45,17 +45,15 @@ data class MemoryLogRowUi(
 
 /** "Today 02:05" for the current day, "Sat 13:59" for any other. */
 object MemoryLogTime {
-    fun format(atMillis: Long, nowMillis: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String {
+    fun format(atMillis: Long, nowMillis: Long, todayLabel: String, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String {
         val at = Instant.ofEpochMilli(atMillis).atZone(zone)
         val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         val clock = at.format(DateTimeFormatter.ofPattern("HH:mm", locale))
         if (at.toLocalDate() == today) {
-            return "${stringToday(locale)} $clock"
+            return "$todayLabel $clock"
         }
         return at.format(DateTimeFormatter.ofPattern("EEE HH:mm", locale))
     }
-
-    private fun stringToday(locale: Locale): String = if (locale.language == "bn") "আজ" else "Today"
 }
 
 /** Every time Jonaki read a thread for facts: when, with which model, and what came of it. */
@@ -112,6 +110,7 @@ fun MemoryLogScreen(
 
 @Composable
 private fun LogRow(row: MemoryLogRowUi, nowMillis: Long) {
+    val todayLabel = stringResource(R.string.memory_log_today)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
@@ -124,7 +123,7 @@ private fun LogRow(row: MemoryLogRowUi, nowMillis: Long) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            val when_ = MemoryLogTime.format(row.atMillis, nowMillis)
+            val when_ = MemoryLogTime.format(row.atMillis, nowMillis, todayLabel)
             val detail = if (row.modelName.isEmpty()) when_ else "$when_ · ${row.modelName}"
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

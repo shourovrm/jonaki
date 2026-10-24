@@ -10,10 +10,9 @@ import app.jonaki.core.ui.JonakiTheme
 private const val PREVIEW_NOW = 1_790_000_000_000L
 
 /** 40 characters. */
-private const val LONG_ENGLISH_TITLE = "Compare three e-readers for Bangla PDFs!"
+private const val LONG_ENGLISH_TITLE = "Compare three e-readers for scanned PDFs!"
 
 /** 40 characters. */
-private const val LONG_BANGLA_TITLE = "নমুনার আকার: হাসপাতাল জরিপের নতুন গবেষণা"
 
 @Composable
 private fun SelectionPreviewScreen(longTitle: String) {
@@ -36,10 +35,4 @@ private fun SelectionPreviewScreen(longTitle: String) {
 @Composable
 private fun ThreadSelectionPreview() {
     SelectionPreviewScreen(LONG_ENGLISH_TITLE)
-}
-
-@Preview(name = "Thread selection, Bangla", locale = "bn", widthDp = 360, heightDp = 800, fontScale = 1.3f)
-@Composable
-private fun ThreadSelectionBanglaPreview() {
-    SelectionPreviewScreen(LONG_BANGLA_TITLE)
 }

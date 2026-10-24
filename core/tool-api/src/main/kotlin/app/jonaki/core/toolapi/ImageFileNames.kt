@@ -50,7 +50,7 @@ object ImageFileNames {
         return words.take(PROMPT_WORDS_IN_NAME).joinToString("-").lowercase(Locale.ROOT).take(MAX_BASE_NAME_LENGTH).trim('-')
     }
 
-    /** Vowel signs in Bangla and other scripts are marks, not letters, and belong to the word before them. */
+    /** Vowel signs in Indic and other scripts are combining marks, not letters, and belong to the word before them. */
     private fun isCombiningMark(character: Char): Boolean {
         val type = Character.getType(character)
         return type == Character.NON_SPACING_MARK.toInt() || type == Character.COMBINING_SPACING_MARK.toInt()

@@ -174,7 +174,7 @@ private val jonakiShapes = Shapes(
 
 // Geist and Geist Mono (SIL Open Font License, core/ui/OFL-Geist.txt) as variable
 // fonts: one file per family holds every weight, about half the size of four static
-// files. Variation settings are applied on API 26+, which is minSdk. Bangla falls back
+// files. Variation settings are applied on API 26+, which is minSdk. Scripts the font does not cover fall back
 // to the system font.
 @OptIn(ExperimentalTextApi::class)
 private fun geistWeight(fontResource: Int, weight: Int): Font = Font(

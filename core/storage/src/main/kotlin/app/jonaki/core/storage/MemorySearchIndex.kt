@@ -118,6 +118,6 @@ object MemorySearchIndex {
         return "%$escaped%"
     }
 
-    /** Length in code points, so that a Bangla vowel sign counts as one character, as the trigram tokenizer counts it. */
+    /** Length in code points, so that a vowel sign counts as one character, as the trigram tokenizer counts it. */
     fun usesMatch(query: String): Boolean = query.codePointCount(0, query.length) >= MINIMUM_MATCH_LENGTH
 }

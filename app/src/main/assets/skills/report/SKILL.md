@@ -19,7 +19,7 @@ A report is one HTML file in `artifacts/`, for example `artifacts/laptop-compari
 - Sections with plain noun-phrase headings. Begin each paragraph with the fact the reader can use, then the number, the example or the reason behind it.
 - A table whenever three or more items are compared on the same attributes.
 - A "Sources" list at the end: title, site and URL of each page used. Cite as [1], [2] in the text.
-- Write in the language the user writes in. For Bangla, set `lang="bn"` and use the font stack `"Noto Sans Bengali", sans-serif`.
+- Write in the language the user writes in. For a non-Latin script, set `lang` and a font stack that covers it, for example `"Noto Sans", sans-serif`, and give charts Latin labels or a legend.
 
 ## Writing
 

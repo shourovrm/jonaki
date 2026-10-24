@@ -53,6 +53,7 @@ internal fun ApprovalSheet(
     onDismiss: () -> Unit,
     safetyCheckOn: Boolean = true,
     safetyCheckAvailable: Boolean = true,
+    safetyCheckOffInSettings: Boolean = false,
     onSafetyCheckChange: (Boolean) -> Unit = {},
 ) {
     val appliedMode = threadMode ?: defaultMode
@@ -95,15 +96,22 @@ internal fun ApprovalSheet(
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            SafetyCheckRow(safetyCheckOn && safetyCheckAvailable, safetyCheckAvailable, onSafetyCheckChange)
+            // Off in Settings is the user's own choice, so it is named before the missing key.
+            val lockedReason = when {
+                safetyCheckOffInSettings -> R.string.chat_safety_off_in_settings
+                !safetyCheckAvailable -> R.string.chat_safety_needs_key
+                else -> null
+            }
+            SafetyCheckRow(safetyCheckOn && lockedReason == null, lockedReason, onSafetyCheckChange)
             Spacer(Modifier.height(16.dp))
         }
     }
 }
 
-/** The Jev guard as a switch for this thread; without an OpenRouter key it is off and locked. */
+/** The Jev guard as a switch for this thread; when it cannot run (no OpenRouter key, or off in Settings) it is off and locked, with the reason shown. */
 @Composable
-private fun SafetyCheckRow(isOn: Boolean, isAvailable: Boolean, onChange: (Boolean) -> Unit) {
+private fun SafetyCheckRow(isOn: Boolean, lockedReasonRes: Int?, onChange: (Boolean) -> Unit) {
+    val isAvailable = lockedReasonRes == null
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -113,7 +121,7 @@ private fun SafetyCheckRow(isOn: Boolean, isAvailable: Boolean, onChange: (Boole
     ) {
         Column(Modifier.weight(1f)) {
             Text(stringResource(R.string.chat_safety_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-            if (isAvailable) {
+            if (lockedReasonRes == null) {
                 Text(
                     stringResource(R.string.chat_safety_help),
                     style = MaterialTheme.typography.bodySmall,
@@ -121,7 +129,7 @@ private fun SafetyCheckRow(isOn: Boolean, isAvailable: Boolean, onChange: (Boole
                 )
             } else {
                 Text(
-                    stringResource(R.string.chat_safety_needs_key),
+                    stringResource(lockedReasonRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = JonakiTheme.colors.deny,
                 )

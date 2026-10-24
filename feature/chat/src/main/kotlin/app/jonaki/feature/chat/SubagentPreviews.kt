@@ -62,12 +62,12 @@ internal object SubagentSamples {
         id = "s3",
         label = "writer 3",
         delegateStepId = "d1",
-        task = "Read inbox/cse-laptop-specs.pdf and draft artifacts/laptop-guide.html in Bangla for Ma",
+        task = "Read inbox/cse-laptop-specs.pdf and draft artifacts/laptop-guide.html for Ma",
         modelName = "DeepSeek V3.2",
         status = SubagentUiStatus.RUNNING,
         steps = listOf(
             StepUi("s3/c1", "read_document", StepUiStatus.DONE, "inbox/cse-laptop-specs.pdf", durationMillis = 1_200),
-            StepUi("s3/c2", "ask_parent", StepUiStatus.RUNNING, "", query = "Bangla only, or English terms too?"),
+            StepUi("s3/c2", "ask_parent", StepUiStatus.RUNNING, "", query = "Short sentences, or full detail?"),
         ),
         costUsd = 0.004,
         latestText = null,
@@ -105,11 +105,11 @@ internal object SubagentSamples {
     private val writerDone = writerAsking.copy(
         status = SubagentUiStatus.DONE,
         steps = writerAsking.steps.map { step -> step.copy(status = StepUiStatus.DONE, durationMillis = 3_400) } +
-            StepUi("s3/c3", "write_file", StepUiStatus.DONE, "artifacts/laptop-guide-for-ma-in-bangla-with-prices.html", durationMillis = 200),
+            StepUi("s3/c3", "write_file", StepUiStatus.DONE, "artifacts/laptop-guide-for-ma-with-prices.html", durationMillis = 200),
         costUsd = 0.019,
-        answer = "Wrote artifacts/laptop-guide-for-ma-in-bangla-with-prices.html.\n\n**Files written or changed**\n\n- work/specs.md",
+        answer = "Wrote artifacts/laptop-guide-for-ma-with-prices.html.\n\n**Files written or changed**\n\n- work/specs.md",
         finishedAtMillis = START + 151_000,
-        filesWritten = listOf("artifacts/laptop-guide-for-ma-in-bangla-with-prices.html", "work/specs.md"),
+        filesWritten = listOf("artifacts/laptop-guide-for-ma-with-prices.html", "work/specs.md"),
     )
 
     private val researcherFailed = researcherRunning.copy(

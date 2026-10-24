@@ -11,7 +11,7 @@ import app.jonaki.core.ui.ThemeMode
 // The D-029 check for the revamped chat (D-123): a 360 dp wide phone at font
 // scale 1.3, with a 40-character title and a 40-character model name.
 
-private const val LONG_TITLE = "Compare three e-readers for Bangla PDFs!"
+private const val LONG_TITLE = "Compare three e-readers for scanned PDFs!"
 
 private const val LONG_MODEL_NAME = "deepseek/deepseek-v4-flash-0925-preview-x"
 

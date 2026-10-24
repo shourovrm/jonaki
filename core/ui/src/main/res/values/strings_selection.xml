@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Top bar of a list in selection mode (thread list, Memory). Bangla in values-bn/strings_selection.xml. -->
+<!-- Top bar of a list in selection mode (thread list, Memory). -->
 <resources>
     <plurals name="selection_count">
         <item quantity="one">%1$d selected</item>

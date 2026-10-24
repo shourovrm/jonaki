@@ -53,10 +53,6 @@ private fun SectionPreview(video: VideoGenerationUi, mode: ThemeMode) {
 @Composable
 private fun VideoSectionDarkPreview() = SectionPreview(sampleVideos, ThemeMode.DARK)
 
-@Preview(name = "Video models, Bangla", locale = "bn", widthDp = 360, heightDp = 640, fontScale = 1.3f)
-@Composable
-private fun VideoSectionBanglaPreview() = SectionPreview(sampleVideos, ThemeMode.LIGHT)
-
 @Preview(name = "Video models, no service", widthDp = 360, heightDp = 200, fontScale = 1.3f)
 @Composable
 private fun VideoSectionNoKeyPreview() = SectionPreview(
@@ -67,12 +63,6 @@ private fun VideoSectionNoKeyPreview() = SectionPreview(
 @Preview(name = "Video picker", widthDp = 360, heightDp = 640, fontScale = 1.3f)
 @Composable
 private fun VideoPickerPreview() = JonakiTheme(ThemeMode.LIGHT) {
-    AddVideoModelsScreen("OpenRouter", samplePicker, onClose = {}, onRetry = {}, onDone = {})
-}
-
-@Preview(name = "Video picker, Bangla", locale = "bn", widthDp = 360, heightDp = 640, fontScale = 1.3f)
-@Composable
-private fun VideoPickerBanglaPreview() = JonakiTheme(ThemeMode.LIGHT) {
     AddVideoModelsScreen("OpenRouter", samplePicker, onClose = {}, onRetry = {}, onDone = {})
 }
 
