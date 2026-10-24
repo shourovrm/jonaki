@@ -109,6 +109,8 @@ fun ThreadListScreen(
     /** A row of "Left to set up" was tapped: the app opens its setup card. */
     onSetUp: (SetupLeft) -> Unit = {},
     onHideSetupLeft: () -> Unit = {},
+    /** Open on the review row: the app opens what waits (Memory, or Skills when only skills wait). */
+    onOpenReview: () -> Unit = {},
 ) {
     var threadToDelete by remember { mutableStateOf<ThreadRow?>(null) }
     // Threads waiting for a project; one when moved from the row's own action, the selection otherwise.
@@ -207,6 +209,8 @@ fun ThreadListScreen(
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (state.setupLeft.isNotEmpty() && !selecting) {
                 SetupLeftList(state.setupLeft, onSetUp, onHideSetupLeft)
+            } else if (state.setupLeft.isEmpty() && !selecting && (state.factsToReview > 0 || state.skillsToReview > 0)) {
+                ReviewRow(state.factsToReview, state.skillsToReview, onOpenReview)
             }
             if (state.threads.isNotEmpty()) {
                 // Disabled while selecting: a changed search would hide threads that are selected.

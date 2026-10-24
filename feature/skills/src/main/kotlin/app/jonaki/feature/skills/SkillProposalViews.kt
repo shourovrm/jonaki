@@ -22,6 +22,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.MonospaceFamily
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 /** One waiting proposal in the list: name, whether it is new or a change, and its description. */
 @Composable
@@ -45,7 +50,40 @@ internal fun ProposalRow(proposal: ProposalRowUi, onOpen: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp),
             )
+            Text(
+                proposalSourceLine(proposal),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
+            )
         }
+    }
+}
+
+/** "From <thread> · Fri · kept 14 days"; the parts that are not known are left out. */
+@Composable
+private fun proposalSourceLine(proposal: ProposalRowUi): String {
+    val parts = mutableListOf<String>()
+    proposal.sourceTitle?.let { title -> parts += stringResource(R.string.skills_proposal_from, title) }
+    if (proposal.createdAtMillis > 0L) {
+        parts += ProposalDate.format(proposal.createdAtMillis, System.currentTimeMillis())
+    }
+    parts += stringResource(R.string.skills_proposal_kept)
+    return parts.joinToString(" · ")
+}
+
+/** A weekday for a proposal from the last six days, else day and month. */
+internal object ProposalDate {
+    private const val RECENT_DAYS = 6L
+
+    fun format(atMillis: Long, nowMillis: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String {
+        val day = Instant.ofEpochMilli(atMillis).atZone(zone).toLocalDate()
+        val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
+        val daysAgo = ChronoUnit.DAYS.between(day, today)
+        val pattern = if (daysAgo in 0..RECENT_DAYS) "EEE" else "d MMM"
+        return day.format(DateTimeFormatter.ofPattern(pattern, locale))
     }
 }
 

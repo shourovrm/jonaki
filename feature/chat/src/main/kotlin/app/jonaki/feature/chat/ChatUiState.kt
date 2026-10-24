@@ -49,6 +49,12 @@ data class ChatUiState(
     val guardState: GuardState = GuardState.OFF,
     /** Media mode in the message box (the user's text goes to a picture, vector or video tool as it is); null hides the chips. */
     val mediaMode: MediaModeUi? = null,
+    /** False replaces the message box with the "No model yet" block. */
+    val hasModel: Boolean = true,
+    /** This thread's Safety check switch (the Jev guard) is on. */
+    val safetyCheckOn: Boolean = true,
+    /** False when there is no OpenRouter key: the switch is off and cannot be turned on. */
+    val safetyCheckAvailable: Boolean = true,
 )
 
 enum class GuardState {
@@ -271,6 +277,27 @@ sealed interface ChatItem {
     ) : ChatItem
 
     data class Error(override val id: String, val message: String, val canRetry: Boolean) : ChatItem
+
+    /**
+     * A muted line after a turn that says what memory extraction did. [text] is formed already
+     * (see [MemoryLineText]); [action] is See, Why or Fix.
+     */
+    data class MemoryLine(override val id: String, val text: String, val action: MemoryLineAction) : ChatItem
+
+    /** A muted line after a turn in which the model proposed a skill; Review opens the Skills screen. */
+    data class SkillProposalLine(override val id: String, val skillName: String) : ChatItem
+
+    /**
+     * A failure with a short [text], the raw [details] folded under a toggle, and, when another
+     * model would work, its key and display name for a "Use <name>" button.
+     */
+    data class ErrorCard(
+        override val id: String,
+        val text: String,
+        val details: String? = null,
+        val suggestedModelKey: String? = null,
+        val suggestedModelName: String? = null,
+    ) : ChatItem
 
     /** A quiet one-line remark about a turn, for example that routing fell back (D-030). */
     data class Note(override val id: String, val text: String) : ChatItem

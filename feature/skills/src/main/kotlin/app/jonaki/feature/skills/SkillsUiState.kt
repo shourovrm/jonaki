@@ -37,6 +37,10 @@ data class ProposalRowUi(
     val description: String,
     /** The skill this proposal would change; null for a new skill. */
     val replaces: String?,
+    /** The title of the thread the proposal came from; null when unknown. */
+    val sourceTitle: String? = null,
+    /** When the proposal was written; 0 hides the date. */
+    val createdAtMillis: Long = 0L,
 )
 
 /** A proposal opened read-only: its whole SKILL.md as it would be written. */

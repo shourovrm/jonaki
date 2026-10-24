@@ -25,6 +25,8 @@ data class SkillProposal(
     /** The name of the existing skill this proposal would change; null for a new skill. */
     val replaces: String?,
     val createdAtMillis: Long,
+    /** The title of the thread the proposal came from, shown on the Skills screen; null when unknown. */
+    val sourceTitle: String? = null,
 )
 
 sealed interface ProposalResult {
@@ -48,11 +50,25 @@ class SkillProposals(
     private val skillExists: (name: String) -> Boolean = { false },
 ) {
 
-    /** Waiting proposals, oldest first. A file that cannot be read is left out. */
+    /**
+     * Waiting proposals, oldest first. A file that cannot be read is left out.
+     * A proposal older than [MAX_AGE_MILLIS] is deleted here, so stale ones cannot fill the limit.
+     */
     @Synchronized
-    fun list(): List<SkillProposal> {
+    fun list(): List<SkillProposal> = liveProposals(clock())
+
+    private fun liveProposals(now: Long): List<SkillProposal> {
         val files = folder.listFiles { file -> file.isFile && file.name.endsWith(FILE_SUFFIX) }.orEmpty()
-        return files.mapNotNull { file -> readProposal(file) }.sortedBy { proposal -> proposal.createdAtMillis }
+        val live = mutableListOf<SkillProposal>()
+        for (file in files) {
+            val proposal = readProposal(file) ?: continue
+            if (now - proposal.createdAtMillis > MAX_AGE_MILLIS) {
+                file.delete()
+            } else {
+                live.add(proposal)
+            }
+        }
+        return live.sortedBy { proposal -> proposal.createdAtMillis }
     }
 
     @Synchronized
@@ -64,20 +80,22 @@ class SkillProposals(
      * of one already waiting replaces it and does not count towards the limit.
      */
     @Synchronized
-    fun propose(name: String, description: String, body: String, replaces: String?): ProposalResult {
+    fun propose(name: String, description: String, body: String, replaces: String?, sourceTitle: String? = null): ProposalResult {
+        // One reading of the clock per call: it stamps the new proposal and judges the age of the waiting ones.
+        val now = clock()
         val skillName = (replaces ?: name).trim()
         val refusal = refusalFor(skillName, description.trim(), body.trim(), isChange = replaces != null)
         if (refusal != null) {
             return refusal
         }
         val replacesWaitingOne = find(skillName) != null
-        if (!replacesWaitingOne && list().size >= MAX_WAITING) {
+        if (!replacesWaitingOne && liveProposals(now).size >= MAX_WAITING) {
             return ProposalResult.Refused(
                 "$MAX_WAITING proposals are already waiting for the user's review",
                 "Wait until the user has reviewed them, and do not propose another skill in this thread.",
             )
         }
-        val proposal = SkillProposal(skillName, description.trim(), body.trim(), replaces?.trim(), clock())
+        val proposal = SkillProposal(skillName, description.trim(), body.trim(), replaces?.trim(), now, sourceTitle?.trim()?.ifEmpty { null })
         folder.mkdirs()
         File(folder, skillName + FILE_SUFFIX).writeText(toJson(proposal).toString())
         return ProposalResult.Saved(proposal)
@@ -155,6 +173,9 @@ class SkillProposals(
             put("replaces", proposal.replaces)
         }
         put("createdAtMillis", proposal.createdAtMillis)
+        if (proposal.sourceTitle != null) {
+            put("sourceTitle", proposal.sourceTitle)
+        }
     }
 
     private fun readProposal(file: File): SkillProposal? {
@@ -167,7 +188,7 @@ class SkillProposals(
         if (file.name != name + FILE_SUFFIX || !SkillFrontMatter.isValidName(name)) {
             return null
         }
-        return SkillProposal(name, description, body, text(fields, "replaces"), createdAtMillis)
+        return SkillProposal(name, description, body, text(fields, "replaces"), createdAtMillis, text(fields, "sourceTitle"))
     }
 
     private fun text(fields: JsonObject, key: String): String? = fields[key]?.jsonPrimitive?.contentOrNull
@@ -178,6 +199,9 @@ class SkillProposals(
 
         /** More would pile up unreviewed; a sixth is refused until the user reviews one. */
         const val MAX_WAITING = 5
+
+        /** A proposal the user has not reviewed in 14 days is dropped. */
+        const val MAX_AGE_MILLIS = 14 * 24 * 3_600_000L
 
         private const val FILE_SUFFIX = ".json"
     }

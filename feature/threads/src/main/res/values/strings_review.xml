@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="threads_review_facts">
+        <item quantity="one">%1$d fact</item>
+        <item quantity="other">%1$d facts</item>
+    </plurals>
+    <plurals name="threads_review_skills">
+        <item quantity="one">%1$d skill</item>
+        <item quantity="other">%1$d skills</item>
+    </plurals>
+    <string name="threads_review_one_kind">%1$s to review</string>
+    <string name="threads_review_both_kinds">%1$s and %2$s to review</string>
+    <string name="threads_review_open">Open</string>
+</resources>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -20,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.ApprovalModeChoice
 import app.jonaki.core.ui.JonakiIcons
+import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.approvalModeHelp
 import app.jonaki.core.ui.approvalModeLabel
 
@@ -48,7 +51,9 @@ internal fun ApprovalSheet(
     onSelect: (ApprovalModeChoice?) -> Unit,
     onWithdrawAllowAll: () -> Unit,
     onDismiss: () -> Unit,
-    guardState: GuardState = GuardState.OFF,
+    safetyCheckOn: Boolean = true,
+    safetyCheckAvailable: Boolean = true,
+    onSafetyCheckChange: (Boolean) -> Unit = {},
 ) {
     val appliedMode = threadMode ?: defaultMode
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -90,23 +95,40 @@ internal fun ApprovalSheet(
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            GuardRow(guardState)
+            SafetyCheckRow(safetyCheckOn && safetyCheckAvailable, safetyCheckAvailable, onSafetyCheckChange)
             Spacer(Modifier.height(16.dp))
         }
     }
 }
 
-/** The Jev guard's state, so a user can see whether it is working; it is switched in Settings. */
+/** The Jev guard as a switch for this thread; without an OpenRouter key it is off and locked. */
 @Composable
-private fun GuardRow(guardState: GuardState) {
-    val stateText = when (guardState) {
-        GuardState.ON -> stringResource(R.string.chat_guard_on)
-        GuardState.OFF -> stringResource(R.string.chat_guard_off)
-        GuardState.ON_WITHOUT_KEY -> stringResource(R.string.chat_guard_no_key)
-    }
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp)) {
-        Text(stringResource(R.string.chat_guard_title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Text(stateText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun SafetyCheckRow(isOn: Boolean, isAvailable: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .toggleable(value = isOn, enabled = isAvailable, role = Role.Switch, onValueChange = onChange),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.chat_safety_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            if (isAvailable) {
+                Text(
+                    stringResource(R.string.chat_safety_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    stringResource(R.string.chat_safety_needs_key),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = JonakiTheme.colors.deny,
+                )
+            }
+        }
+        Spacer(Modifier.width(14.dp))
+        Switch(checked = isOn, onCheckedChange = null, enabled = isAvailable)
     }
 }
 

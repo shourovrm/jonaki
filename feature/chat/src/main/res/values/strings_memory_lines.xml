@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_memory_see">See</string>
+    <string name="chat_memory_why">Why</string>
+    <string name="chat_memory_fix">Fix</string>
+    <string name="chat_skill_proposed">Proposed a skill: %1$s</string>
+    <string name="chat_skill_review">Review</string>
+    <string name="chat_error_details">Details</string>
+    <string name="chat_error_hide_details">Hide details</string>
+    <string name="chat_error_use_model">Use %1$s</string>
+    <string name="chat_no_model_title">No model yet</string>
+    <string name="chat_no_model_body">Pick a free service or add a key.</string>
+    <string name="chat_no_model_action">Set up</string>
+    <string name="chat_safety_title">Safety check</string>
+    <string name="chat_safety_help">A second model checks risky actions and web text. Jev, through OpenRouter.</string>
+    <string name="chat_safety_needs_key">Needs an OpenRouter key. Add one in Settings.</string>
+</resources>
