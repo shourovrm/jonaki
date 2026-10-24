@@ -9,11 +9,9 @@ Decisions:    D-177 to D-191 proposed (D-186 to D-191 from 2026-10-25).
 Build:        `gradle testReleaseUnitTest test assembleRelease --offline` passes (2026-10-25,
               see D-191 Outcome). Version 1.5.0, code 22. Room v13.
 Phone (A059): 1.5.0 installed over USB; the APK is also in Downloads/jonaki-1.5.0.apk.
-Worker:       Deployed (v3): Free plan, 250 calls a day over all phones, 20 per phone,
-              model @cf/qwen/qwen3-30b-a3b-fp8, GET /v1/limit. The CF_AI_TOKEN secret is set
-              but upstream answers 401 (token not recognised): the user must re-enter it with
-              `cd server/jonaki-free && npx wrangler secret put CF_AI_TOKEN` (a token with
-              only Workers AI Read on this account). Then one curl call confirms it.
+Worker:       Live and working (v4): Free plan, 250 calls a day over all phones, 20 per phone,
+              model @cf/qwen/qwen3-30b-a3b-fp8 with thinking off, GET /v1/limit. Verified with
+              curl: plain answer, tool call, streaming. Not yet tried from the app on the phone.
 Checked:      Settings home with six groups, setup card 1, Memory screen with To review and
               the help line, thread list review row. Not yet on a device: the error card, the
               No-model composer, the Safety check switch, the Memory log with rows, the new

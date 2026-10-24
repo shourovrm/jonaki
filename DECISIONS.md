@@ -2772,6 +2772,14 @@ list it sends the on-phone model, so one call costs about 20 to 35
 neurons and 250 calls fit the free share. Past a cap the Worker answers
 "Jonaki Free is used up for today". Deployed with its own name, KV
 namespace and secrets, separate from the user's other Workers.
+Measured through the deployed Worker (2026-10-25, 03:25): a short answer
+0.5 neurons, a tool call 1.5 neurons, a 270-token call 4.2 neurons; the
+usage object reports `neurons` per call. Qwen3 thinks before answering
+unless told not to, and `chat_template_kwargs` misfiles the answer into
+the reasoning field, so the Worker puts a "/no_think" system line first.
+Outcome: the Worker answers plain, tool and streamed calls with the user's
+token; the limit endpoint reports the device's count. Not yet tried from
+the app on the phone.
 
 ## D-187 · 2026-10-25 · Settings grouped by the user's question, fewer summaries — proposed
 User ruling on the mockup docs/mockups/settings-v2.html: the home page gets
