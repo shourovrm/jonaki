@@ -2905,3 +2905,6 @@ marked pre-release. 1.5.0 and 1.5.1 were built but never released.
 Outcome: 0.9.0 built, installed and released on 2026-10-25. The user first
 named 0.6.0, but v0.1.0 to v0.8.0 already exist from before 1.0.0, so the
 next free number in the 0.x line was 0.9.0.
+The GitHub "pre-release" flag stays off the newest release: the updater
+asks /releases/latest, which skips flagged releases, so a flagged 0.9.0
+would hide every update. Older releases keep the flag.
