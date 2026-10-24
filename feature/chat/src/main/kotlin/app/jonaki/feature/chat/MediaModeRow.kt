@@ -156,9 +156,3 @@ private fun PictureOnPreview() {
 private fun VideoOnDarkPreview() {
     JonakiTheme(ThemeMode.DARK) { MediaModePreviewScreen(videoSelected) }
 }
-
-@Preview(name = "Video on, Bangla", locale = "bn", widthDp = 360, heightDp = 640, fontScale = 1.3f)
-@Composable
-private fun VideoOnBanglaPreview() {
-    JonakiTheme(ThemeMode.LIGHT) { MediaModePreviewScreen(videoSelected) }
-}

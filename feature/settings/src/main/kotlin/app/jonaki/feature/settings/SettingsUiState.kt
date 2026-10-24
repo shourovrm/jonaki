@@ -403,17 +403,17 @@ object SettingsSample {
             SubagentModelRowUi("writer", selectedKey = null, defaultIsCheapest = false),
             SubagentModelRowUi("worker", selectedKey = null, defaultIsCheapest = false),
             SubagentModelRowUi("price-checker", selectedKey = null, defaultIsCheapest = false),
-            SubagentModelRowUi("bangla-legal-summary-writer-02", selectedKey = null, defaultIsCheapest = false),
+            SubagentModelRowUi("legal-summary-writer-02", selectedKey = null, defaultIsCheapest = false),
         ),
         subagentLimits = SubagentLimitUi.SAMPLE,
         subagentBudgets = SubagentBudgetUi.SAMPLE + listOf(
             SubagentBudgetUi("price-checker", SubagentBudgetUi.SAMPLE.last().limits),
-            SubagentBudgetUi("bangla-legal-summary-writer-02", SubagentBudgetUi.SAMPLE.last().limits),
+            SubagentBudgetUi("legal-summary-writer-02", SubagentBudgetUi.SAMPLE.last().limits),
         ),
         // A 30-character name and a long description check that each keeps one line (D-029).
         customSubagents = listOf(
             CustomSubagentRowUi("price-checker", "Checks laptop prices in Dhaka shops and lists them by price."),
-            CustomSubagentRowUi("bangla-legal-summary-writer-02", "Summarises court papers in plain Bangla."),
+            CustomSubagentRowUi("legal-summary-writer-02", "Summarises court papers in plain words."),
         ),
         permissions = listOf(
             PermissionRowUi(PermissionRow.NOTIFICATIONS, PermissionStatus.ALLOWED),

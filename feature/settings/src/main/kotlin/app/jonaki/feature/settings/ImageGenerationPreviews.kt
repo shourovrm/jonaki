@@ -87,10 +87,6 @@ private fun SectionPreview(images: ImageGenerationUi, mode: ThemeMode) {
 @Composable
 private fun ImageSectionDarkPreview() = SectionPreview(sampleImages, ThemeMode.DARK)
 
-@Preview(name = "Image services, Bangla", locale = "bn", widthDp = 360, heightDp = 640, fontScale = 1.3f)
-@Composable
-private fun ImageSectionBanglaPreview() = SectionPreview(sampleImages, ThemeMode.LIGHT)
-
 @Preview(name = "Image service without key, light", widthDp = 360, heightDp = 360, fontScale = 1.3f)
 @Composable
 private fun ImageSectionNoKeyPreview() = SectionPreview(sampleImagesWithoutKey, ThemeMode.LIGHT)
@@ -105,12 +101,6 @@ private fun ImageSectionEmptyPreview() = SectionPreview(
 @Preview(name = "Image picker, prices", widthDp = 360, heightDp = 640, fontScale = 1.3f)
 @Composable
 private fun ImagePickerLoadedPreview() = JonakiTheme(ThemeMode.LIGHT) {
-    AddImageModelsScreen("OpenRouter", ImagePickerState.Loaded(samplePickerModels), onClose = {}, onRetry = {}, onDone = {})
-}
-
-@Preview(name = "Image picker, Bangla", locale = "bn", widthDp = 360, heightDp = 640, fontScale = 1.3f)
-@Composable
-private fun ImagePickerBanglaPreview() = JonakiTheme(ThemeMode.LIGHT) {
     AddImageModelsScreen("OpenRouter", ImagePickerState.Loaded(samplePickerModels), onClose = {}, onRetry = {}, onDone = {})
 }
 

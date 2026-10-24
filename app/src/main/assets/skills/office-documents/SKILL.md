@@ -62,7 +62,7 @@ Numbers in a table are right-aligned and get thousands separators; pass numbers 
 - `theme="leaf"` (green, Jonaki's own), `"plain"` (black and grey, for forms and photocopies) or `"formal"` (navy with serif headings, for letters, proposals and academic work). Use one theme for every file of the same piece of work.
 - Change single values with a dict: `theme={"base": "formal", "accent": "8C2F39", "body_font": "Georgia"}`. Colours are `RRGGBB`.
 - For an organisation's house style, ask the user for a `.docx` or `.pptx` of theirs and pass `template="inbox/company.docx"`. The template's own styles, fonts, header, footer and slide layouts are then used instead of the theme, and its sample text and slides are left out. This is the only way to match a house style exactly; do not try to imitate one with theme values.
-- Bangla text works in all three formats. The reader's program picks its own Bangla font when the named one is missing.
+- Write in the language the user writes in. For a non-Latin script, set `lang` and a font stack that covers it, for example "Noto Sans"; the reader's program picks its own font when the named one is missing.
 
 ## From an HTML report or deck
 
@@ -95,7 +95,7 @@ document.save("artifacts/contract-2026.docx")
 
 ## Limits to state when they apply
 
-- A chart in a Word file is a picture with Latin labels only; give a Bangla chart English labels, or put it in Excel or PowerPoint, where charts are native and editable.
+- A chart in a Word file is a picture with Latin labels only; give a chart in a non-Latin script Latin labels or a legend, or put it in Excel or PowerPoint, where charts are native and editable.
 - Old formats (.doc, .xls, .ppt) cannot be read or written; ask for .docx, .xlsx or .pptx.
 - A table of contents is filled in when the file is opened in Word and the field is updated.
 - Programs run offline, so pictures must be files in the thread, not web addresses.

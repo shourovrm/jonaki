@@ -19,27 +19,11 @@ private val englishPrompt = StepPromptUi(
     referencePaths = listOf("images/morning-stretches-poster-draft-one.jpg", "inbox/photo.png"),
 )
 
-private val banglaPrompt = StepPromptUi(
-    prompt = "\"সকালের ব্যায়াম\" শিরোনামের একটি পোস্টার, চারটি নম্বর দেওয়া ঘর।\nপ্রথম ঘর: \"হাত উপরে তুলুন\"। শুরুর ও শেষের ছবির মাঝে একটি তীর।",
-    model = "openrouter:openai/gpt-image-2.5-sunburst",
-    isHighQuality = true,
-    aspectRatio = "2:3",
-    referencePaths = listOf("images/morning-stretches-poster-draft-one.jpg"),
-)
-
 @Preview(name = "Prompt sheet, light", widthDp = 360, heightDp = 640, fontScale = 1.3f)
 @Composable
 private fun PromptSheetPreview() {
     JonakiTheme(ThemeMode.LIGHT) {
         Surface { StepPromptContent(englishPrompt) }
-    }
-}
-
-@Preview(name = "Prompt sheet, Bangla", locale = "bn", widthDp = 360, heightDp = 640, fontScale = 1.3f)
-@Composable
-private fun PromptSheetBanglaPreview() {
-    JonakiTheme(ThemeMode.LIGHT) {
-        Surface { StepPromptContent(banglaPrompt) }
     }
 }
 

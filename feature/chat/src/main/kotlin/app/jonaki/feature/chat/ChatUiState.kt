@@ -55,6 +55,8 @@ data class ChatUiState(
     val safetyCheckOn: Boolean = true,
     /** False when there is no OpenRouter key: the switch is off and cannot be turned on. */
     val safetyCheckAvailable: Boolean = true,
+    /** True when the Safety check is switched off in Settings: the switch is off, disabled, and says "Off in Settings." */
+    val safetyCheckOffInSettings: Boolean = false,
 )
 
 enum class GuardState {

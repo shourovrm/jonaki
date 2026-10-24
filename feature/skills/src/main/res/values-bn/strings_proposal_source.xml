@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="skills_proposed_count">প্রস্তাবিত %1$d</string>
-    <string name="skills_proposal_from">%1$s থেকে</string>
-    <string name="skills_proposal_kept">১৪ দিন রাখা হয়</string>
-</resources>

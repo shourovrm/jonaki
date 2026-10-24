@@ -6,7 +6,7 @@ import app.jonaki.core.ui.JonakiTheme
 import app.jonaki.core.ui.ThemeMode
 
 // The D-029 check: a 360 dp wide phone at font scale 1.3, in dark, light and
-// Bangla, for the first page and two sub-pages (D-128).
+// for the first page and two sub-pages (D-128).
 
 private val noActions = SettingsActions(
     onBack = {},
@@ -39,12 +39,6 @@ private fun SettingsHomeLightPreview() {
     HomeSample(ThemeMode.LIGHT)
 }
 
-@Preview(name = "Settings, Bangla", locale = "bn", widthDp = 360, heightDp = 900, fontScale = 1.3f)
-@Composable
-private fun SettingsHomeBanglaPreview() {
-    HomeSample(ThemeMode.LIGHT)
-}
-
 @Preview(name = "Settings, search", widthDp = 360, heightDp = 600, fontScale = 1.3f)
 @Composable
 private fun SettingsSearchPreview() {
@@ -65,12 +59,6 @@ private fun ModelsLightPreview() {
     PageSample(SettingsPage.MODELS, ThemeMode.LIGHT)
 }
 
-@Preview(name = "Models, Bangla", locale = "bn", widthDp = 360, heightDp = 1400, fontScale = 1.3f)
-@Composable
-private fun ModelsBanglaPreview() {
-    PageSample(SettingsPage.MODELS, ThemeMode.LIGHT)
-}
-
 @Preview(name = "Tools and approvals, dark", widthDp = 360, heightDp = 1000, fontScale = 1.3f)
 @Composable
 private fun ToolsDarkPreview() {
@@ -80,11 +68,5 @@ private fun ToolsDarkPreview() {
 @Preview(name = "Tools and approvals, light", widthDp = 360, heightDp = 1000, fontScale = 1.3f)
 @Composable
 private fun ToolsLightPreview() {
-    PageSample(SettingsPage.TOOLS, ThemeMode.LIGHT)
-}
-
-@Preview(name = "Tools and approvals, Bangla", locale = "bn", widthDp = 360, heightDp = 1000, fontScale = 1.3f)
-@Composable
-private fun ToolsBanglaPreview() {
     PageSample(SettingsPage.TOOLS, ThemeMode.LIGHT)
 }

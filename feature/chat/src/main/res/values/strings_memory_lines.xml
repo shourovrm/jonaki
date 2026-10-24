@@ -14,4 +14,5 @@
     <string name="chat_safety_title">Safety check</string>
     <string name="chat_safety_help">A second model checks risky actions and web text. Jev, through OpenRouter.</string>
     <string name="chat_safety_needs_key">Needs an OpenRouter key. Add one in Settings.</string>
+    <string name="chat_safety_off_in_settings">Off in Settings.</string>
 </resources>

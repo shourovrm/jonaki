@@ -22,8 +22,8 @@ private val previewProjects = listOf(
 
 private val previewState = ThreadListUiState(
     threads = listOf(
-        ThreadRow("e", "Compare three e-readers for Bangla PDFs!", "Searching kobo.com for Bangla font support", PREVIEW_NOW - 20_000, ThreadRunState.Running(3)),
-        ThreadRow("b", "অক্টোবরের বাজেট রিপোর্ট", "report.html saved, 3 charts", PREVIEW_NOW - 90 * MINUTE, ThreadRunState.Idle, costUsd = 0.0087),
+        ThreadRow("e", "Compare three e-readers for scanned PDFs!", "Searching kobo.com for scanned-PDF support", PREVIEW_NOW - 20_000, ThreadRunState.Running(3)),
+        ThreadRow("b", "October budget report", "report.html saved, 3 charts", PREVIEW_NOW - 90 * MINUTE, ThreadRunState.Idle, costUsd = 0.0087),
         ThreadRow("l", "Lease agreement questions", "Needs approval: save notes.md", PREVIEW_NOW - 3 * 60 * MINUTE, ThreadRunState.WaitingForApproval, projectId = "home", projectName = "Home"),
         ThreadRow("i", "Doctor's appointment", "Asked about the clinic's hours", PREVIEW_NOW - 4 * 60 * MINUTE, ThreadRunState.Idle, costUsd = 0.0011, incognito = true),
         ThreadRow("k", "Kurzgesagt on sleep, summary", "Five points, with timestamps", PREVIEW_NOW - DAY, ThreadRunState.Idle, costUsd = 0.0311),
