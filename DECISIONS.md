@@ -2892,3 +2892,16 @@ answers GET /v1/limit and turns upstream errors into the OpenAI error
 shape; the app reads the server's limit once a day (D-186).
 Outcome: unit tests and the release build pass (2026-10-25); the English
 text was checked on the phone's Settings and Memory screens.
+
+## D-192 · 2026-10-25 · Version names go back to 0.x: 0.9.0 follows 1.5.0 — accepted
+User ruling: the app is a pre-release and the `1.4.x` names were given too
+early, so the next release is 0.9.0 (versionCode 23, one more than 1.5.0's
+22) and the line stays below 1.0.0 until the user declares the app stable.
+Android accepts the change because only versionCode must grow. The in-app
+updater (D-178) compares names number by number, so a phone on 1.4.8 or
+1.5.0 reads 0.9.0 as older and installs it by hand once; after that 0.9.1
+and later update normally. The 1.4.x releases on GitHub stay and are
+marked pre-release. 1.5.0 and 1.5.1 were built but never released.
+Outcome: 0.9.0 built, installed and released on 2026-10-25. The user first
+named 0.6.0, but v0.1.0 to v0.8.0 already exist from before 1.0.0, so the
+next free number in the 0.x line was 0.9.0.

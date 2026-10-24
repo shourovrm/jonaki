@@ -9,8 +9,8 @@ android {
     ndkVersion = "28.2.13676358"
     defaultConfig {
         applicationId = "app.jonaki"
-        versionCode = 22
-        versionName = "1.5.0"
+        versionCode = 23
+        versionName = "0.9.0"
     }
     packaging {
         resources {

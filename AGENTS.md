@@ -107,6 +107,12 @@ module.
   -dname "CN=Jonaki"` if missing.
 - Distribution: GitHub release APK (D-019). Google Play requirements are out
   of scope for now.
+- Versioning (D-192): the app is pre-release, so version names are `0.x.y`
+  starting at 0.9.0 (2026-10-25; 0.1.0 to 0.8.0 were used before 1.0.0); the earlier `1.4.x` and `1.5.0` names were a
+  mistake and are never continued. Only `versionCode` must grow (23 at 0.9.0).
+  The in-app updater compares names, so a phone on a `1.x` build installs the
+  first `0.x` build by hand once. `1.0.0` comes only when the user declares the
+  app stable.
 
 ## Interface text
 App strings (labels, buttons, empty states, errors, settings descriptions)

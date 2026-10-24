@@ -59,7 +59,7 @@ data class PythonState(
     val problemPackages: List<String> = emptyList(),
 ) {
     val isDataAddOnInstalled: Boolean
-        get() = dataAddOnPackages.isNotEmpty() && installedPackages.containsAll(dataAddOnPackages)
+        get() = dataAddOnPackages.isNotEmpty() && hasPackages(dataAddOnPackages.toList())
 
     /** Every lock package and every pinned wheel of the documents add-on is installed, and no wheel is damaged. */
     val isDocumentsAddOnInstalled: Boolean
@@ -70,8 +70,12 @@ data class PythonState(
      * wheel names, as run_code reports them.
      */
     fun hasPackages(names: List<String>): Boolean {
-        val installedNames = installedPackages + installedWheels.map { wheel -> wheel.packageName }
-        return coreStatus == PythonCoreStatus.INSTALLED && installedNames.containsAll(names)
+        // Pyodide reports "Pillow" for the lock package "pillow", so names are compared without case;
+        // the documents add-on showed "Install" on a phone where every package was present.
+        val installedNames = (installedPackages + installedWheels.map { wheel -> wheel.packageName })
+            .map { name -> name.lowercase() }
+            .toSet()
+        return coreStatus == PythonCoreStatus.INSTALLED && names.all { name -> name.lowercase() in installedNames }
     }
 }
 

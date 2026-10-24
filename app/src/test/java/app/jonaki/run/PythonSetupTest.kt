@@ -321,6 +321,20 @@ class PythonSetupTest {
     }
 
     @Test
+    fun packageNamesAreComparedWithoutCase() {
+        // Pyodide reports "Pillow" for the lock package "pillow"; the add-on row said Install on a phone that had it.
+        val state = PythonState(
+            coreStatus = PythonCoreStatus.INSTALLED,
+            installedPackages = listOf("Pillow", "beautifulsoup4", "lxml", "soupsieve", "typing-extensions"),
+            installedWheels = release.addOnWheels,
+            dataAddOnPackages = setOf("numpy", "pandas"),
+        )
+        assertTrue(state.isDocumentsAddOnInstalled)
+        assertTrue(state.hasPackages(listOf("pillow", "PILLOW", "Python-Docx")))
+        assertFalse(state.isDataAddOnInstalled)
+    }
+
+    @Test
     fun theDocumentsAddOnInstallsTheCoreThenLockPackagesThenWheels() {
         runBlocking { setup.installDocumentsAddOn()!!.join() }
 

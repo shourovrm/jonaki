@@ -54,7 +54,7 @@ object BuiltInModels {
         // Ollama Cloud is a subscription, so no per-token price.
         ModelInfo("ollama-cloud", "gpt-oss:120b", "gpt-oss 120B", 131_072, null, null, isEstimate = true),
         // Jonaki Free has no per-token price, so the background rule never picks it (D-186).
-        ModelInfo("jonaki-free", "free", "Jonaki Free", 128_000, null, null, isEstimate = true, freePlan = true),
+        ModelInfo("jonaki-free", "free", "Free model", 128_000, null, null, isEstimate = true, freePlan = true),
     )
 
     private fun official(
