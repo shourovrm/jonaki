@@ -9,7 +9,7 @@
     <string name="settings_root_skills">Skills</string>
     <string name="settings_root_files">Files</string>
     <string name="settings_root_reminders">Reminders and schedule</string>
-    <string name="settings_root_safety">Safety</string>
+    <string name="settings_root_safety">Approvals and checks</string>
     <string name="settings_root_theme">Theme</string>
     <string name="settings_root_permissions">Permissions</string>
     <string name="settings_root_about">About Jonaki</string>

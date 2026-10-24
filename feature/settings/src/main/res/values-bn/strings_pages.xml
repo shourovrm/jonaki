@@ -67,7 +67,7 @@
     <string name="settings_root_skills">স্কিল</string>
     <string name="settings_root_files">ফাইল</string>
     <string name="settings_root_reminders">রিমাইন্ডার ও সময়সূচি</string>
-    <string name="settings_root_safety">নিরাপত্তা</string>
+    <string name="settings_root_safety">অনুমতি ও যাচাই</string>
     <string name="settings_group_models">মডেল ও কী</string>
     <string name="settings_group_capabilities">Jonaki যা করতে পারে</string>
     <string name="settings_group_memory">মেমরি</string>

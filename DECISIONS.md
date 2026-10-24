@@ -2757,7 +2757,10 @@ background rule (D-036) never picks it for other threads' extraction; a
 thread on Jonaki Free extracts on Jonaki Free. First run offers it on card
 1 as "Free: Jonaki Free". Rejected: embedding any provider key in the APK
 (it leaks within a day); Pollinations (dead anonymous tier).
-Outcome: pending.
+Outcome: built; unit tests and the release build pass (2026-10-25). The
+Worker is written but not deployed: the deploy call was blocked as a
+production deploy, so the user deploys it (STATUS.md has the commands).
+Card 1 seen on the phone with the three rows.
 
 ## D-187 · 2026-10-25 · Settings grouped by the user's question, fewer summaries — proposed
 User ruling on the mockup docs/mockups/settings-v2.html: the home page gets
@@ -2773,7 +2776,12 @@ and the after-web-content rows; Files and schedule split into Files and
 Reminders and schedule; Memory and skills split into Saved facts and
 Skills. Prices get one header, "USD per million tokens". Why: the old
 grouping followed the code's modules, not what a user is looking for.
-Outcome: pending.
+Outcome: built and seen on the phone (home page with six groups). After
+the Opus string review: the subagent editor's tool list keeps "Tools",
+the price header is "USD / 1M" (the long form was cut off at 1.3), the
+web-content hold is "Review web facts" next to "Review all new facts",
+and the Safety page's row is "Approvals and checks" so it does not repeat
+its group's name.
 
 ## D-188 · 2026-10-25 · Memory and skill proposals say what they did — proposed
 Found on the phone on 2026-10-25: after two weeks, Memory held 5 facts and
@@ -2797,7 +2805,11 @@ text becomes a per-thread switch, Safety check, stored as
 the four columns (an auto-migration). Rejected: lowering what memory keeps
 to "anything the thread found" (chat search already covers answers; see
 the help line).
-Outcome: pending.
+Outcome: built; on the phone the thread list showed "1 fact to review"
+and the Memory screen's To review held a global fact the user had never
+seen. The Memory log starts empty: rows from before 1.5.0 carry no
+purpose. Left: the memory line's text is built in Kotlin, so Bangla
+phones see it in English.
 
 ## D-189 · 2026-10-25 · First run with free options, plain errors, paid-only tags, key-gated Add model — proposed
 From the user's screenshot of a new user: a Gemini key from the free plan,
@@ -2820,7 +2832,9 @@ under Details, and a "Use Gemini 3.8 Flash" button (`messages.errorDetails`,
 with "Add a key first" until a key is saved, since OpenRouter's public list
 let a user add models and fail at send; (6) the "No model yet" composer
 from the first-run mockup is built (STATUS listed it as open).
-Outcome: pending.
+Outcome: unit tests and the release build pass; card 1 and the key-site
+lines seen on the phone; the error card and the No-model composer not
+yet seen on a device.
 
 ## D-190 · 2026-10-25 · YouTube summaries retry with backoff, then Gemini Flash Lite — proposed
 User report: Gemini's free plan answers "server busy" (503) for YouTube
