@@ -1,5 +1,6 @@
 package app.jonaki.core.agent
 
+import app.jonaki.core.providerapi.FailureKind
 import app.jonaki.core.model.Message
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.providerapi.Usage
@@ -32,7 +33,8 @@ sealed interface RunOutcome {
     /** The step budget ran out; [finalText] is the answer the model gave without tools. */
     data class BudgetReached(val finalText: String) : RunOutcome
 
-    data class ProviderFailed(val message: String, val retryable: Boolean) : RunOutcome
+    /** [kind] names the cause when the provider could (D-189); the chat then shows a short card instead of the raw text. */
+    data class ProviderFailed(val message: String, val retryable: Boolean, val kind: FailureKind? = null) : RunOutcome
 
     /** The user pressed Stop; [partialText] is what had streamed so far. */
     data class Stopped(val partialText: String) : RunOutcome

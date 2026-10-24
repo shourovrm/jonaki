@@ -2734,3 +2734,103 @@ the page renderer (D-131), so one tool does not depend on another. Not
 done: scanned PDFs without a text layer come back as empty pages, and the
 model cannot look at them with view_image because there is no file path.
 Outcome: unit tests and the release build pass; not tried on the phone.
+
+## D-186 · 2026-10-25 · Jonaki Free: a keyless service behind a Cloudflare Worker — proposed
+User request: a commoner who installs Jonaki has no API key and nothing to
+try. The review of 2026-10-25 found no keyless public endpoint worth
+shipping (Pollinations' anonymous tier answers "key budget reached"; Kai
+9000's free tier is the author's own proxy). So Jonaki gets the same: a
+Worker in `server/jonaki-free` that answers `/v1/chat/completions` through
+Workers AI (`@cf/openai/gpt-oss-20b`), with the account id and token as
+Worker secrets, never in the app. The app has a preset `jonaki-free`
+(needsApiKey false) and a ChatService entry with no secret, like Ollama on
+the network, and sends a random per-install id in `X-Jonaki-Device`; the
+Worker counts calls per device and UTC day in KV and answers 429 past 60
+calls, the same number as `FreeTierUsage.DAILY_CALL_LIMIT`, which the
+Settings card shows as "Today: N of 60 calls". Workers AI's free share is
+10,000 neurons a day; one agent call with a 5,000-token prompt costs about
+100 neurons on gpt-oss-20b, so the free share covers about 100 calls a day
+over all phones, and past it the account's plan decides: on the Free plan
+the calls fail, on a paid plan they cost about $0.001 each (user: "rate
+limit each user every day"). The catalog row has no price, so the
+background rule (D-036) never picks it for other threads' extraction; a
+thread on Jonaki Free extracts on Jonaki Free. First run offers it on card
+1 as "Free: Jonaki Free". Rejected: embedding any provider key in the APK
+(it leaks within a day); Pollinations (dead anonymous tier).
+Outcome: pending.
+
+## D-187 · 2026-10-25 · Settings grouped by the user's question, fewer summaries — proposed
+User ruling on the mockup docs/mockups/settings-v2.html: the home page gets
+six titled groups (Models and keys; What Jonaki can do; Memory; Safety;
+Look and feel; About), the live summaries go except the red ones (a
+missing key, a blocked permission), technical names stay where the thing
+is technical (MCP, Python, Hugging Face, Tavily, Serper, Exa, Ollama,
+Markdown, SVG), and labels that say nothing to a user are renamed (Jev
+guard → Safety check, Routing → Which provider, Thinking → Reasoning,
+Bypass → Never ask, Tool steps → Steps per agent, and the rest of the
+table in the mockup). Guardrails becomes the Safety page with Approvals
+and the after-web-content rows; Files and schedule split into Files and
+Reminders and schedule; Memory and skills split into Saved facts and
+Skills. Prices get one header, "USD per million tokens". Why: the old
+grouping followed the code's modules, not what a user is looking for.
+Outcome: pending.
+
+## D-188 · 2026-10-25 · Memory and skill proposals say what they did — proposed
+Found on the phone on 2026-10-25: after two weeks, Memory held 5 facts and
+Skills no proposal, while the usage sheet showed 2 turns on MiMo V2.6
+Flash in a thread that never chose it, so extraction ran and found little,
+and the app never said so. Now every background call writes a BACKGROUND
+row with its purpose in `text` ("memory", "title", "compaction") and the
+result in `backgroundResult` (the failure, or what the extraction came to:
+"2 added", "1 to review", "Nothing new", "Answer unreadable: …"); the chat
+shows a muted line after a memory call ("Remembered 2 facts", "Nothing new
+to remember", "Memory not updated: no key for Gemini") with See, Why or
+Fix; the thread list counts facts and proposals waiting for review above
+the threads; the Memory screen gets the help line "Jonaki keeps facts about
+you …" and a Memory log page listing those rows; extraction after a run
+triggers at 8 new messages instead of 20 (leaving still needs 2); a skill
+proposal carries the thread it came from, is announced in the chat with a
+Review action, and is dropped after 14 days so the cap of 5 (D-151)
+cannot stay full with stale ones. The approvals sheet's "Jev guard · On"
+text becomes a per-thread switch, Safety check, stored as
+`threads.safetyCheckOff`; Settings keeps the default. Room version 13 adds
+the four columns (an auto-migration). Rejected: lowering what memory keeps
+to "anything the thread found" (chat search already covers answers; see
+the help line).
+Outcome: pending.
+
+## D-189 · 2026-10-25 · First run with free options, plain errors, paid-only tags, key-gated Add model — proposed
+From the user's screenshot of a new user: a Gemini key from the free plan,
+Gemini 3.1 Pro Preview chosen in the picker, and every message answered by
+the raw 429 body ("generate_content_free_tier_requests, limit: 0"). Now:
+(1) card 1 of the first run asks how to start, with three rows, "Free:
+Jonaki Free", "Free: on this phone" (the smallest recommended GGUF models
+with their size and fit) and "My own key" (the service list as before);
+(2) the key step shows "Get a key at <site>" for every service (Gemini
+aistudio.google.com, Xiaomi platform.xiaomimimo.com, Qwen
+modelstudio.console.alibabacloud.com were missing) and preselects the
+service's default model (Gemini 3.8 Flash) with a Change button; (3)
+ModelInfo gets `freePlan` and the picker tags Gemini Flash rows "Free plan"
+and Pro "Paid plan only"; (4) `StreamEvent.Failed` carries a `FailureKind`,
+the Gemini provider sets FREE_PLAN_MODEL on a 429 whose free-tier metric
+has limit 0, and the run saves an error row with the short text "Gemini's
+free plan does not include Gemini 3.1 Pro Preview.", the raw answer folded
+under Details, and a "Use Gemini 3.8 Flash" button (`messages.errorDetails`,
+`messages.suggestedModelKey`); (5) a service card's "Add model" is disabled
+with "Add a key first" until a key is saved, since OpenRouter's public list
+let a user add models and fail at send; (6) the "No model yet" composer
+from the first-run mockup is built (STATUS listed it as open).
+Outcome: pending.
+
+## D-190 · 2026-10-25 · YouTube summaries retry with backoff, then Gemini Flash Lite — proposed
+User report: Gemini's free plan answers "server busy" (503) for YouTube
+summaries. `RetryingVideoSummarizer` in tools/youtube-summarize asks again
+after 2, 4 and 8 seconds (with up to a quarter of jitter) while the
+failure is retryable, then once on gemini-3.5-flash-lite, which has its
+own free-plan quota, and prefixes that answer with "Summarised with Gemini
+3.5 Flash Lite; Flash was busy." The waits add 14 s under the tool's 180 s
+limit. A failure that is not retryable (a private video) returns at once.
+Rejected for now: a companion app on the phone that extracts captions
+(NewPipeExtractor) and speaks MCP; the user wants to discuss it later, and
+it must live outside Google Play.
+Outcome: RetryingVideoSummarizerTest passes (4 tests).

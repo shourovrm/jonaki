@@ -107,6 +107,13 @@ import app.jonaki.tools.phone.Phone
 import app.jonaki.tools.schedule.TaskScheduler
 import app.jonaki.tools.sharefile.FileDestinations
 import app.jonaki.tools.webfetch.PdfSupport
+import app.jonaki.core.guardapi.NoGuard
+import app.jonaki.core.providerapi.FailureKind
+import kotlinx.coroutines.flow.Flow
+import app.jonaki.core.providerapi.StreamEvent
+import app.jonaki.core.providerapi.ChatRequest
+import app.jonaki.settings.FreeTierUsage
+import app.jonaki.tools.youtubesummarize.RetryingVideoSummarizer
 import app.jonaki.tools.youtubesummarize.VideoAnswer
 import app.jonaki.tools.youtubesummarize.VideoSummarizer
 import app.jonaki.web.PdfBoxPdfReader
@@ -170,6 +177,9 @@ class AgentRunner(
     /** OpenRouter's image model list for the quality and reference checks of generate_image; null (tests) means no list. */
     private val imageModelList: ImageModelList? = null,
 ) {
+    /** Calls made to Jonaki Free today on this phone (D-186). */
+    private val freeTierUsage = FreeTierUsage(FreeTierUsage.inPreferences(context))
+
     private val runningJobs = mutableMapOf<String, Job>()
 
     private val videoSetup: VideoToolSetup? = videoModelList?.let { list ->
@@ -818,7 +828,7 @@ class AgentRunner(
             firstOutcome
         }
         if (finalOutcome is RunOutcome.ProviderFailed) {
-            saveError(threadId, finalOutcome.message)
+            saveProviderFailure(threadId, finalOutcome)
         }
         return finalOutcome
     }
@@ -866,7 +876,7 @@ class AgentRunner(
         threadApprovalStates[threadId] = approvalState
         // Made per run, so switching the Jev guard on or off applies to the next message.
         val guard = RecordingGuard.around(
-            GuardFactory(settings, secrets, httpClient).create(),
+            if (thread.safetyCheckOff) NoGuard else GuardFactory(settings, secrets, httpClient).create(),
             // Saves each answer as a note on the step and each call's cost as a hidden usage row.
             GuardRecorder(threadId, database.stepDao()::appendGuardNote, backgroundModel::saveUsage),
         )
@@ -1318,7 +1328,35 @@ class AgentRunner(
         database.threadDao().setDisabledSkills(threadId, ThreadSkills.withSkill(skillName, enabled, thread.disabledSkills))
     }
 
-    private suspend fun saveError(threadId: String, message: String) {
+    /**
+     * A failure the provider could name becomes a short line with the raw
+     * answer folded under it and, for a model the free plan does not serve,
+     * a model of the same service that the free plan does serve (D-189).
+     */
+    private suspend fun saveProviderFailure(threadId: String, outcome: RunOutcome.ProviderFailed) {
+        val modelKey = database.threadDao().find(threadId)?.modelKey ?: settings.snapshot.value.chatModels.defaultModelKey
+        val service = modelKey?.let { key -> ChatService.byKey(ModelKey.serviceOf(key)) }
+        if (outcome.kind != FailureKind.FREE_PLAN_MODEL || modelKey == null || service == null) {
+            saveError(threadId, outcome.message)
+            return
+        }
+        val modelName = catalog.find(modelKey)?.displayName ?: ModelKey.modelOf(modelKey)
+        saveError(
+            threadId,
+            context.getString(R.string.error_free_plan_model, service.displayName, modelName),
+            details = outcome.message,
+            suggestedModelKey = freePlanModelFor(service, modelKey),
+        )
+    }
+
+    /** A model of [service] that its free plan serves, preferring one the user already added; null when the catalog names none. */
+    private fun freePlanModelFor(service: ChatService, failedModelKey: String): String? {
+        val added = settings.snapshot.value.chatModels.allModelKeys.toSet()
+        val candidates = catalog.models(service.key).filter { info -> info.freePlan == true && info.key != failedModelKey }
+        return (candidates.firstOrNull { info -> info.key in added } ?: candidates.firstOrNull())?.key
+    }
+
+    private suspend fun saveError(threadId: String, message: String, details: String? = null, suggestedModelKey: String? = null) {
         val messageDao = database.messageDao()
         messageDao.upsert(
             MessageEntity(
@@ -1331,6 +1369,8 @@ class AgentRunner(
                 toolCallId = null,
                 isComplete = true,
                 createdAtMillis = System.currentTimeMillis(),
+                errorDetails = details,
+                suggestedModelKey = suggestedModelKey,
             ),
         )
     }
@@ -1339,7 +1379,18 @@ class AgentRunner(
     private fun chatProvider(service: ChatService, route: OpenRouterRoute, onRoutingFallback: () -> Unit): ChatProvider? {
         val secret = service.secret
         val key = if (secret == null) null else secrets.read(secret) ?: return null
-        return ChatProviders.create(service, key, httpClient, route, onRoutingFallback, localRuntime)
+        val provider = ChatProviders.create(service, key, httpClient, route, onRoutingFallback, localRuntime)
+        if (service != ChatService.JONAKI_FREE) {
+            return provider
+        }
+        // Every call counts against the day's limit, so the Settings card can say where the phone stands (D-186).
+        return object : ChatProvider {
+            override val id: String = provider.id
+            override fun stream(request: ChatRequest): Flow<StreamEvent> {
+                freeTierUsage.record()
+                return provider.stream(request)
+            }
+        }
     }
 
     private fun searchBackends(order: List<SearchService>): List<SearchBackend> =
@@ -1353,23 +1404,31 @@ class AgentRunner(
             }
         }
 
+    /** Gemini Flash with three retries, then Flash Lite once, which has its own free-plan quota (D-190). */
     private fun videoSummarizer(): VideoSummarizer? {
         val key = secrets.read(SecretName.GEMINI) ?: return null
         val gemini = GeminiProvider(key, httpClient)
-        return VideoSummarizer { request ->
-            val outcome = gemini.summarizeVideo(
-                VideoSummaryRequest(
-                    videoUrl = request.videoUrl,
-                    prompt = request.prompt,
-                    startSeconds = request.startSeconds,
-                    endSeconds = request.endSeconds,
-                    lowMediaResolution = request.lowMediaResolution,
-                ),
-            )
-            when (outcome) {
-                is VideoSummaryOutcome.Success -> VideoAnswer.Success(outcome.text, outcome.usage?.inputTokens)
-                is VideoSummaryOutcome.Failed -> VideoAnswer.Failed(outcome.message, outcome.retryable)
-            }
+        return RetryingVideoSummarizer(
+            primary = geminiVideoSummarizer(gemini, GeminiProvider.DEFAULT_MODEL),
+            fallback = geminiVideoSummarizer(gemini, VIDEO_FALLBACK_MODEL),
+            fallbackNote = context.getString(R.string.youtube_fallback_note),
+        )
+    }
+
+    private fun geminiVideoSummarizer(gemini: GeminiProvider, model: String) = VideoSummarizer { request ->
+        val outcome = gemini.summarizeVideo(
+            VideoSummaryRequest(
+                videoUrl = request.videoUrl,
+                prompt = request.prompt,
+                model = model,
+                startSeconds = request.startSeconds,
+                endSeconds = request.endSeconds,
+                lowMediaResolution = request.lowMediaResolution,
+            ),
+        )
+        when (outcome) {
+            is VideoSummaryOutcome.Success -> VideoAnswer.Success(outcome.text, outcome.usage?.inputTokens)
+            is VideoSummaryOutcome.Failed -> VideoAnswer.Failed(outcome.message, outcome.retryable)
         }
     }
 
@@ -1377,6 +1436,9 @@ class AgentRunner(
 
     private companion object {
         const val RETRY_DELAY_MILLIS = 2_000L
+
+        /** The smaller Gemini model YouTube summaries fall back to when Flash is busy (D-190). */
+        const val VIDEO_FALLBACK_MODEL = "gemini-3.5-flash-lite"
 
         /** Stands in for the assistant's answer when the naming model reads a thread whose first turn made a picture. */
         const val PICTURE_MADE_NOTE = "(A picture was made from this message.)"

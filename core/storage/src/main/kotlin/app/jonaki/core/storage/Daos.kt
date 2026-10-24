@@ -55,6 +55,10 @@ interface ThreadDao {
     @Query("UPDATE threads SET allowAllInThread = :allowAll, readOutsideContent = :readOutsideContent WHERE id = :threadId")
     suspend fun setApprovalState(threadId: String, allowAll: Boolean, readOutsideContent: Boolean)
 
+    /** The approvals sheet's Safety check switch for one thread (D-188). */
+    @Query("UPDATE threads SET safetyCheckOff = :off WHERE id = :threadId")
+    suspend fun setSafetyCheckOff(threadId: String, off: Boolean)
+
     @Query("UPDATE threads SET disabledSkills = :skillNames WHERE id = :threadId")
     suspend fun setDisabledSkills(threadId: String, skillNames: String)
 

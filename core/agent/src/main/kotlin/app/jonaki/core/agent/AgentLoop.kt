@@ -78,7 +78,7 @@ class AgentLoop(
 
             val turn = streamOneTurn(conversation, toolsForThisTurn)
             if (turn is TurnResult.Failed) {
-                return finish(RunOutcome.ProviderFailed(turn.message, turn.retryable))
+                return finish(RunOutcome.ProviderFailed(turn.message, turn.retryable, turn.kind))
             }
             val answered = turn as TurnResult.Answered
             conversation += answered.message

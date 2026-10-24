@@ -38,6 +38,8 @@
     <string name="status_no_model">No model</string>
     <string name="error_no_model">No model. Add one in Settings.</string>
     <string name="error_no_api_key">No %1$s API key. Add one in Settings.</string>
+    <string name="error_free_plan_model">%1$s\'s free plan does not include %2$s.</string>
+    <string name="youtube_fallback_note">Summarised with Gemini 3.5 Flash Lite; Flash was busy.</string>
     <string name="service_ollama_local">Ollama on this network</string>
     <!-- Approval card and step track lines: what a phone, schedule or share_file call does. -->
     <string name="step_read_calendar">Read calendar</string>

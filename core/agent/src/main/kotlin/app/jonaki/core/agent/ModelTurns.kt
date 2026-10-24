@@ -4,6 +4,7 @@ import app.jonaki.core.model.Message
 import app.jonaki.core.model.Role
 import app.jonaki.core.model.ToolCall
 import app.jonaki.core.providerapi.ChatProvider
+import app.jonaki.core.providerapi.FailureKind
 import app.jonaki.core.providerapi.ChatRequest
 import app.jonaki.core.providerapi.StreamEvent
 import app.jonaki.core.providerapi.Usage
@@ -21,7 +22,7 @@ import kotlinx.serialization.json.jsonObject
 internal sealed interface TurnResult {
     data class Answered(val message: Message, val usage: Usage?) : TurnResult
 
-    data class Failed(val message: String, val retryable: Boolean) : TurnResult
+    data class Failed(val message: String, val retryable: Boolean, val kind: FailureKind? = null) : TurnResult
 }
 
 /**
@@ -52,7 +53,7 @@ internal suspend fun streamTurn(
     }
     val failure = failed
     if (failure != null) {
-        return TurnResult.Failed(failure.message, failure.retryable)
+        return TurnResult.Failed(failure.message, failure.retryable, failure.kind)
     }
     val finish = finished
         ?: return TurnResult.Failed("the model's reply stopped before it finished", retryable = true)
