@@ -2,7 +2,7 @@
 <resources>
     <string name="settings_zone_in_messages">Time zone in messages</string>
     <string name="settings_zone_in_messages_description">Your date and time are always sent.</string>
-    <string name="settings_zone_none">None</string>
-    <string name="settings_zone_offset">Offset</string>
-    <string name="settings_zone_name">Zone name</string>
+    <string name="settings_zone_none">Off</string>
+    <string name="settings_zone_offset">UTC offset</string>
+    <string name="settings_zone_name">City</string>
 </resources>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_model_providers">Providers</string>
+    <string name="settings_model_providers">Provider list</string>
     <string name="settings_providers_order_note">Chosen providers are tried cheapest first.</string>
     <string name="settings_providers_fallbacks">Use other providers if these fail</string>
     <string name="settings_providers_loading">Loading providers…</string>

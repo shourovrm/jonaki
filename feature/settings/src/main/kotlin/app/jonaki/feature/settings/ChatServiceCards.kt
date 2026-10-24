@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
 import app.jonaki.core.ui.ThinkingChoice
@@ -64,8 +65,11 @@ import app.jonaki.core.ui.UsageFormat
 @Composable
 internal fun ChatServicesSection(state: SettingsUiState, actions: SettingsActions) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val today = state.freeCallsToday
+        val limit = state.freeCallLimit
+        val freeCalls = if (today != null && limit != null) FreeCalls(today, limit) else null
         for (card in state.chatServices) {
-            ServiceCard(card, actions)
+            ServiceCard(card, freeCalls, actions)
         }
         if (state.addableServices.isNotEmpty()) {
             AddServiceDropdown(state.addableServices, actions.onAddService)
@@ -74,12 +78,12 @@ internal fun ChatServicesSection(state: SettingsUiState, actions: SettingsAction
 }
 
 @Composable
-private fun ServiceCard(card: ChatServiceCardUi, actions: SettingsActions) {
+private fun ServiceCard(card: ChatServiceCardUi, freeCalls: FreeCalls?, actions: SettingsActions) {
     // A card with no key yet opens by itself, so the key field is in view.
     val startsOpen = card.apiKey != null && !card.apiKey.isSet
     val summary = collapsedSummary(card.apiKey, card.models.size)
     ServiceCardFrame(card.serviceKey, startsOpen, card.displayName, summary, card.account) {
-        CardBody(card, actions)
+        CardBody(card, freeCalls, actions)
     }
 }
 
@@ -171,14 +175,26 @@ private fun AccountLine(account: AccountLineUi) {
     )
 }
 
+/** The service that needs no key and no routing: Jonaki Free (D-186). */
+private const val FREE_SERVICE_KEY = "jonaki-free"
+
 @Composable
-private fun CardBody(card: ChatServiceCardUi, actions: SettingsActions) {
+private fun CardBody(card: ChatServiceCardUi, state: FreeCalls?, actions: SettingsActions) {
+    val isFree = card.serviceKey == FREE_SERVICE_KEY
     val slot = card.apiKey
     if (slot != null) {
         KeyField(stringResource(R.string.settings_api_key), slot, actions)
     }
+    if (isFree && state != null) {
+        Text(
+            stringResource(R.string.settings_free_calls_today, state.today, state.limit),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+        )
+    }
     val routing = card.routing
-    if (routing != null) {
+    if (routing != null && !isFree) {
         Text(
             stringResource(R.string.settings_routing),
             style = MaterialTheme.typography.labelMedium,
@@ -190,19 +206,76 @@ private fun CardBody(card: ChatServiceCardUi, actions: SettingsActions) {
     }
     if (card.models.isNotEmpty()) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(top = 12.dp))
+        if (!isFree) {
+            PriceHeader()
+        }
     }
     for (model in card.models) {
         ModelRow(model, card, actions)
     }
+    if (isFree) {
+        return
+    }
+    val needsKey = slot != null && !slot.isSet
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-        TextButton(onClick = { actions.onAddModels(card.serviceKey) }) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.settings_add_model))
+        Column {
+            TextButton(onClick = { actions.onAddModels(card.serviceKey) }, enabled = !needsKey) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.settings_add_model))
+            }
+            if (needsKey) {
+                Text(
+                    stringResource(R.string.settings_add_model_needs_key),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 12.dp, bottom = 8.dp),
+                )
+            }
         }
         Spacer(Modifier.weight(1f))
         TextButton(onClick = { actions.onRemoveService(card.serviceKey) }) {
             Text(stringResource(R.string.settings_remove_service), color = JonakiTheme.colors.deny)
+        }
+    }
+}
+
+/** Calls used today and the daily limit, both known. */
+private data class FreeCalls(val today: Int, val limit: Int)
+
+/** Width of one price column; the header and every model row use it, so the numbers sit under their words. */
+private val PriceColumnWidth = 48.dp
+
+/** Space the star and the menu button take on either side of a model row's text. */
+private val ModelRowSideWidth = 48.dp
+
+/** One header names the unit for every price below it, so a row is only a name and three numbers. */
+@Composable
+private fun PriceHeader() {
+    val style = MaterialTheme.typography.labelSmall
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp + ModelRowSideWidth, end = 4.dp + ModelRowSideWidth, top = 8.dp, bottom = 2.dp),
+    ) {
+        Text(
+            stringResource(R.string.settings_per_million),
+            style = style,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        for (label in listOf(R.string.settings_price_head_in, R.string.settings_price_head_out, R.string.settings_price_head_cache)) {
+            Text(
+                stringResource(label),
+                style = style,
+                color = color,
+                maxLines = 1,
+                softWrap = false,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(PriceColumnWidth),
+            )
         }
     }
 }
@@ -239,30 +312,32 @@ private fun ModelRow(model: ServiceModelUi, card: ChatServiceCardUi, actions: Se
     ) {
         DefaultStar(model, onMakeDefault = { actions.onModelSetDefault(model.key) })
         Column(Modifier.weight(1f).padding(top = 10.dp)) {
-            // Line 1: the name ends in "…" when long; the context window keeps its full width (D-029).
+            // Line 1: the name ends in "…" when long (D-029).
+            Text(
+                model.name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            // Line 2: the plan tag and the context window on the left, the three prices in columns on the right.
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    model.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                val window = model.contextWindowTokens
-                if (window != null) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        UsageFormat.tokenCount(window),
-                        style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    PlanTag(model.freePlan)
+                    val window = model.contextWindowTokens
+                    if (window != null) {
+                        Text(
+                            UsageFormat.tokenCount(window),
+                            style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
                 }
-            }
-            // Line 2: the three prices wrap between values, never inside one.
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PriceText(R.string.settings_price_in, model.inputPricePerMillion)
-                PriceText(R.string.settings_price_out, model.outputPricePerMillion)
-                PriceText(R.string.settings_price_cache, model.cachedInputPricePerMillion)
+                if (card.serviceKey != FREE_SERVICE_KEY) {
+                    PriceValue(model.inputPricePerMillion)
+                    PriceValue(model.outputPricePerMillion)
+                    PriceValue(model.cachedInputPricePerMillion)
+                }
             }
             ThinkingLine(model.thinking)
             val label = routingLabelFor(model, card.routing)
@@ -342,13 +417,15 @@ private fun DefaultStar(model: ServiceModelUi, onMakeDefault: () -> Unit) {
 }
 
 @Composable
-private fun PriceText(labelRes: Int, usdPerMillion: Double?) {
+private fun PriceValue(usdPerMillion: Double?) {
     Text(
-        stringResource(labelRes, UsageFormat.price(usdPerMillion)),
+        UsageFormat.price(usdPerMillion),
         style = MaterialTheme.typography.labelMedium.copy(fontFamily = MonospaceFamily),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
         softWrap = false,
+        textAlign = TextAlign.End,
+        modifier = Modifier.width(PriceColumnWidth),
     )
 }
 

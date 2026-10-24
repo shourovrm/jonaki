@@ -20,13 +20,13 @@
     <string name="settings_permissions_battery_purpose">Long runs can stop while the phone is idle</string>
     <string name="settings_permissions_internet">Internet</string>
     <string name="settings_permissions_internet_purpose">Models, web search and MCP servers</string>
-    <string name="settings_permissions_network_state">Network state</string>
+    <string name="settings_permissions_network_state">Check connection</string>
     <string name="settings_permissions_network_state_purpose">Wait for a connection before runs</string>
     <string name="settings_permissions_background">Run in background</string>
     <string name="settings_permissions_background_purpose">Keep replies going when closed</string>
     <string name="settings_permissions_boot">Start at boot</string>
     <string name="settings_permissions_boot_purpose">Set reminders again after restart</string>
-    <string name="settings_permissions_keep_awake">Keep awake</string>
+    <string name="settings_permissions_keep_awake">Stay awake for tasks</string>
     <string name="settings_permissions_keep_awake_purpose">Finish scheduled tasks</string>
     <string name="settings_about_app_name">Jonaki</string>
     <string name="settings_about_setup">Show setup cards</string>

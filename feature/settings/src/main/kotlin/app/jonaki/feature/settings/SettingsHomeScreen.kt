@@ -51,9 +51,9 @@ import androidx.compose.ui.unit.dp
 import app.jonaki.core.ui.JonakiIcons
 
 /**
- * The first Settings page (D-128): a search field, then one row per
- * sub-page in three groups separated by space. Each row's second line is
- * the page's live state, so most states can be read without opening it.
+ * The first Settings page (D-187): a search field, then one row per
+ * sub-page under six group headers. A row has a second line only when the
+ * user must act.
  * [scrollState] belongs to the caller, so Back from a sub-page lands at the
  * same place.
  */
@@ -101,21 +101,32 @@ fun SettingsHomeScreen(
 
 @Composable
 private fun PageRows(state: SettingsUiState, texts: SettingsTexts, onOpenPage: (SettingsPage) -> Unit) {
-    SettingsPage.GROUPS.forEachIndexed { groupIndex, group ->
-        if (groupIndex > 0) {
-            Spacer(Modifier.height(14.dp))
-        }
-        for (page in group) {
+    for ((group, pages) in SettingsPage.GROUPS) {
+        GroupHeader(stringResource(group.title))
+        for (page in pages) {
             val summary = SettingsSummaries.of(page, state, texts)
             PageRow(
                 icon = iconOf(page),
                 title = stringResource(page.title),
-                summary = summary.text,
-                summaryIsAlert = summary.needsAttention,
+                summary = summary?.text,
+                summaryIsAlert = summary?.needsAttention == true,
                 onClick = { onOpenPage(page) },
             )
         }
     }
+}
+
+@Composable
+private fun GroupHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp),
+    )
 }
 
 /** Each match is a row that opens its page; the second line names that page. */
@@ -145,7 +156,7 @@ private fun SearchResults(state: SettingsUiState, texts: SettingsTexts, query: S
 
 /** Title and summary keep one line each and end in "…" (D-029). */
 @Composable
-private fun PageRow(icon: ImageVector, title: String, summary: String, summaryIsAlert: Boolean, onClick: () -> Unit) {
+private fun PageRow(icon: ImageVector, title: String, summary: String?, summaryIsAlert: Boolean, onClick: () -> Unit) {
     val summaryColor = if (summaryIsAlert) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -170,13 +181,15 @@ private fun PageRow(icon: ImageVector, title: String, summary: String, summaryIs
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = summaryColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (summary != null) {
+                Text(
+                    summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = summaryColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         Spacer(Modifier.width(8.dp))
         Icon(
@@ -221,11 +234,13 @@ private fun iconOf(page: SettingsPage): ImageVector = when (page) {
     SettingsPage.LOCAL_MODELS -> JonakiIcons.Download
     SettingsPage.WEB -> JonakiIcons.Globe
     SettingsPage.TOOLS -> Icons.Outlined.Build
-    SettingsPage.GUARDRAILS -> Icons.Outlined.Lock
+    SettingsPage.SAFETY -> Icons.Outlined.Lock
     SettingsPage.SUBAGENTS -> JonakiIcons.People
     SettingsPage.ANSWERS -> JonakiIcons.ChatBubble
-    SettingsPage.MEMORY_SKILLS -> JonakiIcons.Lightbulb
-    SettingsPage.FILES_SCHEDULE -> JonakiIcons.Folder
+    SettingsPage.MEMORY -> JonakiIcons.Storage
+    SettingsPage.SKILLS -> JonakiIcons.Lightbulb
+    SettingsPage.FILES -> JonakiIcons.Folder
+    SettingsPage.REMINDERS -> JonakiIcons.DoneAll
     SettingsPage.THEME -> JonakiIcons.DarkMode
     SettingsPage.PERMISSIONS -> JonakiIcons.Shield
     SettingsPage.ABOUT -> Icons.Outlined.Info

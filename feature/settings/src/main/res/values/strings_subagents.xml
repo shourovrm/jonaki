@@ -5,14 +5,15 @@
     <string name="settings_subagents_section_limits">Limits</string>
     <string name="settings_subagents_without_asking">Start without asking</string>
     <string name="settings_subagents_per_message">Per message</string>
-    <string name="settings_subagents_per_call">Start at once</string>
+    <string name="settings_subagents_per_call">Run at the same time</string>
     <string name="settings_subagents_in_one_call">In one call</string>
-    <string name="settings_subagents_max_per_message">Most per message</string>
-    <string name="settings_subagents_tool_steps">Tool steps</string>
-    <string name="settings_subagents_cost">Cost</string>
-    <string name="settings_subagents_minutes">Minutes</string>
+    <string name="settings_subagents_max_per_message">Most in one message</string>
+    <string name="settings_subagents_tool_steps">Steps per agent</string>
+    <string name="settings_subagents_cost">Spend per agent</string>
+    <string name="settings_subagents_minutes">Time per agent</string>
     <string name="settings_subagents_lower">Lower %1$s</string>
     <string name="settings_subagents_raise">Raise %1$s</string>
+    <string name="settings_subagents_section_types">Types</string>
     <string name="settings_subagents_section_custom">Custom</string>
     <string name="settings_subagents_add">Add subagent</string>
     <string name="settings_subagents_new">New subagent</string>
@@ -31,4 +32,18 @@
         <item quantity="one">%1$d custom</item>
         <item quantity="other">%1$d custom</item>
     </plurals>
+    <string name="settings_subagents_unit_per_message">%1$d per message</string>
+    <plurals name="settings_subagents_unit_agents">
+        <item quantity="one">%1$d agent</item>
+        <item quantity="other">%1$d agents</item>
+    </plurals>
+    <plurals name="settings_subagents_unit_tool_calls">
+        <item quantity="one">%1$d tool call</item>
+        <item quantity="other">%1$d tool calls</item>
+    </plurals>
+    <plurals name="settings_subagents_unit_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <string name="settings_subagents_unit_usd">%1$s USD</string>
 </resources>
