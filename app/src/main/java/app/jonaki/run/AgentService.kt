@@ -42,13 +42,19 @@ class AgentService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startInForeground()
-        wakeLock.acquire(WAKE_LOCK_LIMIT_MILLIS)
         val runner = (application as JonakiApplication).runner
+        if (intent?.action == ACTION_STOP_RUNS) {
+            // The notification's Stop button: stop every run; the collector below then ends the service.
+            runner.runningThreadIds.value.forEach { threadId -> runner.stop(threadId) }
+        }
+        startInForeground(getString(R.string.run_notification_title_many), null)
+        wakeLock.acquire(WAKE_LOCK_LIMIT_MILLIS)
         scope.launch {
             runner.runningThreadIds.collect { threadIds ->
                 if (threadIds.isEmpty()) {
                     stopSelf()
+                } else {
+                    showRunning(threadIds)
                 }
             }
         }
@@ -63,23 +69,50 @@ class AgentService : Service() {
         super.onDestroy()
     }
 
-    private fun startInForeground() {
+    /** Names the single running thread, or counts the threads when several run. */
+    private suspend fun showRunning(threadIds: Set<String>) {
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, getString(R.string.run_channel_name), NotificationManager.IMPORTANCE_LOW),
-        )
+        if (threadIds.size == 1) {
+            val threadTitle = (application as JonakiApplication).database.threadDao().find(threadIds.single())?.title
+            val title = threadTitle?.takeIf { it.isNotBlank() } ?: getString(R.string.run_notification_title)
+            manager.notify(NOTIFICATION_ID, buildNotification(title, null))
+        } else {
+            val text = getString(R.string.run_notification_threads, threadIds.size)
+            manager.notify(NOTIFICATION_ID, buildNotification(getString(R.string.run_notification_title_many), text))
+        }
+    }
+
+    private fun buildNotification(title: String, text: String?): Notification {
         val openApp = PendingIntent.getActivity(
             this,
             0,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = Notification.Builder(this, CHANNEL_ID)
+        val stopRuns = PendingIntent.getService(
+            this,
+            1,
+            Intent(this, AgentService::class.java).setAction(ACTION_STOP_RUNS),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+        return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(getString(R.string.run_notification_title))
+            .setContentTitle(title)
+            .setContentText(text)
             .setContentIntent(openApp)
+            .addAction(Notification.Action.Builder(null, getString(R.string.run_notification_stop), stopRuns).build())
             .setOngoing(true)
             .build()
+    }
+
+    private fun startInForeground(title: String, text: String?) {
+        val manager = getSystemService(NotificationManager::class.java)
+        // Android keeps the importance a channel was first created with, so the quieter level needs a new id.
+        manager.deleteNotificationChannel(OLD_CHANNEL_ID)
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_ID, getString(R.string.run_channel_name), NotificationManager.IMPORTANCE_MIN),
+        )
+        val notification = buildNotification(title, text)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
@@ -88,7 +121,11 @@ class AgentService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "agent_runs"
+        private const val CHANNEL_ID = "runs-quiet"
+        private const val OLD_CHANNEL_ID = "agent_runs"
+
+        /** Sent by the notification's Stop button. */
+        const val ACTION_STOP_RUNS = "app.jonaki.STOP_RUNS"
         private const val NOTIFICATION_ID = 1
         private const val WAKE_LOCK_TAG = "jonaki:agent-run"
 

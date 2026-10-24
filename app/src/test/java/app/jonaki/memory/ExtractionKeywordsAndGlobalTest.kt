@@ -87,7 +87,7 @@ class ExtractionKeywordsAndGlobalTest {
 
         assertTrue(prompt.contains("\"keywords\""))
         assertTrue(prompt.contains("2 to 4 key words"))
-        assertTrue(prompt.contains("always in both scripts"))
+        assertTrue(prompt.contains("the same words in English"))
     }
 
     @Test

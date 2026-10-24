@@ -11,6 +11,12 @@ Behaviour:
 - `POST /v1/chat/completions` needs the device header (else 400), refuses a
   body over 200 KB (413), answers 429 past the daily limit, replaces the model
   with `MODEL`, caps `max_tokens` at 2048 and streams the upstream answer back.
+  A non-2xx upstream answer becomes `{"error":{"message","type":"upstream_error"}}`
+  with the same status; 401 and 403 say the server token is missing.
+- `GET /v1/limit` needs the device header and returns `{"limit", "used",
+  "resets_at"}` (the `DAILY_CALL_LIMIT` variable, today's count for the phone,
+  the next UTC midnight) without counting a call. Change the limit in
+  `wrangler.toml` and redeploy; the app reads it once a day.
 - `GET /v1/models` lists one model, `free`.
 - Anything else is 404.
 

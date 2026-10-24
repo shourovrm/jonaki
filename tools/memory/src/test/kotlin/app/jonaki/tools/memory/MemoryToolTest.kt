@@ -198,7 +198,7 @@ class MemoryToolTest {
         assertFalse(output.isError)
         assertTrue(output.text.startsWith("No fact matches \"rivers\"."))
         assertTrue(output.text.contains("second query"))
-        assertTrue(output.text.contains("other script"))
+        assertTrue(output.text.contains("another language or script"))
     }
 
     @Test

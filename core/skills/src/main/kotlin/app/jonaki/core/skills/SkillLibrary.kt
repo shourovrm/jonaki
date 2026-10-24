@@ -134,7 +134,8 @@ class SkillLibrary(val folder: File, private val stateFile: File) {
     @Synchronized
     fun installBuiltIns(builtIns: List<BuiltInSkill>) {
         val shippedNames = builtIns.map { builtIn -> builtIn.name }.toSet()
-        val state = readState().filterKeys { name -> name in shippedNames }.toMutableMap()
+        // Records of withdrawn built-ins survive until removeWithdrawnBuiltIns has judged them.
+        val state = readState().filterKeys { name -> name in shippedNames || name in WITHDRAWN_BUILT_INS }.toMutableMap()
         for (builtIn in builtIns) {
             val shippedHash = hashOf(builtIn.files)
             val record = state[builtIn.name]
@@ -181,6 +182,27 @@ class SkillLibrary(val folder: File, private val stateFile: File) {
                 resetBuiltIn(builtIn)
             }
         }
+    }
+
+    /**
+     * Deletes each withdrawn built-in skill whose folder still holds exactly
+     * what the app installed. An edited copy, an import under that name, or a
+     * skill without a record is the user's own and stays. Call it before
+     * [installBuiltIns], which forgets the records of skills it no longer ships.
+     */
+    @Synchronized
+    fun removeWithdrawnBuiltIns() {
+        val state = readState().toMutableMap()
+        for (name in WITHDRAWN_BUILT_INS) {
+            val record = state[name] ?: continue
+            val skillFolder = File(folder, name)
+            val unedited = !skillFolder.isDirectory || hashOf(filesIn(skillFolder)) == record.installedHash
+            if (unedited) {
+                skillFolder.deleteRecursively()
+                state.remove(name)
+            }
+        }
+        writeState(state)
     }
 
     private fun entryOf(skillFolder: File, record: BuiltInRecord?): SkillEntry {
@@ -260,6 +282,9 @@ class SkillLibrary(val folder: File, private val stateFile: File) {
     private data class BuiltInRecord(val installedHash: String, val deleted: Boolean)
 
     companion object {
+        /** Built-in skills the app no longer ships; see [removeWithdrawnBuiltIns]. */
+        val WITHDRAWN_BUILT_INS = setOf("bangla-formal-letter")
+
         const val SKILL_FILE = "SKILL.md"
 
         /** A path such as "templates/page.html": no leading slash, no "..", no backslash. */

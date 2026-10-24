@@ -1,6 +1,14 @@
 package app.jonaki.settings
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.time.Instant
 import java.time.ZoneId
 
@@ -20,6 +28,11 @@ class FreeTierUsage(
         fun read(): Pair<String?, Int>
 
         fun write(day: String, count: Int)
+
+        /** The limit the Worker last reported and the local day it was fetched, or nulls before the first fetch. */
+        fun readLimit(): Pair<String?, Int?>
+
+        fun writeLimit(day: String, limit: Int)
     }
 
     @Synchronized
@@ -32,6 +45,51 @@ class FreeTierUsage(
     @Synchronized
     fun record() {
         store.write(today(), todayCount() + 1)
+    }
+
+    /** The limit the Worker reported, or null until the first successful fetch. */
+    @Synchronized
+    fun serverLimit(): Int? = store.readLimit().second
+
+    /** The server's limit when known, else the built-in [DAILY_CALL_LIMIT]. */
+    fun effectiveLimit(): Int = serverLimit() ?: DAILY_CALL_LIMIT
+
+    /**
+     * Asks the Worker for the limit and today's count, at most once per local
+     * day. [baseUrl] is the Worker's /v1 address. A failure of any kind leaves
+     * the stored values as they were.
+     */
+    suspend fun refreshLimit(httpClient: OkHttpClient, baseUrl: String, deviceId: String) {
+        if (store.readLimit().first == today()) {
+            return
+        }
+        val request = Request.Builder()
+            .url(baseUrl.trimEnd('/') + "/limit")
+            .header("X-Jonaki-Device", deviceId)
+            .build()
+        val reported = withContext(Dispatchers.IO) {
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        return@use null
+                    }
+                    val fields = Json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
+                    fields.getValue("limit").jsonPrimitive.int to fields.getValue("used").jsonPrimitive.int
+                }
+            } catch (failure: java.io.IOException) {
+                null
+            } catch (failure: kotlinx.serialization.SerializationException) {
+                null
+            } catch (failure: NoSuchElementException) {
+                null
+            } catch (failure: IllegalArgumentException) {
+                null
+            }
+        } ?: return
+        synchronized(this) {
+            store.writeLimit(today(), reported.first)
+            store.write(today(), reported.second)
+        }
     }
 
     private fun today(): String = Instant.ofEpochMilli(clock()).atZone(ZoneId.of(zoneId)).toLocalDate().toString()
@@ -49,6 +107,15 @@ class FreeTierUsage(
 
                 override fun write(day: String, count: Int) {
                     preferences.edit().putString("day", day).putInt("count", count).apply()
+                }
+
+                override fun readLimit(): Pair<String?, Int?> {
+                    val limit = if (preferences.contains("limit")) preferences.getInt("limit", 0) else null
+                    return preferences.getString("limitFetchedDay", null) to limit
+                }
+
+                override fun writeLimit(day: String, limit: Int) {
+                    preferences.edit().putString("limitFetchedDay", day).putInt("limit", limit).apply()
                 }
             }
         }

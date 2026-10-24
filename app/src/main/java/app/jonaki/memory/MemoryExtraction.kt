@@ -92,7 +92,7 @@ Rules:
 - Add only lasting facts: the user's goals, preferences, decisions, names, dates, constraints and plans. Not questions, small talk or what an answer explained.
 - Write each fact as one short sentence that makes sense alone, in the language the user wrote in. Turn relative dates into dates using the time in brackets.
 - source is the label of the message the fact comes from.
-- Give keywords for every add and update, always in both scripts whatever language the fact is in: the fact's 2 to 4 key words in English, then the same words in Bangla script, so that a search in either script finds it. Examples: "আমার বোনের বিয়ে জানুয়ারিতে" gets "keywords":"sister wedding January বোন বিয়ে জানুয়ারি"; "I work at a bank in Dhaka" gets "keywords":"bank job Dhaka ব্যাংক চাকরি ঢাকা".
+- Give keywords for every add and update: the fact's 2 to 4 key words in the language the fact is written in, and the same words in English when that is a different language, so that a search in either finds it. Examples: "I work at a bank in Dhaka" gets "keywords":"bank job Dhaka"; "Mi hermana se casa en enero" gets "keywords":"hermana boda enero sister wedding January".
 - Update a thread fact when the new messages change it; delete one the user says is wrong or no longer true.
 - Never add what the thread facts or global facts already say. Global facts cannot be changed here.
 - Never store keys, passwords or card numbers.

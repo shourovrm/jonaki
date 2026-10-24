@@ -95,7 +95,7 @@ class ThreadTitlesTest {
     @Test
     fun banglaNamesKeepTheirTextAndLoseQuotesAndTheDanda() {
         assertEquals("ঢাকার আবহাওয়ার পূর্বাভাস", ThreadTitles.fromGenerated("“ঢাকার আবহাওয়ার পূর্বাভাস।”"))
-        assertEquals("ঢাকার আবহাওয়া", ThreadTitles.fromGenerated("শিরোনাম: ঢাকার আবহাওয়া"))
+        assertEquals("ঢাকার আবহাওয়া", ThreadTitles.fromGenerated("Title: ঢাকার আবহাওয়া"))
     }
 
     @Test

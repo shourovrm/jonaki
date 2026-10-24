@@ -75,7 +75,7 @@ class ProposeSkillTool(
         putJsonObject("properties") {
             putJsonObject("name") {
                 put("type", "string")
-                put("description", "Skill name: lowercase letters, digits and single hyphens, for example bangla-formal-letter")
+                put("description", "Skill name: lowercase letters, digits and single hyphens, for example openreview-paper")
             }
             putJsonObject("description") {
                 put("type", "string")
