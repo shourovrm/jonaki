@@ -21,6 +21,10 @@ data class ThreadListUiState(
     val projectModelOptions: List<ProjectModelOption> = emptyList(),
     /** "Left to set up": what the first-run cards did not get; empty hides the list (D-184). */
     val setupLeft: List<SetupLeft> = emptyList(),
+    /** Facts held for review, all threads; with [skillsToReview] they make the review row (0 and 0 hides it). */
+    val factsToReview: Int = 0,
+    /** Skill proposals waiting on the Skills screen. */
+    val skillsToReview: Int = 0,
 )
 
 /** One thing the first-run cards left undone. */

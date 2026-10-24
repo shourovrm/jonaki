@@ -23,6 +23,18 @@ interface SkillProposalSink {
     val maxWaiting: Int
 
     suspend fun propose(name: String, description: String, body: String, replaces: String?): SkillProposalOutcome
+
+    /**
+     * Same as above, with the title of the thread the proposal comes from. The default drops the
+     * title, so a sink that does not show it needs no change.
+     */
+    suspend fun propose(
+        name: String,
+        description: String,
+        body: String,
+        replaces: String?,
+        sourceTitle: String?,
+    ): SkillProposalOutcome = propose(name, description, body, replaces)
 }
 
 sealed interface SkillProposalOutcome {
@@ -38,7 +50,11 @@ sealed interface SkillProposalOutcome {
  * prompt and cannot be loaded, until the user adds it on the Skills screen.
  * That is why the tool runs without an approval card.
  */
-class ProposeSkillTool(private val sink: SkillProposalSink) : Tool {
+class ProposeSkillTool(
+    private val sink: SkillProposalSink,
+    /** The title of the thread that runs the tool; the app gives it so the Skills screen can say where a proposal came from. */
+    private val sourceTitle: () -> String? = { null },
+) : Tool {
     override val name: String = "propose_skill"
 
     override val promptLine: String =
@@ -93,7 +109,7 @@ class ProposeSkillTool(private val sink: SkillProposalSink) : Tool {
         val body = argumentOrNull(arguments, "body")
             ?: return missing("body")
         val replaces = argumentOrNull(arguments, "replaces")
-        return when (val outcome = sink.propose(skillName, description, body, replaces)) {
+        return when (val outcome = sink.propose(skillName, description, body, replaces, sourceTitle())) {
             is SkillProposalOutcome.Saved -> ToolOutput.success(savedText(outcome))
             is SkillProposalOutcome.Refused -> ToolOutput.error(outcome.reason, outcome.nextStep)
         }

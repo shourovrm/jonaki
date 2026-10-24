@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_help">Jonaki keeps facts about you: goals, preferences, decisions, names, dates. What an answer explained is found with chat search.</string>
+    <string name="memory_log_row">Memory log</string>
+    <string name="memory_log_title">Memory log</string>
+    <string name="memory_log_intro">Every time Jonaki read a thread for facts. Calls use the cheapest model with a key.</string>
+    <string name="memory_log_help">A thread is read after 8 new messages, or when you leave it with 2 or more. Facts from a thread that read web pages wait for review.</string>
+</resources>

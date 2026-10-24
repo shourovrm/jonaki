@@ -90,7 +90,7 @@ fun SkillsScreen(state: SkillsUiState, actions: SkillsActions, modifier: Modifie
             if (state.proposals.isNotEmpty()) {
                 item(key = "proposed-header") {
                     Text(
-                        stringResource(R.string.skills_proposed),
+                        stringResource(R.string.skills_proposed_count, state.proposals.size),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 4.dp, top = 4.dp),

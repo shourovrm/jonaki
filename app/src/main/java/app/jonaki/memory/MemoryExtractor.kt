@@ -79,6 +79,7 @@ class MemoryExtractor(
         if (answer is BackgroundAnswer.Failed) {
             // The mark stays, so the next trigger tries these messages again.
             Log.w(TAG, "Memory extraction failed: ${answer.message}")
+            // A Failed answer already wrote its failure text onto the row.
             return
         }
         val text = (answer as BackgroundAnswer.Success).text
@@ -87,11 +88,17 @@ class MemoryExtractor(
             // Asking again would likely cost as much and fail the same way, so these messages count as read.
             Log.w(TAG, "Memory extraction answer unreadable: ${plan.failure}")
         }
-        apply(threadId, projectId, plan)
+        val outcome = apply(threadId, projectId, plan)
+        answer.rowId?.let { rowId -> database.messageDao().setBackgroundResult(rowId, resultText(plan, outcome)) }
         database.threadDao().setMemoryExtractedUpTo(threadId, lastPosition)
     }
 
-    private suspend fun apply(threadId: String, projectId: String?, plan: ExtractionPlan) {
+    /** How many facts one extraction saved at once and how many it left waiting for the user. */
+    private data class ApplyOutcome(val added: Int, val toReview: Int)
+
+    private suspend fun apply(threadId: String, projectId: String?, plan: ExtractionPlan): ApplyOutcome {
+        var added = 0
+        var toReview = 0
         val memoryDao = database.memoryDao()
         val now = clock()
         val waitForReview = reviewMode()
@@ -103,15 +110,32 @@ class MemoryExtractor(
             val heldAsPlanted = holdAfterOutsideContent && FactScreen.waitsForReview(looksPlanted(threadId, newFact.text))
             val pendingReview = ExtractionWrites.waitsForReview(newFact, waitForReview, heldAsPlanted)
             memoryDao.insert(ExtractionWrites.newMemory(newFact, threadId, projectId, now, pendingReview))
+            if (pendingReview) toReview++ else added++
         }
         for (update in plan.updates) {
             val current = memoryDao.find(update.factId) ?: continue
             // The old text stays, as a superseded copy, so that the user can bring it back.
             memoryDao.insert(ExtractionWrites.supersededCopy(current, now))
             memoryDao.update(ExtractionWrites.updated(current, update, now))
+            added++
         }
         for (factId in plan.deletes) {
             memoryDao.supersede(factId, now)
+            added++
+        }
+        return ApplyOutcome(added, toReview)
+    }
+
+    /** The text the memory line in the thread and the memory log show; MemoryLineText reads the same forms. */
+    private fun resultText(plan: ExtractionPlan, outcome: ApplyOutcome): String {
+        if (plan.failure != null) {
+            return "Answer unreadable: ${plan.failure}"
+        }
+        return when {
+            outcome.added > 0 && outcome.toReview > 0 -> "${outcome.added} added, ${outcome.toReview} to review"
+            outcome.added > 0 -> "${outcome.added} added"
+            outcome.toReview > 0 -> "${outcome.toReview} to review"
+            else -> "Nothing new"
         }
     }
 

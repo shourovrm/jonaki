@@ -149,6 +149,14 @@ fun MemoryScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
+            item(key = "help") {
+                Text(
+                    stringResource(R.string.memory_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                )
+            }
             if (state.waitingForReview.isNotEmpty()) {
                 sectionLabel(R.string.memory_section_review)
                 items(state.waitingForReview, key = { fact -> "review-${fact.id}" }) { fact ->
@@ -201,6 +209,9 @@ fun MemoryScreen(
                     actions = actions,
                     factSelection = factSelection,
                 )
+            }
+            item(key = "memory-log") {
+                MemoryLogRow(actions.onOpenLog)
             }
         }
     }
@@ -605,6 +616,22 @@ private fun ReviewCard(fact: MemoryFactUi, actions: MemoryActions, factSelection
                     Text(stringResource(R.string.memory_keep))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MemoryLogRow(onOpen: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable(onClick = onOpen).heightIn(min = 56.dp).padding(horizontal = 16.dp),
+        ) {
+            Text(stringResource(R.string.memory_log_row), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         }
     }
 }

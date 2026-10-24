@@ -159,6 +159,14 @@ fun ChatScreen(
     onApprovalModeChange: (ApprovalModeChoice?) -> Unit = {},
     /** "Withdraw" in the chip's sheet: every tool asks again by the mode. */
     onWithdrawAllowAll: () -> Unit = {},
+    /** The Safety check switch in the approvals sheet; applies to this thread only. */
+    onSafetyCheckChange: (Boolean) -> Unit = {},
+    /** The action on a memory line (See, Why or Fix): the app opens Memory, the memory log or Settings. */
+    onMemoryLine: () -> Unit = {},
+    /** Use <model> on an error card: the app switches this thread to that model. */
+    onUseModel: (modelKey: String) -> Unit = {},
+    /** Set up in the "No model yet" block: the app opens the setup of services and keys. */
+    onSetUp: () -> Unit = {},
     /** The ring pill: the app works out [ChatUiState.context] for the sheet; null leaves the pill without a tap. */
     onOpenContext: (() -> Unit)? = null,
     /** A run_code step was tapped: the app fills [ChatUiState.codeRun] for the code sheet (D-090). */
@@ -253,7 +261,9 @@ fun ChatScreen(
                     if (mediaMode?.selected != null) {
                         MediaDetailsLine(mediaMode, onOpenSettings = { openSheet = ChatSheet.MEDIA })
                     }
-                    Composer(
+                    if (!state.hasModel) {
+                        NoModelBlock(onSetUp)
+                    } else Composer(
                         draft = state.draft,
                         canSend = state.draft.isNotBlank() || state.attachments.isNotEmpty(),
                         mediaKind = mediaMode?.selected,
@@ -288,6 +298,9 @@ fun ChatScreen(
                         onOpenSubagent = { subagentId -> onOpenSubagent(subagentId) },
                         onOpenWork = { workId -> openWorkId = workId },
                         onAnswerDrawn = onAnswerDrawn,
+                        onMemoryLine = onMemoryLine,
+                        onOpenSkills = onOpenSkills,
+                        onUseModel = onUseModel,
                     )
                 }
             }
@@ -326,6 +339,9 @@ fun ChatScreen(
                 threadMode = state.threadApprovalMode,
                 defaultMode = state.defaultApprovalMode,
                 allowAllInThread = state.allowAllInThread,
+                safetyCheckOn = state.safetyCheckOn,
+                safetyCheckAvailable = state.safetyCheckAvailable,
+                onSafetyCheckChange = onSafetyCheckChange,
                 onSelect = { choice ->
                     openSheet = ChatSheet.NONE
                     onApprovalModeChange(choice)
@@ -335,7 +351,6 @@ fun ChatScreen(
                     onWithdrawAllowAll()
                 },
                 onDismiss = { openSheet = ChatSheet.NONE },
-                guardState = state.guardState,
             )
             openSheet == ChatSheet.MEDIA -> {
                 val mediaMode = state.mediaMode
@@ -562,6 +577,9 @@ private fun MessageList(
     onOpenSubagent: (String) -> Unit,
     onOpenWork: (String) -> Unit,
     onAnswerDrawn: (String) -> Unit,
+    onMemoryLine: () -> Unit,
+    onOpenSkills: () -> Unit,
+    onUseModel: (String) -> Unit,
 ) {
     // Follow the stream only while the user is at the bottom; scrolling up to
     // read earlier steps must not be undone by the next chunk.
@@ -618,6 +636,9 @@ private fun MessageList(
                 is ChatItem.SubagentWork -> SubagentWorkRow(item, onOpenWork)
                 is ChatItem.Approval -> ApprovalCard(item, onApprovalChoice)
                 is ChatItem.Error -> ErrorRow(item, onRetry)
+                is ChatItem.ErrorCard -> ErrorCardRow(item, onUseModel)
+                is ChatItem.MemoryLine -> MemoryLineRow(item, onMemoryLine)
+                is ChatItem.SkillProposalLine -> SkillProposalLineRow(item, onOpenSkills)
                 is ChatItem.Note -> NoteRow(item)
                 is ChatItem.Artifact -> ArtifactRow(item, onOpenArtifact)
                 is ChatItem.GeneratedImage -> GeneratedImageCard(item.path, onSaveImage, onShareImage)

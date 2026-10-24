@@ -144,6 +144,16 @@ interface MessageDao {
     @Query("UPDATE messages SET backgroundResult = :result WHERE id = :id")
     suspend fun setBackgroundResult(id: String, result: String)
 
+    /** The memory log: one row per memory-extraction call, newest first, with the title of the thread it read. */
+    @Query(
+        "SELECT messages.createdAtMillis AS createdAtMillis, messages.model AS model, " +
+            "messages.backgroundResult AS backgroundResult, messages.threadId AS threadId, threads.title AS threadTitle " +
+            "FROM messages INNER JOIN threads ON threads.id = messages.threadId " +
+            "WHERE messages.role = 'BACKGROUND' AND messages.text = 'memory' " +
+            "ORDER BY messages.createdAtMillis DESC LIMIT :limit",
+    )
+    suspend fun listMemoryLog(limit: Int): List<MemoryLogRow>
+
     @Query("UPDATE messages SET text = :text WHERE id = :messageId")
     suspend fun updateText(messageId: String, text: String)
 
@@ -252,6 +262,15 @@ data class MessageSearchRow(
     val role: String,
     val text: String,
     val createdAtMillis: Long,
+    val threadTitle: String,
+)
+
+data class MemoryLogRow(
+    val createdAtMillis: Long,
+    val model: String?,
+    /** Null while the call runs or when it ended before writing a result. */
+    val backgroundResult: String?,
+    val threadId: String,
     val threadTitle: String,
 )
 

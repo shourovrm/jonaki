@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="skills_proposed_count">Proposed %1$d</string>
+    <string name="skills_proposal_from">From %1$s</string>
+    <string name="skills_proposal_kept">kept 14 days</string>
+</resources>

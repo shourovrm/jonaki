@@ -75,6 +75,8 @@ class MemoryActions(
     /** Puts a superseded fact back in use. */
     val onRestore: (factId: Long) -> Unit = {},
     val onReviewModeChange: (enabled: Boolean) -> Unit,
+    /** The "Memory log" row at the bottom: the app opens [MemoryLogScreen]. */
+    val onOpenLog: () -> Unit = {},
 )
 
 /** Entries of a fact's ⋮ menu, in the order shown. */
