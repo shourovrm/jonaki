@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_start_title">How do you want to start?</string>
+    <string name="setup_start_hint">Pick one. The others stay available in Settings.</string>
+    <string name="setup_start_free">Free: Jonaki Free</string>
+    <string name="setup_start_free_detail">Up to %1$d calls a day on this phone</string>
+    <string name="setup_start_phone">Free: on this phone</string>
+    <string name="setup_start_phone_detail">Runs offline after the download.</string>
+    <string name="setup_start_own_key">My own key</string>
+    <string name="setup_start_own_key_detail">OpenRouter, Gemini, DeepSeek, OpenAI and more.</string>
+    <string name="setup_start_download">Download %1$s</string>
+    <string name="setup_phone_model_detail">%1$s · %2$s</string>
+    <string name="setup_fit_fits">Fits</string>
+    <string name="setup_fit_tight">Barely fits</string>
+    <string name="setup_fit_too_big">Too big</string>
+    <string name="setup_phone_wifi">Wi-Fi is recommended.</string>
+    <string name="setup_phone_started">The model appears in the picker when it is done.</string>
+    <string name="setup_phone_no_space">Not enough free storage.</string>
+</resources>

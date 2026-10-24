@@ -78,7 +78,11 @@ fun SetupDeckScreen(state: SetupDeckUi, actions: SetupDeckActions, modifier: Mod
         }
         Deck(waitingCards = cardCount - cardNumber, modifier = Modifier.weight(1f)) {
             when (state.card) {
-                SetupCard.MODEL -> if (state.model.showsKeyStep) ModelKeyCard(state.model, actions) else ModelServiceCard(state.model, actions)
+                SetupCard.MODEL -> when {
+                    state.model.showsKeyStep -> ModelKeyCard(state.model, actions)
+                    state.model.showsServiceList -> ModelServiceCard(state.model, actions)
+                    else -> StartCard(state.model, actions)
+                }
                 SetupCard.SEARCH -> SearchCard(state.search, actions)
                 SetupCard.APPROVALS -> ApprovalsCard(state.asksOnlyOutsideThreadFolder, actions)
                 SetupCard.NOTIFICATIONS -> NotificationsCard(actions)
@@ -190,6 +194,100 @@ private fun KeyField(value: String, onValueChange: (String) -> Unit, savedKeyPre
 }
 
 @Composable
+private fun ColumnScope.StartCard(model: SetupModelCardUi, actions: SetupDeckActions) {
+    val selectedPhoneModel = model.phoneModels.firstOrNull { phoneModel -> phoneModel.fileName == model.selectedPhoneModelFileName }
+    CardBody(stringResource(R.string.setup_start_title)) {
+        Text(
+            stringResource(R.string.setup_start_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+        )
+        ChoiceRow(
+            stringResource(R.string.setup_start_free),
+            selected = model.start == SetupStart.JONAKI_FREE,
+            onSelect = { actions.onStartSelect(SetupStart.JONAKI_FREE) },
+            detail = stringResource(R.string.setup_start_free_detail, model.freeDailyLimit),
+        )
+        ChoiceRow(
+            stringResource(R.string.setup_start_phone),
+            selected = model.start == SetupStart.ON_PHONE,
+            onSelect = { actions.onStartSelect(SetupStart.ON_PHONE) },
+            detail = stringResource(R.string.setup_start_phone_detail),
+        )
+        if (model.start == SetupStart.ON_PHONE) {
+            PhoneModelList(model, actions)
+        }
+        ChoiceRow(
+            stringResource(R.string.setup_start_own_key),
+            selected = model.start == SetupStart.OWN_KEY,
+            onSelect = { actions.onStartSelect(SetupStart.OWN_KEY) },
+            detail = stringResource(R.string.setup_start_own_key_detail),
+        )
+        Text(
+            stringResource(R.string.setup_model_needed),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp),
+        )
+    }
+    val downloadIsPending = model.start == SetupStart.ON_PHONE && !model.phoneDownloadStarted
+    CardFooter(
+        onBack = null,
+        onSkip = actions.onSkip,
+        actionLabel = if (downloadIsPending && selectedPhoneModel != null) {
+            stringResource(R.string.setup_start_download, selectedPhoneModel.sizeText)
+        } else {
+            stringResource(R.string.setup_next)
+        },
+        actionEnabled = when {
+            !downloadIsPending -> true
+            selectedPhoneModel == null -> false
+            else -> selectedPhoneModel.fit != SetupFit.TOO_BIG
+        },
+        onAction = {
+            when {
+                model.start == SetupStart.JONAKI_FREE || model.start == SetupStart.OWN_KEY -> actions.onStartConfirm()
+                downloadIsPending -> selectedPhoneModel?.let { phoneModel -> actions.onPhoneDownload(phoneModel.fileName) }
+                else -> actions.onSkip()
+            }
+        },
+    )
+}
+
+@Composable
+private fun PhoneModelList(model: SetupModelCardUi, actions: SetupDeckActions) {
+    Column(Modifier.padding(start = 34.dp)) {
+        for (phoneModel in model.phoneModels) {
+            val fitWord = stringResource(
+                when (phoneModel.fit) {
+                    SetupFit.FITS -> R.string.setup_fit_fits
+                    SetupFit.TIGHT -> R.string.setup_fit_tight
+                    SetupFit.TOO_BIG -> R.string.setup_fit_too_big
+                },
+            )
+            ChoiceRow(
+                phoneModel.name,
+                selected = phoneModel.fileName == model.selectedPhoneModelFileName,
+                onSelect = { actions.onPhoneModelSelect(phoneModel.fileName) },
+                detail = stringResource(R.string.setup_phone_model_detail, phoneModel.sizeText, fitWord),
+            )
+        }
+        val note = when {
+            model.phoneDownloadRefused -> R.string.setup_phone_no_space
+            model.phoneDownloadStarted -> R.string.setup_phone_started
+            else -> R.string.setup_phone_wifi
+        }
+        Text(
+            stringResource(note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
 private fun ColumnScope.ModelServiceCard(model: SetupModelCardUi, actions: SetupDeckActions) {
     val selectedIsInShortList = model.services.take(SetupDeckUi.SHORT_LIST_SIZE).any { service -> service.key == model.selectedServiceKey }
     var showsAll by rememberSaveable { mutableStateOf(false) }
@@ -215,7 +313,7 @@ private fun ColumnScope.ModelServiceCard(model: SetupModelCardUi, actions: Setup
         )
     }
     CardFooter(
-        onBack = null,
+        onBack = actions.onBack,
         onSkip = actions.onSkip,
         actionLabel = stringResource(R.string.setup_next),
         actionEnabled = model.selectedServiceKey != null,
@@ -227,6 +325,8 @@ private fun ColumnScope.ModelServiceCard(model: SetupModelCardUi, actions: Setup
 private fun ColumnScope.ModelKeyCard(model: SetupModelCardUi, actions: SetupDeckActions) {
     var typedKey by rememberSaveable(model.selectedServiceKey) { mutableStateOf("") }
     val hasKey = typedKey.isNotBlank() || model.savedKeyPreview != null
+    // Once a key is there the service's own default model is preselected, so Next needs no picker.
+    val shownModelName = model.chosenModelName ?: model.defaultModelName.takeIf { hasKey }
     CardBody(stringResource(R.string.setup_model_key_title, model.selectedServiceName)) {
         KeyField(typedKey, { typedKey = it }, model.savedKeyPreview)
         if (model.keySite != null) {
@@ -241,10 +341,10 @@ private fun ColumnScope.ModelKeyCard(model: SetupModelCardUi, actions: SetupDeck
             Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text(stringResource(R.string.setup_model_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // The one item this row shows, so the full name wraps (D-029).
-                Text(model.chosenModelName ?: stringResource(R.string.setup_model_none), style = MaterialTheme.typography.bodyLarge)
+                Text(shownModelName ?: stringResource(R.string.setup_model_none), style = MaterialTheme.typography.bodyLarge)
             }
             OutlinedButton(onClick = { actions.onChooseModel(typedKey) }, enabled = hasKey) {
-                Text(stringResource(if (model.chosenModelName == null) R.string.setup_model_choose else R.string.setup_model_change), maxLines = 1)
+                Text(stringResource(if (shownModelName == null) R.string.setup_model_choose else R.string.setup_model_change), maxLines = 1)
             }
         }
     }
@@ -252,8 +352,8 @@ private fun ColumnScope.ModelKeyCard(model: SetupModelCardUi, actions: SetupDeck
         onBack = actions.onBack,
         onSkip = actions.onSkip,
         actionLabel = stringResource(R.string.setup_next),
-        actionEnabled = model.chosenModelName != null,
-        onAction = actions.onModelDone,
+        actionEnabled = shownModelName != null,
+        onAction = { actions.onModelDone(typedKey) },
     )
 }
 

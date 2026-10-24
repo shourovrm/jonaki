@@ -35,8 +35,34 @@ private fun DeckPreview(state: SetupDeckUi, mode: ThemeMode) {
 @Preview(name = "Setup, service", widthDp = 360, heightDp = 640, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun SetupServicePreview() = DeckPreview(
-    SetupDeckUi(model = SetupModelCardUi(services = sampleServices, selectedServiceKey = "openrouter")),
+    SetupDeckUi(model = SetupModelCardUi(services = sampleServices, selectedServiceKey = "openrouter", showsServiceList = true)),
     ThemeMode.DARK,
+)
+
+private val samplePhoneModels = listOf(
+    SetupPhoneModelUi("Qwen3.5-0.8B-Q4_0.gguf", "Qwen3.5-0.8B", "0.5 GB", SetupFit.FITS),
+    SetupPhoneModelUi("Qwen3.5-2B-Q4_0.gguf", "Qwen3.5-2B", "1.2 GB", SetupFit.TIGHT),
+)
+
+@Preview(name = "Setup, three ways", widthDp = 360, heightDp = 640, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SetupStartPreview() = DeckPreview(
+    SetupDeckUi(model = SetupModelCardUi(freeDailyLimit = 60, phoneModels = samplePhoneModels)),
+    ThemeMode.DARK,
+)
+
+@Preview(name = "Setup, on this phone", widthDp = 360, heightDp = 640, fontScale = 1.3f)
+@Composable
+private fun SetupPhonePreview() = DeckPreview(
+    SetupDeckUi(
+        model = SetupModelCardUi(
+            freeDailyLimit = 60,
+            start = SetupStart.ON_PHONE,
+            phoneModels = samplePhoneModels,
+            selectedPhoneModelFileName = samplePhoneModels.first().fileName,
+        ),
+    ),
+    ThemeMode.LIGHT,
 )
 
 @Preview(name = "Setup, key and model", widthDp = 360, heightDp = 640, fontScale = 1.3f)

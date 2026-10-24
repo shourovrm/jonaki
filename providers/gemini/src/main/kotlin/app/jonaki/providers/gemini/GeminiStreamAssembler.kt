@@ -98,5 +98,6 @@ internal fun failureFromError(error: JsonObject): StreamEvent.Failed {
     val message = error.stringOrNull("message") ?: error.toString()
     val retryable = statusCode != null && isRetryableHttpStatus(statusCode)
     val label = listOfNotNull(statusCode?.toString(), error.stringOrNull("status")).joinToString(" ")
-    return StreamEvent.Failed("Gemini answered $label: $message", retryable)
+    val kind = statusCode?.let { code -> GeminiFailures.kindOf(code, message) }
+    return StreamEvent.Failed("Gemini answered $label: $message", retryable, kind)
 }

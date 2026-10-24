@@ -102,6 +102,7 @@ class GeminiProvider(
         return StreamEvent.Failed(
             "Gemini answered HTTP $statusCode: ${bodyText.take(300).ifBlank { "no details" }}",
             retryable = isRetryableHttpStatus(statusCode),
+            kind = GeminiFailures.kindOf(statusCode, bodyText),
         )
     }
 
