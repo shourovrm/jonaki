@@ -2848,3 +2848,24 @@ Rejected for now: a companion app on the phone that extracts captions
 (NewPipeExtractor) and speaks MCP; the user wants to discuss it later, and
 it must live outside Google Play.
 Outcome: RetryingVideoSummarizerTest passes (4 tests).
+
+## D-191 · 2026-10-25 · English only: no Bangla in the app except the About sentence — proposed
+User ruling: "remove all Bangla and bn reference in the app, except the
+about section will keep the text that the app name is Bangla", so that new
+users are not confused; anyone who wants another language sets the phone's
+locale, and the interface follows Android's own mechanism later if a
+translation is ever added again. So: every `values-bn` folder goes and
+with it the Bangla interface of M11 and the BanglaStringsTest that
+enforced it; the Bangla previews, sample data and the "আজ" label go; the
+prompts and tool hints name no language (the keyword rule becomes "the
+fact's language and English", the examples are language-neutral, the
+title parser no longer strips "শিরোনাম:", the example skill name is
+"openreview-paper"); the shipped skills' Bangla font lines become a rule
+for any non-Latin script; the withdrawn built-in "bangla-formal-letter"
+is deleted from a phone's library when the user never edited it (D-155
+only stopped shipping it). Test data in other scripts stays where it
+checks that search, file names and Markdown handle any script, because
+it never reaches the app. The About line "Jonaki is Bangla for firefly."
+and README's "Bangla for firefly" stay. Supersedes the Bangla interface
+part of M11.
+Outcome: pending.
