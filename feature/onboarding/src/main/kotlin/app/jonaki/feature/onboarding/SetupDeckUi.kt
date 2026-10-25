@@ -2,11 +2,10 @@ package app.jonaki.feature.onboarding
 
 import androidx.compose.runtime.Immutable
 
-/** The four first-run cards, in the order they are shown (D-184). */
+/** The three first-run cards, in the order they are shown (D-184). */
 enum class SetupCard {
     MODEL,
     SEARCH,
-    APPROVALS,
     NOTIFICATIONS,
 }
 
@@ -85,8 +84,6 @@ data class SetupDeckUi(
     val card: SetupCard = SetupCard.MODEL,
     val model: SetupModelCardUi = SetupModelCardUi(),
     val search: SetupSearchCardUi = SetupSearchCardUi(),
-    /** True is "only outside the thread's folder" (Auto); false is "every time" (Ask). */
-    val asksOnlyOutsideThreadFolder: Boolean = false,
 ) {
     companion object {
         const val SHORT_LIST_SIZE = 4
@@ -113,8 +110,6 @@ data class SetupDeckActions(
     val onSearchServiceSelect: (serviceKey: String) -> Unit = {},
     /** Saves [typedKey] when it is not blank and puts the service first in the search order. */
     val onSearchDone: (typedKey: String) -> Unit = {},
-    val onApprovalChange: (onlyOutsideThreadFolder: Boolean) -> Unit = {},
-    val onApprovalDone: () -> Unit = {},
     /** Opens Android's permission question; the deck ends after the answer. */
     val onAllowNotifications: () -> Unit = {},
 )

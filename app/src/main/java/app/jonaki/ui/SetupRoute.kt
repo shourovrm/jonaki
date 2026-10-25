@@ -12,7 +12,6 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import app.jonaki.JonakiApplication
-import app.jonaki.core.agent.ApprovalMode
 import app.jonaki.core.localmodels.FitLabel
 import app.jonaki.core.localmodels.MemoryFit
 import app.jonaki.core.localmodels.RecommendedModel
@@ -213,7 +212,6 @@ internal fun SetupRoute(
             selectedServiceName = displayNameOf(searchService),
             savedKeyPreview = keyPreviews[searchService.secret],
         ),
-        asksOnlyOutsideThreadFolder = snapshot.defaultApprovalMode == ApprovalMode.AUTO,
     )
     val actions = SetupDeckActions(
         onSkipAll = finish,
@@ -279,12 +277,6 @@ internal fun SetupRoute(
             settings.update { current -> current.copy(searchOrder = listOf(searchService) + (current.searchOrder - searchService)) }
             showNextCard()
         },
-        onApprovalChange = { onlyOutsideThreadFolder ->
-            settings.update { current ->
-                current.copy(defaultApprovalMode = if (onlyOutsideThreadFolder) ApprovalMode.AUTO else ApprovalMode.ASK)
-            }
-        },
-        onApprovalDone = showNextCard,
         onAllowNotifications = {
             scope.launch {
                 application.runtimePermissions.requestNotifications()

@@ -42,11 +42,6 @@ class ToolGroupsTest {
     }
 
     @Test
-    fun thePickerShowsOnceMoreToThoseWhoSawTheFirstVersion() {
-        assertTrue(ToolPicker.shouldShow(seenVersion = 1))
-    }
-
-    @Test
     fun disabledGroupsSurviveSavingAndUnknownNamesAreDropped() {
         val disabled = setOf(ToolGroup.PYTHON, ToolGroup.WEB)
 
@@ -56,12 +51,5 @@ class ToolGroupsTest {
         assertEquals(disabled, ToolGroups.disabledFromText(text))
         assertEquals(setOf(ToolGroup.WEB), ToolGroups.disabledFromText("WEB,TELEPORT,"))
         assertEquals(emptySet<ToolGroup>(), ToolGroups.disabledFromText(""))
-    }
-
-    @Test
-    fun thePickerShowsOnANewInstallAndOnceAfterTheUpdate() {
-        // A new install and an install from before the picker both read version 0.
-        assertTrue(ToolPicker.shouldShow(seenVersion = 0))
-        assertFalse(ToolPicker.shouldShow(seenVersion = ToolPicker.CURRENT))
     }
 }

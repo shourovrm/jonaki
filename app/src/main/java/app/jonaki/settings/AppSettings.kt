@@ -53,10 +53,8 @@ data class SettingsSnapshot(
     val defaultApprovalMode: ApprovalMode = ApprovalMode.ASK,
     /** Model key per subagent type; a type without an entry uses its default (D-065). */
     val subagentModels: Map<String, String> = emptyMap(),
-    /** Tool groups switched off in the picker or Settings > Tools; every other group is on (M8). */
+    /** Tool groups switched off in Settings > Tools; every other group is on (M8). */
     val disabledToolGroups: Set<ToolGroup> = emptySet(),
-    /** The [ToolPicker] version the user last finished; 0 before the picker existed. */
-    val toolPickerSeenVersion: Int = 0,
     /** True once the first-run setup cards were finished or skipped, or were not needed (D-184). */
     val setupDeckSeen: Boolean = false,
     /** True hides "Left to set up" on the thread list for good. */
@@ -156,7 +154,6 @@ class AppSettings(
             defaultApprovalMode = ApprovalModes.fromName(preferences.getString(APPROVAL_MODE, null)),
             subagentModels = SubagentModelChoice.fromText(preferences.getString(SUBAGENT_MODELS, "").orEmpty()),
             disabledToolGroups = ToolGroups.disabledFromText(preferences.getString(DISABLED_TOOL_GROUPS, "").orEmpty()),
-            toolPickerSeenVersion = preferences.getInt(TOOL_PICKER_SEEN_VERSION, 0),
             setupDeckSeen = preferences.getBoolean(SETUP_DECK_SEEN, false),
             setupListHidden = preferences.getBoolean(SETUP_LIST_HIDDEN, false),
             refusedPermissions = preferences.getStringSet(REFUSED_PERMISSIONS, emptySet()).orEmpty().toSet(),
@@ -294,7 +291,6 @@ class AppSettings(
         editor.putString(APPROVAL_MODE, snapshot.defaultApprovalMode.name)
         editor.putString(SUBAGENT_MODELS, SubagentModelChoice.toText(snapshot.subagentModels))
         editor.putString(DISABLED_TOOL_GROUPS, ToolGroups.disabledToText(snapshot.disabledToolGroups))
-        editor.putInt(TOOL_PICKER_SEEN_VERSION, snapshot.toolPickerSeenVersion)
         editor.putBoolean(SETUP_DECK_SEEN, snapshot.setupDeckSeen)
         editor.putBoolean(SETUP_LIST_HIDDEN, snapshot.setupListHidden)
         editor.putStringSet(REFUSED_PERMISSIONS, snapshot.refusedPermissions)
@@ -357,7 +353,6 @@ class AppSettings(
         const val APPROVAL_MODE = "approval_mode"
         const val SUBAGENT_MODELS = "subagent_models"
         const val DISABLED_TOOL_GROUPS = "disabled_tool_groups"
-        const val TOOL_PICKER_SEEN_VERSION = "tool_picker_seen_version"
         const val SETUP_DECK_SEEN = "setup_deck_seen"
         const val SETUP_LIST_HIDDEN = "setup_list_hidden"
         // A new key: the old "requested_permissions" also counted dialogs closed with Back (D-127).

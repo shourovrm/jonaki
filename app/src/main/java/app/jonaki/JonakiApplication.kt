@@ -193,7 +193,7 @@ class JonakiApplication : Application() {
     lateinit var scheduledTasks: ScheduledTasks
         private set
 
-    /** Installs and removes Python for Settings > Python, the tool picker and the chat's install card (M8). */
+    /** Installs and removes Python for Settings > Python and the chat's install card (M8). */
     lateinit var python: PythonSetup
         private set
 

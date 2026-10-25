@@ -81,7 +81,3 @@ private fun SetupKeyPreview() = DeckPreview(
     ),
     ThemeMode.LIGHT,
 )
-
-@Preview(name = "Setup, approvals", widthDp = 360, heightDp = 640, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-private fun SetupApprovalsPreview() = DeckPreview(SetupDeckUi(card = SetupCard.APPROVALS), ThemeMode.DARK)

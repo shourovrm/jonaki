@@ -63,16 +63,3 @@ object ToolGroups {
     fun disabledToText(disabled: Set<ToolGroup>): String =
         ToolGroup.entries.filter { group -> group in disabled }.joinToString(",") { group -> group.name }
 }
-
-/**
- * The first-run tool picker shows once per [CURRENT] version: on a new
- * install, and once to installs from before the picker existed (their
- * saved version is 0). Raising [CURRENT] shows it once more, for example
- * when a later version adds a group worth a look.
- */
-object ToolPicker {
-    // 2 adds the Phone, Schedule and MCP groups (D-120).
-    const val CURRENT = 2
-
-    fun shouldShow(seenVersion: Int): Boolean = seenVersion < CURRENT
-}

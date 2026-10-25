@@ -151,7 +151,6 @@ import app.jonaki.settings.SecretName
 import app.jonaki.settings.SettingsSnapshot
 import app.jonaki.settings.ThemeChoice
 import app.jonaki.settings.ToolGroup
-import app.jonaki.settings.ToolPicker
 import app.jonaki.tools.sharefile.DestinationResult
 import java.io.File
 import java.io.IOException
@@ -278,10 +277,6 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     route = ROUTE_CHAT_PREFIX + threadKey
                 },
             )
-            return@JonakiTheme
-        }
-        if (ToolPicker.shouldShow(settingsSnapshot.toolPickerSeenVersion)) {
-            ToolPickerRoute(application)
             return@JonakiTheme
         }
         if (!startResolved) {

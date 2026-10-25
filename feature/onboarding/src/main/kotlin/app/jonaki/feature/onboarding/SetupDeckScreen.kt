@@ -84,7 +84,6 @@ fun SetupDeckScreen(state: SetupDeckUi, actions: SetupDeckActions, modifier: Mod
                     else -> StartCard(state.model, actions)
                 }
                 SetupCard.SEARCH -> SearchCard(state.search, actions)
-                SetupCard.APPROVALS -> ApprovalsCard(state.asksOnlyOutsideThreadFolder, actions)
                 SetupCard.NOTIFICATIONS -> NotificationsCard(actions)
             }
         }
@@ -373,30 +372,6 @@ private fun ColumnScope.SearchCard(search: SetupSearchCardUi, actions: SetupDeck
         actionLabel = stringResource(R.string.setup_next),
         actionEnabled = typedKey.isNotBlank() || search.savedKeyPreview != null,
         onAction = { actions.onSearchDone(typedKey) },
-    )
-}
-
-@Composable
-private fun ColumnScope.ApprovalsCard(onlyOutsideThreadFolder: Boolean, actions: SetupDeckActions) {
-    CardBody(stringResource(R.string.setup_approvals_title)) {
-        ChoiceRow(
-            stringResource(R.string.setup_approvals_always),
-            selected = !onlyOutsideThreadFolder,
-            onSelect = { actions.onApprovalChange(false) },
-        )
-        ChoiceRow(
-            stringResource(R.string.setup_approvals_outside),
-            selected = onlyOutsideThreadFolder,
-            onSelect = { actions.onApprovalChange(true) },
-            detail = stringResource(R.string.setup_approvals_outside_detail),
-        )
-    }
-    CardFooter(
-        onBack = actions.onBack,
-        onSkip = actions.onSkip,
-        actionLabel = stringResource(R.string.setup_next),
-        actionEnabled = true,
-        onAction = actions.onApprovalDone,
     )
 }
 

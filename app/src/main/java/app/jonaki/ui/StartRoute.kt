@@ -10,14 +10,12 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.jonaki.JonakiApplication
-import app.jonaki.settings.ToolPicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
  * Works out what a fresh start of the app shows. A start keeps the screen it
- * was given when a share from another app is arriving, when the first-run
- * tool picker is due, or when no model is set up yet (a new thread there
+ * was given when a share from another app is arriving, or when no model is set up yet (a new thread there
  * could not answer, so the list with its way to Settings stays).
  */
 suspend fun chooseStart(application: JonakiApplication, leftThreadStore: LeftThreadStore): StartChoice {
@@ -25,7 +23,6 @@ suspend fun chooseStart(application: JonakiApplication, leftThreadStore: LeftThr
     val hasModel = settingsSnapshot.chatModels.allModelKeys.isNotEmpty() ||
         withContext(Dispatchers.IO) { application.localModelRuntime.modelKeys().isNotEmpty() }
     val hasGivenDestination = application.launchedWithShare ||
-        ToolPicker.shouldShow(settingsSnapshot.toolPickerSeenVersion) ||
         !hasModel
     val record = leftThreadStore.read()
     val recordedThread = if (record == null) {

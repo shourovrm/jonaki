@@ -7,7 +7,6 @@ import androidx.compose.runtime.getValue
 import app.jonaki.JonakiApplication
 import app.jonaki.core.ui.ToolGroupChoice
 import app.jonaki.core.ui.ToolGroupRowUi
-import app.jonaki.feature.onboarding.ToolPickerScreen
 import app.jonaki.feature.settings.PythonActions
 import app.jonaki.feature.settings.PythonDownloadUi
 import app.jonaki.feature.settings.PythonScreen
@@ -20,22 +19,6 @@ import app.jonaki.run.PythonState
 import app.jonaki.runtimes.pyodide.PyodideRelease
 import app.jonaki.settings.AppSettings
 import app.jonaki.settings.ToolGroup
-import app.jonaki.settings.ToolPicker
-
-/** The first-run tool picker; Continue marks it seen so it does not show again (plan M8 step 3). */
-@Composable
-fun ToolPickerRoute(application: JonakiApplication) {
-    val rows = toolGroupRows(application)
-    ToolPickerScreen(
-        rows = rows,
-        onSwitch = { choice, on -> switchToolGroup(application.settings, application.python, choice, on) },
-        onDownload = { choice -> startDownload(application.python, choice) },
-        onCancelDownload = application.python::cancel,
-        onContinue = {
-            application.settings.update { current -> current.copy(toolPickerSeenVersion = ToolPicker.CURRENT) }
-        },
-    )
-}
 
 @Composable
 fun ToolsRoute(application: JonakiApplication, onBack: () -> Unit) {

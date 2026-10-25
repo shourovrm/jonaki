@@ -80,7 +80,7 @@ data class PythonState(
 }
 
 /**
- * Installs and removes Python for the settings screen, the tool picker and
+ * Installs and removes Python for the settings screen and
  * the chat's install card, one download at a time. Downloads run in the
  * app's scope, so leaving a screen does not stop them; Cancel does. The
  * state is read back from the files after every change (D-069: no record

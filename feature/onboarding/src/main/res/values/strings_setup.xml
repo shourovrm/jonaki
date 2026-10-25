@@ -18,10 +18,6 @@
     <string name="setup_model_choose">Choose</string>
     <string name="setup_model_change">Change</string>
     <string name="setup_search_title">Web search</string>
-    <string name="setup_approvals_title">Ask before a change?</string>
-    <string name="setup_approvals_always">Every time</string>
-    <string name="setup_approvals_outside">Only outside the thread\'s folder</string>
-    <string name="setup_approvals_outside_detail">Small undoable changes, like reminders, don\'t ask either.</string>
     <string name="setup_notifications_title">Notify when a task is done?</string>
     <string name="setup_notifications_detail">Reminders need this too.</string>
 </resources>
