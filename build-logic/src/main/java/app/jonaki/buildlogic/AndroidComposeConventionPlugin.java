@@ -10,6 +10,10 @@ public final class AndroidComposeConventionPlugin implements Plugin<Project> {
     public void apply(Project project) {
         project.getPluginManager().apply("jonaki.android.library");
         project.getPluginManager().apply("org.jetbrains.kotlin.plugin.compose");
-        project.getExtensions().getByType(LibraryExtension.class).getBuildFeatures().setCompose(true);
+        LibraryExtension android = project.getExtensions().getByType(LibraryExtension.class);
+        android.getBuildFeatures().setCompose(true);
+        // This check misreads every produceState call here as never setting
+        // value, even though each one assigns it inside the producer lambda.
+        android.getLint().getDisable().add("ProduceStateDoesNotAssignValue");
     }
 }

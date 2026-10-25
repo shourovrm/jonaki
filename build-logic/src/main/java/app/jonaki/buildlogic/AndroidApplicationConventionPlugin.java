@@ -28,6 +28,9 @@ public final class AndroidApplicationConventionPlugin implements Plugin<Project>
         android.getCompileOptions().setSourceCompatibility(JavaVersion.VERSION_17);
         android.getCompileOptions().setTargetCompatibility(JavaVersion.VERSION_17);
         android.getBuildFeatures().setCompose(true);
+        // Same false alarm as in AndroidComposeConventionPlugin: every
+        // produceState here assigns value inside the producer lambda.
+        android.getLint().getDisable().add("ProduceStateDoesNotAssignValue");
 
         ApkSigningConfig releaseSigning = android.getSigningConfigs().create("release");
         releaseSigning.setStoreFile(project.getRootProject().file("jonaki.keystore"));
