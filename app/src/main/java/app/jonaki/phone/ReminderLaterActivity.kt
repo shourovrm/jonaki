@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -49,7 +50,8 @@ class ReminderLaterActivity : ComponentActivity() {
         reminderId = intent.getStringExtra(ReminderReceiver.EXTRA_REMINDER_ID)
         val jonaki = application as JonakiApplication
         setContent {
-            val themeChoice = jonaki.settings.snapshot.value.theme
+            val snapshot by jonaki.settings.snapshot.collectAsState()
+            val themeChoice = snapshot.theme
             JonakiTheme(themeMode = themeModeOf(themeChoice)) {
                 Sheet()
             }
