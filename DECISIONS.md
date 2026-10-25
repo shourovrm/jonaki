@@ -2908,3 +2908,26 @@ next free number in the 0.x line was 0.9.0.
 The GitHub "pre-release" flag stays off the newest release: the updater
 asks /releases/latest, which skips flagged releases, so a flagged 0.9.0
 would hide every update. Older releases keep the flag.
+
+## D-193 · 2026-10-25 · First run is lighter, an empty chat says Hi!, and three lines get shorter — accepted
+User approval of six changes. (1) The "Choose tools" picker no longer
+shows at app start and the setup deck loses its "Ask before a change?"
+card, leaving model, web search and notifications (D-184 had four cards);
+every tool group stays on, Settings > Tools stays, and the chat asks
+before risky actions anyway. The picker screen, its route, its gate and
+the saved "seen" version are deleted. (2) A run_code call that finds
+Python missing already shows the chat's install card with the core's
+size ("Needs Python (13.5 MB). Install?"); that was found in place, so
+nothing changed there. (3) A thread with no messages shows a firefly at
+the end of a dotted flight curve with "Hi!" in the middle, drawn in the
+running-thread colours of the Leaf theme; it also shows above the "No
+model yet" block, and waits until the thread's messages have been read so
+an opening thread does not flash it. The mock is
+docs/mockups/empty-chat-greeting-c.html. (4) The Safety check help reads
+"A decision model checks risky actions and web text · Jev (OpenRouter)",
+with the guard's name and service passed in from the guard, so the chat
+module names no guard. (5) A memory call that found nothing new leaves no
+line under the turn, and with it the "Why" action; "Remembered N facts",
+"N to review" and "Memory not updated: ..." stay. (6) About no longer has
+"Show setup cards"; a person who skipped the cards still finds what is
+left under "Left to set up" on the thread list (D-184).
