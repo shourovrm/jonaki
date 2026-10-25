@@ -31,7 +31,7 @@ import app.jonaki.core.ui.MonospaceFamily
 /**
  * Turns the result text MemoryExtractor writes onto a background row into the line
  * under a turn. The extractor writes "N added", "N to review", "N added, M to review",
- * "Nothing new" or "Answer unreadable: why"; a failed call writes its failure text.
+ * "Nothing new" (which has no line) or "Answer unreadable: why"; a failed call writes its failure text.
  */
 object MemoryLineText {
     /** Starts every line about a call that saved nothing because it failed; the chat offers Fix on such a line. */
@@ -41,10 +41,11 @@ object MemoryLineText {
     private val reviewPattern = Regex("""(\d+) to review""")
     private val addedAndReviewPattern = Regex("""(\d+) added, (\d+) to review""")
 
-    fun from(result: String?): String {
+    /** Null when the call found nothing new: that is not worth a line under the turn. */
+    fun from(result: String?): String? {
         val text = result?.trim().orEmpty()
         if (text == "Nothing new") {
-            return "Nothing new to remember"
+            return null
         }
         val addedAndReview = addedAndReviewPattern.matchEntire(text)
         if (addedAndReview != null) {
@@ -66,13 +67,12 @@ object MemoryLineText {
     private fun factCount(count: Int): String = if (count == 1) "1 fact" else "$count facts"
 }
 
-/** The action at the end of a memory line: See opens Memory, Why the log, Fix the place that needs a key. */
-enum class MemoryLineAction { SEE, WHY, FIX }
+/** The action at the end of a memory line: See opens Memory, Fix the place that needs a key. */
+enum class MemoryLineAction { SEE, FIX }
 
 @Composable
 private fun MemoryLineAction.label(): String = when (this) {
     MemoryLineAction.SEE -> stringResource(R.string.chat_memory_see)
-    MemoryLineAction.WHY -> stringResource(R.string.chat_memory_why)
     MemoryLineAction.FIX -> stringResource(R.string.chat_memory_fix)
 }
 

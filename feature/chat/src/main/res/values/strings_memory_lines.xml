@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="chat_memory_see">See</string>
-    <string name="chat_memory_why">Why</string>
     <string name="chat_memory_fix">Fix</string>
     <string name="chat_skill_proposed">Proposed a skill: %1$s</string>
     <string name="chat_skill_review">Review</string>

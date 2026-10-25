@@ -30,7 +30,6 @@ import app.jonaki.feature.chat.WorkingActivity
 import app.jonaki.core.modelcatalog.ModelKey
 import app.jonaki.feature.chat.MemoryLineAction
 import app.jonaki.feature.chat.MemoryLineText
-import app.jonaki.memory.MemoryExtractor
 import app.jonaki.run.BackgroundModel
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -437,14 +436,9 @@ object ChatItems {
     private fun memoryLines(memoryRows: List<MessageEntity>, after: Long, before: Long): List<ChatItem> =
         memoryRows
             .filter { row -> row.position > after && row.position < before }
-            .map { row ->
-                val result = row.backgroundResult.orEmpty()
-                val text = MemoryLineText.from(result)
-                val action = when {
-                    result == MemoryExtractor.RESULT_NOTHING_NEW -> MemoryLineAction.WHY
-                    text.startsWith(MemoryLineText.NOT_UPDATED_PREFIX) -> MemoryLineAction.FIX
-                    else -> MemoryLineAction.SEE
-                }
+            .mapNotNull { row ->
+                val text = MemoryLineText.from(row.backgroundResult) ?: return@mapNotNull null
+                val action = if (text.startsWith(MemoryLineText.NOT_UPDATED_PREFIX)) MemoryLineAction.FIX else MemoryLineAction.SEE
                 ChatItem.MemoryLine("memory-${row.id}", text, action)
             }
 

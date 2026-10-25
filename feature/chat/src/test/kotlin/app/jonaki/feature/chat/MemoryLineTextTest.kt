@@ -1,6 +1,7 @@
 package app.jonaki.feature.chat
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class MemoryLineTextTest {
@@ -22,8 +23,8 @@ class MemoryLineTextTest {
     }
 
     @Test
-    fun `nothing new reads as a sentence`() {
-        assertEquals("Nothing new to remember", MemoryLineText.from("Nothing new"))
+    fun `nothing new has no line`() {
+        assertNull(MemoryLineText.from("Nothing new"))
     }
 
     @Test

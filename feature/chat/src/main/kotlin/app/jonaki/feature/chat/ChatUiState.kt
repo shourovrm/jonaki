@@ -287,7 +287,7 @@ sealed interface ChatItem {
 
     /**
      * A muted line after a turn that says what memory extraction did. [text] is formed already
-     * (see [MemoryLineText]); [action] is See, Why or Fix.
+     * (see [MemoryLineText]); [action] is See or Fix.
      */
     data class MemoryLine(override val id: String, val text: String, val action: MemoryLineAction) : ChatItem
 
