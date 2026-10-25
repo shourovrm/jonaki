@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jonaki empty chat greeting C</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@font-face { font-family: "Geist"; src: url("../../core/ui/src/main/res/font/geist.ttf"); font-weight: 100 900; }
+body { background: #0b0c0b; color: #d9dcd5; font-family: "Geist", system-ui, sans-serif; padding: 24px 32px 48px; }
+.caption { text-align: center; font-size: 14px; color: #9aa094; margin-bottom: 24px; }
+.row { display: flex; gap: 48px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+.cell-label { font-size: 14px; color: #9aa094; margin: 0 0 10px 6px; }
+.phone { width: 390px; height: 844px; border-radius: 34px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); box-shadow: 0 0 0 8px #1b1d1a, 0 30px 80px #00000080; }
+.statusbar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 500; }
+.chat-top { height: 56px; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-bottom: 1px solid var(--line); }
+.chat-top .title { flex: 1; font-size: 16.5px; font-weight: 600; padding-left: 4px; }
+.icon-btn { width: 40px; height: 40px; display: grid; place-items: center; }
+.empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding-bottom: 72px; }
+.hello { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.sub { font-size: 14.5px; color: var(--muted); }
+.composer { display: flex; align-items: flex-end; gap: 8px; padding: 6px 12px 16px; }
+.plus { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink-2); flex: none; }
+.field { flex: 1; min-height: 44px; border-radius: 22px; background: var(--field); display: flex; align-items: center; padding: 0 16px; font-size: 14.5px; color: var(--muted); }
+.send { width: 44px; height: 44px; border-radius: 22px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; flex: none; }
+.leaf.dark { --bg:#10130e; --ink:#e6e9e0; --ink-2:#c3c9b9; --muted:#8b927f; --line:#262b21; --field:#1a1e16; --accent:#c9e86b; --on-accent:#1f2a00; --glow:#d4f06a; --halo:#c9e86b55; --stem:#e4e8dc; }
+.leaf.light { --bg:#f3f6ef; --ink:#171b14; --ink-2:#3a4233; --muted:#5f6857; --line:#dde3d5; --field:#e7ece1; --accent:#3f5600; --on-accent:#f3f6ef; --glow:#729600; --halo:#72960055; --stem:#171b14; }
+
+</style></head><body>
+<div class="caption">C. A small firefly at the end of a dotted flight curve</div>
+<div class="row"><div><div class="cell-label">Dark</div>
+<div class="phone leaf dark">
+  <div class="statusbar"><span>9:41</span><span>5G &nbsp;86%</span></div>
+  <div class="chat-top"><div class="icon-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></div><div class="title">New chat</div><div class="icon-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg></div></div>
+  <div class="empty"><svg class="mark" width="168" height="84" viewBox="0 0 168 84" aria-hidden="true"><defs>
+<radialGradient id="halocd" cx="132" cy="22" r="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="var(--glow)" stop-opacity="0.55"/><stop offset="0.55" stop-color="var(--glow)" stop-opacity="0.18"/><stop offset="1" stop-color="var(--glow)" stop-opacity="0"/></radialGradient>
+<linearGradient id="trailcd" x1="8" y1="0" x2="132" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="var(--glow)" stop-opacity="0"/><stop offset="1" stop-color="var(--glow)" stop-opacity="0.85"/></linearGradient></defs>
+<path d="M8,70 C28,76 40,48 62,52 C84,56 82,24 108,30 C118,32 126,26 132,22" fill="none" stroke="url(#trailcd)" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 6"/>
+<circle cx="132" cy="22" r="20" fill="url(#halocd)"/><circle cx="132" cy="22" r="5.5" fill="var(--glow)"/></svg><div class="hello">Hi!</div></div>
+  <div class="composer"><div class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div><div class="field">Message</div><div class="send"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg></div></div>
+</div></div><div><div class="cell-label">Light</div>
+<div class="phone leaf light">
+  <div class="statusbar"><span>9:41</span><span>5G &nbsp;86%</span></div>
+  <div class="chat-top"><div class="icon-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></div><div class="title">New chat</div><div class="icon-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg></div></div>
+  <div class="empty"><svg class="mark" width="168" height="84" viewBox="0 0 168 84" aria-hidden="true"><defs>
+<radialGradient id="halocl" cx="132" cy="22" r="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="var(--glow)" stop-opacity="0.55"/><stop offset="0.55" stop-color="var(--glow)" stop-opacity="0.18"/><stop offset="1" stop-color="var(--glow)" stop-opacity="0"/></radialGradient>
+<linearGradient id="trailcl" x1="8" y1="0" x2="132" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="var(--glow)" stop-opacity="0"/><stop offset="1" stop-color="var(--glow)" stop-opacity="0.85"/></linearGradient></defs>
+<path d="M8,70 C28,76 40,48 62,52 C84,56 82,24 108,30 C118,32 126,26 132,22" fill="none" stroke="url(#trailcl)" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 6"/>
+<circle cx="132" cy="22" r="20" fill="url(#halocl)"/><circle cx="132" cy="22" r="5.5" fill="var(--glow)"/></svg><div class="hello">Hi!</div></div>
+  <div class="composer"><div class="plus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div><div class="field">Message</div><div class="send"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg></div></div>
+</div></div></div>
+</body></html>
