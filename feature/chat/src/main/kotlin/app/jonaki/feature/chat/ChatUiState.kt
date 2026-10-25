@@ -59,6 +59,9 @@ data class ChatUiState(
     val safetyCheckAvailable: Boolean = true,
     /** True when the Safety check is switched off in Settings: the switch is off, disabled, and says "Off in Settings." */
     val safetyCheckOffInSettings: Boolean = false,
+    /** The guard's name and its service, shown in the Safety check help; the chat module does not know which guard runs. */
+    val safetyCheckGuardName: String = "",
+    val safetyCheckGuardProvider: String = "",
 )
 
 enum class GuardState {

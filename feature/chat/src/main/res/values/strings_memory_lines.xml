@@ -12,7 +12,7 @@
     <string name="chat_no_model_body">Pick a free service or add a key.</string>
     <string name="chat_no_model_action">Set up</string>
     <string name="chat_safety_title">Safety check</string>
-    <string name="chat_safety_help">A second model checks risky actions and web text. Jev, through OpenRouter.</string>
+    <string name="chat_safety_help">A decision model checks risky actions and web text · %1$s (%2$s)</string>
     <string name="chat_safety_needs_key">Needs an OpenRouter key. Add one in Settings.</string>
     <string name="chat_safety_off_in_settings">Off in Settings.</string>
 </resources>

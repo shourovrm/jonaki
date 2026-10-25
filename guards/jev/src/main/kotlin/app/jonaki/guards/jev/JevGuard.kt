@@ -228,6 +228,10 @@ class JevGuard(
         const val DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
         const val MODEL = "typesafe/jev-1.13"
 
+        /** The guard's name and the service that runs it, as the chat shows them. */
+        const val DISPLAY_NAME = "Jev"
+        const val PROVIDER_NAME = "OpenRouter"
+
         /** The spike's longest text was 300 characters, so this size is a cost and speed choice, not a measured limit. */
         const val CHUNK_SIZE = 8_000
 

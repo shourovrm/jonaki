@@ -54,6 +54,8 @@ internal fun ApprovalSheet(
     safetyCheckOn: Boolean = true,
     safetyCheckAvailable: Boolean = true,
     safetyCheckOffInSettings: Boolean = false,
+    safetyCheckGuardName: String = "",
+    safetyCheckGuardProvider: String = "",
     onSafetyCheckChange: (Boolean) -> Unit = {},
 ) {
     val appliedMode = threadMode ?: defaultMode
@@ -102,7 +104,7 @@ internal fun ApprovalSheet(
                 !safetyCheckAvailable -> R.string.chat_safety_needs_key
                 else -> null
             }
-            SafetyCheckRow(safetyCheckOn && lockedReason == null, lockedReason, onSafetyCheckChange)
+            SafetyCheckRow(safetyCheckOn && lockedReason == null, lockedReason, safetyCheckGuardName, safetyCheckGuardProvider, onSafetyCheckChange)
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -110,7 +112,7 @@ internal fun ApprovalSheet(
 
 /** The Jev guard as a switch for this thread; when it cannot run (no OpenRouter key, or off in Settings) it is off and locked, with the reason shown. */
 @Composable
-private fun SafetyCheckRow(isOn: Boolean, lockedReasonRes: Int?, onChange: (Boolean) -> Unit) {
+private fun SafetyCheckRow(isOn: Boolean, lockedReasonRes: Int?, guardName: String, guardProvider: String, onChange: (Boolean) -> Unit) {
     val isAvailable = lockedReasonRes == null
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -123,7 +125,7 @@ private fun SafetyCheckRow(isOn: Boolean, lockedReasonRes: Int?, onChange: (Bool
             Text(stringResource(R.string.chat_safety_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             if (lockedReasonRes == null) {
                 Text(
-                    stringResource(R.string.chat_safety_help),
+                    stringResource(R.string.chat_safety_help, guardName, guardProvider),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

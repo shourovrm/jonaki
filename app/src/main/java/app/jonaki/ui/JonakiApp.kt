@@ -1,5 +1,6 @@
 package app.jonaki.ui
 
+import app.jonaki.guard.activeGuardDisplay
 import app.jonaki.guard.GuardRecorder
 import app.jonaki.guard.JevOptions
 import app.jonaki.feature.settings.JevOptionsUi
@@ -996,6 +997,8 @@ private fun ChatRoute(
         safetyCheckOn = settingsSnapshot.jevOptions.isOn && thread?.safetyCheckOff != true,
         safetyCheckAvailable = SecretName.OPENROUTER in application.secrets.names.collectAsState().value,
         safetyCheckOffInSettings = !settingsSnapshot.jevOptions.isOn,
+        safetyCheckGuardName = activeGuardDisplay().name,
+        safetyCheckGuardProvider = activeGuardDisplay().provider,
         context = contextUi,
         codeRun = codeRun.takeIf { openCodeStepId != null },
         mediaMode = MediaModeUiBuilder.build(
