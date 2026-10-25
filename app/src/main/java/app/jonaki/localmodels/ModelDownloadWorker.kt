@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -41,6 +42,9 @@ class ModelDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
         return foregroundInfo(spec?.fileName.orEmpty(), downloadedBytes = 0, totalBytes = spec?.sizeBytes ?: 0)
     }
 
+    // WorkManager marks getStopReason as API 31, but it only reads a field
+    // WorkManager itself sets, so it is safe on every API level we support.
+    @SuppressLint("NewApi")
     override suspend fun doWork(): Result {
         val spec = DownloadSpec.from(inputData) ?: return Result.failure()
         val localModels = (applicationContext as JonakiApplication).localModels
