@@ -71,7 +71,7 @@ internal class SetupPlace(
             save = { place -> listOf(place.card.name, place.modelServiceKey, place.showsKeyStep, place.start.name, place.showsServiceList) },
             restore = { saved ->
                 SetupPlace(
-                    SetupCard.valueOf(saved[0] as String),
+                    restoredSetupCard(saved[0] as String),
                     saved[1] as String?,
                     saved[2] as Boolean,
                     SetupStart.valueOf(saved[3] as String),
@@ -81,6 +81,14 @@ internal class SetupPlace(
         )
     }
 }
+
+/**
+ * The card a saved setup place names. A name saved by an older version can
+ * be a card that no longer exists (the approvals card), which restores as
+ * the first card instead of failing.
+ */
+internal fun restoredSetupCard(savedName: String): SetupCard =
+    SetupCard.entries.firstOrNull { card -> card.name == savedName } ?: SetupCard.MODEL
 
 internal object Setup {
     // The services most people have a key for come first; the card lists the rest under "More services".
