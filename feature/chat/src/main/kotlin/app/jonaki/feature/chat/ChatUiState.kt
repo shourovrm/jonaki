@@ -10,6 +10,8 @@ data class ChatUiState(
     val title: String,
     val webSearchEnabled: Boolean,
     val items: List<ChatItem>,
+    /** True until the thread's messages have been read; the empty-chat greeting waits for it. */
+    val isLoading: Boolean = false,
     /** True while the agent works on this thread; Stop shows beside Send, and Send queues the message. */
     val isRunning: Boolean,
     val draft: String,

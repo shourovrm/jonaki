@@ -279,7 +279,11 @@ fun ChatScreen(
             },
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
-                if (state.items.isNotEmpty()) {
+                if (state.items.isEmpty()) {
+                    if (!state.isLoading) {
+                        EmptyChatGreeting()
+                    }
+                } else {
                     MessageList(
                         listState = listState,
                         items = state.items,

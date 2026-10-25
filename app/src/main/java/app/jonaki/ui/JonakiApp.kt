@@ -740,9 +740,11 @@ private fun ChatRoute(
     val thread by remember(threadId) {
         if (isNew) flowOf(null) else database.threadDao().observe(threadId)
     }.collectAsState(initial = null)
-    val messages by remember(threadId) {
+    // Null until the first read, so an opening thread does not flash the empty-chat greeting.
+    val loadedMessages by remember(threadId) {
         if (isNew) flowOf(emptyList()) else database.messageDao().observeThread(threadId)
-    }.collectAsState(initial = emptyList())
+    }.collectAsState(initial = null)
+    val messages = loadedMessages.orEmpty()
     val steps by remember(threadId) {
         if (isNew) flowOf(emptyList()) else database.stepDao().observeThread(threadId)
     }.collectAsState(initial = emptyList())
@@ -941,6 +943,7 @@ private fun ChatRoute(
         .map { model -> MediaModelRowUi(model.key, model.name, model.priceText) }
     val state = ChatUiState(
         title = thread?.title.orEmpty(),
+        isLoading = loadedMessages == null,
         webSearchEnabled = webSearchEnabled,
         items = ChatItems.build(
             rows = messages,

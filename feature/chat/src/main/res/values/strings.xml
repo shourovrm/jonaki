@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="chat_back">Back</string>
+    <string name="chat_empty_greeting">Hi!</string>
     <string name="chat_more">More options</string>
     <string name="chat_menu_rename">Rename</string>
     <string name="chat_menu_memory">Memory</string>
