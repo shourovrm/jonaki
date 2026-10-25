@@ -132,7 +132,6 @@ import app.jonaki.feature.settings.StatusIconsScreen
 import app.jonaki.feature.settings.moveInOrder
 import app.jonaki.feature.threads.ProjectModelOption
 import app.jonaki.feature.threads.RenameThreadDialog
-import app.jonaki.feature.onboarding.SetupCard
 import app.jonaki.feature.threads.SetupLeft
 import app.jonaki.feature.threads.ShareTargetRow
 import app.jonaki.feature.threads.ShareTargetScreen
@@ -309,11 +308,6 @@ fun JonakiApp(application: JonakiApplication, onDarkThemeChange: (Boolean) -> Un
                     onOpenPage = { page -> route = settingsPageRoute(page) },
                     onBack = goBack,
                     onOpenStatusIcons = { route = ROUTE_STATUS_ICONS },
-                    onOpenSetup = {
-                        setupPlace.openAt(SetupCard.MODEL)
-                        setupOpen = true
-                        route = ROUTE_SETUP
-                    },
                     onAddModels = { serviceKey -> route = ROUTE_ADD_MODELS_PREFIX + serviceKey },
                     onAddImageModels = { serviceKey -> route = ROUTE_ADD_IMAGE_MODELS_PREFIX + serviceKey },
                     onAddVectorModels = { serviceKey -> route = ROUTE_ADD_VECTOR_MODELS_PREFIX + serviceKey },
@@ -1434,7 +1428,6 @@ private fun SettingsRoute(
     onOpenPage: (SettingsPage) -> Unit,
     onBack: () -> Unit,
     onOpenStatusIcons: () -> Unit,
-    onOpenSetup: () -> Unit,
     onAddModels: (String) -> Unit,
     onAddImageModels: (String) -> Unit,
     onAddVectorModels: (String) -> Unit,
@@ -1809,7 +1802,6 @@ private fun SettingsRoute(
         onOpenGitHub = { openGitHub(context) },
         onCheckForUpdate = updateController::check,
         onInstallUpdate = updateController::downloadOrInstall,
-        onOpenSetup = onOpenSetup,
     )
     if (page == null) {
         SettingsHomeScreen(

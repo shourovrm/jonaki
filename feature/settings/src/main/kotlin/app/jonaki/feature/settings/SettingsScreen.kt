@@ -108,7 +108,6 @@ fun SettingsPageScreen(page: SettingsPage, state: SettingsUiState, actions: Sett
                     state.update,
                     actions.onCheckForUpdate,
                     actions.onInstallUpdate,
-                    actions.onOpenSetup,
                 )
             }
         }
